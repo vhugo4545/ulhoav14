@@ -1,0 +1,142 @@
+﻿/* Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+
+
+/* Reset e base */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', Arial, sans-serif;
+  background: linear-gradient(to right, #f1f3f6, #e2e8f0);
+  color: #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* Container centralizado */
+.container {
+  background-color: #ffffff;
+  width: 100%;
+  max-width: 420px;
+  padding: 32px 28px;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Títulos */
+h1, h2 {
+  text-align: center;
+  color: #222;
+  margin-bottom: 24px;
+  font-weight: 600;
+  font-size: 1.6rem;
+}
+
+/* Campos de formulário */
+input,
+select {
+  width: 100%;
+  padding: 12px 14px;
+  margin-top: 16px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+input:focus,
+select:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+  outline: none;
+}
+
+/* Botões padrão */
+button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 28px;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.1s ease;
+}
+
+button:hover {
+  background: #0056b3;
+  transform: scale(1.02);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Links de troca de formulário */
+.toggle {
+  text-align: center;
+  margin-top: 20px;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: color 0.2s ease;
+}
+
+.toggle:hover {
+  text-decoration: underline;
+  color: #0056b3;
+}
+
+/* Painel admin */
+#areaAdmin {
+  margin-top: 30px;
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+/* Alerta */
+.alert {
+  background: #ffecec;
+  color: #d8000c;
+  padding: 12px;
+  margin-top: 16px;
+  border-left: 5px solid #d8000c;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+/* Responsividade simples */
+@media (max-width: 480px) {
+  .container {
+    padding: 24px 20px;
+  }
+
+  h1, h2 {
+    font-size: 1.4rem;
+  }
+}
+
+input.form-control[placeholder="Ambiente"] {
+  width: 800px !important;   /* ou o valor que preferir */
+  max-width: 98vw;
+  /* Mantém altura e fonte padrão do Bootstrap */
+}

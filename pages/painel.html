@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Painel</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1 id="boasVindas">Olá!</h1>
+
+    <div id="areaAdmin" style="display:none;">
+      <button>Botão exclusivo do admin</button>
+    </div>
+
+    <button onclick="logout()">Sair</button>
+  </div>
+
+  <script src="../js/utils.js"></script>
+  <script>
+    const usuario = JSON.parse(sessionStorage.getItem('usuario'));
+    const boasVindas = document.getElementById('boasVindas');
+
+    if (usuario?.nome) {
+      boasVindas.innerText = `Olá, ${usuario.nome}`;
+    }
+
+    if (usuario?.tipo === 'admin') {
+      document.getElementById('areaAdmin').style.display = 'block';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Proposta com Inputs e Tabela</title>
+
+  <!-- CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/listagem.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+</head>
+
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <ul>
+    
+      <li><a href="../pages/listagem.html"><span class="material-icons-outlined">list</span> Início</a></li>
+     
+    </ul>
+    <button id="btn-criar" class="sidebar-button" onclick="salvarPropostaEditavel() ">
+      <span class="material-icons-outlined">add_circle_outline</span> Criar Proposta
+    </button>
+<br>
+
+    <button id="btn-solicitar" class="sidebar-button" onclick="irParaPagina('solicitarAprovacao.html')">
+      <span class="material-icons-outlined">assignment_turned_in</span> Solicitar Aprovação
+    </button>
+
+    <button id="btn-autorizar" class="sidebar-button" onclick="irParaPagina('autorizarProposta.html')">
+      <span class="material-icons-outlined">verified_user</span> Autorizar Proposta
+    </button>
+
+    <button id="btn-enviar" class="sidebar-button" onclick="irParaPagina('enviarProposta.html')">
+      <span class="material-icons-outlined">send</span> Enviar Proposta
+    </button>
+
+    <button id="btn-gerar-pedido" class="sidebar-button" onclick="irParaPagina('gerarPedidoVenda.html')">
+      <span class="material-icons-outlined">receipt_long</span> Gerar Pedido de Venda
+    </button>
+    </div>
+
+  </aside>
+
+
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="content">
+    <div class="main-container">
+      <form id="novoOrcamentoForm">
+        <div class="accordion mb-3" id="accordionOrcamento">
+
+          <!-- Aba: Informações do Orçamento -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseInfoOrcamento">
+                Informações do Orçamento
+              </button>
+            </h2>
+            <div id="collapseInfoOrcamento" class="accordion-collapse collapse show">
+              <div class="accordion-body">
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label">Número do Orçamento</label>
+                    <input type="text" class="form-control" id="numeroOrcamento" readonly tabindex="-1" style="background-color: #e6e6e6; color: #000;">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Data do Orçamento</label>
+                    <input type="date" class="form-control" id="dataOrcamento" required>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Origem do Cliente</label>
+                    <select class="form-select" id="origemCliente" required>
+                      <option value="">Selecione</option>
+                      <option>Arquiteto(a)</option>
+                      <option>Construtora</option>
+                      <option>Engenheiro(a)</option>
+                      <option>Google</option>
+                      <option>Instagram</option>
+                      <option>Indicação</option>
+                      <option>Já é cliente</option>
+                      <option>Licitação</option>
+                      <option>Outros</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba: Dados do Cliente -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseCliente">
+                Dados do Cliente
+              </button>
+            </h2>
+            <div id="collapseCliente" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <div id="clientesWrapper">
+                  <div class="row g-3 cliente-item">
+                    <div class="col-md-6 position-relative d-flex align-items-end gap-2">
+                      <div class="flex-grow-1">
+                        <label class="form-label">Nome / Razão Social</label>
+                        <input type="text" class="form-control razaoSocial" placeholder="Digite para buscar..."
+                          autocomplete="off">
+                        <ul class="sugestoesCliente list-group position-absolute w-100 shadow bg-white"
+                          style="z-index: 10; max-height: 200px; overflow-y: auto; display: none;"></ul>
+                      </div>
+                      <button type="button" class="btn btn-outline-success rounded-circle" title="Incluir Cliente"
+                        onclick="abrirPopupIncluirCliente()"
+                        style="height: 38px; width: 38px; display: flex; align-items: center; justify-content: center;">
+                        <strong>+</strong>
+                      </button>
+                    </div>
+
+                    <div class="col-md-6">
+                      <label class="form-label">Código Omie</label>
+                    <input type="text" class="form-control codigoCliente" readonly tabindex="-1" style="background-color: #dfdfe0; color: #000;">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">CPF / CNPJ</label>
+                      <input type="text" class="form-control cpfCnpj" required>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Nome do Contato</label>
+                      <input type="text" class="form-control nomeContato">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Função</label>
+                      <input type="text" class="form-control funcaoCliente">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Telefone</label>
+                      <input type="text" class="form-control telefoneCliente">
+                    </div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-outline-primary mt-2"
+                  onclick="adicionarClienteRelacionado()">Adicionar Cliente Relacionado</button>
+              </div>
+            </div>
+          </div>
+
+
+
+
+
+
+
+          <!-- Modal de Incluir Cliente -->
+          <!-- Modal de Incluir Cliente -->
+
+
+
+
+          <!-- Aba: Endereço da Obra -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseEndereco">
+                Endereço da Obra
+              </button>
+            </h2>
+            <div id="collapseEndereco" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <div class="row g-3">
+                  <div class="col-md-3"><label class="form-label">CEP</label><input type="text" class="form-control"
+                      id="cep"></div>
+                  <div class="col-md-6"><label class="form-label">Rua / Avenida</label><input type="text"
+                      class="form-control" id="rua"></div>
+                  <div class="col-md-3"><label class="form-label">Número</label><input type="text" class="form-control"
+                      id="numero"></div>
+                  <div class="col-md-4"><label class="form-label">Complemento</label><input type="text"
+                      class="form-control" id="complemento"></div>
+                  <div class="col-md-4"><label class="form-label">Bairro</label><input type="text" class="form-control"
+                      id="bairro"></div>
+                  <div class="col-md-2"><label class="form-label">Cidade</label><input type="text" class="form-control"
+                      id="cidade"></div>
+                  <div class="col-md-2"><label class="form-label">Estado</label><input type="text" class="form-control"
+                      id="estado"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba: Equipe Interna -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseEquipe">
+                Equipe Interna
+              </button>
+            </h2>
+            <div id="collapseEquipe" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Vendedor Responsável</label>
+                    <select class="form-select" id="vendedorResponsavel" required>
+                      <option value="">Carregando...</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Operador (Usuário Interno)</label>
+                    <input type="text" class="form-control" id="operadorInterno">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba: Produtos, Condições e Prazos -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseProdutos">
+                Produtos, Prazos e Condições
+              </button>
+            </h2>
+            <div id="collapseProdutos" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <div class="mb-3">
+                  <label class="form-label">Prazos por Área</label>
+                  <textarea class="form-control" id="prazosArea" rows="5"
+                    placeholder="Área ___: ___ dias úteis após aprovação..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Condição de Pagamento</label>
+                  <select class="form-select" id="condicaoPagamento">
+                    <option value="">Selecione</option>
+                    <option value="debito">40% de entrada, 40% após 30 dias e 20% após 60 dias.</option>
+                    <option value="debito">40% de entrada, 30% após 30 dias e 30% após 60 dias.</option>
+                    <option value="debito">60% de entrada, 40% após 30 dias.</option>
+                    <option value="parcelado">Personalizado</option>
+                  </select>
+                </div>
+
+                <div id="parcelamentoContainer" style="display: none;">
+                  <label class="form-label">Parcelas</label>
+                  <div id="listaParcelas"></div>
+                  <strong>Total das parcelas: <span id="totalParcelas">R$ 0,00</span></strong>
+                  <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="adicionarParcela()">+ Adicionar
+                    Parcela</button>
+                </div>
+
+                <div class="mb-3 mt-3">
+                  <label class="form-label">Condições Gerais</label>
+                  <div class="d-flex flex-wrap gap-2 mb-2">
+                    <button type="button" class="btn btn-outline-primary"
+                      onclick="preencherCondicoesComInstalacao()">Com medição e instalação</button>
+                    <button type="button" class="btn btn-outline-secondary"
+                      onclick="preencherCondicoesSemInstalacao()">Sem medição e instalação</button>
+                    <button type="button" class="btn btn-outline-warning" onclick="preencherCondicoesSemTampo()">Sem
+                      tampo</button>
+                  </div>
+                  <textarea class="form-control" id="condicoesGerais" rows="10"
+                    placeholder="Escolha uma opção ou edite manualmente..."></textarea>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+
+        </div>
+      </form>
+      <div class="d-flex justify-content-center my-4 position-relative">
+        <div class="d-flex flex-column align-items-center w-100" style="max-width: 600px;">
+          <div class="input-group input-group-lg shadow w-100">
+            <input id="buscaProduto" type="text" class="form-control text-center"
+              placeholder="Pesquisar produto, cliente ou proposta..." autocomplete="off">
+            <button class="btn btn-primary d-flex align-items-center gap-2 px-4" type="button">
+              <span class="material-icons-outlined">search</span>
+              <span>Buscar</span>
+            </button>
+          </div>
+
+          <button id="fecharSanfonasBtn" class="btn btn-outline-secondary btn-sm w-100 mt-2"
+            onclick="fecharTodasSanfonas()">
+            🔽 Fechar todos os blocos
+          </button>
+
+          <button id="abrirSanfonasBtn" class="btn btn-outline-primary btn-sm w-100 mt-2"
+            onclick="abrirTodasSanfonas()">
+            🔼 Abrir todos os blocos
+          </button>
+
+
+
+          <ul id="sugestoesProdutos" class="list-group position-absolute w-100 shadow bg-white mt-2"
+            style="z-index: 10; top: 100%; display: none; max-height: 200px; overflow-y: auto;"></ul>
+        </div>
+      </div>
+
+
+      <div class="col-lg-12" id="blocosProdutosContainer">
+        <!-- Blocos dinâmicos de produtos serão adicionados aqui -->
+      </div>
+    </div>
+    <br>
+    <br>
+    <br>
+    <br>
+
+
+  </main>
+  <!-- Modal de Incluir Cliente -->
+  <div class="modal fade" id="popupClienteModal" tabindex="-1" aria-labelledby="popupClienteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="popupClienteLabel">Incluir Cliente</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <form id="popupCliente_form">
+            <div class="mb-3 d-none">
+              <label class="form-label">Código de Integração</label>
+              <input type="text" class="form-control" id="popupCliente_codigo" readonly>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Razão Social</label>
+              <input type="text" class="form-control" id="popupCliente_razao" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Nome Fantasia</label>
+              <input type="text" class="form-control" id="popupCliente_fantasia" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">E-mail</label>
+              <input type="email" class="form-control" id="popupCliente_email" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">CNPJ ou CPF</label>
+              <input type="text" class="form-control" id="popupCliente_cnpjcpf" required>
+            </div>
+          
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary" onclick="enviarClienteParaAPI()">Salvar Cliente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script -->
+   <script src="../js/validarToken.js" defer></script>
+<script src="../js/sair.js" defer></script>
+<script>
+  
+function observarEPreencherOperadorInterno() {
+  const nome = localStorage.getItem("usuarioNome");
+  if (!nome) return;
+
+  const tentarPreencher = () => {
+    const campo = document.getElementById("operadorInterno");
+    if (campo && campo.value.trim() === "") {
+      campo.value = nome;
+      console.log("✅ Campo #operadorInterno preenchido com:", nome);
+      observer.disconnect(); // para de observar
+    }
+  };
+
+  const observer = new MutationObserver(tentarPreencher);
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+
+  tentarPreencher(); // tenta imediatamente também
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(observarEPreencherOperadorInterno, 3000); // espera 3 segundos
+});
+
+
+</script>
+
+<script>
+
+  function abrirTodasSanfonas() {
+    document.querySelectorAll(".accordion-button").forEach(botao => {
+      if (botao.classList.contains("collapsed")) {
+        botao.click();
+      }
+    });
+  }
+
+
+
+
+
+
+
+
+  // Aplica proteção de clique duplo em todos os botões com a classe .sidebar-button
+// Aplica proteção de clique duplo em todos os botões com a classe .sidebar-button
+document.querySelectorAll('.sidebar-button').forEach(btn => {
+  btn.addEventListener('click', function(evt) {
+    if (btn.disabled) {
+      console.warn('Clique duplo detectado e bloqueado em:', btn); // Aviso no console
+      evt.stopImmediatePropagation();
+      evt.preventDefault();
+      return false;
+    }
+    console.log('Clique aceito, bloqueando botão por 2 segundos:', btn); // Log para clique normal
+    btn.disabled = true;
+    setTimeout(() => btn.disabled = false, 2000); // 2 segundos
+  }, true); // true = captura antes do onclick
+});
+
+
+</script>
+
+
+
+  <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+ <script src="../js/cadastroClientes.js" defer></script>
+  <script src="../js/validarToken.js" defer></script>
+  <script src="../js/auth.js" defer></script>
+  <script src="../js/produtos.js" defer></script>
+  <!-- Scripts principais (em ordem lógica e sem duplicatas) -->
+  <script src="../js/clienteAutocomplete.js" defer></script>
+  <script src="../js/consultaCEP.js" defer></script>
+  <script src="../js/tabelas.js" defer></script>
+  <script src="../js/BarraPesquisa.js" defer></script>
+
+
+  <script src="../js/equipeInterna.js" defer></script>
+  <script src="../js/prazosCondicoes.js" defer></script>
+
+  <script src="../js/formulas.js" defer></script>
+ <script src="../js/envioOmie.js" defer></script>
+
+
+
+
+
+
+
+
+ <script src="../js/envioOmie.js" defer></script>
+  <script src="../js/carregamento.js" defer></script>
+  <script src="../js/salvarPropostas.js" defer></script>
+  <script src="../js/carregamento.js" defer></script>
+  <script src="../js/impressao.js" defer></script>
+  <script src="../js/totais.js" defer></script>
+  <script src="../js/enviarPropostas.js" defer></script>
+  <script src="../js/preencherPropostas.js" defer></script>
+  <script src="../js/formularioOrcamento.js" defer></script>
+  <script src="../js/formulaValores.js" defer></script>
+  <script src="../js/visualizarBotoes.js" defer></script>
+ 
+</body>
+
+
+</html>

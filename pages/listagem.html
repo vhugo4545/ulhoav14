@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Listagem de Propostas</title>
+  <link rel="stylesheet" href="../css/listagem.css" />
+ 
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+
+</head>
+<body>
+   
+  <!-- Menu lateral -->
+  <aside class="sidebar">
+    <ul>
+      </ul>
+    <div class="sidebar-footer">
+      <button id="save-proposal" class="sidebar-button" onclick="irParaPagina('criar.html')">
+        <span class="material-icons-outlined">save</span> Criar Proposta
+      </button>
+      
+  <button id="btn-editar-modelo" class="sidebar-button" onclick="redirecionarParaEdicao()">
+    <span class="material-icons-outlined">edit_note</span>Editar Modelo
+  </button>
+
+ <a id="btn-editar-formulas" href="modelo.html" class="sidebar-button" style="text-decoration: none; flex-direction: column;">
+  <span class="material-icons-outlined">functions</span>
+  Editar Fórmulas
+</a>
+
+    </div>
+  </aside>
+
+  <!-- Conteúdo principal -->
+  <main class="content">
+    <!-- Barra superior -->
+    <header class="topbar">
+      <div class="title-search">
+        <h2>Listagem de Propostas</h2>
+        <input type="text" id="search" placeholder="Pesquisar..." />
+
+        <!-- Seleção de Vendedor -->
+        <select id="filter-seller">
+          <option value="">Todos os Vendedores</option>
+        </select>
+
+        <!-- Seleção de Status -->
+        <select id="filter-status">
+          <option value="">Todos os Status</option>
+          <option value="Aprovado">Aprovado</option>
+          <option value="Pendente">Pendente</option>
+          <option value="Cancelado">Cancelado</option>
+        </select>
+      </div>
+      <img src="logo-redonda.png" alt="Logo" class="logo-round" />
+    </header>
+
+    <!-- Indicador de carregamento -->
+    <div id="loading" style="text-align:center; padding: 20px;">🔄 Carregando propostas...</div>
+
+    <!-- Tabela com rolagem -->
+<div class="table-wrapper">
+  <div class="table-container">
+    <table id="data-table" style="display: table;">
+      <thead>
+       <thead>
+  <tr>
+    <th>#</th>
+    <th>Nº Proposta</th>
+    <th>Data</th>
+    <th>Vendedor</th>
+    <th>Cliente</th>
+    <th>CNPJ/CPF</th>
+
+    <th>Status</th>
+    <th>Validade</th>
+    <th>Ações</th>
+  </tr>
+</thead>
+
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>07/04/2025</td>
+          <td>R$ 14.041,76</td>
+          <td>Indefinido</td>
+          <td>Cliente sem nome</td>
+          <td>Orçamento Iniciado</td>
+          <td>--</td>
+          <td style="color: red; font-weight: bold;">14/04/2025<br><span style="color: red;">VENCIDA</span></td>
+          <td>
+            <button title="Editar"><i class="material-icons">edit</i></button>
+            <button title="Duplicar"><i class="material-icons">content_copy</i></button>
+            <button title="Excluir"><i class="material-icons">delete</i></button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Paginação -->
+  <div class="pagination">
+    <button id="prev-page" disabled>❮ Anterior</button>
+    <span id="page-info">Página 1</span>
+    <button id="next-page">Próxima ❯</button>
+  </div>
+</div>
+
+  <script>
+  function redirecionarParaEdicao() {
+    const id = new URLSearchParams(location.search).get("id");
+    window.location.href = "editar.html?id=" + "68746e305b9691a7ed3b3f97";
+  }
+  // Aplica proteção de clique duplo em todos os botões com a classe .sidebar-button
+// Aplica proteção de clique duplo em todos os botões com a classe .sidebar-button
+document.querySelectorAll('.sidebar-button').forEach(btn => {
+  btn.addEventListener('click', function(evt) {
+    if (btn.disabled) {
+      console.warn('Clique duplo detectado e bloqueado em:', btn); // Aviso no console
+      evt.stopImmediatePropagation();
+      evt.preventDefault();
+      return false;
+    }
+    console.log('Clique aceito, bloqueando botão por 2 segundos:', btn); // Log para clique normal
+    btn.disabled = true;
+    setTimeout(() => btn.disabled = false, 2000); // 2 segundos
+  }, true); // true = captura antes do onclick
+});
+
+
+</script>
+  </main>
+    <script src="../js/validarToken.js" defer></script>
+   <script src="../js/carregamento.js" defer></script>
+   <script src="../js/list.js" defer></script>
+  <script src="../js/auth.js" defer></script>
+</body>
+</html>
