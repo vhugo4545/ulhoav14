@@ -170,7 +170,19 @@ function inicializarCamposDeFormulaQuantidade(container, context = {}) {
   const inputsReativos = container.querySelectorAll('input[name]');
 
 inputsReativos.forEach(input => {
-  input.addEventListener("input", () => {
+  input.addEventListener("input", (event) => {
+    // Exibe no console o input ativado (por nome e valor atual)
+    console.log(
+      "[Input ativado]",
+      "name:", input.name,
+      "| value:", input.value,
+      "| id:", input.id || "(sem id)"
+    );
+
+    // (Opcional) Destaca visualmente o input por 1 segundo
+    input.style.outline = "2px solid #007bff";
+    setTimeout(() => { input.style.outline = ""; }, 1000);
+
     // Atualiza todos os campos com fórmula dentro do grupo
     inputsFormula.forEach(campo => {
       const formula = campo.dataset.formula || "";
@@ -178,14 +190,18 @@ inputsReativos.forEach(input => {
         const valor = evaluateFormula(formula, context);
         campo.value = Number.isFinite(valor) ? valor : 0;
 
-        // ⚠️ Se o campo for quantidade-desejada, atualiza o campo .quantidade
-        if (campo.classList.contains("quantidade-desejada")) {
-          const linha = campo.closest("tr");
-          const inputQuantidade = linha?.querySelector("input.quantidade");
-          if (inputQuantidade) {
-            inputQuantidade.value = Math.ceil(valor || 1);
-          }
-        }
+       // ⚠️ Se o campo for quantidade-desejada, atualiza o campo .quantidade (exceto em editar.html)
+if (
+  campo.classList.contains("quantidade-desejada") &&
+  !window.location.pathname.includes("editar.html")
+) {
+  const linha = campo.closest("tr");
+  const inputQuantidade = linha?.querySelector("input.quantidade");
+  if (inputQuantidade) {
+    inputQuantidade.value = Math.ceil(valor || 1);
+  }
+}
+
       }
     });
 

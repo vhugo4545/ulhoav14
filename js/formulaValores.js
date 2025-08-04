@@ -460,8 +460,7 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
 
   const camposFinanceiros = [
     { label: "Custo Total de Material", name: "custoTotalMaterial" },
-    { label: "Preço Mínimo", name: "precoMinimo" },
-    { label: "Preço Sugerido", name: "precoSugerido" }
+
   ];
 
   const bloco = document.createElement("div");
@@ -612,8 +611,12 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
   if (window.location.pathname.includes("criar.html")) {
     setTimeout(() => {
       atualizarPrecosOmieNaDOM();
-      ativarInputsDescricaoComDelay();
+
+     //ativarInputsDescricaoComDelay();
     }, 1000);
+    // Chame a função quando quiser (após montar o DOM ou quando trocar o nome do grupo)
+
+
   }
 
   return idSuffix;
@@ -683,6 +686,7 @@ function ativarRecalculoEmTodasTabelas() {
       }
 
       const quantidade = parseFloat(inputQuantidade.value.replace(",", ".") || 1);
+
       const custoUnitario = parseFloat(
 
         custoUnitarioCell.textContent.replace("R$", "").replace(",", ".") ||
@@ -746,3 +750,6 @@ function ativarRecalculoEmTodasTabelas() {
     adicionarTotalizadoresPorAmbienteComAgrupamento();
   });
 }
+
+
+

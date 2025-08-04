@@ -150,7 +150,8 @@
     const proposta = await resp.json();
 
     propostaOriginal = proposta; // ✅ Salva a proposta completa globalmente
-
+    console.log(proposta)
+    console.log("testge")
     todasFormulas = [];
     const accordion = document.getElementById("produtosAccordion");
     accordion.innerHTML = "";

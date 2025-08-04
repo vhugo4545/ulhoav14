@@ -193,7 +193,7 @@ ${item.descricao_utilizacao|| "Utilização (Modelo)"}
     });
 
   grupoList.style.display = grupoList.children.length > 0 ? "block" : "none";
-   document.querySelectorAll('input[name="descricao"]').forEach(forcarEventosDescricao);
+ //  document.querySelectorAll('input[name="descricao"]').forEach(forcarEventosDescricao);
    
 }
 

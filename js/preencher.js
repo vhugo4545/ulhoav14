@@ -86,6 +86,7 @@ async function localizarECarregarPropostaPorId() {
 
 
 function arredondarCimaSeguro(valor, context = {}) {
+
   if (valor === undefined || valor === null) return 1;
 
   try {

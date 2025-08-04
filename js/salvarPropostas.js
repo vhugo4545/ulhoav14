@@ -185,6 +185,20 @@ async function salvarPropostaEditavel() {
     console.log("📦 Proposta salva com sucesso:", resultado);
     ocultarCarregando()
     mostrarPopupCustomizado("✅ Sucesso", "Proposta atualizada com sucesso!", "success");
+    console.log(resultado._id)
+// Supondo que você já tem o objeto resultado com o campo _id
+if (resultado && resultado._id) {
+  window.location.href = `editar.html?id=${resultado._id}`;
+}
+
+const btn = document.createElement('button');
+btn.textContent = 'Editar';
+btn.onclick = () => {
+  if (resultado && resultado._id) {
+    window.location.href = `editar.html?id=${resultado._id}`;
+  }
+};
+document.body.appendChild(btn);
 
     return resultado;
 
