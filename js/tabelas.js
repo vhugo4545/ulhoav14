@@ -30,8 +30,6 @@ function atualizarTituloAccordion(idSuffix, nome) {
 
 
 
-
-
 // Inclui pelo texto digitado no input
 function incluirProduto(idSuffix) {
   const termo = document.getElementById(`input-${idSuffix}`).value.trim().toLowerCase();
@@ -66,7 +64,6 @@ function removerBloco(id) {
     bloco.remove();
   }
 }
-
 
 function abrirSubstituirProduto(botao) {
   const linha = botao.closest("tr");
@@ -106,10 +103,6 @@ function abrirSubstituirProduto(botao) {
 
   linha.parentNode.insertBefore(novaLinha, linha.nextSibling);
 }
-
-
-
-
 
 function incluirProdutoPeloIndice(idSuffix, index) {
   const lista = sugestoesTemp[idSuffix];
@@ -151,8 +144,6 @@ function montarLinhaProduto(idSuffix, produto) {
 }
 
 
-
-
 // Limpa sugestões (principal ou sub)
 function limparSugestoes(idSuffix, sub=false) {
   const sel = sub ? `#sugestoes-${idSuffix}-sub` : `#sugestoes-${idSuffix}`;
@@ -188,118 +179,6 @@ function abrirSubstituirProduto(botao, idSuffix) {
 
   linha.parentNode.insertBefore(novaLinha, linha.nextSibling);
 }
-
-
-
-function normalizarTextoFlex(texto) {
- return (texto || "")
-    .replace(/&quot;/g, '"')              // Converte entidades HTML de aspas para aspas reais
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")      // Remove acentos
-    .replace(/[^a-z0-9 x\/"\-]+/g, " ")   // Mantém X, /, " e hífen
-    .replace(/\s+/g, " ")                 // Múltiplos espaços para um só
-    .trim();
-}
-
-
-function mostrarSugestoes(input, idSuffix) {
-  const termoOriginal = input.value.trim();
-  const termoNorm = normalizarTextoFlex(termoOriginal);
-
-  if (termoNorm.length < 3) {
-    document.getElementById(`sugestoes-${idSuffix}`).innerHTML = '';
-    return;
-  }
-
-  const termos = termoNorm.split(' ').filter(Boolean); // Cada palavra da busca
-  const container = document.getElementById(`sugestoes-${idSuffix}`);
-  if (!container) return;
-
-  const resultados = todosProdutos.filter(prod => {
-    const descNorm = normalizarTextoFlex(prod.descricao);
-    return termos.every(term => descNorm.includes(term));
-  }).slice(0, 6);
-
-  sugestoesTemp[idSuffix] = resultados;
-
-  container.innerHTML = resultados.length
-    ? `<table class="table table-sm mb-0"><tbody>${
-        resultados.map((prod, i) => `
-          <tr>
-            <td>${prod.descricao || "-"}</td>
-            <td>R$ ${parseFloat(prod.valor_unitario||0).toFixed(2)}</td>
-            <td><button class="btn btn-success btn-sm"
-                        onclick="incluirProdutoPeloIndice('${idSuffix}', ${i})">➕</button></td>
-          </tr>`).join("")
-      }</tbody></table>`
-    : `<div class="text-muted px-2">Nenhum resultado encontrado</div>`;
-}
-
-
-
-
-function normalizarTexto(texto) {
-  return (texto || "")
-    .replace(/&quot;/g, '"')              // Converte entidades HTML de aspas para aspas reais
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")      // Remove acentos
-    .replace(/[^a-z0-9 x\/"\-]+/g, " ")   // Mantém X, /, " e hífen
-    .replace(/\s+/g, " ")                 // Múltiplos espaços para um só
-    .trim();
-}
-
-
-
-/**
- * Mostra sugestões para substituição de produtos, com busca tolerante e priorização exata.
- * @param {HTMLInputElement} input - campo de pesquisa
- * @param {string} idSuffix - identificador do bloco
- */
-function mostrarSugestoesSub(input, idSuffix) {
-  const termo = input.value.trim();
-  const container = document.getElementById(`sugestoes-${idSuffix}-sub`);
-  if (!container) return;
-  if (termo.length < 3) {
-    container.innerHTML = '';
-    return;
-  }
-
-  // Normaliza termo e descrição mantendo símbolos técnicos
-  const termoNorm = normalizarTexto(termo);
-
-  // 1. Prioriza igualdade exata
-  const exatos = todosProdutos.filter(prod =>
-    normalizarTexto(prod.descricao) === termoNorm
-  );
-
-  // 2. Busca por partes (cada palavra do termo aparece na descrição, incluindo símbolos técnicos!)
-  const termos = termoNorm.split(' ').filter(Boolean);
-  const similares = todosProdutos.filter(prod => {
-    const descNorm = normalizarTexto(prod.descricao);
-    return descNorm !== termoNorm && termos.every(term => descNorm.includes(term));
-  });
-
-  // Junta exatos + similares, limitando a 6 resultados
-  const resultados = [...exatos, ...similares].slice(0, 6);
-
-  sugestoesTemp[`${idSuffix}-sub`] = resultados;
-
-  container.innerHTML = resultados.length
-    ? `<table class="table table-sm mb-0"><tbody>${
-        resultados.map((prod, i) => `
-          <tr onclick="substituirProdutoPeloIndice('${idSuffix}', ${i})" style="cursor:pointer">
-            <td>${prod.descricao}</td>
-            <td>R$ ${parseFloat(prod.valor_unitario || 0).toFixed(2)}</td>
-          </tr>
-        `).join("")
-      }</tbody></table>`
-    : `<div class="text-muted px-2">Nenhum resultado encontrado</div>`;
-}
-
-
-
 
 
 function substituirProdutoPeloIndice(idSuffix, index) {
@@ -457,4 +336,137 @@ function confirmarSubstituicao(botao) {
     simularFocusEBlurEmTodosCamposFormula();
   }
 }
+
+
+
+function normalizarTextoRanking(texto) {
+  return (texto || "")
+    .replace(/&quot;/g, '"')              // Entidade para aspas
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")      // Remove acentos
+    .replace(/[^a-z0-9 x\/"\-]+/g, " ")   // Mantém X, /, " e hífen
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function mostrarSugestoes(input, idSuffix) {
+  const termoOriginal = input.value.trim();
+  const termoNorm = normalizarTextoRanking(termoOriginal);
+
+  if (termoNorm.length < 3) {
+    document.getElementById(`sugestoes-${idSuffix}`).innerHTML = '';
+    return;
+  }
+
+  const termos = termoNorm.split(' ').filter(Boolean);
+  const container = document.getElementById(`sugestoes-${idSuffix}`);
+  if (!container) return;
+
+  // Ranking: mais compatíveis vêm primeiro
+  const resultadosPontuados = todosProdutos.map(prod => {
+    const descNorm = normalizarTextoRanking(prod.descricao);
+
+    // Peso 1: Igualdade exata do termo digitado
+    const exato = descNorm === termoNorm ? 10000 : 0;
+    // Peso 2: Termo completo como substring (ex: "2 x 1/2")
+    const substring = descNorm.includes(termoNorm) ? 2000 : 0;
+    // Peso 3: Todos os termos presentes?
+    const todosPresentes = termos.every(term => descNorm.includes(term)) ? 1000 : 0;
+    // Peso 4: Quantos termos batem (quanto mais, melhor)
+    const termosPresentes = termos.filter(term => descNorm.includes(term)).length * 10;
+
+    // Pontuação final
+    let score = exato + substring + todosPresentes + termosPresentes;
+
+    // Penaliza se não tiver pelo menos metade dos termos presentes
+    if (termosPresentes < termos.length * 5) score -= 5000;
+
+    return { prod, score };
+  });
+
+  // Ordena por score decrescente (melhor primeiro)
+  const resultados = resultadosPontuados
+    .filter(obj => obj.score > 0) // Só resultados relevantes
+    .sort((a, b) => b.score - a.score)
+    .map(obj => obj.prod);
+
+  sugestoesTemp[idSuffix] = resultados;
+
+  container.innerHTML = resultados.length
+    ? `
+      <div style="max-height:340px; overflow-y:auto; border:1px solid #e0e0e0; border-radius:6px;">
+        <table class="table table-sm mb-0">
+          <tbody>
+            ${resultados.map((prod, i) => `
+              <tr>
+                <td>${prod.descricao || "-"}</td>
+                <td>R$ ${parseFloat(prod.valor_unitario||0).toFixed(2)}</td>
+                <td><button class="btn btn-success btn-sm"
+                            onclick="incluirProdutoPeloIndice('${idSuffix}', ${i})">➕</button></td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`
+    : `<div class="text-muted px-2">Nenhum resultado encontrado</div>`;
+}
+
+function normalizarTexto(texto) {
+  return (texto || "")
+    .replace(/&quot;/g, '"')                // Entidade para aspas HTML
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")        // Remove acentos
+    .replace(/[^a-z0-9 x\/"\-]+/g, " ")     // Mantém X, /, " e hífen para códigos técnicos
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function mostrarSugestoesSub(input, idSuffix) {
+  const termo = input.value.trim();
+  const container = document.getElementById(`sugestoes-${idSuffix}-sub`);
+  if (!container) return;
+  if (termo.length < 3) {
+    container.innerHTML = '';
+    return;
+  }
+
+  // Normaliza termo e descrição mantendo símbolos técnicos
+  const termoNorm = normalizarTexto(termo);
+
+  // 1. Prioriza igualdade exata
+  const exatos = todosProdutos.filter(prod =>
+    normalizarTexto(prod.descricao) === termoNorm
+  );
+
+  // 2. Busca por partes (cada palavra do termo aparece na descrição, incluindo símbolos técnicos!)
+  const termos = termoNorm.split(' ').filter(Boolean);
+  const similares = todosProdutos.filter(prod => {
+    const descNorm = normalizarTexto(prod.descricao);
+    return descNorm !== termoNorm && termos.every(term => descNorm.includes(term));
+  });
+
+  // Junta exatos + similares (aqui sem limite de 6, mostre todos se quiser)
+  const resultados = [...exatos, ...similares];
+
+  sugestoesTemp[`${idSuffix}-sub`] = resultados;
+
+  container.innerHTML = resultados.length
+    ? `<table class="table table-sm mb-0"><tbody>${
+        resultados.map((prod, i) => `
+          <tr onclick="substituirProdutoPeloIndice('${idSuffix}', ${i})" style="cursor:pointer">
+            <td>${prod.descricao}</td>
+            <td>R$ ${parseFloat(prod.valor_unitario || 0).toFixed(2)}</td>
+          </tr>
+        `).join("")
+      }</tbody></table>`
+    : `<div class="text-muted px-2">Nenhum resultado encontrado</div>`;
+}
+
+
+
+
+
+
+
 
