@@ -170,22 +170,53 @@ function mostrarPopupSelecaoGruposEstetico(grupos, valorFinal, onConfirmar) {
 // 3. Função que realmente gera o HTML da impressão
 function gerarHTMLParaImpressao(gruposOcultarProduto) {
   const getValue = id => document.getElementById(id)?.value || "-";
-  const dados = {
-    numero: getValue("numeroOrcamento"),
-    data: new Date(getValue("dataOrcamento")).toLocaleDateString('pt-BR'),
-    origem: getValue("origemCliente"),
-    nomeOrigem: getValue("nomeOrigem"),
-    codigoOrigem: getValue("codigoOrigem"),
-    telefoneOrigem: getValue("telefoneOrigem"),
-    emailOrigem: getValue("emailOrigem"),
-    comissao: getValue("comissaoArquiteto"),
-    operador: getValue("operadorInterno"),
-    enderecoObra: `Rua/Avenida: ${getValue("rua")}, Número: ${getValue("numero")}, Bairro: ${getValue("bairro")} - Complemento: ${getValue("complemento")} - Cidade: ${getValue("cidade")}/${getValue("estado")} - CEP: ${getValue("cep")}`,
-    prazos: getValue("prazosArea"),
-    condicao: document.getElementById("condicaoPagamento")?.selectedOptions[0]?.textContent.trim() || "-",
-    condicoesGerais: getValue("condicoesGerais"),
-    vendedor: document.getElementById("vendedorResponsavel")?.selectedOptions[0]?.textContent || "-"
-  };
+// Helpers
+function getSelectedText(id) {
+  const sel = document.getElementById(id);
+  return sel?.selectedOptions?.[0]?.textContent?.trim() || "-";
+}
+
+function safeDateBR(v) {
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? "-" : d.toLocaleDateString("pt-BR");
+}
+
+function escapeHtml(s = "") {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function toHtmlWithBr(raw = "") {
+  return escapeHtml(raw).replace(/\r?\n/g, "<br>");
+}
+
+// --- Dados ---
+const dados = {
+  numero: getValue("numeroOrcamento"),
+  data: safeDateBR(getValue("dataOrcamento")),
+  origem: getValue("origemCliente"),
+  nomeOrigem: getValue("nomeOrigem"),
+  codigoOrigem: getValue("codigoOrigem"),
+  telefoneOrigem: getValue("telefoneOrigem"),
+  emailOrigem: getValue("emailOrigem"),
+  comissao: getValue("comissaoArquiteto"),
+  operador: getValue("operadorInterno"),
+
+  enderecoObra: `Rua/Avenida: ${getValue("rua")}, Número: ${getValue("numero")}, ` +
+                `Bairro: ${getValue("bairro")} - Complemento: ${getValue("complemento")} - ` +
+                `Cidade: ${getValue("cidade")}/${getValue("estado")} - CEP: ${getValue("cep")}`,
+
+  // Preservam quebras de linha na impressão
+  prazos: toHtmlWithBr(getValue("prazosArea")),
+  condicao: toHtmlWithBr(getSelectedText("condicaoPagamento")),
+  condicoesGerais: toHtmlWithBr(getValue("condicoesGerais")),
+
+  vendedor: getSelectedText("vendedorResponsavel")
+};
+
+
 
 const clienteWrapper = document.querySelector(".cliente-item");
 dados.nomeCliente = clienteWrapper?.querySelector(".razaoSocial")?.value?.trim() || "-";

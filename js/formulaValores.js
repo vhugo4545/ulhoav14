@@ -81,12 +81,17 @@ const campoValorImpostos = impostos * precoMinimo;
 
 const somaValotres = campoValorImpostos + custoMaterial + campoValorGastosOperacionais
 
-const campoValorSeguranca = precoMinimo - precoMinimo / (1 + comissaoArquiteta + margemSegunraca);
-const campoValorMargemLucro =  (campoValorMinimo-  somaValotres) - campoValorSeguranca ;
+const campoValorMargemLucro =  (campoValorMinimo-  somaValotres) - margemSegunraca ;
+const campoValorSeguranca = (custoMaterial/(1-campoValorGastosOperacionais - campoValorMargemLucro  - valorImpostos))* valorMargem  ;
+
 const campoValorMiudezas = custoMaterial - custoMaterial / (1 + miudezas);
 const campoNegocia = precoSugerido - precoMinimo
 
 
+const arqeuiteto = (custoMaterial/(1-campoValorGastosOperacionais - campoValorMargemLucro - campoValorImpostos))* comissaoArquiteta  ;
+
+
+console.log( "teste ",arqeuiteto)
 
 adicionarBotaoResumoFinanceiro(blocoId)
 adicionarTotalizadoresPorAmbienteComAgrupamento();
@@ -133,14 +138,19 @@ adicionarTotalizadoresPorAmbienteComAgrupamento();
 
   const precoMinimo = (custoMaterial / divisor) * (1 + comissaoArquiteta + margemSeguranca);
   const precoSugerido = precoMinimo * (1 + negociacao);
-
-  const campoVAlorSegunrnçaDesperdicio = precoMinimo - precoMinimo / (1 + comissaoArquiteta + margemSeguranca);
+  const campoVAlorSegunrnçaDesperdicio = precoMinimo - precoMinimo / (1 + comissaoArquiteta + margemSegunraca);
   const campoValorGastosOperacionais = (precoMinimo - campoVAlorSegunrnçaDesperdicio) * gastosTotais;
+  const campoValorPorcentagemImpostos = impostos;
+  const campoValorMinimo = precoMinimo;
   const campoValorImpostos = impostos * precoMinimo;
-  const somaValores = campoValorImpostos + custoMaterial + campoValorGastosOperacionais;
-  const campoValorMargemLucro = (precoMinimo - somaValores) - campoVAlorSegunrnçaDesperdicio;
+  const somaValotres = campoValorImpostos + custoMaterial + campoValorGastosOperacionais;
+  const campoValorMargemLucro = (campoValorMinimo - somaValotres) - campoValorSeguranca;
+  const campoValorSeguranca = (custoMaterial/(1-campoValorGastosOperacionais - campoValorMargemLucro - campoValorImpostos))* margemSeguranca  ;
+  const arqeuiteto = (custoMaterial/(1-campoValorGastosOperacionais - campoValorMargemLucro - campoValorImpostos))* comissaoArquiteta  ;
   const campoValorMiudezas = custoMaterial - custoMaterial / (1 + miudezas);
   const campoNegocia = precoSugerido - precoMinimo;
+
+  console.log( "Arquiteto", arqeuiteto, "Segurança",  campoValorSeguranca)
 
   return {
     campoVAlorSegunrnçaDesperdicio,
@@ -153,6 +163,70 @@ adicionarTotalizadoresPorAmbienteComAgrupamento();
   };
 }
 
+function calcularValoresFinanceiros(blocoId) {
+  const bloco = document.getElementById(blocoId);
+  if (!bloco) return null;
+
+  const inputs = bloco.querySelectorAll('input[name]');
+  const dados = {};
+  inputs.forEach(input => {
+    const nome = input.name;
+    const valor = input.value.trim().replace(',', '.').replace('R$', '');
+    dados[nome] = parseFloat(valor) || 0;
+  });
+
+  const impostos = dados.impostos / 100;
+  const margemLucro = dados.margem_lucro / 100;
+  const gastosTotais = dados.gasto_operacional / 100;
+  const negociacao = dados.margem_negociacao / 100;
+  const miudezas = dados.miudezas / 100;
+  const comissaoArquiteta = dados.comissao_arquiteta / 100;
+  const margemSegunraca = dados.margem_seguranca / 100;
+
+  const tabela = bloco.querySelector("table");
+  let materialBase = 0;
+  tabela.querySelectorAll("tbody tr").forEach(linha => {
+    const valorStr = linha.querySelector(".custo-unitario")?.textContent?.replace("R$", "").replace(",", ".");
+    const valor = parseFloat(valorStr || 0);
+    materialBase += valor;
+  });
+
+  const custoMaterial = materialBase * (1 + miudezas);
+  const divisor = 1 - (gastosTotais + margemLucro + impostos);
+  if (divisor <= 0) {
+    console.error("❌ Erro: soma dos percentuais maior ou igual a 100%");
+    return null;
+  }
+
+  const precoMinimo = (custoMaterial / divisor) * (1 + (comissaoArquiteta + margemSegunraca));
+  const precoSugerido = precoMinimo * (1 + negociacao);
+
+  const campoVAlorSegunrnçaDesperdicio = precoMinimo - precoMinimo / (1 + comissaoArquiteta + margemSegunraca);
+  const campoValorGastosOperacionais = (precoMinimo - campoVAlorSegunrnçaDesperdicio) * gastosTotais;
+  const campoValorPorcentagemImpostos = impostos;
+  const campoValorMinimo = precoMinimo;
+  const campoValorImpostos = impostos * precoMinimo;
+  const somaValotres = campoValorImpostos + custoMaterial + campoValorGastosOperacionais;
+  const campoValorMargemLucro = (campoValorMinimo - somaValotres) - margemSegunraca;
+  const campoValorSeguranca = (custoMaterial/(1-campoValorGastosOperacionais - campoValorMargemLucro - campoValorImpostos))* margemSegunraca  ;
+  const arqeuiteto = (custoMaterial/(1-campoValorGastosOperacionais - campoValorMargemLucro - campoValorImpostos))* comissaoArquiteta  ;
+  const campoValorMiudezas = custoMaterial - custoMaterial / (1 + miudezas);
+  const campoNegocia = precoSugerido - precoMinimo;
+
+  
+
+  return {
+    campoVAlorSegunrnçaDesperdicio,
+    campoValorGastosOperacionais,
+    campoValorPorcentagemImpostos,
+    campoValorMinimo,
+    campoValorImpostos,
+    campoValorSeguranca,
+    campoValorMargemLucro,
+    campoValorMiudezas,
+    campoNegocia
+  };
+}
 
 function adicionarBotaoResumoFinanceiro(blocoId) {
   const bloco = document.getElementById(blocoId);
@@ -229,67 +303,7 @@ function exibirResumoFinanceiroConsole(blocoId) {
   console.log("Valor sugerido:", valoresCalculados.campoNegocia.toFixed(2));
 }
 
-function calcularValoresFinanceiros(blocoId) {
-  const bloco = document.getElementById(blocoId);
-  if (!bloco) return null;
 
-  const inputs = bloco.querySelectorAll('input[name]');
-  const dados = {};
-  inputs.forEach(input => {
-    const nome = input.name;
-    const valor = input.value.trim().replace(',', '.').replace('R$', '');
-    dados[nome] = parseFloat(valor) || 0;
-  });
-
-  const impostos = dados.impostos / 100;
-  const margemLucro = dados.margem_lucro / 100;
-  const gastosTotais = dados.gasto_operacional / 100;
-  const negociacao = dados.margem_negociacao / 100;
-  const miudezas = dados.miudezas / 100;
-  const comissaoArquiteta = dados.comissao_arquiteta / 100;
-  const margemSegunraca = dados.margem_seguranca / 100;
-
-  const tabela = bloco.querySelector("table");
-  let materialBase = 0;
-  tabela.querySelectorAll("tbody tr").forEach(linha => {
-    const valorStr = linha.querySelector(".custo-unitario")?.textContent?.replace("R$", "").replace(",", ".");
-    const valor = parseFloat(valorStr || 0);
-    materialBase += valor;
-  });
-
-  const custoMaterial = materialBase * (1 + miudezas);
-  const divisor = 1 - (gastosTotais + margemLucro + impostos);
-  if (divisor <= 0) {
-    console.error("❌ Erro: soma dos percentuais maior ou igual a 100%");
-    return null;
-  }
-
-  const precoMinimo = (custoMaterial / divisor) * (1 + (comissaoArquiteta + margemSegunraca));
-  const precoSugerido = precoMinimo * (1 + negociacao);
-
-  const campoVAlorSegunrnçaDesperdicio = precoMinimo - precoMinimo / (1 + comissaoArquiteta + margemSegunraca);
-  const campoValorGastosOperacionais = (precoMinimo - campoVAlorSegunrnçaDesperdicio) * gastosTotais;
-  const campoValorPorcentagemImpostos = impostos;
-  const campoValorMinimo = precoMinimo;
-  const campoValorImpostos = impostos * precoMinimo;
-  const somaValotres = campoValorImpostos + custoMaterial + campoValorGastosOperacionais;
-  const campoValorSeguranca = precoMinimo - precoMinimo / (1 + comissaoArquiteta + margemSegunraca);
-  const campoValorMargemLucro = (campoValorMinimo - somaValotres) - campoValorSeguranca;
-  const campoValorMiudezas = custoMaterial - custoMaterial / (1 + miudezas);
-  const campoNegocia = precoSugerido - precoMinimo;
-
-  return {
-    campoVAlorSegunrnçaDesperdicio,
-    campoValorGastosOperacionais,
-    campoValorPorcentagemImpostos,
-    campoValorMinimo,
-    campoValorImpostos,
-    campoValorSeguranca,
-    campoValorMargemLucro,
-    campoValorMiudezas,
-    campoNegocia
-  };
-}
 
 function duplicarBlocoViaDOM(idOriginal) {
   const blocoOriginal = document.getElementById(idOriginal);

@@ -88,3 +88,59 @@
   // atualizarListaArquitetos();
 </script>
 
+
+
+
+function normalizarTextoFlex(texto) {
+  return (texto || "")
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .toLowerCase()
+    .replace(/["']/g, '')            // Remove aspas
+    .replace(/[\s\-–—_.,/]+/g, ' ')  // Troca tudo que separa por espaço único
+    .replace(/\s+/g, ' ')            // Múltiplos espaços viram um só
+    .trim();
+}
+
+function mostrarSugestoes(input, idSuffix) {
+  const termoOriginal = input.value.trim();
+  const termoNorm = normalizarTextoFlex(termoOriginal);
+
+  const termos = termoNorm.split(' ').filter(Boolean); // Cada palavra da busca
+  const container = document.getElementById(`sugestoes-${idSuffix}`);
+  if (!container) return;
+  if (termoNorm.length < 3) {
+    container.innerHTML = '';
+    return;
+  }
+
+  console.log('--- INÍCIO DA BUSCA ---');
+  console.log('Termo digitado:', termoOriginal, '|| Termos da busca:', termos);
+
+  const resultados = todosProdutos.filter(prod => {
+    const descNorm = normalizarTextoFlex(prod.descricao);
+    const corresponde = termos.every(term => descNorm.includes(term));
+    console.log(
+      `[${corresponde ? "✔️" : "❌"}] "${prod.descricao}" (${descNorm}) contém todos:`, termos, '=>', corresponde
+    );
+    return corresponde;
+  }).slice(0, 6);
+
+  sugestoesTemp[idSuffix] = resultados;
+
+  console.log('Resultados finais encontrados:', resultados);
+
+  container.innerHTML = resultados.length
+    ? `<table class="table table-sm mb-0"><tbody>${
+        resultados.map((prod, i) => `
+          <tr>
+            <td>${prod.descricao || "-"}</td>
+            <td>R$ ${parseFloat(prod.valor_unitario||0).toFixed(2)}</td>
+            <td><button class="btn btn-success btn-sm"
+                        onclick="incluirProdutoPeloIndice('${idSuffix}', ${i})">➕</button></td>
+          </tr>`).join("")
+      }</tbody></table>`
+    : `<div class="text-muted px-2">Nenhum resultado encontrado</div>`;
+
+  console.log('--- FIM DA BUSCA ---');
+}
