@@ -27,17 +27,21 @@
   <button id="btn-criar" class="sidebar-button" onclick="salvarPropostaEditavel()">
     <span class="material-icons-outlined">add_circle_outline</span><br> Duplicar Proposta
   </button>
-<style>
-  .campo-multilinha { 
-    white-space: pre-wrap;   /* preserva \n */
-    word-break: break-word;  /* evita estouro de linha */
-  }
-  @media print {
-    .campo-multilinha { 
-      white-space: pre-wrap;
-    }
-  }
-</style>
+
+ <div class="sidebar-footer">
+  <button id="btn-destravar" class="sidebar-button" onclick="destravarCampos()">
+    <span class="material-icons-outlined">lock_open</span><br> Destravar Campos
+  </button>
+</div>
+
+<script>
+function destravarCampos() {
+    document.querySelectorAll('input[readonly]').forEach(campo => {
+        campo.removeAttribute('readonly'); // Remove o readonly
+        campo.style.background = ''; // Restaura a cor padrão
+    });
+}
+</script>
 
 
 <button id="btn-planilha-custos" class="sidebar-button" onclick="gerarPlanilhaCustos()">
