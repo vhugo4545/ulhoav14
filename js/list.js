@@ -128,10 +128,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const tipoUsuario = localStorage.getItem("usuarioTipo");
     const nomeUsuario = localStorage.getItem("usuarioNome");
 
-    // Só filtra vendedor se não for admin (mantém performance)
-    if (tipoUsuario !== "admin") {
-      filteredData = filteredData.filter(item => item.vendedor === nomeUsuario);
-    }
+   filteredData = filteredData; // <- na prática, nem precisa dessa linha
 
     tableBody.innerHTML = "";
     const start = (currentPage - 1) * rowsPerPage;
