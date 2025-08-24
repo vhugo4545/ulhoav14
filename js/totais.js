@@ -58,7 +58,9 @@ function calcularValoresFinanceirosDiretoDaTabela(blocoId) {
 
   // Variáveis para totalizadores (adicionadas)
   const valorMargemSeguranca = margemSeguranca * precoMinimo;
-  const valorComissaoArquiteta = comissaoArquiteta * precoMinimo;
+  const valorComissaoArquiteta = (custoMaterial/ (1- campoValorGastosOperacionais -campoValorMargemLucro - campoValorImpostos)) * comissaoArquiteta
+
+  
 
   return {
     campoValorGastosOperacionais,
@@ -179,6 +181,7 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
   const blocos = document.querySelectorAll("[id^='bloco-']");
   const mapaAmbientes = {};
 
+  // 1) Calcula os valores de cada bloco e agrupa por ambiente
   blocos.forEach(bloco => {
     const blocoId = bloco.id;
     const valores = calcularValoresFinanceirosDiretoDaTabela(blocoId);
@@ -190,14 +193,15 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
     if (!mapaAmbientes[nomeAmbiente]) mapaAmbientes[nomeAmbiente] = [];
     mapaAmbientes[nomeAmbiente].push(valores);
 
+    // Remove e re-renderiza o totalizador interno do bloco
     bloco.querySelectorAll(".resumo-totalizador").forEach(el => el.remove());
     const div = document.createElement("div");
     div.className = "resumo-totalizador mt-4 p-4 border-top";
     div.innerHTML = gerarHtmlTotalizador(nomeAmbiente, valores);
-
     bloco.appendChild(div);
   });
 
+  // 2) Limpa container externo e recria
   document.querySelectorAll("#totalizadoresExternosPorAmbiente")?.forEach(e => e.remove());
 
   const containerResumo = document.createElement("div");
@@ -207,9 +211,10 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
 
   const checkboxes = {};
 
+  // 3) Cria um bloco externo por ambiente (consolidado)
   for (const ambiente in mapaAmbientes) {
     const ambienteId = slugify(ambiente);
-    const valores = somarValores(mapaAmbientes[ambiente]);
+    const valores = somarValores(mapaAmbientes[ambiente]); // soma todos os blocos desse ambiente
 
     const divResumo = document.createElement("div");
     divResumo.className = "resumo-totalizador mb-4 p-4 border rounded bg-light";
@@ -221,9 +226,31 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
       ${gerarHtmlTotalizador(ambiente, valores)}
     `;
     containerResumo.appendChild(divResumo);
-    checkboxes[ambienteId] = valores;
+    checkboxes[ambienteId] = valores; // guarda para cálculo do final
   }
 
+  // 4) TOTAL DA PROPOSTA (SOMA DE TODOS OS AMBIENTES) — fixo, sem desconto/checkbox
+  const listaAmbientes = Object.values(checkboxes);
+  if (listaAmbientes.length) {
+    const valoresGerais = somarValores(listaAmbientes);
+
+    // Mini-resumo compacto (opcional)
+    const mini = document.createElement("div");
+    mini.className = "bg-white border rounded p-3 mb-3 text-center";
+
+    containerResumo.appendChild(mini);
+
+    // Bloco completo com o mesmo layout dos ambientes
+    const blocoGeral = document.createElement("div");
+    blocoGeral.className = "resumo-totalizador mb-4 p-4 border rounded bg-light";
+    blocoGeral.innerHTML = `
+      <div class="fw-semibold mb-3">Total da Proposta (soma de todos os ambientes)</div>
+      ${gerarHtmlTotalizador("Proposta", valoresGerais)}
+    `;
+    containerResumo.appendChild(blocoGeral);
+  }
+
+  // 5) Campo de desconto
   const inputDesconto = document.createElement("input");
   inputDesconto.type = "text";
   inputDesconto.className = "form-control w-auto mx-auto mb-3 text-center";
@@ -232,7 +259,7 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
   inputDesconto.value = "";
   containerResumo.appendChild(inputDesconto);
 
-  // CRIA PRIMEIRO O BLOCO FINAL E PEGA O ELEMENTO DE VALOR:
+  // 6) Card do Valor Final (considera seleção via checkboxes + desconto)
   const final = document.createElement("div");
   final.className = "bg-white border border-2 rounded p-4 mb-5 text-center";
   final.innerHTML = `
@@ -243,43 +270,42 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
 
   const finalValor = final.querySelector("#valorFinalTotal");
 
-  // Só agora a função de cálculo:
   const calcularTotalFinal = () => {
     if (typeof atualizarValoresDasParcelas === "function") atualizarValoresDasParcelas();
-    let total = 0;
 
+    let total = 0;
     for (const checkbox of containerResumo.querySelectorAll(".ambiente-toggle")) {
       if (checkbox.checked) {
         const ambienteId = checkbox.dataset.ambiente;
-        total += checkboxes[ambienteId]?.campoValorFinal || 0;
+        total += checkboxes[ambienteId]?.campoValorFinal || 0; // soma Valor Sugerido dos ambientes marcados
       }
     }
 
     const desconto = inputDesconto.value.trim();
-
     if (desconto.endsWith("%")) {
       const percentual = parseFloat(desconto.replace("%", "").replace(",", ".")) / 100;
-      total -= total * percentual;
-    } else {
-      const valor = parseFloat(desconto.replace("R$", "").replace(",", ".").replace(/\s/g, ""));
-      if (!isNaN(valor)) {
-        total -= valor;
-      }
+      if (!isNaN(percentual)) total -= total * percentual;
+    } else if (desconto) {
+      const valor = parseFloat(desconto.replace("R$", "").replace(/\./g, "").replace(",", ".").replace(/\s/g, ""));
+      if (!isNaN(valor)) total -= valor;
     }
 
-    finalValor.innerHTML = `R$ ${total.toFixed(2)}`;
+    finalValor.textContent = `R$ ${total.toFixed(2)}`;
   };
 
-  // Eventos
+  // 7) Eventos
   inputDesconto.addEventListener("input", calcularTotalFinal);
   containerResumo.querySelectorAll(".ambiente-toggle").forEach(cb => {
     cb.addEventListener("change", calcularTotalFinal);
   });
 
+  // 8) Inicializa
   calcularTotalFinal();
 
-  document.querySelector("#novoOrcamentoForm")?.appendChild(containerResumo);
+  const form = document.querySelector("#novoOrcamentoForm");
+  (form || document.body).appendChild(containerResumo);
 }
+
 
 
 function monitorarMudancasAmbientes() {
