@@ -255,6 +255,13 @@ function destravarCampos() {
                     <input type="text" class="form-control" id="operadorInterno">
                   </div>
                 </div>
+                 <!-- Botão Histórico -->
+      <div class="mt-3">
+        <button id="btn-historico-mudancas" type="button" class="btn btn-warning w-100" onclick="toggleTabelaHistorico()">
+          📋 Ver Histórico de Alterações
+        </button>
+      </div>
+
               </div>
             </div>
           </div>
@@ -506,6 +513,200 @@ document.querySelectorAll('.sidebar-button').forEach(btn => {
 </script>
 
 
+<script>
+  // ==========================
+// Configurações
+// ==========================
+// Pega o nome do usuário salvo no localStorage (ou "Usuário Desconhecido" se não existir)
+window.usuarioNome = localStorage.getItem("usuarioNome") || "Usuário Desconhecido";
+
+const historicoMudancas = [];
+const LIMITE_HISTORICO = 50;
+
+// ==========================
+// Registrar alterações
+// ==========================
+function registrarAlteracao(campo, origem = "usuario/js") {
+  const usuario = window.usuarioNome || "Usuário Desconhecido";
+
+  // ====== Ignorar campos específicos ======
+  if (campo.id === "buscaProduto") return; // <<< ignora campo de busca
+
+  const nomeCampo =
+    campo.name ||
+    campo.id ||
+    campo.getAttribute("placeholder") ||
+    campo.getAttribute("aria-label") ||
+    campo.closest("td")?.innerText?.trim() ||
+    "Campo sem identificação";
+
+  const valorOriginal = campo.dataset?.valorOriginal ?? "";
+  const valorAtual = campo.value ?? campo.textContent ?? "";
+
+  // ====== Regras para ignorar ======
+  if (
+    (!valorOriginal && !valorAtual) ||              // vazio → vazio
+    (valorOriginal === "-" && valorAtual === "-") || // traço → traço
+    (nomeCampo === "Campo sem identificação") ||     // campo não identificado
+    (origem === "inclusao-tabela")                   // inclusão de tabela (já tem log próprio)
+  ) {
+    return;
+  }
+
+  // Só registra se houve mudança real
+  if (valorOriginal !== valorAtual) {
+    const registro = {
+      usuario,
+      acao: "Alteração de campo",
+      campo: nomeCampo,
+      valorOriginal: valorOriginal || "(vazio)",
+      valorAjustado: valorAtual || "(vazio)",
+      origem,
+      dataHora: new Date().toLocaleString()
+    };
+
+    historicoMudancas.push(registro);
+    if (historicoMudancas.length > LIMITE_HISTORICO) historicoMudancas.shift();
+
+    console.log(
+      `✏️ ${registro.usuario} | Campo: ${registro.campo} | ${registro.valorOriginal} ➝ ${registro.valorAjustado}`
+    );
+  }
+}
+
+
+
+function registrarInclusaoTabela(idTabela) {
+  const usuario = window.usuarioNome || "Usuário Desconhecido";
+
+  const registro = {
+    usuario,
+    acao: "Inclusão de tabela",
+    tabela: idTabela,
+    dataHora: new Date().toLocaleString()
+  };
+
+  historicoMudancas.push(registro);
+  if (historicoMudancas.length > LIMITE_HISTORICO) historicoMudancas.shift();
+
+  console.log(`📑 ${usuario} | Tabela incluída: ${idTabela}`);
+}
+
+// ==========================
+// Eventos globais
+// ==========================
+document.addEventListener("focusin", e => {
+  const campo = e.target.closest("input, select, textarea, [contenteditable='true']");
+  if (campo) campo.dataset.valorOriginal = campo.value ?? campo.textContent;
+});
+
+document.addEventListener(
+  "blur",
+  e => {
+    const campo = e.target.closest("input, select, textarea, [contenteditable='true']");
+    if (campo) registrarAlteracao(campo, "usuario");
+  },
+  true
+);
+
+// Detecta inclusão de tabelas dinamicamente
+const observer = new MutationObserver(mutations => {
+  for (const m of mutations) {
+    m.addedNodes.forEach(node => {
+      if (node.nodeType === 1 && node.matches("table[id^='tabela-bloco-']")) {
+        registrarInclusaoTabela(node.id);
+      }
+      if (node.nodeType === 1) {
+        const tabelas = node.querySelectorAll("table[id^='tabela-bloco-']");
+        tabelas.forEach(tbl => registrarInclusaoTabela(tbl.id));
+      }
+    });
+  }
+});
+observer.observe(document.body, { childList: true, subtree: true });
+
+// ==========================
+// UI - Botão e Tabela Histórico
+// ==========================
+function toggleTabelaHistorico() {
+  let tabelaDiv = document.getElementById("historico-mudancas-div");
+  const btn = document.getElementById("btn-historico-mudancas");
+
+  // Se ainda não existe a tabela → cria
+  if (!tabelaDiv) {
+    tabelaDiv = document.createElement("div");
+    tabelaDiv.id = "historico-mudancas-div";
+    tabelaDiv.className = "mt-3";
+    btn.parentNode.appendChild(tabelaDiv);
+    btn.textContent = "🔄 Atualizar Histórico"; // muda o texto do botão
+  }
+
+  // Atualiza o conteúdo SEM remover a div
+  let html = `
+    <div class="card shadow-sm">
+      <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+        Histórico de Alterações (máx. ${LIMITE_HISTORICO})
+        <button class="btn btn-sm btn-danger" onclick="limparHistoricoMudancas()">Limpar</button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Usuário</th>
+                <th>Ação</th>
+                <th>Campo/Tabela</th>
+                <th>Original</th>
+                <th>Ajustado</th>
+                <th>Data/Hora</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${
+                historicoMudancas.length === 0
+                  ? `<tr><td colspan="6" class="text-center text-muted">Nenhuma alteração registrada</td></tr>`
+                  : historicoMudancas
+                      .map(r => `
+                        <tr>
+                          <td>${r.usuario}</td>
+                          <td>${r.acao}</td>
+                          <td>${r.campo || r.tabela || "-"}</td>
+                          <td>${r.valorOriginal || "-"}</td>
+                          <td>${r.valorAjustado || "-"}</td>
+                          <td>${r.dataHora}</td>
+                        </tr>
+                      `)
+                      .join("")
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  tabelaDiv.innerHTML = html;
+}
+
+// ==========================
+// Funções utilitárias
+// ==========================
+function verHistoricoMudancas() {
+  if (historicoMudancas.length === 0) {
+    console.warn("Nenhuma alteração registrada ainda.");
+  } else {
+    console.table(historicoMudancas);
+  }
+}
+
+function limparHistoricoMudancas() {
+  historicoMudancas.length = 0;
+  console.info("Histórico de mudanças limpo.");
+  const div = document.getElementById("historico-mudancas-div");
+  if (div) toggleTabelaHistorico(); // atualiza
+}
+
+</script>
 
 </body>
 
