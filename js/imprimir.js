@@ -170,6 +170,11 @@ function mostrarPopupSelecaoGruposEstetico(grupos, valorFinal, onConfirmar) {
 
 
 
+// Função auxiliar para formatar valores em Real
+function formatarReal(valor) {
+  return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
 // 3. Função que realmente gera o HTML da impressão
 function gerarHTMLParaImpressao(gruposOcultarProduto) {
   const getValue = id => document.getElementById(id)?.value || "-";
@@ -280,9 +285,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
               ${g.resumoGrupo ? `<tr><td colspan="3"><em>${g.resumoGrupo}</em></td></tr>` : ""}
             </tbody>
           </table>
-          <div class="text-end p-2 bg-light">
-        
-          </div>
         </div>`;
     });
 
@@ -290,11 +292,10 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     corpoHTML += `
       <div class="border p-2 mt-2 text-end bg-light">
         <strong>Total do Ambiente ${nomeAmbiente.toUpperCase()}:</strong> 
-        R$ ${valorTotalAmbiente.toFixed(2).replace('.', ',')}
+        ${formatarReal(valorTotalAmbiente)}
       </div>
     `;
   });
-
 
   // 5. Totalizadores gerais
   const valorFinalComDescontoStr = document.getElementById("valorFinalTotal")?.textContent || "R$ 0,00";
@@ -305,12 +306,12 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
 
   corpoHTML += temDescontoValido ? `
     <div class="border p-2 text-end mt-4 bg-light">
-      <div><strong>Total Bruto:</strong> R$ ${totalGeral.toFixed(2).replace('.', ',')}</div>
-      <div><strong>Desconto Aplicado:</strong> R$ ${descontoAplicado.toFixed(2).replace('.', ',')}</div>
-      <div class="fw-bold fs-5 text-success"><strong>Total com Desconto:</strong> R$ ${valorFinalComDesconto.toFixed(2).replace('.', ',')}</div>
+      <div><strong>Total Bruto:</strong> ${formatarReal(totalGeral)}</div>
+      <div><strong>Desconto Aplicado:</strong> ${formatarReal(descontoAplicado)}</div>
+      <div class="fw-bold fs-5 text-success"><strong>Total com Desconto:</strong> ${formatarReal(valorFinalComDesconto)}</div>
     </div>` : `
     <div class="border p-2 text-end mt-4 bg-light">
-      <div class="fw-bold">Total Geral: R$ ${totalGeral.toFixed(2).replace('.', ',')}</div>
+      <div class="fw-bold">Total Geral: ${formatarReal(totalGeral)}</div>
     </div>`;
 
   // 6. Condições gerais
@@ -382,3 +383,4 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
   }
   abrirJanelaParaImpressao(htmlCompleto);
 }
+

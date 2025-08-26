@@ -110,56 +110,57 @@ return `
   <div class="row text-center gx-4 gy-3">
     <div class="col">
       <div class="text-muted small">Miudezas</div>
-      <div class="fw-bold">R$ ${valores.campoValorMiudezas.toFixed(2)}</div>
+      <div class="fw-bold">${valores.campoValorMiudezas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
       <div class="text-secondary small">${porcentagem(valores.campoValorMiudezas)}</div>
     </div>
     <div class="col">
       <div class="text-muted small">Gastos <br>Operacionais</div>
-      <div class="fw-bold">R$ ${valores.campoValorGastosOperacionais.toFixed(2)}</div>
+      <div class="fw-bold">${valores.campoValorGastosOperacionais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
       <div class="text-secondary small">${porcentagem(valores.campoValorGastosOperacionais)}</div>
     </div>
     <div class="col">
       <div class="text-muted small">Impostos</div>
-      <div class="fw-bold">R$ ${valores.campoValorImpostos.toFixed(2)}</div>
+      <div class="fw-bold">${valores.campoValorImpostos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
       <div class="text-secondary small">${porcentagem(valores.campoValorImpostos)}</div>
     </div>
     <div class="col">
       <div class="text-muted small">Margem de <br>Segurança</div>
-      <div class="fw-bold">R$ ${margemSeguranca.toFixed(2)}</div>
+      <div class="fw-bold">${margemSeguranca.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
       <div class="text-secondary small">${porcentagem(margemSeguranca)}</div>
     </div>
     <div class="col">
       <div class="text-muted small">Comissão <br>Arquiteta</div>
-      <div class="fw-bold">R$ ${comissaoArquiteta.toFixed(2)}</div>
+      <div class="fw-bold">${comissaoArquiteta.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
       <div class="text-secondary small">${porcentagem(comissaoArquiteta)}</div>
     </div>
     <div class="col">
       <div class="text-muted small">Margem de <br>Negociação</div>
-      <div class="fw-bold">R$ ${campoNegociacao.toFixed(2)}</div>
+      <div class="fw-bold">${campoNegociacao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
       <div class="text-secondary small">${porcentagem(campoNegociacao)}</div>
     </div>
     <div class="col">
       <div class="text-muted small">Custo Total <br>de Material</div>
-      <div class="fw-bold">R$ ${custoTotalMaterial.toFixed(2)}</div>
+      <div class="fw-bold">${custoTotalMaterial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
       <div class="text-secondary small">–</div>
     </div>
     <div class="col">
       <div class="text-muted small">Valor <br>Mínimo</div>
-      <div class="fw-bold">R$ ${valores.campoValorMinimo.toFixed(2)}</div>
+      <div class="fw-bold">${valores.campoValorMinimo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
       <div class="text-secondary small">100%</div>
     </div>
     <div class="col">
       <div class="text-muted small">Valor <br>Sugerido</div>
-      <div class="fw-bold">R$ ${valores.campoValorFinal.toFixed(2)}</div>
+      <div class="fw-bold">${valores.campoValorFinal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
       <div class="text-secondary small">${porcentagem(valores.campoValorFinal)}</div>
     </div>
     <div class="col">
       <div class="text-muted small">Margem de <br>Lucro</div>
-      <div class="fw-bold">R$ ${valores.campoValorMargemLucro.toFixed(2)}</div>
+      <div class="fw-bold">${valores.campoValorMargemLucro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
       <div class="text-secondary small">${porcentagem(valores.campoValorMargemLucro)}</div>
     </div>
   </div>
 `;
+
 
 }
 
