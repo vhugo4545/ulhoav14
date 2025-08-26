@@ -261,7 +261,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       corpoHTML += `
         <div class="mt-4 border">
           <div class="fw-bold border p-2 bg-light text-center">
-            AMBIENTE: ${nomeAmbiente.toUpperCase()} — Grupo ${i + 1}
+            AMBIENTE: ${nomeAmbiente.toUpperCase()} 
           </div>
           <table class="table table-sm table-bordered w-100">
             <thead class="table-light">
