@@ -281,7 +281,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
             </tbody>
           </table>
           <div class="text-end p-2 bg-light">
-            <strong>Total do Grupo:</strong> R$ ${g.totalGrupo.toFixed(2).replace('.', ',')}
+        
           </div>
         </div>`;
     });
@@ -295,30 +295,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     `;
   });
 
-  // 4. Resumo dos ambientes
-  corpoHTML += `
-    <div class="border p-3 mt-4">
-      <h5 class="mb-3" style="font-size:1.11em">Resumo dos Totais por Ambiente</h5>
-      <table class="table table-bordered table-sm w-100 mb-0">
-        <thead>
-          <tr>
-            <th style="width:40%">Total do Ambiente</th>
-            <th>Ambiente</th>
-            <th style="width:22%">Valor</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${ambienteTotais.map(a => `
-            <tr>
-              <td><strong>Total do Ambiente</strong></td>
-              <td>${a.nome}</td>
-              <td><strong>R$ ${a.total.toFixed(2).replace('.', ',')}</strong></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
 
   // 5. Totalizadores gerais
   const valorFinalComDescontoStr = document.getElementById("valorFinalTotal")?.textContent || "R$ 0,00";
