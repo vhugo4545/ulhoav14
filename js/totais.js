@@ -57,10 +57,26 @@ function calcularValoresFinanceirosDiretoDaTabela(blocoId) {
   const campoNegociacao = precoSugerido - precoMinimo; // MARGEM NEGOCIAÇÃO
 
   // Variáveis para totalizadores (adicionadas)
-  const valorMargemSeguranca = margemSeguranca * precoMinimo;
-  const valorComissaoArquiteta = (custoMaterial/ (1- campoValorGastosOperacionais -campoValorMargemLucro - campoValorImpostos)) * comissaoArquiteta
-
+  const valorMargemSeguranca =  (custoMaterial + campoValorGastosOperacionais + campoValorMargemLucro + campoValorImpostos) 
+  * (margemSeguranca );
   
+
+console.log("➡️ ok Custo Total de Material:", custoMaterial);
+console.log("➡️ ok Gastos Operacionais:", campoValorGastosOperacionais);
+console.log("➡️ ok Margem de Lucro:", campoValorMargemLucro);
+console.log("➡️ ok Impostos:", campoValorImpostos);
+console.log("➡️ Comissão Arquiteta (%):", comissaoArquiteta);
+
+const valorComissaoArquiteta = 
+  (custoMaterial + campoValorGastosOperacionais + campoValorMargemLucro + campoValorImpostos) 
+  * (comissaoArquiteta );
+
+
+
+
+console.log("➡️ Valor Final Comissão Arquiteta:", valorComissaoArquiteta);
+
+  console.log("Valor arquiteto",valorComissaoArquiteta)
 
   return {
     campoValorGastosOperacionais,
@@ -90,60 +106,61 @@ function gerarHtmlTotalizador(nomeAmbiente, valores) {
   const margemSeguranca = Number(valores.margem_seguranca) || 0;
   const campoNegociacao = Number(valores.campoNegociacao) || 0;
 
-  return `
-    <div class="row text-center gx-4 gy-3">
-      <div class="col">
-        <div class="text-muted small">Gastos Operacionais</div>
-        <div class="fw-bold">R$ ${valores.campoValorGastosOperacionais.toFixed(2)}</div>
-        <div class="text-secondary small">${porcentagem(valores.campoValorGastosOperacionais)}</div>
-      </div>
-      <div class="col">
-        <div class="text-muted small">Margem de <br>Lucro</div>
-        <div class="fw-bold">R$ ${valores.campoValorMargemLucro.toFixed(2)}</div>
-        <div class="text-secondary small">${porcentagem(valores.campoValorMargemLucro)}</div>
-      </div>
-      <div class="col">
-        <div class="text-muted small">Comissão <br>Arquiteta</div>
-        <div class="fw-bold">R$ ${comissaoArquiteta.toFixed(2)}</div>
-        <div class="text-secondary small">${porcentagem(comissaoArquiteta)}</div>
-      </div>
-      <div class="col">
-        <div class="text-muted small">Impostos<br><P></div>
-        <div class="fw-bold">R$ ${valores.campoValorImpostos.toFixed(2)}</div>
-        <div class="text-secondary small">${porcentagem(valores.campoValorImpostos)}</div>
-      </div>
-      <div class="col">
-        <div class="text-muted small">Custo Total <br>de Material</div>
-        <div class="fw-bold">R$ ${custoTotalMaterial.toFixed(2)}</div>
-        <div class="text-secondary small">–</div>
-      </div>
-      <div class="col">
-        <div class="text-muted small">Valor<br> Mínimo</div>
-        <div class="fw-bold">R$ ${valores.campoValorMinimo.toFixed(2)}</div>
-        <div class="text-secondary small">100%</div>
-      </div>
-      <div class="col">
-        <div class="text-muted small">Miudezas<br><P></div>
-        <div class="fw-bold">R$ ${valores.campoValorMiudezas.toFixed(2)}</div>
-        <div class="text-secondary small">${porcentagem(valores.campoValorMiudezas)}</div>
-      </div>
-      <div class="col">
-        <div class="text-muted small">Margem de <br>Segurança</div>
-        <div class="fw-bold">R$ ${margemSeguranca.toFixed(2)}</div>
-        <div class="text-secondary small">${porcentagem(margemSeguranca)}</div>
-      </div>
-      <div class="col">
-        <div class="text-muted small">Valor<br> Sugerido</div>
-        <div class="fw-bold">R$ ${valores.campoValorFinal.toFixed(2)}</div>
-        <div class="text-secondary small">${porcentagem(valores.campoValorFinal)}</div>
-      </div>
-      <div class="col">
-        <div class="text-muted small">Margem de <br>Negociação</div>
-        <div class="fw-bold">R$ ${campoNegociacao.toFixed(2)}</div>
-        <div class="text-secondary small">${porcentagem(campoNegociacao)}</div>
-      </div>
+return `
+  <div class="row text-center gx-4 gy-3">
+    <div class="col">
+      <div class="text-muted small">Miudezas</div>
+      <div class="fw-bold">R$ ${valores.campoValorMiudezas.toFixed(2)}</div>
+      <div class="text-secondary small">${porcentagem(valores.campoValorMiudezas)}</div>
     </div>
-  `;
+    <div class="col">
+      <div class="text-muted small">Gastos <br>Operacionais</div>
+      <div class="fw-bold">R$ ${valores.campoValorGastosOperacionais.toFixed(2)}</div>
+      <div class="text-secondary small">${porcentagem(valores.campoValorGastosOperacionais)}</div>
+    </div>
+    <div class="col">
+      <div class="text-muted small">Impostos</div>
+      <div class="fw-bold">R$ ${valores.campoValorImpostos.toFixed(2)}</div>
+      <div class="text-secondary small">${porcentagem(valores.campoValorImpostos)}</div>
+    </div>
+    <div class="col">
+      <div class="text-muted small">Margem de <br>Segurança</div>
+      <div class="fw-bold">R$ ${margemSeguranca.toFixed(2)}</div>
+      <div class="text-secondary small">${porcentagem(margemSeguranca)}</div>
+    </div>
+    <div class="col">
+      <div class="text-muted small">Comissão <br>Arquiteta</div>
+      <div class="fw-bold">R$ ${comissaoArquiteta.toFixed(2)}</div>
+      <div class="text-secondary small">${porcentagem(comissaoArquiteta)}</div>
+    </div>
+    <div class="col">
+      <div class="text-muted small">Margem de <br>Negociação</div>
+      <div class="fw-bold">R$ ${campoNegociacao.toFixed(2)}</div>
+      <div class="text-secondary small">${porcentagem(campoNegociacao)}</div>
+    </div>
+    <div class="col">
+      <div class="text-muted small">Custo Total <br>de Material</div>
+      <div class="fw-bold">R$ ${custoTotalMaterial.toFixed(2)}</div>
+      <div class="text-secondary small">–</div>
+    </div>
+    <div class="col">
+      <div class="text-muted small">Valor <br>Mínimo</div>
+      <div class="fw-bold">R$ ${valores.campoValorMinimo.toFixed(2)}</div>
+      <div class="text-secondary small">100%</div>
+    </div>
+    <div class="col">
+      <div class="text-muted small">Valor <br>Sugerido</div>
+      <div class="fw-bold">R$ ${valores.campoValorFinal.toFixed(2)}</div>
+      <div class="text-secondary small">${porcentagem(valores.campoValorFinal)}</div>
+    </div>
+    <div class="col">
+      <div class="text-muted small">Margem de <br>Lucro</div>
+      <div class="fw-bold">R$ ${valores.campoValorMargemLucro.toFixed(2)}</div>
+      <div class="text-secondary small">${porcentagem(valores.campoValorMargemLucro)}</div>
+    </div>
+  </div>
+`;
+
 }
 
 
