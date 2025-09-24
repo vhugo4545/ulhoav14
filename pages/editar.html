@@ -86,7 +86,300 @@ function destravarCampos() {
   <button id="btn-atualizar-precos" class="sidebar-button" onclick="atualizarPrecosOmieNaDOM()">
     <span class="material-icons-outlined">sync</span><br>  Atualizar Preços da Omie
   </button>
+
+
+  <button id="btn-enviar-cliente" class="sidebar-button" 
+        onclick="openOsPopup({ endpoint: 'http://localhost:3000/os' })">
+  <span class="material-icons-outlined">send</span><br> Modulo de Serviços
+</button>
+
+<style>
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#f6f7fb; margin:0; padding:24px; }
+  .btn { padding:10px 16px; border:none; border-radius:10px; cursor:pointer; font-weight:600; }
+  .btn-primary { background:#2563eb; color:#fff; }
+  .btn-secondary { background:#e5e7eb; }
+  pre { background:#0b1020; color:#d1e7ff; padding:12px; border-radius:12px; overflow:auto; }
+
+  /* Popup */
+  .os-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+  .os-modal{width:100%;max-width:720px;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:18px;max-height:95vh;overflow:auto}
+  .os-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .os-input{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font:14px system-ui}
+  .os-label{font:600 13px system-ui;color:#111;margin-bottom:6px;display:block}
+  .os-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+  .os-btn{padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font:600 14px system-ui}
+  .os-btn-primary{background:#2563eb;color:#fff}
+  .os-btn-secondary{background:#e5e7eb}
+  .os-card{border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:12px}
+  .os-title{font:600 16px system-ui;margin:0 0 8px}
+  .os-muted{font:12px system-ui;color:#6b7280}
+</style>
+
+<script>
+let CLIENTES_CACHE = [];
+
+// pré-carregar clientes assim que a página abrir
+async function carregarClientesNaAbertura() {
+  try {
+    const resp = await fetch("http://localhost:3000/clientes");
+    const data = await resp.json();
+    if (data && Array.isArray(data.clientes)) {
+      CLIENTES_CACHE = data.clientes;
+      console.log("✅ Clientes pré-carregados:", CLIENTES_CACHE.length);
+    } else {
+      console.warn("⚠️ Resposta inesperada da rota /clientes:", data);
+    }
+  } catch (err) {
+    console.error("❌ Erro ao carregar clientes:", err);
+  }
+}
+window.addEventListener("DOMContentLoaded", carregarClientesNaAbertura);
+
+// função para buscar código Omie pela razão social no cache
+function getCodigoClientePorRazao(razaoSocial) {
+  if (!CLIENTES_CACHE.length) {
+    console.warn("⚠️ Clientes ainda não carregados, retornando fallback.");
+    return "cliente não compartilhado entre bases";
+  }
+  const encontrado = CLIENTES_CACHE.find(c =>
+    String(c.nome_fantasia || "").toLowerCase().includes(razaoSocial.toLowerCase())
+  );
+  return encontrado ? encontrado.codigo_cliente_omie : "cliente não compartilhado entre bases";
+}
+
+async function openOsPopup({ endpoint = "http://localhost:3000/os" } = {}) {
+  const ENDPOINT = endpoint;
+  const $ = (sel, root=document) => root.querySelector(sel);
+
+  // helpers
+  function brlToNumber(v){ if(typeof v!=="string") return Number(v)||0; return Number(v.replace(/\./g,"").replace(",", "."))||0; }
+  function numberToBRL(n){ return (new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(n||0))).replace("R$","").trim(); }
+  function parseMoneyLoose(txt){
+    if(!txt) return 0;
+    let s=String(txt).replace(/[^\d.,-]/g,"");
+    const last=Math.max(s.lastIndexOf(","), s.lastIndexOf("."));
+    let i=s,f=""; if(last>=0){ i=s.slice(0,last); f=s.slice(last+1); }
+    i=i.replace(/[^\d-]/g,""); f=f.replace(/[^\d]/g,"");
+    const num=Number(i+(f? "."+f:"")); return isNaN(num)?0:num;
+  }
+
+  // pega valores da página
+  const orcEl = document.getElementById("numeroOrcamento");
+  const cCodIntOSValue =
+    (orcEl?.value && String(orcEl.value).trim()) ||
+    (orcEl?.dataset?.valorOriginal && String(orcEl.dataset.valorOriginal).trim()) || "";
+
+  // pega razão social e busca código Omie no cache
+  const razaoEl = document.querySelector("input.form-control.razaoSocial");
+  const razaoSocialValue =
+    (razaoEl?.value && String(razaoEl.value).trim()) ||
+    (razaoEl?.dataset?.valorOriginal && String(razaoEl.dataset.valorOriginal).trim()) || "";
+
+  let nCodCliValue = "cliente não compartilhado entre bases";
+  if (razaoSocialValue) {
+    nCodCliValue = getCodigoClientePorRazao(razaoSocialValue);
+  }
+
+  const valorFinalTxt = $("#valorFinalTotal")?.textContent?.trim() || "R$ 0,00";
+  const valorTotalNum = parseMoneyLoose(valorFinalTxt);
+  const prefillValor  = numberToBRL(valorTotalNum);
+
+  // monta popup
+  const backdrop = document.createElement("div");
+  backdrop.className = "os-backdrop";
+  Object.assign(backdrop.style, {
+    position:"fixed", inset:"0", background:"rgba(0,0,0,.45)",
+    display:"flex", alignItems:"center", justifyContent:"center",
+    zIndex:"9999", padding:"16px"
+  });
+  backdrop.setAttribute("aria-hidden","true");
+
+  backdrop.innerHTML = `
+    <div class="os-modal" role="dialog" aria-modal="true" aria-labelledby="os-title"
+         style="width:100%;max-width:720px;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:18px;max-height:95vh;overflow:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 class="os-title" id="os-title" style="font:600 16px system-ui">Módulo de Serviços</h3>
+        <button class="os-btn os-btn-secondary" id="os-close" type="button"
+                style="padding:10px 14px;border-radius:10px;border:none;background:#e5e7eb;cursor:pointer;font:600 14px system-ui">Fechar</button>
+      </div>
+
+      <!-- Cabeçalho -->
+      <div class="os-row">
+        <div>
+          <label class="os-label">Número do orçamento (cCodIntOS)</label>
+          <input class="os-input" id="os-cCodIntOS" value="${cCodIntOSValue}">
+        </div>
+        <div>
+          <label class="os-label">Código do cliente (nCodCli)</label>
+          <input class="os-input" id="os-nCodCli" value="${nCodCliValue}">
+        </div>
+      </div>
+
+      <div class="os-row" style="margin-top:12px">
+        <div>
+          <label class="os-label">Quantidade de parcelas (nQtdeParc)</label>
+          <input class="os-input" id="os-nQtdeParc" type="number" min="1" step="1" value="1">
+        </div>
+        <div>
+          <label class="os-label">Data de previsão (DD/MM/AAAA) (dDtPrevisao)</label>
+          <input class="os-input" id="os-dDtPrevisao" value="14/09/2025">
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <label class="os-label">Observações da NF (cDadosAdicNF)</label>
+        <input class="os-input" id="os-cDadosAdicNF" value="OS incluída via API • Orçamento ${cCodIntOSValue}">
+      </div>
+
+      <!-- Serviço -->
+      <div class="os-card">
+        <div class="os-title">Serviço (valor final com desconto)</div>
+        <div class="os-muted">Será enviado 1 item em <code>ServicosPrestados</code> com <b>nQtde = 1</b> e <b>nValUnit = Valor final</b>.</div>
+
+        <div class="os-row" style="margin-top:10px">
+          <div>
+            <label class="os-label">Valor total (R$)</label>
+            <input class="os-input" id="os-valorTotal" inputmode="decimal" value="${prefillValor}">
+          </div>
+          <div>
+            <label class="os-label">Desconto (%)</label>
+            <input class="os-input" id="os-percent" type="number" step="0.01" value="0">
+          </div>
+        </div>
+
+        <div class="os-row" style="margin-top:10px">
+          <div>
+            <label class="os-label">Valor final (R$)</label>
+            <input class="os-input" id="os-resultado" readonly>
+          </div>
+          <div>
+            <label class="os-label">Quantidade do serviço (nQtde)</label>
+            <input class="os-input" id="os-s2nQtde" type="number" min="1" value="1" readonly>
+          </div>
+        </div>
+      </div>
+
+      <div class="os-actions">
+        <button class="os-btn os-btn-secondary" id="os-cancel" type="button">Cancelar</button>
+        <button class="os-btn os-btn-primary" id="os-submit" type="button">Enviar OS</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+
+  // acessibilidade/controle
+  function show(){ backdrop.style.display="flex"; backdrop.setAttribute("aria-hidden","false"); }
+  function hide(){ backdrop.style.display="none"; backdrop.setAttribute("aria-hidden","true"); }
+  function cleanup(){ try{backdrop.remove()}catch{} }
+  show();
+
+  // refs
+  const btnClose   = $("#os-close", backdrop);
+  const btnCancel  = $("#os-cancel", backdrop);
+  const btnSubmit  = $("#os-submit", backdrop);
+
+  const inpCodInt  = $("#os-cCodIntOS", backdrop);
+  const inpCli     = $("#os-nCodCli", backdrop);
+  const inpParc    = $("#os-nQtdeParc", backdrop);
+  const inpData    = $("#os-dDtPrevisao", backdrop);
+  const inpAdicNF  = $("#os-cDadosAdicNF", backdrop);
+
+  const inpTotal   = $("#os-valorTotal", backdrop);
+  const inpPercent = $("#os-percent", backdrop);
+  const inpRes     = $("#os-resultado", backdrop);
+  const inpS2Qtde  = $("#os-s2nQtde", backdrop);
+
+  // cálculo: valor final = total - desconto(%)
+  function calc(){
+    const base = brlToNumber(inpTotal.value);
+    const p = Number(inpPercent.value)||0;
+    const final = base * (1 - p/100);
+    inpRes.value = numberToBRL(final);
+  }
+  inpTotal.addEventListener("input", calc);
+  inpPercent.addEventListener("input", calc);
+  calc();
+
+  // fechar
+  const closeAll = () => { hide(); cleanup(); };
+  btnClose.onclick = closeAll;
+  btnCancel.onclick = closeAll;
+  backdrop.addEventListener("keydown", e => { if(e.key==="Escape") closeAll(); });
+
+  // enviar
+  btnSubmit.onclick = async () => {
+    const missing = [];
+    if (!inpCodInt.value)            missing.push("Número do orçamento (cCodIntOS)");
+    if (!inpData.value)              missing.push("Data de previsão (dDtPrevisao)");
+    if (!inpCli.value || inpCli.value === "cliente não compartilhado entre bases") missing.push("Código do cliente (nCodCli)");
+    if (!(Number(inpParc.value) > 0))missing.push("Quantidade de parcelas (nQtdeParc)");
+
+    const nValUnitFinal = brlToNumber(inpRes.value || "0");
+    if (!(nValUnitFinal > 0)) missing.push("Valor final (R$)");
+
+    if (missing.length) {
+      alert("Preencha: " + missing.join(", "));
+      return;
+    }
+
+    const payload = {
+      Cabecalho: {
+        cCodIntOS: String(inpCodInt.value).trim(),
+        cCodParc: "999",
+        cEtapa: "20",
+        dDtPrevisao: String(inpData.value).trim(),
+        nCodCli: Number(inpCli.value),
+        nQtdeParc: Number(inpParc.value)
+      },
+      Departamentos: [],
+      Email: { cEnvBoleto:"N", cEnvLink:"N", cEnviarPara:"teste@omie.com.br" },
+      InformacoesAdicionais: {
+        cCodCateg: "1.02.02",
+        cDadosAdicNF: String(inpAdicNF.value).trim(),
+        nCodCC: 10937506623
+      },
+      ServicosPrestados: [
+        {
+          cCodServLC116: "7.01",
+          cCodServMun:   "0701-0/01-88",
+          cRetemISS:     "N",
+          cTribServ:     "01",
+          impostos: { cRetemIRRF:"N", cRetemPIS:"N", nAliqIRRF:0, nAliqISS:0, nAliqPIS:0 },
+          nQtde: 1,
+          nValUnit: nValUnitFinal
+        }
+      ]
+    };
+
+    try {
+      const resp = await fetch(ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+      const out = document.getElementById("saida");
+      if (out) out.textContent = JSON.stringify(data, null, 2);
+      alert(data.ok ? "OS enviada com sucesso!" : ("Falha: " + (data.error || "Erro")));
+      closeAll();
+    } catch (err) {
+      const out = document.getElementById("saida");
+      if (out) out.textContent = "Erro de conexão: " + (err?.message || err);
+      alert("Erro de conexão com o servidor.");
+      closeAll();
+    }
+  };
+}
+</script>
+
+
+
+
+
+
 </div>
+
+
 
 <script>
   function redirecionarParaEdicao() {
