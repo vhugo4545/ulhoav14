@@ -89,7 +89,7 @@ function destravarCampos() {
 
 
   <button id="btn-enviar-cliente" class="sidebar-button" 
-        onclick="openOsPopup({ endpoint: 'http://localhost:3000/os' })">
+        onclick="openOsPopup({ endpoint: 'https://ulhoa-servico-ec4e1aa95355.herokuapp.com/' })">
   <span class="material-icons-outlined">send</span><br> Modulo de Serviços
 </button>
 
@@ -121,7 +121,7 @@ let CLIENTES_CACHE = [];
 // pré-carregar clientes assim que a página abrir
 async function carregarClientesNaAbertura() {
   try {
-    const resp = await fetch("http://localhost:3000/clientes");
+    const resp = await fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes");
     const data = await resp.json();
     if (data && Array.isArray(data.clientes)) {
       CLIENTES_CACHE = data.clientes;
@@ -147,7 +147,7 @@ function getCodigoClientePorRazao(razaoSocial) {
   return encontrado ? encontrado.codigo_cliente_omie : "cliente não compartilhado entre bases";
 }
 
-async function openOsPopup({ endpoint = "http://localhost:3000/os" } = {}) {
+async function openOsPopup({ endpoint = "https://ulhoa-servico-ec4e1aa95355.herokuapp.com/os" } = {}) {
   const ENDPOINT = endpoint;
   const $ = (sel, root=document) => root.querySelector(sel);
 
