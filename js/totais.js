@@ -356,15 +356,6 @@ function atualizarValoresDasParcelas() {
     let soma = 0;
 
     linhas.forEach((linha) => {
-      const inputValor = linha.querySelector(".valor-parcela");
-      if (!inputValor) return;
-
-      const valor = parseFloat(valorPorParcela.toFixed(2));
-      soma += valor;
-
-      // Mantém formato com ponto decimal
-      inputValor.value = `R$ ${valor.toFixed(2)}`;
-      inputValor.setAttribute("data-percentual", ((valor / total) * 100).toFixed(2));
     });
 
     // Atualiza total das parcelas

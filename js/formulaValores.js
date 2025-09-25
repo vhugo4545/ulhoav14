@@ -425,37 +425,44 @@ function inserirCheckboxResumo(idSuffix) {
 
 // Função para atualizar resumo do grupo
 function atualizarResumoDoGrupo(idSuffix) {
-  inserirCheckboxResumo(idSuffix);
-
-  const checkbox = document.getElementById(`checkboxResumoManual-${idSuffix}`);
-  const textarea = document.getElementById(`resumo-${idSuffix}`);
-
-  // Se não existe, não faz nada
-  if (!textarea) return;
-
-  // Se modo manual estiver ativado, não atualiza
-  if (checkbox?.checked) {
-    console.log("Resumo do grupo NÃO foi atualizado pois está em modo manual.");
-    return;
-  }
-
-  // Atualiza automaticamente se não estiver em modo manual
-  const tabela = document.querySelector(`#tabela-${idSuffix} tbody`);
-  const linhas = tabela?.querySelectorAll("tr") || [];
-  const alturaMontante = document.querySelector(`#collapse-${idSuffix} input[name='altura_montante']`)?.value || "";
-
-  const primeiro = linhas[0]?.querySelector("td:nth-child(2)")?.textContent?.trim() || "";
-  const segundo = linhas[1]?.querySelector("td:nth-child(2)")?.textContent?.trim() || "";
-
-  if (!window.location.pathname.includes("editar.html")) {
-  const resumo = `${primeiro}\nem ${segundo}\nAltura do Montante: ${alturaMontante} m \nAltura Final:\nFixação:`;
-  textarea.value = resumo;
-  console.log("Resumo do grupo atualizado automaticamente (modo automático).");
-}
+  
 }
 
 
 // Pare aqui
+// Mapeamento: interno -> label visível
+const labelsParametros = {
+  miudezas: "Miudezas",
+  gasto_operacional: "Gastos Operacionais",
+  impostos: "Impostos",
+  margem_seguranca: "Margem de Segurança",
+  comissao_arquiteta: "Comissão Arquiteta",
+  margem_negociacao: "Margem de Negociação",
+  numero_montantes: "Nº de Montantes / Fixações",
+  altura_montante: "Altura do Montante",
+  numero_protecoes: "Número de Proteções / Altura do Vidro",
+  margem_lucro: "Margem de Lucro",
+  descricao: "Metragem / Unidade(s)"
+};
+
+// Ordem para exibição no front
+const ordemParametros = [
+  "miudezas",
+  "gasto_operacional",
+  "impostos",
+  "margem_seguranca",
+  "comissao_arquiteta",
+  "margem_negociacao",
+  "numero_montantes",
+  "altura_montante",
+  "numero_protecoes",
+  "margem_lucro",
+  "descricao"
+];
+
+// ----------------------------
+// Função principal
+// ----------------------------
 function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
   const idSuffix = `bloco-${blocoIndex++}`;
   const container = document.getElementById("blocosProdutosContainer");
@@ -466,15 +473,8 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
 
   const estaEditandoModelo = window.location.pathname.includes("editarModelo.html");
 
-  const parametros = [
-    "miudezas", "gasto_operacional", "impostos", "margem_lucro",
-    "margem_seguranca", "comissao_arquiteta", "margem_negociacao",
-    "altura_montante", "numero_montantes", "numero_protecoes", "descricao"
-  ];
-
   const camposFinanceiros = [
-    { label: "Custo Total de Material", name: "custoTotalMaterial" },
-
+    { label: "Custo Total de Material", name: "custoTotalMaterial" }
   ];
 
   const bloco = document.createElement("div");
@@ -519,9 +519,9 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                 <div class="tab-content pt-3">
                   <div class="tab-pane fade show active" id="${idSuffix}-aba1">
                     <form class="row g-2">
-                      ${parametros.map(param => `
+                      ${ordemParametros.map(param => `
                         <div class="col-6">
-                          <label class="form-label">${param.replace(/_/g, ' ')}</label>
+                          <label class="form-label">${labelsParametros[param]}</label>
                           <input type="text" name="${param}" class="form-control form-control-sm"
                             ${(!estaEditandoModelo && !["altura_montante", "numero_montantes", "numero_protecoes", "descricao", "comissao_arquiteta", "margem_negociacao","margem_seguranca","margem_lucro"].includes(param))
                               ? "readonly style='background:#f3f3f3'" : ""}>
@@ -573,8 +573,7 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                     </tfoot>
                   </table>
                   <div class="mt-3">
-                 
-                    <textarea id="resumo-${idSuffix}" class="form-control form-control-sm" rows="6" ></textarea>
+                    <textarea id="resumo-${idSuffix}" class="form-control form-control-sm" rows="6"></textarea>
                   </div>
                 </div>
               </div>
@@ -625,16 +624,12 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
   if (window.location.pathname.includes("criar.html")) {
     setTimeout(() => {
       atualizarPrecosOmieNaDOM();
-
-     //ativarInputsDescricaoComDelay();
     }, 1000);
-    // Chame a função quando quiser (após montar o DOM ou quando trocar o nome do grupo)
-
-
   }
 
   return idSuffix;
 }
+
 
 
 function ativarInputsDescricaoComDelay() {

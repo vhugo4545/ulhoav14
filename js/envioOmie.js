@@ -122,6 +122,7 @@ async function atualizarNaOmie() {
       if (resposta.ok) {
         mostrarPopupCustomizado("✅ Sucesso!", "Pedido enviado com sucesso à Omie.", "success");
         console.log("📤 Enviado à Omie:", data);
+
       } else {
         mostrarPopupCustomizado("❌ Erro ao enviar", data?.erro || "Erro desconhecido ao enviar pedido.", "error");
         console.error("❌ Erro:", data);
@@ -225,38 +226,67 @@ async function gerarPayloadOmie() {
   });
 
   // 💳 Parcelas
-  let somaParcelas = 0;
-  linhasParcelas.forEach((linha, i) => {
-    const valorStr = linha.querySelector(".valor-parcela")?.value?.replace("R$", "").replace(/\./g, "").replace(",", ".") || "0";
-    const valor = parseFloat(valorStr) || 0;
-    const dataISO = linha.querySelector(".data-parcela")?.value || "";
-    const dataFormatada = formatarDataBR(dataISO);
-    const percentual = totalGrupos > 0 ? ((valor / totalGrupos) * 100).toFixed(2) : 0;
+// 💳 Parcelas — percentuais garantidos = 100%
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+const parseValor = (raw) => {
+  const s = String(raw ?? "").trim();
+  if (!s) return 0;
+  const only = s.replace(/[^\d.,-]/g, "");
+  if (only.includes(",") && only.includes(".")) {
+    return parseFloat(only.replace(/\./g, "").replace(",", ".")) || 0;
+  }
+  if (only.includes(",")) {
+    return parseFloat(only.replace(",", ".")) || 0;
+  }
+  return parseFloat(only) || 0;
+};
 
-    somaParcelas += valor;
+const parcelasPayload = [];
+const valores = [];
 
-    payload.lista_parcelas.parcela.push({
-      data_vencimento: dataFormatada,
-      numero_parcela: i + 1,
-      percentual,
-      valor: parseFloat(valor.toFixed(2))
-    });
+linhasParcelas.forEach((linha, i) => {
+  const elValor = linha.querySelector(".valor-parcela");
+  const rawValor =
+    (elValor?.value && elValor.value.trim()) ||
+    (elValor?.dataset?.valorOriginal && elValor.dataset.valorOriginal.trim()) ||
+    "";
+
+  const valor = round2(parseValor(rawValor));
+
+  const dataISO = linha.querySelector(".data-parcela")?.value || "";
+  const data_vencimento = formatarDataBR(dataISO);
+
+  parcelasPayload.push({
+    data_vencimento,
+    numero_parcela: i + 1,
+    percentual: "0.00", // vai ser calculado depois
+    valor
   });
 
-  // Ajusta última parcela se houver diferença
-  const totalGruposRounded = parseFloat(totalGrupos.toFixed(2));
-  const somaParcelasRounded = parseFloat(somaParcelas.toFixed(2));
-  if (Math.abs(totalGruposRounded - somaParcelasRounded) > 1) {
-    const diferenca = totalGruposRounded - somaParcelasRounded;
-    const ultimaParcela = payload.lista_parcelas.parcela.at(-1);
-    if (ultimaParcela) {
-      ultimaParcela.valor = parseFloat((ultimaParcela.valor + diferenca).toFixed(2));
-      ultimaParcela.percentual = ((ultimaParcela.valor / totalGruposRounded) * 100).toFixed(2);
-    } else {
-      mostrarPopupPendencias(["Não foi possível ajustar parcelas. Nenhuma parcela encontrada."]);
-      return null;
-    }
-  }
+  valores.push(valor);
+});
+
+// soma de todos os valores informados
+const somaParcelas = round2(valores.reduce((acc, v) => acc + v, 0));
+
+// distribui percentuais
+let somaPerc = 0;
+parcelasPayload.forEach((p, idx) => {
+  let pct = somaParcelas > 0 ? (p.valor / somaParcelas) * 100 : 0;
+  pct = round2(pct);
+  parcelasPayload[idx].percentual = pct.toFixed(2);
+  somaPerc = round2(somaPerc + pct);
+});
+
+// ajuste final na última parcela para fechar 100%
+if (parcelasPayload.length) {
+  const diff = round2(100 - somaPerc);
+  const last = parcelasPayload[parcelasPayload.length - 1];
+  last.percentual = round2(parseFloat(last.percentual) + diff).toFixed(2);
+}
+
+payload.lista_parcelas.parcela = parcelasPayload;
+
 
   // ✅ Blocos adicionais obrigatórios
   payload.frete = {

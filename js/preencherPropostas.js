@@ -25,7 +25,8 @@ try {
   setIfExists("estado",           campos.estado);
   setIfExists("operadorInterno",  campos.operadorInterno);
   setIfExists("prazosArea",       campos.prazosArea);
-  setIfExists("condicaoPagamento",campos.condicaoPagamento);
+  setIfExists("condicaoPagamento",campos.condicaoPagamento, console.log("teste teste"));
+ 
   setIfExists("condicoesGerais",  campos.condicoesGerais);
 
 } catch (err) {
