@@ -332,7 +332,7 @@ async function openOsPopup({ endpoint = "https://ulhoa-servico-ec4e1aa95355.hero
         nQtdeParc: Number(inpParc.value)
       },
       Departamentos: [],
-      Email: { cEnvBoleto:"N", cEnvLink:"N", cEnviarPara:"teste@omie.com.br" },
+      Email: { cEnvBoleto:"N", cEnvLink:"N", cEnviarPara:"" },
       InformacoesAdicionais: {
         cCodCateg: "1.02.02",
         cDadosAdicNF: String(inpAdicNF.value).trim(),
@@ -603,6 +603,9 @@ async function openOsPopup({ endpoint = "https://ulhoa-servico-ec4e1aa95355.hero
                       onclick="preencherCondicoesSemInstalacao()">Sem medição e instalação</button>
                     <button type="button" class="btn btn-outline-warning" onclick="preencherCondicoesSemTampo()">Sem
                       tampo</button>
+                      <button type="button" class="btn btn-outline-dark"
+  onclick="preencherCondicoesGeraisComDiagramacao()">Descritivo contratual</button>
+
                   </div>
                   <textarea class="form-control" id="condicoesGerais" rows="10"
                     placeholder="Escolha uma opção ou edite manualmente..."></textarea>
