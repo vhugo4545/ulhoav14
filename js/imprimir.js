@@ -33,7 +33,7 @@ function gerarOrcamentoParaImpressaoCompleta() {
   // Captura lista de grupos/blocos para montar popup
   const grupos = [];
   document.querySelectorAll("table[id^='tabela-bloco-']").forEach(tabela => {
-    const grupoId = tabela.id.replace("tabela-", "");
+    const grupoId = tabela.id.replace("tabela-", "").trim(); // 🔹 aqui
     const inputAmbiente = document.querySelector(`input[data-id-grupo='${grupoId}'][placeholder='Ambiente']`);
     const nomeAmbiente = inputAmbiente?.value.trim() || "Sem Ambiente";
     const linhaProduto = tabela.querySelector("tbody tr");
@@ -59,6 +59,7 @@ function gerarOrcamentoParaImpressaoCompleta() {
     gerarHTMLParaImpressao(gruposOcultarProduto);
   });
 }
+
 
 // 2. Função de popup estético para ocultar produtos
 function mostrarPopupSelecaoGruposEstetico(grupos, valorFinal, onConfirmar) {
@@ -152,21 +153,20 @@ function mostrarPopupSelecaoGruposEstetico(grupos, valorFinal, onConfirmar) {
 
   overlay.style.display = "flex";
   overlay.querySelector("#popup-modal-custom").focus();
-
-  overlay.querySelector("#btnCancelarModalCustom").onclick = function() {
+ overlay.querySelector("#btnCancelarModalCustom").onclick = function() {
     overlay.style.display = "none";
   };
   overlay.querySelector("#btnConfirmarModalCustom").onclick = function() {
     const checkboxes = overlay.querySelectorAll("input[name='ocultarProduto']");
     const opcoes = {};
     checkboxes.forEach(cb => {
-      opcoes[cb.dataset.grupoid] = cb.checked;
+      const key = (cb.dataset.grupoid || "").trim(); // 🔹 aqui
+      opcoes[key] = !!cb.checked; // 🔹 garante booleano
     });
     overlay.style.display = "none";
     onConfirmar(opcoes);
   };
 }
-
 
 
 
@@ -220,7 +220,12 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
   // 1. Monta lista de grupos com ambiente
   let gruposDados = [];
   document.querySelectorAll("table[id^='tabela-bloco-']").forEach(tabela => {
-    const grupoId = tabela.id.replace("tabela-", "");
+    const grupoId = tabela.id.replace("tabela-", "").trim(); // normaliza ID
+    // ⛔️ AJUSTE: se foi marcado para ocultar no popup, pula este grupo por completo
+    if (gruposOcultarProduto && !!gruposOcultarProduto[grupoId]) {
+      return; // não adiciona aos dados -> não imprime
+    }
+
     const inputAmbiente = document.querySelector(`input[data-id-grupo='${grupoId}'][placeholder='Ambiente']`);
     const nomeAmbiente = inputAmbiente?.value.trim() || "Sem Ambiente";
     const linhaProduto = tabela.querySelector("tbody tr");
@@ -237,7 +242,13 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     let qtd = linhaProduto?.querySelector("input.quantidade")?.value || "1";
 
     gruposDados.push({
-      grupoId, nomeAmbiente, totalGrupo, descricao, qtd, resumoGrupo, ocultar: !gruposOcultarProduto[grupoId]
+      grupoId,
+      nomeAmbiente,
+      totalGrupo,
+      descricao,
+      qtd,
+      resumoGrupo
+      // (não precisamos mais do campo "ocultar" aqui)
     });
   });
 
@@ -256,8 +267,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
   // 3. Para cada ambiente
   Object.entries(ambientes).forEach(([nomeAmbiente, grupos]) => {
     const valorTotalAmbiente = grupos.reduce((soma, x) => soma + x.totalGrupo, 0);
-    let gruposParaImprimir = grupos.filter(g => !g.ocultar);
-    if (gruposParaImprimir.length === 0) gruposParaImprimir = [grupos[0]];
+    let gruposParaImprimir = grupos; // já veio sem os ocultos
 
     totalGeral += valorTotalAmbiente;
     ambienteTotais.push({ nome: nomeAmbiente, total: valorTotalAmbiente });
@@ -383,4 +393,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
   }
   abrirJanelaParaImpressao(htmlCompleto);
 }
+
+
 
