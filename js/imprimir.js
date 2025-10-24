@@ -175,9 +175,18 @@ function formatarReal(valor) {
   return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-// 3. Função que realmente gera o HTML da impressão
 function gerarHTMLParaImpressao(gruposOcultarProduto) {
   const getValue = id => document.getElementById(id)?.value || "-";
+
+  // Helper seguro
+  const getTextOrValue = (el) => {
+    if (!el) return "";
+    if (typeof el.value === "string" && el.value.trim()) return el.value.trim();
+    if (typeof el.textContent === "string" && el.textContent.trim()) return el.textContent.trim();
+    return "";
+  };
+
+  // 1) Dados gerais do orçamento
   const dados = {
     numero: getValue("numeroOrcamento"),
     data: new Date(getValue("dataOrcamento")).toLocaleDateString('pt-BR'),
@@ -195,37 +204,37 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     vendedor: document.getElementById("vendedorResponsavel")?.selectedOptions[0]?.textContent || "-"
   };
 
-  const clienteWrapper = document.querySelector(".cliente-item");
-  dados.nomeCliente = clienteWrapper?.querySelector(".razaoSocial")?.value?.trim() || "-";
-  dados.cpfCnpj = clienteWrapper?.querySelector(".cpfCnpj")?.value?.trim() || "-";
+  // 2) Coleta múltiplos clientes/contatos
+  const clientes = Array.from(document.querySelectorAll('#clientesWrapper .cliente-item'))
+    .map(row => ({
+      nomeCliente:  getTextOrValue(row.querySelector('.razaoSocial')),
+      cpfCnpj:      getTextOrValue(row.querySelector('.cpfCnpj')),
+      codigo:       getTextOrValue(row.querySelector('.codigoCliente')),
+      nomeContato:  getTextOrValue(row.querySelector('.nomeContato')),
+      funcao:       getTextOrValue(row.querySelector('.funcaoCliente')),
+      telefone:     getTextOrValue(row.querySelector('.telefoneCliente')),
+    }))
+    .filter(c => c.nomeCliente || c.nomeContato || c.telefone || c.cpfCnpj);
 
-  // Busca telefone cliente
-  let telefoneCliente = "-";
-  let telClienteEl = clienteWrapper?.querySelector(".telefoneCliente");
-  if (telClienteEl) {
-    if (telClienteEl.value && telClienteEl.value.trim()) {
-      telefoneCliente = telClienteEl.value.trim();
-    } else if (telClienteEl.textContent && telClienteEl.textContent.trim()) {
-      telefoneCliente = telClienteEl.textContent.trim();
-    }
-  }
-  dados.telefoneCliente = telefoneCliente;
+  // Primeiro cliente = responsável
+  const principal = clientes[0] || {};
+  dados.nomeCliente      = principal.nomeCliente || "-";
+  dados.cpfCnpj          = principal.cpfCnpj || "-";
+  dados.telefoneCliente  = principal.telefone || "-";
 
-  // Nome do contato
-  let nomeContato = clienteWrapper?.querySelector(".nomeContato")?.value?.trim() || "-";
-  let telefoneContato = telefoneCliente;
-  dados.contatoResponsavel = (nomeContato !== "-" || telefoneContato !== "-")
-    ? `${nomeContato} - ${telefoneContato}` : "-";
+  // Armazena todos para a tabela extra
+  dados.contatos = clientes.map((c, idx) => ({
+    cliente:  idx === 0 ? `${c.nomeCliente || "-"} (Responsável)` : (c.nomeCliente || "-"),
+    cpfCnpj:  c.cpfCnpj || "-",
+    contato:  c.nomeContato || "-",
+    funcao:   c.funcao || "-",
+    telefone: c.telefone || "-",
+  }));
 
-  // 1. Monta lista de grupos com ambiente
+  // 3) Monta lista de grupos
   let gruposDados = [];
   document.querySelectorAll("table[id^='tabela-bloco-']").forEach(tabela => {
-    const grupoId = tabela.id.replace("tabela-", "").trim(); // normaliza ID
-    // ⛔️ AJUSTE: se foi marcado para ocultar no popup, pula este grupo por completo
-    if (gruposOcultarProduto && !!gruposOcultarProduto[grupoId]) {
-      return; // não adiciona aos dados -> não imprime
-    }
-
+    const grupoId = tabela.id.replace("tabela-", "").trim();
     const inputAmbiente = document.querySelector(`input[data-id-grupo='${grupoId}'][placeholder='Ambiente']`);
     const nomeAmbiente = inputAmbiente?.value.trim() || "Sem Ambiente";
     const linhaProduto = tabela.querySelector("tbody tr");
@@ -234,25 +243,21 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     resumoGrupo = resumoGrupo.replace(/\n/g, "<br>");
 
     const totalGrupo = parseFloat(
-      tabela.querySelector("tfoot td[colspan='6'] strong")?.textContent.replace(/[^\d,\.]/g, '').replace(',', '.') || "0"
+      tabela.querySelector("tfoot td[colspan='6'] strong")?.textContent
+        .replace(/[^\d,\.]/g, '')
+        .replace(',', '.') || "0"
     );
 
     let colunas = linhaProduto?.querySelectorAll("td");
     let descricao = colunas?.[1]?.textContent.trim() || "-";
     let qtd = linhaProduto?.querySelector("input.quantidade")?.value || "1";
 
-    gruposDados.push({
-      grupoId,
-      nomeAmbiente,
-      totalGrupo,
-      descricao,
-      qtd,
-      resumoGrupo
-      // (não precisamos mais do campo "ocultar" aqui)
-    });
+    const ocultar = !!(gruposOcultarProduto && gruposOcultarProduto[grupoId]);
+
+    gruposDados.push({ grupoId, nomeAmbiente, totalGrupo, descricao, qtd, resumoGrupo, ocultar });
   });
 
-  // 2. Agrupa por ambiente
+  // 4) Agrupa por ambiente
   let ambientes = {};
   gruposDados.forEach(g => {
     if (!ambientes[g.nomeAmbiente]) ambientes[g.nomeAmbiente] = [];
@@ -261,18 +266,14 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
 
   let totalGeral = 0;
   let corpoHTML = "";
-  let ambienteTotais = [];
-  let contadorGlobal = 1; // contador sequencial para todos os produtos
+  let contadorGlobal = 1;
 
-  // 3. Para cada ambiente
   Object.entries(ambientes).forEach(([nomeAmbiente, grupos]) => {
     const valorTotalAmbiente = grupos.reduce((soma, x) => soma + x.totalGrupo, 0);
-    let gruposParaImprimir = grupos; // já veio sem os ocultos
-
     totalGeral += valorTotalAmbiente;
-    ambienteTotais.push({ nome: nomeAmbiente, total: valorTotalAmbiente });
 
-    gruposParaImprimir.forEach((g, i) => {
+    const gruposVisiveis = grupos.filter(g => !g.ocultar);
+    gruposVisiveis.forEach(g => {
       corpoHTML += `
         <div class="mt-4 border">
           <div class="fw-bold border p-2 bg-light text-center">
@@ -298,7 +299,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
         </div>`;
     });
 
-    // Total consolidado do ambiente
     corpoHTML += `
       <div class="border p-2 mt-2 text-end bg-light">
         <strong>Total do Ambiente ${nomeAmbiente.toUpperCase()}:</strong> 
@@ -307,14 +307,16 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     `;
   });
 
-  // 5. Totalizadores gerais
+  // 5) Totais gerais
   const valorFinalComDescontoStr = document.getElementById("valorFinalTotal")?.textContent || "R$ 0,00";
-  const valorFinalComDesconto = parseFloat(valorFinalComDescontoStr.replace(/[^\d,\.]/g, "").replace(",", "."));
+  const valorFinalComDesconto = parseFloat(
+    valorFinalComDescontoStr.replace(/[^\d,\.]/g, "").replace(",", ".")
+  );
   const campoDesconto = document.getElementById("campoDescontoFinal")?.value?.trim();
   const temDescontoValido = campoDesconto && valorFinalComDesconto > 0 && valorFinalComDesconto < totalGeral;
   const descontoAplicado = temDescontoValido ? totalGeral - valorFinalComDesconto : 0;
 
-  corpoHTML += temDescontoValido ? `
+  let totalizadoresHTML = temDescontoValido ? `
     <div class="border p-2 text-end mt-4 bg-light">
       <div><strong>Total Bruto:</strong> ${formatarReal(totalGeral)}</div>
       <div><strong>Desconto Aplicado:</strong> ${formatarReal(descontoAplicado)}</div>
@@ -324,18 +326,34 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       <div class="fw-bold">Total Geral: ${formatarReal(totalGeral)}</div>
     </div>`;
 
-  // 6. Condições gerais
-  const condicoesGeraisFormatada = (dados.condicoesGerais || "").replace(/•/g, "<br>•");
-  corpoHTML += `
-    <div class="border p-2 mt-3">
-      <strong>Prazo:</strong><br>${dados.prazos}<br><br>
-      <strong>Condições de Pagamento:</strong><br>${dados.condicao}<br><br>
-      <strong>Condições Gerais:</strong><br>${condicoesGeraisFormatada}
-      <br>
-    </div>
-  `;
+  // 6) Tabela de contatos
+  const tabelaContatosHTML = (dados.contatos && dados.contatos.length)
+    ? `
+      <h6 class="mt-3 text-center fw-bold">Clientes & Contatos</h6>
+    <table class="table table-bordered table-sm w-100">
+      <thead class="table-light">
+        <tr>
+          <th>Cliente</th>
+         
+          <th>Função</th>
+          <th>Telefone</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${dados.contatos.map(c => `
+          <tr>
+            <td>${c.cliente}</td>
+           
+            <td>${c.funcao}</td>
+            <td>${c.telefone}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ` : '';
 
-  // 7. HTML completo
+  // 7) HTML completo (sem “Contato Responsável”)
+  const condicoesGeraisFormatada = (dados.condicoesGerais || "").replace(/•/g, "<br>•");
   const htmlCompleto = `
     <html>
       <head>
@@ -365,20 +383,31 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
           </table>
 
           <table class="table table-bordered table-sm w-100 mt-2">
-            <tr><td><strong>Cliente:</strong></td><td>${dados.nomeCliente}</td></tr>
+            <tr><td><strong>Cliente (Responsável):</strong></td><td>${dados.nomeCliente}</td></tr>
             <tr><td><strong>CPF/CNPJ:</strong></td><td>${dados.cpfCnpj}</td></tr>
             <tr><td><strong>Telefone Cliente:</strong></td><td>${dados.telefoneCliente}</td></tr>
             <tr><td><strong>Endereço da Obra:</strong></td><td>${dados.enderecoObra}</td></tr>
-            <tr><td><strong>Contato Responsável:</strong></td><td>${dados.contatoResponsavel}</td></tr>
             <tr><td><strong>Vendedor:</strong></td><td>${dados.vendedor}</td></tr>
             <tr><td><strong>Operador:</strong></td><td>${dados.operador}</td></tr>
           </table>
+
+          ${tabelaContatosHTML}
         </div>
+
         ${corpoHTML}
+
+        ${totalizadoresHTML}
+
+        <div class="border p-2 mt-3">
+          <strong>Prazo:</strong><br>${dados.prazos}<br><br>
+          <strong>Condições de Pagamento:</strong><br>${dados.condicao}<br><br>
+          <strong>Condições Gerais:</strong><br>${condicoesGeraisFormatada}
+          <br>
+        </div>
       </body>
     </html>`;
 
-  // 8. Abre a janela de impressão
+  // 8) Impressão
   async function abrirJanelaParaImpressao(htmlCompleto) {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -393,6 +422,3 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
   }
   abrirJanelaParaImpressao(htmlCompleto);
 }
-
-
-
