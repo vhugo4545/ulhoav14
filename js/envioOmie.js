@@ -183,7 +183,7 @@ function gerarNumeroPedidoUnico() {
     z-index: 9999;
   }
   .vv-modal{
-    width: min(860px);
+    width: min(1500px);
     background: #fff; border-radius: 14px;
     box-shadow: 0 20px 60px rgba(0,0,0,.22);
     overflow: hidden; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
@@ -289,10 +289,9 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
    3) POPUP DE SELEÇÃO + RATEIO DE SERVIÇOS
    ============================================ */
 async function abrirPopupSelecaoItensOmie(itens){
-  // fecha possível overlay de carregamento antes do popup
   if (typeof ocultarCarregando === 'function') ocultarCarregando();
 
-  // helper para normalizar e identificar "Mão de Obra de Instalação (por Hora)"
+  // --- helpers de normalização e identificação ---
   const normalize = (s) => (s || '')
     .toString()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -304,37 +303,67 @@ async function abrirPopupSelecaoItensOmie(itens){
     return n.includes('mao de obra de instalacao') && n.includes('(por hora)');
   };
 
-  return new Promise(resolve => {
-    // backdrop/modal
-    const backdrop = document.createElement('div');
-    backdrop.className = 'vv-modal-backdrop';
+const classifyKind = (desc) => {
+  const n = (desc || "")
+    .toString()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 
-    const modal = document.createElement('div');
-    modal.className = 'vv-modal';
+  // Vidro: começa com "vidro" ou "vidros"
+  if (/^vidros?\b/.test(n)) return "vidro";
+
+  // Serviço: "Mão de Obra de Instalação (por Hora)"
+  if (isMaoDeObraInstalPorHora(desc)) return "servico";
+
+  // Caso padrão
+  return "produto";
+};
+
+
+  return new Promise(resolve => {
+    // ======== UI (modal) ========
+    const backdrop = document.createElement('div'); backdrop.className = 'vv-modal-backdrop';
+    const modal    = document.createElement('div'); modal.className    = 'vv-modal';
 
     const header = document.createElement('header');
-    header.innerHTML = `<h3>Selecione os itens (Serviços será rateado nos aprovados)</h3>`;
+    header.innerHTML = `<h3>Selecione os itens (Desconto primeiro → Ignorar → MO → Serviços)</h3>`;
 
-    const body = document.createElement('div');
-    body.className = 'vv-body';
+    const body  = document.createElement('div'); body.className = 'vv-body';
 
-    // controles (Serviços e Comissão)
+    // --------- controles (Serviços / Desconto / Comissão) ---------
     const controls = document.createElement('div');
-    controls.style.cssText = "display:grid; gap:8px; margin-bottom:12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items:end;";
+    controls.style.cssText = "display:grid; gap:8px; margin-bottom:12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items:end;";
     controls.innerHTML = `
+      <!-- Serviços -->
       <div style="display:flex; flex-direction:column; gap:6px;">
-        <label style="font-weight:600;">Serviços (aplicado nos produtos aprovados)</label>
+        <label style="font-weight:600;">Serviços (aplicado nos aprovados)</label>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
           <label><input type="radio" name="srvModo" value="percent" checked> % do total aprovado</label>
           <label><input type="radio" name="srvModo" value="valor"> Valor fixo (R$)</label>
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <input id="srvPercent" type="number" min="0" step="0.01" value="0" class="vv-input" style="width:120px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;" aria-label="Percentual de serviços (%)">
-          <input id="srvValor"   type="text"   value="R$ 0,00" class="vv-input" style="width:160px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;" aria-label="Valor de serviços (R$)">
+          <input id="srvPercent" type="number" min="0" step="0.01" value="0" class="vv-input" style="width:120px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+          <input id="srvValor"   type="text"   value="R$ 0,00" class="vv-input" style="width:160px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
         </div>
-        <small class="vv-help">Ignorados <b>não</b> entram no rateio de Serviços.</small>
+        <small class="vv-help">Ignorados não entram no rateio de Serviços.</small>
       </div>
 
+      <!-- Desconto (calculado primeiro) -->
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <label style="font-weight:600;">Desconto (primeiro, sobre o <b>TOTAL</b> dos itens)</label>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <label><input type="radio" name="discModo" value="percent" checked> % do total</label>
+          <label><input type="radio" name="discModo" value="valor"> Valor fixo (R$)</label>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input id="discPercent" type="number" min="0" step="0.01" value="0" class="vv-input" style="width:120px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+          <input id="discValor"   type="text"   value="R$ 0,00" class="vv-input" style="width:160px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+        </div>
+        <small class="vv-help">Depois o desconto é <b>dividido igualmente</b> entre os aprovados.</small>
+      </div>
+
+      <!-- Comissão (informativa) -->
       <div style="display:flex; flex-direction:column; gap:6px;">
         <label style="font-weight:600;">Comissão (informativa — não vai para a Omie)</label>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
@@ -342,14 +371,14 @@ async function abrirPopupSelecaoItensOmie(itens){
           <label><input type="radio" name="comModo" value="valor"> Valor fixo (R$)</label>
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <input id="comPercent" type="number" min="0" step="0.01" value="0" class="vv-input" style="width:120px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;" aria-label="Percentual de comissão (%)">
-          <input id="comValor"   type="text"   value="R$ 0,00" class="vv-input" style="width:160px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;" aria-label="Valor de comissão (R$)">
+          <input id="comPercent" type="number" min="0" step="0.01" value="0" class="vv-input" style="width:120px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+          <input id="comValor"   type="text"   value="R$ 0,00" class="vv-input" style="width:160px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
         </div>
-        <small class="vv-help">Mantemos o payload <b>idêntico ao antigo</b>.</small>
+        <small class="vv-help">Mantemos o payload idêntico ao antigo.</small>
       </div>
     `;
 
-    // tabela
+    // --------- tabela ---------
     const table = document.createElement('table');
     table.className = 'vv-table';
     table.innerHTML = `
@@ -359,9 +388,9 @@ async function abrirPopupSelecaoItensOmie(itens){
           <th>Ambiente</th>
           <th>Produto</th>
           <th>Código</th>
-          <th class="vv-right">% participação</th>
+          <th class="vv-right">% part.</th>
           <th class="vv-right">Valor original</th>
-          <th class="vv-right">Valor ajustado</th>
+          <th class="vv-right">Valor ajustado (base+MO)</th>
           <th class="vv-right">Final p/ OMIE</th>
         </tr>
       </thead>
@@ -369,15 +398,24 @@ async function abrirPopupSelecaoItensOmie(itens){
     `;
     const tbody = table.querySelector('tbody');
 
-    // footer
+    // --------- rodapé ---------
     const footer = document.createElement('div');
     footer.className = 'vv-footer';
     footer.innerHTML = `
       <div class="totais">
-        <div>Total aprovado: <b id="vv-total-aprovado">R$ 0,00</b></div>
+        <div>Total aprovado (base + MO): <b id="vv-total-aprovado">R$ 0,00</b></div>
         <div>Serviços aplicado: <b id="vv-total-servicos">R$ 0,00</b></div>
+        <div>🟡 Desconto total (sobre TODOS): <b id="vv-total-desconto">R$ 0,00</b></div>
         <div>Comissão (info): <b id="vv-total-comissao">R$ 0,00</b></div>
         <div>Total produtos após ajuste: <b id="vv-total-ajustado">R$ 0,00</b></div>
+
+        <!-- Totais por categoria (FINAIS p/ OMIE) -->
+        <div style="margin-top:10px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; padding-top:8px; border-top:1px dashed #e5e7eb;">
+          <div>🔹 Total (Produto): <b id="vv-cat-produto">R$ 0,00</b></div>
+          <div>🛠️ Total (Serviço): <b id="vv-cat-servico">R$ 0,00</b></div>
+          <div>🪟 Total (Vidro): <b id="vv-cat-vidro">R$ 0,00</b></div>
+        </div>
+
         <small class="vv-help" style="display:block; margin-top:6px;">
           <b>Regra especial:</b> se "Mão de Obra de Instalação (por Hora)" for <i>ignorado</i>, seu valor é dividido em partes iguais entre os itens não ignorados.
         </small>
@@ -390,177 +428,300 @@ async function abrirPopupSelecaoItensOmie(itens){
       </div>
     `;
 
+    // --------- ajuda + filtros ---------
     const help = document.createElement('div');
     help.className = 'vv-help';
     help.innerHTML = `
-      Por padrão, todos os itens (1 por grupo) irão para a Omie. Marque "Ignorar" nos que <b>não</b> irão.<br>
-      Defina "Serviços" por % ou R$: esse valor será <b>rateado proporcionalmente</b> entre os itens aprovados, reduzindo o valor final enviado à Omie.<br>
-      "Comissão" é apenas informativa (não altera payload).
+      Ordem: <b>Desconto</b> sobre TODOS → <b>Ignorar</b> → <b>MO</b> redistribuída entre aprovados → <b>Serviços</b> proporcional. Arredonda só no final.
     `;
 
-    // monta modal
+    const filtros = document.createElement('div');
+    filtros.style.cssText = "display:flex; gap:10px; align-items:center; margin:12px 0; flex-wrap:wrap;";
+    filtros.innerHTML = `
+      <input id="filtroTexto" type="text" placeholder="Buscar..." 
+        style="padding:8px 12px; border:1px solid #ccc; border-radius:8px; width:220px;" />
+      <button class="vv-btn" id="filtroTodos">Todos</button>
+      <button class="vv-btn" id="filtroVidros">Somente Vidros</button>
+      <button class="vv-btn" id="filtroServicos">Somente Serviços</button>
+      <small class="vv-help">Filtros são visuais; não alteram os cálculos.</small>
+    `;
+
+    // monta
     const bodyWrap = document.createElement('div');
     bodyWrap.appendChild(help);
+    bodyWrap.appendChild(filtros);
     bodyWrap.appendChild(controls);
     bodyWrap.appendChild(table);
     body.appendChild(bodyWrap);
+    modal.appendChild(header); modal.appendChild(body); modal.appendChild(footer);
+    backdrop.appendChild(modal); document.body.appendChild(backdrop);
 
-    modal.appendChild(header);
-    modal.appendChild(body);
-    modal.appendChild(footer);
-    backdrop.appendChild(modal);
-    document.body.appendChild(backdrop);
-
-    // popula linhas
+    // --------- linhas ---------
     itens.forEach(item => {
       const tr = document.createElement('tr');
       const ehMOHora = isMaoDeObraInstalPorHora(item.descricao);
+      const kind = classifyKind(item.descricao || '');
       tr.innerHTML = `
         <td><input type="checkbox" class="vv-ignorar" data-key="${item.key}"></td>
-        <td>${item.ambiente}</td>
+        <td>${item.ambiente || '-'}</td>
         <td>${item.descricao ? item.descricao : '<small>Sem descrição</small>'}${ehMOHora ? ' <small style="color:#2563eb;font-weight:600;">(MO Hora)</small>' : ''}</td>
         <td><span class="vv-mono">${item.codigo || '-'}</span></td>
         <td class="vv-right vv-mono" data-col="part">0%</td>
-        <td class="vv-right vv-mono" data-col="original">${vv_fmtBRL(item.valorTotalGrupo)}</td>
+        <td class="vv-right vv-mono" data-col="original">${vv_fmtBRL(Number(item.valorTotalGrupo)||0)}</td>
         <td class="vv-right vv-mono" data-col="ajustado">R$ 0,00</td>
         <td class="vv-right vv-mono" data-col="final">R$ 0,00</td>
       `;
       tr.dataset.key = item.key;
       tr.dataset.valor = String(Number(item.valorTotalGrupo)||0);
-      tr.dataset.islabor = ehMOHora ? '1' : '0'; // ⭐ marca Mão de Obra (por Hora)
+      tr.dataset.islabor = ehMOHora ? '1' : '0';
+      tr.dataset.kind = kind; // produto | servico | vidro
       tbody.appendChild(tr);
     });
 
-    // refs
-    const chkAll      = [...tbody.querySelectorAll('.vv-ignorar')];
-    const $totAprov   = footer.querySelector('#vv-total-aprovado');
-    const $totServ    = footer.querySelector('#vv-total-servicos');
-    const $totCom     = footer.querySelector('#vv-total-comissao');
-    const $totAjust   = footer.querySelector('#vv-total-ajustado');
-    const $srvPercent = controls.querySelector('#srvPercent');
-    const $srvValor   = controls.querySelector('#srvValor');
-    const $comPercent = controls.querySelector('#comPercent');
-    const $comValor   = controls.querySelector('#comValor');
+    // --------- refs ---------
+    const chkAll       = [...tbody.querySelectorAll('.vv-ignorar')];
+    const $totAprov    = footer.querySelector('#vv-total-aprovado');
+    const $totServ     = footer.querySelector('#vv-total-servicos');
+    const $totDesc     = footer.querySelector('#vv-total-desconto');
+    const $totCom      = footer.querySelector('#vv-total-comissao');
+    const $totAjust    = footer.querySelector('#vv-total-ajustado');
+    const $catProduto  = footer.querySelector('#vv-cat-produto');
+    const $catServico  = footer.querySelector('#vv-cat-servico');
+    const $catVidro    = footer.querySelector('#vv-cat-vidro');
+
+    const $srvPercent  = controls.querySelector('#srvPercent');
+    const $srvValor    = controls.querySelector('#srvValor');
+    const $discPercent = controls.querySelector('#discPercent');
+    const $discValor   = controls.querySelector('#discValor');
+    const $comPercent  = controls.querySelector('#comPercent');
+    const $comValor    = controls.querySelector('#comValor');
 
     const getModoServicos = () => (controls.querySelector('input[name="srvModo"]:checked')?.value) || 'percent';
+    const getModoDesconto = () => (controls.querySelector('input[name="discModo"]:checked')?.value) || 'percent';
     const getModoComissao = () => (controls.querySelector('input[name="comModo"]:checked')?.value) || 'percent';
-    const isIgnoredKey    = (key) => !!chkAll.find(c => c.dataset.key===key)?.checked;
 
-    const lerAprovados = () =>
-      itens.filter(i => !isIgnoredKey(i.key));
+    // --------- helpers numéricos ---------
+    const sum = (arr) => arr.reduce((a,b)=>a+b,0);
+    const toCents = (v) => Math.round(v * 100);      // materializa centavos só no fim
+    const fromCents = (c) => c / 100;
 
-   function recalc(){
+    // ============== FILTROS (visuais) ==============
+    const filtroInput = filtros.querySelector('#filtroTexto');
+    const btnTodos    = filtros.querySelector('#filtroTodos');
+    const btnVidros   = filtros.querySelector('#filtroVidros');
+    const btnServ     = filtros.querySelector('#filtroServicos');
+
+  function aplicarFiltro(tipo = 'todos'){
+  const termo = (filtroInput.value || '').toLowerCase().trim();
+  [...tbody.querySelectorAll('tr')].forEach(tr=>{
+    const desc = (tr.children[2]?.innerText || '').toLowerCase();
+    const amb  = (tr.children[1]?.innerText || '').toLowerCase();
+    const kind = tr.dataset.kind;
+    const isLabor = tr.dataset.islabor === '1';
+
+    let mostra = true;
+    if (tipo === 'vidros')   mostra = (kind === 'vidro');
+    if (tipo === 'servicos') mostra = (kind === 'servico' || isLabor);
+
+    if (termo && !(desc.includes(termo) || amb.includes(termo))) mostra = false;
+
+    tr.style.display = mostra ? '' : 'none';
+  });
+}
+
+    filtroInput.addEventListener('input', ()=>aplicarFiltro());
+    btnTodos.addEventListener('click', ()=>aplicarFiltro('todos'));
+    btnVidros.addEventListener('click', ()=>aplicarFiltro('vidros'));
+    btnServ.addEventListener('click',  ()=>aplicarFiltro('servicos'));
+
+    // ===================== RECALC =====================
+  function recalc(){
   const rows = [...tbody.querySelectorAll('tr')];
-
-  // 1) Quem está aprovado?
   const isIgnoredKey = (key) => !!chkAll.find(c => c.dataset.key===key)?.checked;
-  const aprovadosRows = rows.filter(tr => !isIgnoredKey(tr.dataset.key));
 
-  // 2) Soma dos aprovados (originais) — ainda sem MO e sem Serviços
-  const somaAprovOriginal = aprovadosRows.reduce((acc, tr) => {
-    return acc + (Number(tr.dataset.valor||0) || 0);
-  }, 0);
-
-  // 3) MO ignorada (total)
-  const laborIgnoredTotal = rows.reduce((acc, tr) => {
-    const isLab = tr.dataset.islabor === '1';
-    const isIgn = isIgnoredKey(tr.dataset.key);
-    if (isLab && isIgn) {
-      return acc + (Number(tr.dataset.valor||0) || 0);
+  // -------- 0) Aux: total de VIDRO (sempre, mesmo ignorados) --------
+  const catVidroC_all = rows.reduce((acc, tr) => {
+    if (tr.dataset.kind === "vidro") {
+      const original = Number(tr.dataset.valor || 0) || 0;
+      return acc + toCents(original);
     }
     return acc;
   }, 0);
 
-  // 4) Divisão igual da MO ignorada entre os aprovados
-  const nRecebedores = aprovadosRows.length || 0;
-  const parcelaIgual = (nRecebedores > 0) ? vv_round2(laborIgnoredTotal / nRecebedores) : 0;
+  // -------- 1) DESCONTO (primeiro) sobre o TOTAL de TODOS os itens (originais) --------
+  const totalTodos = rows.reduce((acc, tr) => acc + (Number(tr.dataset.valor||0) || 0), 0);
 
-  // 5) Base com MO (por item) e total da base com MO
-  let totalBaseComMO = 0;
-  const baseComMOByKey = new Map(); // key -> baseWithLabor
+  let descontoTotal = 0;
+  if (getModoDesconto()==='percent'){
+    const p = Number($discPercent.value||0);
+    descontoTotal = (p/100) * totalTodos;
+  } else {
+    descontoTotal = vv_parseBRL($discValor.value||'0');
+  }
+  // clamp entre 0 e total
+  descontoTotal = Math.max(0, Math.min(descontoTotal, totalTodos));
+
+  // -------- 2) Ignorados / Aprovados --------
+  const aprovadosRows = rows.filter(tr => !isIgnoredKey(tr.dataset.key));
+  const nAprov = aprovadosRows.length;
+
+  // Se nada aprovado, pinta UI básica e mantém Vidro somando todos os vidros
+  if (nAprov === 0){
+    rows.forEach(tr=>{
+      tr.querySelector('[data-col="part"]').textContent = '0%';
+      tr.querySelector('[data-col="ajustado"]').textContent = vv_fmtBRL(Number(tr.dataset.valor||0));
+      tr.querySelector('[data-col="final"]').textContent = vv_fmtBRL(0);
+    });
+    $totAprov.textContent = vv_fmtBRL(0);
+    $totServ.textContent  = vv_fmtBRL(0);
+    $totDesc.textContent  = vv_fmtBRL(descontoTotal);
+    $totCom.textContent   = vv_fmtBRL(0);
+    $totAjust.textContent = vv_fmtBRL(0);
+    $catProduto.textContent = vv_fmtBRL(0);
+    $catServico.textContent = vv_fmtBRL(0);
+    $catVidro.textContent   = vv_fmtBRL(fromCents(catVidroC_all)); // vidros sempre aparecem
+    return;
+  }
+
+  // -------- 3) MO ignorada total (divisão IGUAL entre aprovados) --------
+  const laborIgnoredTotal = rows.reduce((acc, tr) => {
+    const isLab = tr.dataset.islabor === '1';
+    const isIgn = isIgnoredKey(tr.dataset.key);
+    return acc + (isLab && isIgn ? (Number(tr.dataset.valor||0) || 0) : 0);
+  }, 0);
+  const cotaMO = laborIgnoredTotal > 0 ? (laborIgnoredTotal / nAprov) : 0;
+
+  // -------- 4) Base + MO por item aprovado (sem arredondar) --------
+  const baseMOMap = new Map(); // key -> baseWithMO
+  let totalBaseMO = 0;
   aprovadosRows.forEach(tr => {
-    const key = tr.dataset.key;
     const original = Number(tr.dataset.valor||0) || 0;
-    const baseWithLabor = vv_round2(original + parcelaIgual);
-    baseComMOByKey.set(key, baseWithLabor);
-    totalBaseComMO += baseWithLabor;
+    const base = original + cotaMO;
+    baseMOMap.set(tr.dataset.key, base);
+    totalBaseMO += base;
   });
-  totalBaseComMO = vv_round2(totalBaseComMO);
 
-  // 6) Serviços (agora calculado SOBRE a base com MO)
-  let valorServicos = 0;
+  // -------- 5) Serviços sobre a base+MO (apenas aprovados) --------
+  let servicosTotal = 0;
   if (getModoServicos()==='percent'){
     const p = Number($srvPercent.value||0);
-    valorServicos = vv_round2((p/100) * totalBaseComMO);
+    servicosTotal = (p/100) * totalBaseMO;
   } else {
-    valorServicos = vv_round2(vv_parseBRL($srvValor.value||0));
+    servicosTotal = vv_parseBRL($srvValor.value||'0');
   }
-  // Cap nos aprovados (com MO)
-  valorServicos = Math.min(Math.max(0, valorServicos), totalBaseComMO);
+  // serviços não pode ultrapassar a base aprovada
+  servicosTotal = Math.max(0, Math.min(servicosTotal, totalBaseMO));
 
-  // 7) Comissão (informativa; não altera valores)
-  let valorComissao = 0;
-  if (getModoComissao()==='percent'){
-    const p = Number($comPercent.value||0);
-    valorComissao = vv_round2((p/100) * totalBaseComMO);
-  } else {
-    valorComissao = vv_round2(vv_parseBRL($comValor.value||0));
+  // -------- 6) Aplicação do DESCONTO nos aprovados (igual por item) --------
+  // o desconto foi calculado sobre TODOS; só a parte que cabe aos aprovados pode ser aplicada
+  const descontoAplicavel = Math.min(descontoTotal, totalBaseMO);
+  const cotaDescontoIgual = nAprov > 0 ? (descontoAplicavel / nAprov) : 0;
+
+  // -------- 7) Finais por item (sem arredondar) --------
+  const linhas = []; // { key, baseFloat, servFloat, finalFloat }
+  aprovadosRows.forEach(tr => {
+    const key = tr.dataset.key;
+    const base = baseMOMap.get(key) || 0;
+    const share = totalBaseMO > 0 ? (base / totalBaseMO) : 0;
+    const servAbat = servicosTotal * share; // abatimento proporcional de serviços
+    const final = Math.max(0, base - servAbat - cotaDescontoIgual);
+    linhas.push({ key, baseFloat: base, servFloat: servAbat, finalFloat: final });
+  });
+
+  // -------- 8) Arredonda só no final + corrige resíduo de centavos --------
+  const sumCents  = (arr) => arr.reduce((a,b)=>a+b,0);
+
+  const targetTotalFinal = totalBaseMO - servicosTotal - descontoAplicavel;
+  const targetCents = toCents(targetTotalFinal);
+
+  let finalsCents = linhas.map(l => toCents(l.finalFloat));
+  let somaCents   = sumCents(finalsCents);
+  let delta = targetCents - somaCents;
+
+  // distribui o resíduo centavo a centavo
+  let i = 0;
+  while (delta !== 0 && linhas.length > 0){
+    finalsCents[i % linhas.length] += (delta > 0 ? 1 : -1);
+    delta += (delta > 0 ? -1 : 1);
+    i++;
   }
-  valorComissao = Math.max(0, valorComissao);
 
-  // 8) Distribuição por linha:
-  //    - participação passa a ser baseada na base com MO (é essa base que gera o rateio dos Serviços)
-  //    - "Valor ajustado" = baseWithLabor
-  //    - "Final p/ OMIE" = baseWithLabor - (valorServicos * shareBaseMO)
+  // -------- 9) Render por linha --------
   rows.forEach(tr => {
-    const key      = tr.dataset.key;
-    const original = Number(tr.dataset.valor||0) || 0;
-    const ignorado = isIgnoredKey(key);
-
+    const key = tr.dataset.key;
     const $part = tr.querySelector('[data-col="part"]');
     const $aj   = tr.querySelector('[data-col="ajustado"]');
     const $fin  = tr.querySelector('[data-col="final"]');
 
-    if (ignorado || totalBaseComMO<=0){
+    const ignorado = isIgnoredKey(key);
+    if (ignorado || !baseMOMap.has(key)){
       $part.textContent = '0%';
-      $aj.textContent   = vv_fmtBRL(original); // referência visual
+      $aj.textContent   = vv_fmtBRL(Number(tr.dataset.valor||0));
       $fin.textContent  = vv_fmtBRL(0);
       return;
     }
 
-    const baseWithLabor = baseComMOByKey.get(key) || 0;
-    const shareBaseMO   = baseWithLabor / totalBaseComMO; // participação sobre a base com MO
-    const descontoServ  = vv_round2(valorServicos * shareBaseMO);
-    const final         = vv_round2(baseWithLabor - descontoServ);
+    const base = baseMOMap.get(key);
+    const share = totalBaseMO>0 ? (base / totalBaseMO) : 0;
+    const idx = linhas.findIndex(l => l.key === key);
+    const finCents = finalsCents[idx] ?? 0;
 
-    $part.textContent = (shareBaseMO*100).toFixed(2) + '%';
-    $aj.textContent   = vv_fmtBRL(baseWithLabor); // ✅ agora mostra a base com MO
-    $fin.textContent  = vv_fmtBRL(final);         // ✅ após descontar serviços
+    $part.textContent = (share*100).toFixed(2) + '%';
+    $aj.textContent   = vv_fmtBRL(fromCents(toCents(base))); // exibe base+MO (sem desconto/serv)
+    $fin.textContent  = vv_fmtBRL(fromCents(finCents));      // final p/ Omie
   });
 
-  // 9) Totais do rodapé
-  const totalFinalProdutos = rows.reduce((acc, tr) => {
-    const key = tr.dataset.key;
-    if (isIgnoredKey(key)) return acc;
-    const finText = tr.querySelector('[data-col="final"]').textContent || '0';
-    return acc + vv_parseBRL(finText);
-  }, 0);
+  // -------- 10) Totais --------
+  const totAprovCents = toCents(totalBaseMO);
+  const totServCents  = toCents(servicosTotal);
+  const totDescCents  = toCents(descontoTotal); // desconto sobre TODOS
+  const totFinalCents = targetCents;
 
-  // "Total aprovado" passa a refletir a BASE COM MO (que é a base real para os Serviços)
-  $totAprov.textContent = vv_fmtBRL(totalBaseComMO);
-  $totServ.textContent  = vv_fmtBRL(valorServicos);
-  $totCom.textContent   = vv_fmtBRL(valorComissao);
-  $totAjust.textContent = vv_fmtBRL(vv_round2(totalFinalProdutos));
+  // === Totais por categoria ===
+  // Produto = finais aprovados que NÃO são vidro
+  // Serviço = total de serviços calculado (apenas aprovados)
+  // Vidro   = soma dos valores ORIGINAIS de TODOS os itens classificados como vidro (mesmo ignorados)
+  let catProdutoC = 0;
+
+  const kindByKey = new Map();
+  rows.forEach(tr => { kindByKey.set(tr.dataset.key, tr.dataset.kind); });
+
+  linhas.forEach((l, idx) => {
+    const finC = finalsCents[idx] || 0;
+    const kind = kindByKey.get(l.key) || "produto";
+    if (kind !== "vidro") catProdutoC += finC;
+  });
+
+  const catServicoC = totServCents;   // serviços (controle)
+  const catVidroC   = catVidroC_all;  // vidros (originais de todos)
+
+  // Pinta totais
+  $totAprov.textContent = vv_fmtBRL(fromCents(totAprovCents));
+  $totServ.textContent  = vv_fmtBRL(fromCents(totServCents));
+  $totDesc.textContent  = vv_fmtBRL(fromCents(totDescCents));
+
+  // Comissão (apenas display; não entra no final)
+  const comDisplay = getModoComissao()==='percent'
+    ? fromCents( toCents( (Number($comPercent.value||0)/100) * totalBaseMO ) )
+    : fromCents( toCents( vv_parseBRL($comValor.value||'0') ) );
+  $totCom.textContent   = vv_fmtBRL(comDisplay);
+
+  $totAjust.textContent = vv_fmtBRL(fromCents(totFinalCents));
+  $catProduto.textContent = vv_fmtBRL(fromCents(catProdutoC));
+  $catServico.textContent = vv_fmtBRL(fromCents(catServicoC));
+  $catVidro.textContent   = vv_fmtBRL(fromCents(catVidroC));
 }
+
 
 
     // eventos
     controls.querySelectorAll('input[name="srvModo"]').forEach(r=> r.addEventListener('change', recalc));
+    controls.querySelectorAll('input[name="discModo"]').forEach(r=> r.addEventListener('change', recalc));
     controls.querySelectorAll('input[name="comModo"]').forEach(r=> r.addEventListener('change', recalc));
-    [$srvPercent, $srvValor, $comPercent, $comValor].forEach(inp=>{
+    [$srvPercent,$srvValor,$discPercent,$discValor,$comPercent,$comValor].forEach(inp=>{
       inp.addEventListener('input', recalc);
-      if (inp=== $srvValor || inp=== $comValor){
-        inp.addEventListener('blur', ()=> { inp.value = vv_fmtBRL(vv_parseBRL(inp.value)); });
+      if (inp===$srvValor || inp===$discValor || inp===$comValor){
+        inp.addEventListener('blur', ()=>{ inp.value = vv_fmtBRL(vv_parseBRL(inp.value||'0')); });
       }
     });
 
@@ -568,7 +729,7 @@ async function abrirPopupSelecaoItensOmie(itens){
       [...tbody.querySelectorAll('.vv-ignorar')].forEach(c => c.checked = true);
       recalc();
     });
-    footer.querySelector('#vv-desmarcar-todos').addEventListener('click',  ()=>{
+    footer.querySelector('#vv-desmarcar-todos').addEventListener('click', ()=>{
       [...tbody.querySelectorAll('.vv-ignorar')].forEach(c => c.checked = false);
       recalc();
     });
@@ -579,96 +740,61 @@ async function abrirPopupSelecaoItensOmie(itens){
       resolve(null);
     });
 
-    footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
-      const aprovados = [];
-      const ignorados = [];
-
+    footer.querySelector('#vv-confirmar').addEventListener('click', ()=>{
       const ignoradosKeys = new Set(
         [...tbody.querySelectorAll('.vv-ignorar')].filter(c => c.checked).map(c => c.dataset.key)
       );
-      const aprovadosLista = itens.filter(i => !ignoradosKeys.has(i.key));
-      const somaAprov = aprovadosLista.reduce((acc,i)=> acc + (Number(i.valorTotalGrupo)||0), 0);
 
-      // Serviços (valor total final) — será enviado como OS separada (stub abaixo)
-      let valorServicos = 0;
-      if ((controls.querySelector('input[name="srvModo"]:checked')?.value) === 'percent'){
-        const p = Number($srvPercent.value||0);
-        valorServicos = vv_round2((p/100) * somaAprov);
-      } else {
-        valorServicos = vv_round2(vv_parseBRL($srvValor.value||0));
-      }
-      valorServicos = Math.min(Math.max(0, valorServicos), somaAprov);
-
-      // Comissão (apenas info)
-      let valorComissao = 0;
-      if ((controls.querySelector('input[name="comModo"]:checked')?.value) === 'percent'){
-        const p = Number($comPercent.value||0);
-        valorComissao = vv_round2((p/100) * somaAprov);
-      } else {
-        valorComissao = vv_round2(vv_parseBRL($comValor.value||0));
-      }
-
-      // extrai valores finais da UI (já com redistribuição da MO ignorada)
+      const aprovados = [];
+      const ignorados = [];
       [...tbody.querySelectorAll('tr')].forEach(tr=>{
         const key  = tr.dataset.key;
         const item = itens.find(i=> i.key===key);
-        const isIgn = tr.querySelector('.vv-ignorar')?.checked;
-
-        const partText = tr.querySelector('[data-col="part"]').textContent || '0%';
-        const part = Number(partText.replace('%',''))/100;
-
+        const isIgn = ignoradosKeys.has(key);
         if (isIgn){
           ignorados.push(item);
         } else {
           const finText = tr.querySelector('[data-col="final"]').textContent || '0';
-          const finalValor = vv_round2(vv_parseBRL(finText));
+          const finalValor = vv_parseBRL(finText);
           aprovados.push({
             ...item,
-            part,
             valorOriginal: Number(item.valorTotalGrupo)||0,
             valorAjustadoParaOmie: finalValor
           });
         }
       });
 
-      // Envia OS de serviços (se > 0) e SEMPRE mostra popup de sucesso/erro (mantido):
-      if (valorServicos > 0 && typeof enviarOSServico === 'function') {
-        try {
-          const resp = await enviarOSServico({ valorServicos });
-          if (!resp || resp.ok !== true) {
-            const msg = (resp && (resp.error || resp.message)) || "Falha desconhecida ao enviar OS de Serviços.";
-            if (typeof mostrarPopupCustomizado === "function") {
-              mostrarPopupCustomizado("❌ Erro ao enviar Serviços", msg, "error");
-            } else {
-              alert("Erro ao enviar Serviços: " + msg);
-            }
-          } else {
-            if (typeof mostrarPopupCustomizado === "function") {
-              mostrarPopupCustomizado("✅ Serviços enviados", `OS de Serviços enviada em ${vv_fmtBRL(valorServicos)}.`, "success");
-            }
-          }
-        } catch (e) {
-          const msg = e?.message || String(e);
-          if (typeof mostrarPopupCustomizado === "function") {
-            mostrarPopupCustomizado("❌ Erro ao enviar Serviços", msg, "error");
-          } else {
-            alert("Erro ao enviar Serviços: " + msg);
-          }
-        }
-      }
+      const totalAprovadoBaseComMO = vv_parseBRL($totAprov.textContent||'0');
+      const valorServicos          = vv_parseBRL($totServ.textContent||'0');
+      const valorDesconto          = vv_parseBRL($totDesc.textContent||'0');
+      const totalFinalProdutos     = vv_parseBRL($totAjust.textContent||'0');
 
       document.body.removeChild(backdrop);
       resolve({
         aprovadosParaOmie: aprovados,
         ignorados,
-        totais: { totalAprovado: somaAprov, valorServicos, valorComissao }
+        totais: {
+          totalAprovadoBaseComMO,
+          valorServicos,
+          valorDesconto,
+          totalFinalProdutos,
+          porCategoria: {
+            produto: vv_parseBRL($catProduto.textContent||'0'),
+            servico: vv_parseBRL($catServico.textContent||'0'),
+            vidro:   vv_parseBRL($catVidro.textContent||'0')
+          }
+        }
       });
     });
 
-    // primeiro cálculo
+    // primeira pintura
     recalc();
   });
 }
+
+
+
+
 
 
 /* =========================================================
