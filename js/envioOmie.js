@@ -405,15 +405,15 @@ const classifyKind = (desc) => {
       <div class="totais">
         <div>Total aprovado (base + MO): <b id="vv-total-aprovado">R$ 0,00</b></div>
         <div>Serviços aplicado: <b id="vv-total-servicos">R$ 0,00</b></div>
-        <div>🟡 Desconto total (sobre TODOS): <b id="vv-total-desconto">R$ 0,00</b></div>
+        <div>Desconto total (sobre TODOS): <b id="vv-total-desconto">R$ 0,00</b></div>
         <div>Comissão (info): <b id="vv-total-comissao">R$ 0,00</b></div>
         <div>Total produtos após ajuste: <b id="vv-total-ajustado">R$ 0,00</b></div>
 
         <!-- Totais por categoria (FINAIS p/ OMIE) -->
         <div style="margin-top:10px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; padding-top:8px; border-top:1px dashed #e5e7eb;">
           <div>🔹 Total (Produto): <b id="vv-cat-produto">R$ 0,00</b></div>
-          <div>🛠️ Total (Serviço): <b id="vv-cat-servico">R$ 0,00</b></div>
-          <div>🪟 Total (Vidro): <b id="vv-cat-vidro">R$ 0,00</b></div>
+          <div>🔹 Total (Serviço): <b id="vv-cat-servico">R$ 0,00</b></div>
+          <div>🔹 Total (Vidro): <b id="vv-cat-vidro">R$ 0,00</b></div>
         </div>
 
         <small class="vv-help" style="display:block; margin-top:6px;">
