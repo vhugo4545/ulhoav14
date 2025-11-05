@@ -888,6 +888,9 @@ function vv_getPrimeiraDataParcelaISO() {
 /* =======================================
    5) GERAR PAYLOAD (estrutura antiga)
    ======================================= */
+/* =======================================
+   5) GERAR PAYLOAD (estrutura antiga)
+   ======================================= */
 async function gerarPayloadOmie(){
   const pendencias = [];
 
@@ -942,7 +945,10 @@ async function gerarPayloadOmie(){
     return null;
   }
 
-  // 4) ignorados → produtos faturados direto
+  // 🔸 MÍNIMA ALTERAÇÃO: guardar a última seleção (inclui Total (Serviço))
+  window.__vvUltimaSelecaoOmie = selecao;
+
+  // 4) ignorados → produtos faturados direto (opcional)
   try {
     if (typeof produtosFaturadosParaOCliente === "function") {
       produtosFaturadosParaOCliente(ignorados);
@@ -951,7 +957,7 @@ async function gerarPayloadOmie(){
     console.warn("produtosFaturadosParaOCliente falhou:", e);
   }
 
-  // 5) payload base
+  // 5) payload base (produtos)
   const numeroPedido = (typeof gerarNumeroPedidoUnico === "function")
     ? gerarNumeroPedidoUnico()
     : ("PED-" + Date.now());
@@ -1008,7 +1014,7 @@ async function gerarPayloadOmie(){
     payload.cabecalho.quantidade_itens++;
   });
 
-  // 7) parcelas (sua regra)
+  // 7) parcelas
   const parcelasPayload = [];
   const valores = [];
 
@@ -1068,7 +1074,6 @@ async function atualizarNaOmie() {
     if (spinner) spinner.style.display = "inline-block";
     if (botao) botao.disabled = true;
 
-    // pequeno debounce visual
     setTimeout(async () => {
       const payload = await gerarPayloadOmie();
 
@@ -1079,8 +1084,9 @@ async function atualizarNaOmie() {
         return;
       }
 
-      console.log("📦 Payload gerado:", payload);
+      console.log("📦 Payload gerado (produtos):", payload);
 
+      let sucessoProdutos = false;
       try {
         const resposta = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/omie/pedidos", {
           method: "POST",
@@ -1094,15 +1100,59 @@ async function atualizarNaOmie() {
         const data = await resposta.json();
 
         if (resposta.ok) {
-          mostrarPopupCustomizado("✅ Sucesso!", "Pedido enviado com sucesso à Omie.", "success");
-          console.log("📤 Enviado à Omie:", data);
+          sucessoProdutos = true;
+          if (typeof mostrarPopupCustomizado === "function") {
+            mostrarPopupCustomizado("✅ Sucesso!", "Pedido de PRODUTOS enviado com sucesso à Omie.", "success");
+          }
+          console.log("📤 Enviado à Omie (produtos):", data);
         } else {
-          mostrarPopupCustomizado("❌ Erro ao enviar", data?.erro || "Erro desconhecido ao enviar pedido.", "error");
-          console.error("❌ Erro:", data);
+          if (typeof mostrarPopupCustomizado === "function") {
+            mostrarPopupCustomizado("❌ Erro ao enviar produtos", data?.erro || "Erro desconhecido ao enviar.", "error");
+          }
+          console.error("❌ Erro (produtos):", data);
         }
       } catch (erro) {
-        mostrarPopupCustomizado("❌ Erro na conexão", "Não foi possível enviar o pedido. Verifique a conexão com o servidor.", "error");
-        console.error("❌ Erro de envio:", erro);
+        if (typeof mostrarPopupCustomizado === "function") {
+          mostrarPopupCustomizado("❌ Erro na conexão", "Falha ao enviar PRODUTOS. Verifique o servidor.", "error");
+        }
+        console.error("❌ Erro de envio (produtos):", erro);
+      }
+
+      // 🔸 MÍNIMA ALTERAÇÃO: após sucesso dos produtos, tenta enviar a OS de Serviços
+      if (sucessoProdutos) {
+        try {
+          const selecao = window.__vvUltimaSelecaoOmie || null;
+          const valorServicos = selecao?.totais?.valorServicos || 0; // 🛠️ Total (Serviço) do popup
+
+          if (valorServicos > 0 && typeof enviarOSServico === "function") {
+            console.log("🛠️ Enviando OS de Serviços. Valor:", valorServicos);
+            const osResp = await enviarOSServico({ valorServicos });
+            if (osResp?.ok) {
+              if (typeof mostrarPopupCustomizado === "function") {
+                mostrarPopupCustomizado(
+                  "✅ Serviços enviados",
+                  `OS de Serviços criada com sucesso.<br>Valor: ${vv_fmtBRL(valorServicos)}.`,
+                  "success"
+                );
+              }
+            } else {
+              if (typeof mostrarPopupCustomizado === "function") {
+                mostrarPopupCustomizado(
+                  "⚠️ Serviços não enviados",
+                  `Não foi possível criar a OS de Serviços agora.<br>Motivo: ${osResp?.error || "desconhecido"}`,
+                  "warning"
+                );
+              }
+            }
+          } else {
+            console.log("ℹ️ Sem serviços para enviar (valor 0) ou função enviarOSServico indisponível.");
+          }
+        } catch (err) {
+          console.error("❌ Falha ao enviar OS de Serviços:", err);
+          if (typeof mostrarPopupCustomizado === "function") {
+            mostrarPopupCustomizado("⚠️ Serviços não enviados", "Ocorreu um erro ao criar a OS de Serviços.", "warning");
+          }
+        }
       }
 
       if (spinner) spinner.style.display = "none";
@@ -1114,6 +1164,8 @@ async function atualizarNaOmie() {
     ocultarCarregando();
   }
 }
+
+
 /* ================== CONFIG ================== */
 const OS_SERVICOS_ENDPOINT = window.OS_SERVICOS_ENDPOINT
   || "https://ulhoa-servico-ec4e1aa95355.herokuapp.com/os";
