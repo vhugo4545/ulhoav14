@@ -8,13 +8,13 @@ function preencherCondicoesComInstalacao() {
   }
 
   textarea.value = `
-• A proposta inclui visita para medição técnica;
-• A instalação será realizada por equipe especializada;
-• O prazo de entrega será contado após aprovação do projeto;
-• Garantia de 12 meses sobre defeitos de fabricação;
-• Não inclui obras civis e pontos elétricos/hidráulicos;
-• Condição sujeita à análise de local e viabilidade.
-  `.trim();
+    • A validade deste orçamento é de 7 dias.
+    • Os valores podem sofrer alterações caso haja mudanças nas medidas ou especificações informadas pelo cliente.
+    • A instalação será realizada em horário comercial (7h às 17h); serviços fora desse período terão custo adicional.
+    • Caso o orçamento inclua vidros, calhas e/ou chapas, o pagamento e o faturamento deverão ser realizados pela contratante, sendo que a contratada atuará apenas na intermediação e instalação do pedido.
+
+Aviso Importante: Entraremos em férias coletivas a partir de 20/12/25, retornando às atividades normais no dia 05/01/26.
+ `.trim();
 
   console.log("✅ Condições com instalação preenchidas.");
 }
@@ -27,11 +27,12 @@ function preencherCondicoesSemInstalacao() {
   }
 
   textarea.value = `
-• Este orçamento não contempla instalação;
-• Entrega no local definido pelo cliente;
-• Garantia de 12 meses sobre defeitos de fabricação;
-• Itens prontos para fixação, conforme especificado;
-• Não inclui montagem, nivelamento ou ajustes em obra.
+    • A validade deste orçamento é de 7 dias.
+    • Os valores podem sofrer alterações caso haja mudanças nas medidas ou especificações informadas pelo cliente.
+    • Não incluso medição, transporte e instalação. As peças deverão ser retiradas na empresa.
+    • Caso o orçamento inclua vidros, calhas e/ou chapas, o pagamento e o faturamento deverão ser realizados pela contratante, sendo que a contratada atuará apenas na intermediação e produção do pedido.
+
+Aviso Importante: Entraremos em férias coletivas a partir de 20/12/25, retornando às atividades normais no dia 05/01/26.
   `.trim();
 
   console.log("✅ Condições sem instalação preenchidas.");
@@ -45,11 +46,13 @@ function preencherCondicoesSemTampo() {
   }
 
   textarea.value = `
-• Este orçamento não contempla tampo (vidro/pedra);
-• Espaços e ajustes devem ser confirmados pelo cliente;
-• Fornecimento do tampo será de responsabilidade do cliente;
-• Possíveis alterações de medidas devem ser previamente comunicadas.
-  `.trim();
+    • A validade deste orçamento é de 7 dias.
+    • Os valores podem sofrer alterações caso haja mudanças nas medidas ou especificações informadas pelo cliente.
+    • Não incluso medição, transporte e instalação. As peças deverão ser retiradas na empresa.
+    • Não incluso tampo.
+    • Caso o orçamento inclua vidros, calhas e/ou chapas, o pagamento e o faturamento deverão ser realizados pela contratante, sendo que a contratada atuará apenas na intermediação e produção do pedido.
+
+Aviso Importante: Entraremos em férias coletivas a partir de 20/12/25, retornando às atividades normais no dia 05/01/26. `.trim();
 
   console.log("✅ Condições sem tampo preenchidas.");
 }
