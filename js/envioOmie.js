@@ -285,13 +285,214 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
 /* ============================================
    3) POPUP DE SELEÇÃO + RATEIO DE SERVIÇOS
    ============================================ */
-/* ============================================
-   3) POPUP DE SELEÇÃO + RATEIO DE SERVIÇOS
-   ============================================ */
+/* =========================================================
+   1) COMISSÕES → OMIE (função global usada pelo popup)
+   ---------------------------------------------------------
+   - Mantém a assinatura: window.enviarComissoes(payload)
+   - Envia arquiteto e vendedor em paralelo para sua rota
+     http://localhost:3000/api/omie/comissao
+   - Dispara eventos:
+       vv:comissoes:prontas    (antes do POST)
+       vv:comissoes:enviadas   (após POST, com resultados)
+   ========================================================= */
+(function () {
+  if (window.enviarComissoes) return; // evita redefinir
+
+  const API_URL = "http://localhost:3000/api/omie/comissao";
+
+  // Utilitário: normaliza para YYYY-MM-DD (aceita Date, string ou vazio)
+  const toISODate = (d) => {
+    if (!d) return "";
+    try {
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return "";
+      const m = String(dt.getMonth() + 1).padStart(2, "0");
+      const day = String(dt.getDate()).padStart(2, "0");
+      return `${dt.getFullYear()}-${m}-${day}`;
+    } catch { return ""; }
+  };
+
+  // Toast simples
+  function toast(msg, ok = true) {
+    try {
+      const id = "vv-comm-toast";
+      let t = document.getElementById(id);
+      if (!t) {
+        t = document.createElement("div");
+        t.id = id;
+        t.style.cssText =
+          "position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:999999;padding:10px 14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);font:500 14px/1.2 Inter,system-ui;max-width:92vw;white-space:pre-line;text-align:center";
+        document.body.appendChild(t);
+      }
+      t.textContent = msg;
+      t.style.background = ok ? "#10b981" : "#ef4444";
+      t.style.color = "#fff";
+      t.style.opacity = "0";
+      t.style.transition = "opacity .2s ease";
+      requestAnimationFrame(() => { t.style.opacity = "1"; });
+      setTimeout(() => { t.style.opacity = "0"; }, 2600);
+    } catch {}
+  }
+
+  // Monta o payload esperado pela sua rota, respeitando defaults do backend.
+  function montarLancamento(tipo, fonte, baseConsiderada) {
+    // fonte = { nome, codigo, modo, percent, valorManual, valorCalculado, previsao, vencimento, observacao }
+    const calc = Number(fonte?.valorCalculado || 0);
+    const manual = Number(fonte?.valorManual || 0);
+    const valor_documento = Number((calc > 0 ? calc : manual).toFixed(2));
+
+    const data_previsao   = toISODate(fonte?.previsao || "");
+    const data_vencimento = toISODate(fonte?.vencimento || "");
+
+    // Campos opcionais: se vierem vazios, não enviamos — o backend aplica defaults
+    const payload = {
+      valor_documento,
+      data_previsao,
+      data_vencimento,
+      ...(fonte?.codigo ? { codigo_cliente_fornecedor: String(fonte.codigo).trim() } : {}),
+      // Se quiser sobrescrever categoria/conta, descomente:
+      // codigo_categoria: "2.02.01",
+      // id_conta_corrente: "2523861035",
+      observacao:
+        (fonte?.observacao?.trim()
+          || `Comissão ${tipo} — ${fonte?.nome || ""} (base: ${Number(baseConsiderada||0).toFixed(2)})`)
+    };
+
+    return payload;
+  }
+
+  // Validação leve antes de enviar (evita 400 do backend)
+  function validarLancamento(lanc, papel) {
+    const erros = [];
+    if (!(lanc?.valor_documento > 0)) erros.push("valor_documento inválido");
+    if (!lanc?.data_previsao)  erros.push("data_previsao ausente");
+    if (!lanc?.data_vencimento) erros.push("data_vencimento ausente");
+    return { valido: erros.length === 0, erros, papel };
+  }
+
+  async function postarLancamento(lanc, papel) {
+    try {
+      const r = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lanc)
+      });
+      const json = await r.json().catch(() => ({}));
+      if (!r.ok || json?.ok === false) {
+        const msg = json?.error || `HTTP ${r.status}`;
+        return { ok: false, papel, erro: msg, resposta: json, enviado: lanc };
+      }
+      return { ok: true, papel, resposta: json, enviado: lanc };
+    } catch (e) {
+      return { ok: false, papel, erro: e?.message || "Falha de rede", enviado: lanc };
+    }
+  }
+
+  // === Função global que o popup chama no Confirmar ===
+  // Espera payload: { baseConsiderada, arquiteto:{...}, vendedor:{...} }
+  window.enviarComissoes = async function (payload) {
+    try {
+      document.dispatchEvent(
+        new CustomEvent("vv:comissoes:prontas", { detail: { payload } })
+      );
+    } catch {}
+
+    const lancArq  = montarLancamento("arquiteto", payload?.arquiteto, payload?.baseConsiderada);
+    const lancVend = montarLancamento("vendedor",  payload?.vendedor,  payload?.baseConsiderada);
+
+    const vArq  = validarLancamento(lancArq,  "arquiteto");
+    const vVend = validarLancamento(lancVend, "vendedor");
+
+    if (!vArq.valido || !vVend.valido) {
+      const msgs = []
+        .concat(!vArq.valido ? [`Arquiteto: ${vArq.erros.join(", ")}`] : [])
+        .concat(!vVend.valido ? [`Vendedor: ${vVend.erros.join(", ")}`] : []);
+      const erro = "Dados incompletos para enviar comissões.\n" + msgs.join("\n");
+      toast(erro, false);
+      try {
+        document.dispatchEvent(
+          new CustomEvent("vv:comissoes:enviadas", {
+            detail: { ok: false, erro, resultados: { vArq, vVend } }
+          })
+        );
+      } catch {}
+      return { ok: false, erro, resultados: { vArq, vVend } };
+    }
+
+    const [resArq, resVend] = await Promise.all([
+      postarLancamento(lancArq,  "arquiteto"),
+      postarLancamento(lancVend, "vendedor"),
+    ]);
+
+    const okGeral = !!(resArq?.ok && resVend?.ok);
+
+    if (okGeral) {
+      toast("Comissões enviadas com sucesso (arquiteto + vendedor).");
+    } else {
+      let msg = "Falha ao enviar comissões.\n";
+      if (!resArq.ok)  msg += `Arquiteto: ${resArq.erro || "erro"}\n`;
+      if (!resVend.ok) msg += `Vendedor: ${resVend.erro || "erro"}\n`;
+      toast(msg.trim(), false);
+    }
+
+    try {
+      document.dispatchEvent(
+        new CustomEvent("vv:comissoes:enviadas", {
+          detail: {
+            ok: okGeral,
+            resultados: { arquiteto: resArq, vendedor: resVend }
+          }
+        })
+      );
+    } catch {}
+
+    return {
+      ok: okGeral,
+      resultados: {
+        arquiteto: resArq,
+        vendedor: resVend
+      }
+    };
+  };
+})();
+
+/* =========================================================
+   2) POPUP DE SELEÇÃO + RATEIO + ENVIO DE COMISSÕES
+   ---------------------------------------------------------
+   - NÃO altera nada além do que você pediu
+   - Inclui previsão/vencimento/observação para Arquiteto e Vendedor
+   - Chama window.enviarComissoes(...) no confirmar
+   ========================================================= */
 async function abrirPopupSelecaoItensOmie(itens){
   if (typeof ocultarCarregando === 'function') ocultarCarregando();
 
-  // --- helpers de normalização e identificação ---
+  // ===== helpers de UI: toast =====
+  function vvToast(msg, tipo='ok', tempo=4500){
+    let cont = document.getElementById('vv-toast-container');
+    if (!cont){
+      cont = document.createElement('div');
+      cont.id = 'vv-toast-container';
+      cont.style.cssText = `
+        position:fixed; inset:auto 16px 16px auto; z-index:10000; display:flex; flex-direction:column; gap:8px;
+      `;
+      document.body.appendChild(cont);
+    }
+    const el = document.createElement('div');
+    el.className = 'vv-toast';
+    el.style.cssText = `
+      max-width: min(92vw, 560px);
+      background: ${tipo==='erro' ? '#fee2e2' : tipo==='info' ? '#e0f2fe' : '#dcfce7'};
+      border: 1px solid ${tipo==='erro' ? '#ef4444' : tipo==='info' ? '#38bdf8' : '#22c55e'};
+      color: #111827; padding: 10px 12px; border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.12); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    `;
+    el.textContent = msg;
+    cont.appendChild(el);
+    setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .35s linear'; }, tempo-350);
+    setTimeout(()=>{ cont.removeChild(el); }, tempo);
+  }
+
+  // ---- helpers de normalização/identificação ----
   const normalize = (s) => (s || '')
     .toString()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -303,26 +504,378 @@ async function abrirPopupSelecaoItensOmie(itens){
     return n.includes('mao de obra de instalacao') && n.includes('(por hora)');
   };
 
-const classifyKind = (desc) => {
-  const n = (desc || "")
-    .toString()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
+  const classifyKind = (desc) => {
+    const n = (desc || "")
+      .toString()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+    if (/^vidros?\b/.test(n)) return "vidro";
+    if (isMaoDeObraInstalPorHora(desc)) return "servico";
+    return "produto";
+  };
 
-  // Vidro: começa com "vidro" ou "vidros"
-  if (/^vidros?\b/.test(n)) return "vidro";
+  // ========== ESTADO DE COMISSÕES (só informativo) ==========
+  const vendedorDefault =
+    document.querySelector('#vendedorResponsavel')?.value?.trim() ||
+    document.querySelector('#vendedorResponsavel')?.textContent?.trim() ||
+    '';
 
-  // Serviço: "Mão de Obra de Instalação (por Hora)"
-  if (isMaoDeObraInstalPorHora(desc)) return "servico";
+  const ARQ_COMISSAO_SEL = '#totalizadoresExternosPorAmbiente > div:nth-child(4) > div.row.text-center.gx-4.gy-3 > div:nth-child(5) > div.fw-bold';
+  const $arqDomEl = document.querySelector(ARQ_COMISSAO_SEL);
+  const arqDomValorInicial = (typeof vv_parseBRL === 'function')
+    ? vv_parseBRL($arqDomEl?.textContent || '0')
+    : Number(String($arqDomEl?.textContent || '0').replace(/[^\d,-]/g,'').replace(/\./g,'').replace(',','.')) || 0;
 
-  // Caso padrão
-  return "produto";
-};
+  let _comArq = { modo:'percent', percent:0, valorManual:0, nome:'', codigo:'', prev:'', venc:'', obs:'' };
+  let _comVend= { modo:'percent', percent:0, valorManual:0, nome:(vendedorDefault||''), codigo:'', prev:'', venc:'', obs:'' };
+  let _lastTotalBaseMO = 0;
 
+  if (arqDomValorInicial > 0) { _comArq.modo = 'valor'; _comArq.valorManual = arqDomValorInicial; }
 
+  function coletarArquitetosCadastrados(){
+    const lista = [];
+    document.querySelectorAll('#clientesWrapper .cliente-item').forEach(item=>{
+      const nome = (item.querySelector('.razaoSocial')?.value
+                 || item.querySelector('.razaoSocial')?.getAttribute('data-valor-original')
+                 || '').trim();
+      const codigo = (item.querySelector('.codigoCliente')?.value || '').trim();
+      if (nome) lista.push({ nome, codigo });
+    });
+    const nomeArqExtra = (document.getElementById('arquitetoNome')?.value || '').trim();
+    const codArqExtra  = (document.getElementById('codigoArquiteto')?.value || '').trim();
+    if (nomeArqExtra) lista.push({ nome: nomeArqExtra, codigo: codArqExtra });
+    const seen = new Set();
+    return lista.filter(a=>{
+      const k = a.nome.toLowerCase();
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }
+  function lerComissaoArquitetoDoResumo(){
+    const el = document.querySelector(ARQ_COMISSAO_SEL);
+    return el ? (window.vv_parseBRL ? vv_parseBRL(el.textContent||'0') : 0) : 0;
+  }
+  function atualizarComissaoArquitetoNoResumo(valor){
+    const el = document.querySelector(ARQ_COMISSAO_SEL);
+    if (el && window.vv_fmtBRL) el.textContent = vv_fmtBRL(Number(valor)||0);
+  }
+
+  // ===== SUB-POPUP: COMISSÕES =====
+  function abrirPopupComissao(){
+    return new Promise((resolveC)=>{
+      const ARQUITETOS = coletarArquitetosCadastrados();
+      const valorComissaoResumo = lerComissaoArquitetoDoResumo();
+
+      const bd = document.createElement('div'); bd.className = 'vv-modal-backdrop';
+      const md = document.createElement('div'); md.className = 'vv-modal';
+      const hd = document.createElement('header');
+      hd.innerHTML = `<h3>Comissões — base: Total aprovado (base + MO)</h3>`;
+
+      const by = document.createElement('div'); by.className = 'vv-body';
+
+      const optsArq = ARQUITETOS.map(a=>{
+        const txt = a.codigo ? `${a.nome} — ${a.codigo}` : a.nome;
+        const sel = (a.nome && a.nome === (_comArq?.nome||'')) ? 'selected' : '';
+        return `<option value="${a.nome.replace(/"/g,'&quot;')}" data-codigo="${(a.codigo||'').replace(/"/g,'&quot;')}" ${sel}>${txt}</option>`;
+      }).join('');
+
+      by.innerHTML = `
+        <div style="display:grid; gap:16px;">
+          <div style="display:grid; gap:8px;">
+            <div class="vv-help">Base atual para cálculo: <b id="vv-com-base">${vv_fmtBRL(_lastTotalBaseMO||0)}</b></div>
+          </div>
+
+          <div style="display:grid; gap:16px; grid-template-columns: repeat(auto-fit, minmax(280px,1fr));">
+            <!-- Arquiteto -->
+            <section style="border:1px solid #e5e7eb; border-radius:12px; padding:12px;">
+              <h4 style="margin:0 0 8px 0;">Arquiteto</h4>
+
+              <label class="form-label">Selecionar arquiteto cadastrado</label>
+              <select id="comArqSelect" class="form-select" style="margin-bottom:8px;">
+                <option value="">— escolher —</option>
+                ${optsArq}
+              </select>
+
+              <div class="row g-2" style="margin-bottom:8px;">
+                <div class="col-8">
+                  <label class="form-label">Nome</label>
+                  <input id="comArqNome" class="form-control" placeholder="Nome do arquiteto" value="${_comArq?.nome||''}">
+                </div>
+                <div class="col-4">
+                  <label class="form-label">Código</label>
+                  <input id="comArqCodigo" class="form-control" placeholder="Código" value="${_comArq?.codigo||''}">
+                </div>
+              </div>
+
+              <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                <label><input type="radio" name="comArqModo" value="percent" ${_comArq?.modo!=='valor'?'checked':''}> % do total aprovado</label>
+                <label><input type="radio" name="comArqModo" value="valor" ${_comArq?.modo==='valor'?'checked':''}> Valor fixo (R$)</label>
+              </div>
+
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <label class="form-label" style="min-width:90px;">Valor</label>
+                <input id="comArqPercent" type="number" min="0" step="0.01" value="${_comArq?.percent||0}" class="form-control" style="max-width:140px;">
+                <input id="comArqValor"   type="text"   value="${vv_fmtBRL(_comArq?.valorManual ?? valorComissaoResumo ?? 0)}" class="form-control" style="max-width:180px;">
+              </div>
+
+              <div class="row g-2" style="margin-top:8px;">
+                <div class="col-6">
+                  <label class="form-label">Previsão</label>
+                  <input type="date" id="arqPrev" class="form-control" value="${_comArq?.prev||''}">
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Vencimento</label>
+                  <input type="date" id="arqVenc" class="form-control" value="${_comArq?.venc||''}">
+                </div>
+              </div>
+              <div style="margin-top:8px;">
+                <label class="form-label">Observação (opcional)</label>
+                <textarea id="arqObs" rows="2" class="form-control" placeholder="Ex: Comissão arquiteto">${_comArq?.obs||''}</textarea>
+              </div>
+
+              <div class="vv-help" style="margin-top:6px;">Calculado: <b id="comArqCalc">R$ 0,00</b></div>
+            </section>
+
+            <!-- Vendedor -->
+            <section style="border:1px solid #e5e7eb; border-radius:12px; padding:12px;">
+              <h4 style="margin:0 0 8px 0;">Vendedor</h4>
+
+              <div class="row g-2" style="margin-bottom:8px;">
+                <div class="col-8">
+                  <label class="form-label">Nome</label>
+                  <input id="comVendNome" class="form-control" placeholder="Nome do vendedor" value="${_comVend?.nome|| (document.getElementById('vendedorResponsavel')?.value||'')}">
+                </div>
+                <div class="col-4">
+                  <label class="form-label">Código</label>
+                  <input id="comVendCodigo" class="form-control" placeholder="Código" value="${_comVend?.codigo|| (document.getElementById('codigoVendedor')?.value||'')}">
+                </div>
+              </div>
+
+              <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                <label><input type="radio" name="comVendModo" value="percent" ${_comVend?.modo!=='valor'?'checked':''}> % do total aprovado</label>
+                <label><input type="radio" name="comVendModo" value="valor" ${_comVend?.modo==='valor'?'checked':''}> Valor fixo (R$)</label>
+              </div>
+
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <label class="form-label" style="min-width:90px;">Valor</label>
+                <input id="comVendPercent" type="number" min="0" step="0.01" value="${_comVend?.percent||0}" class="form-control" style="max-width:140px;">
+                <input id="comVendValor"   type="text"   value="${vv_fmtBRL(_comVend?.valorManual||0)}" class="form-control" style="max-width:180px;">
+              </div>
+
+              <div class="row g-2" style="margin-top:8px;">
+                <div class="col-6">
+                  <label class="form-label">Previsão</label>
+                  <input type="date" id="vendPrev" class="form-control" value="${_comVend?.prev||''}">
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Vencimento</label>
+                  <input type="date" id="vendVenc" class="form-control" value="${_comVend?.venc||''}">
+                </div>
+              </div>
+              <div style="margin-top:8px;">
+                <label class="form-label">Observação (opcional)</label>
+                <textarea id="vendObs" rows="2" class="form-control" placeholder="Ex: Comissão consultor">${_comVend?.obs||''}</textarea>
+              </div>
+
+              <div class="vv-help" style="margin-top:6px;">Calculado: <b id="comVendCalc">R$ 0,00</b></div>
+            </section>
+
+            <!-- Resumo -->
+            <section style="border:1px solid #e5e7eb; border-radius:12px; padding:12px;">
+              <h4 style="margin:0 0 8px 0;">Resumo</h4>
+              <div class="vv-help">Arquiteto: <b id="sumArq">R$ 0,00</b></div>
+              <div class="vv-help">Vendedor: <b id="sumVend">R$ 0,00</b></div>
+              <div class="vv-help" style="margin-top:4px;">Total: <b id="sumTot">R$ 0,00</b></div>
+            </section>
+          </div>
+        </div>
+      `;
+
+      const ft = document.createElement('div'); ft.className = 'vv-footer';
+      ft.innerHTML = `
+        <div class="vv-help">Informativo — não altera valores enviados à Omie.</div>
+        <div style="display:flex; gap:8px;">
+          <button class="vv-btn" id="commCancel">Cancelar</button>
+          <button class="vv-btn primary" id="commSave">Salvar</button>
+        </div>
+      `;
+
+      md.appendChild(hd); md.appendChild(by); md.appendChild(ft);
+      bd.appendChild(md); document.body.appendChild(bd);
+
+      const $selArq       = by.querySelector('#comArqSelect');
+      const $comArqNome   = by.querySelector('#comArqNome');
+      const $comArqCodigo = by.querySelector('#comArqCodigo');
+      const $comArqPercent= by.querySelector('#comArqPercent');
+      const $comArqValor  = by.querySelector('#comArqValor');
+      const $arqPrev      = by.querySelector('#arqPrev');
+      const $arqVenc      = by.querySelector('#arqVenc');
+      const $arqObs       = by.querySelector('#arqObs');
+
+      const $comVendNome   = by.querySelector('#comVendNome');
+      const $comVendCodigo = by.querySelector('#comVendCodigo');
+      const $comVendPercent= by.querySelector('#comVendPercent');
+      const $comVendValor  = by.querySelector('#comVendValor');
+      const $vendPrev      = by.querySelector('#vendPrev');
+      const $vendVenc      = by.querySelector('#vendVenc');
+      const $vendObs       = by.querySelector('#vendObs');
+
+      const $comArqCalc = by.querySelector('#comArqCalc');
+      const $comVendCalc= by.querySelector('#comVendCalc');
+      const $sumArq = by.querySelector('#sumArq');
+      const $sumVend= by.querySelector('#sumVend');
+      const $sumTot = by.querySelector('#sumTot');
+
+      const getModoArq  = ()=> by.querySelector('input[name="comArqModo"]:checked')?.value || 'percent';
+      const getModoVend = ()=> by.querySelector('input[name="comVendModo"]:checked')?.value || 'percent';
+      const parseBRL = (s)=> (window.vv_parseBRL ? vv_parseBRL(s) : Number(String(s).replace(/[^\d,-]/g,'').replace(/\./g,'').replace(',','.'))||0);
+      const fmtBRL   = (n)=> (window.vv_fmtBRL   ? vv_fmtBRL(n)   : `R$ ${Number(n||0).toFixed(2)}`);
+
+      if ($selArq){
+        $selArq.addEventListener('change', ()=>{
+          const opt = $selArq.selectedOptions[0];
+          if (!opt) return;
+          $comArqNome.value   = opt.value || '';
+          $comArqCodigo.value = opt.getAttribute('data-codigo') || '';
+          $comArqNome.dispatchEvent(new Event('change'));
+        });
+      }
+
+      function recalcComm(){
+        const base = _lastTotalBaseMO || 0;
+
+        const arq = (getModoArq()==='percent')
+          ? (Number($comArqPercent.value||0)/100) * base
+          : parseBRL($comArqValor.value||'0');
+
+        const vend = (getModoVend()==='percent')
+          ? (Number($comVendPercent.value||0)/100) * base
+          : parseBRL($comVendValor.value||'0');
+
+        $comArqCalc.textContent = fmtBRL(arq);
+        $comVendCalc.textContent= fmtBRL(vend);
+        $sumArq.textContent = fmtBRL(arq);
+        $sumVend.textContent= fmtBRL(vend);
+        $sumTot.textContent = fmtBRL(Math.max(0,arq)+Math.max(0,vend));
+      }
+
+      by.querySelectorAll('input[name="comArqModo"]').forEach(r=> r.addEventListener('change', recalcComm));
+      by.querySelectorAll('input[name="comVendModo"]').forEach(r=> r.addEventListener('change', recalcComm));
+      [$comArqPercent,$comArqValor,$comVendPercent,$comVendValor].forEach(inp=>{
+        inp.addEventListener('input', recalcComm);
+        if (inp===$comArqValor || inp===$comVendValor){
+          inp.addEventListener('blur', ()=>{ inp.value = fmtBRL(parseBRL(inp.value||'0')); });
+        }
+      });
+
+      recalcComm();
+
+      ft.querySelector('#commCancel').addEventListener('click', ()=>{
+        document.body.removeChild(bd);
+        resolveC(null);
+      });
+
+      ft.querySelector('#commSave').addEventListener('click', ()=>{
+        _comArq = {
+          modo: getModoArq(),
+          percent: Number($comArqPercent.value||0),
+          valorManual: parseBRL($comArqValor.value||'0'),
+          nome: $comArqNome.value||'',
+          codigo: $comArqCodigo.value||'',
+          prev: $arqPrev.value||'',
+          venc: $arqVenc.value||'',
+          obs: $arqObs.value||''
+        };
+        _comVend = {
+          modo: getModoVend(),
+          percent: Number($comVendPercent.value||0),
+          valorManual: parseBRL($comVendValor.value||'0'),
+          nome: $comVendNome.value||'',
+          codigo: $comVendCodigo.value||'',
+          prev: $vendPrev.value||'',
+          venc: $vendVenc.value||'',
+          obs: $vendObs.value||''
+        };
+
+        atualizarComissaoArquitetoNoResumo(_comArq.modo==='percent'
+          ? (_lastTotalBaseMO * (Number(_comArq.percent||0)/100))
+          : _comArq.valorManual
+        );
+
+        const arqCalc  = vv_parseBRL($sumArq.textContent||'0');
+        const venCalc  = vv_parseBRL($sumVend.textContent||'0');
+
+        document.body.removeChild(bd);
+        resolveC({
+          baseConsiderada: _lastTotalBaseMO,
+          arquiteto: { ..._comArq, valorCalculado: arqCalc },
+          vendedor:  { ..._comVend, valorCalculado: venCalc },
+          total: arqCalc + venCalc
+        });
+      });
+    });
+  }
+
+  // === Normalização nome->código vendedor ===
+  function _vv_normNome(s){
+    return (s || "")
+      .toString()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .replace(/\s+/g," ")
+      .trim()
+      .toUpperCase();
+  }
+  const VENDEDORES_CODIGO = [
+    { nome:"FELIPE ULHOA FERREIRA", codigo:"2452908656", aliases:["FELIPE ULHOA","FELIPE U","FELIPE F","FELIPE FERREIRA"] },
+    { nome:"JOAO CLEBER MARTINS",   codigo:"2458334366", aliases:["JOAO CLEBER","JOÃO CLEBER","JOAO C MARTINS","J C MARTINS","JOAO MARTINS"] },
+    { nome:"RAFAEL ANGELO ARAUJO DA SILVA", codigo:"2458334372", aliases:["RAFAEL ANGELO","RAFAEL A A SILVA","RAFAEL ARAUJO","RAFAEL SILVA"] }
+  ];
+  function resolverCodigoVendedor(nome){
+    const n = _vv_normNome(nome);
+    if (!n) return "";
+    for (const v of VENDEDORES_CODIGO){
+      if (_vv_normNome(v.nome) === n) return v.codigo;
+    }
+    for (const v of VENDEDORES_CODIGO){
+      if ((v.aliases||[]).some(a => _vv_normNome(a) === n)) return v.codigo;
+    }
+    for (const v of VENDEDORES_CODIGO){
+      const alvo = _vv_normNome(v.nome);
+      if (n.includes(alvo) || alvo.includes(n)) return v.codigo;
+      if ((v.aliases||[]).some(a => {
+        const aa = _vv_normNome(a);
+        return n.includes(aa) || aa.includes(n);
+      })) return v.codigo;
+    }
+    return "";
+  }
+  (function wireVendedorCodigoAuto(){
+    const sel = document.getElementById("vendedorResponsavel");
+    if (!sel) return;
+    let cod = document.getElementById("codigoVendedor");
+    if (!cod){
+      cod = document.createElement("input");
+      cod.type = "text";
+      cod.id = "codigoVendedor";
+      cod.className = "form-control";
+      cod.placeholder = "Código do vendedor";
+      cod.style.maxWidth = "220px";
+      sel.parentElement?.appendChild(cod);
+    }
+    function atualizarCodigo(){
+      const nome = (sel.value || sel.options?.[sel.selectedIndex]?.text || "").trim();
+      const codigo = resolverCodigoVendedor(nome);
+      cod.value = codigo;
+    }
+    sel.addEventListener("change", atualizarCodigo);
+    sel.addEventListener("input", atualizarCodigo);
+    atualizarCodigo();
+  })();
+
+  // ===================== MODAL PRINCIPAL =====================
   return new Promise(resolve => {
-    // ======== UI (modal) ========
     const backdrop = document.createElement('div'); backdrop.className = 'vv-modal-backdrop';
     const modal    = document.createElement('div'); modal.className    = 'vv-modal';
 
@@ -331,7 +884,7 @@ const classifyKind = (desc) => {
 
     const body  = document.createElement('div'); body.className = 'vv-body';
 
-    // --------- controles (Serviços / Desconto / Comissão) ---------
+    // --------- controles ---------
     const controls = document.createElement('div');
     controls.style.cssText = "display:grid; gap:8px; margin-bottom:12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items:end;";
     controls.innerHTML = `
@@ -349,7 +902,7 @@ const classifyKind = (desc) => {
         <small class="vv-help">Ignorados não entram no rateio de Serviços.</small>
       </div>
 
-      <!-- Desconto (calculado primeiro) -->
+      <!-- Desconto -->
       <div style="display:flex; flex-direction:column; gap:6px;">
         <label style="font-weight:600;">Desconto (primeiro, sobre o <b>TOTAL</b> dos itens)</label>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
@@ -363,7 +916,7 @@ const classifyKind = (desc) => {
         <small class="vv-help">Depois o desconto é <b>dividido igualmente</b> entre os aprovados.</small>
       </div>
 
-      <!-- Comissão (informativa) -->
+      <!-- Comissão (display) -->
       <div style="display:flex; flex-direction:column; gap:6px;">
         <label style="font-weight:600;">Comissão (informativa — não vai para a Omie)</label>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
@@ -374,7 +927,7 @@ const classifyKind = (desc) => {
           <input id="comPercent" type="number" min="0" step="0.01" value="0" class="vv-input" style="width:120px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
           <input id="comValor"   type="text"   value="R$ 0,00" class="vv-input" style="width:160px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
         </div>
-        <small class="vv-help">Mantemos o payload idêntico ao antigo.</small>
+        <small class="vv-help">Use o botão "Comissão…" para cadastrar nomes e confirmar.</small>
       </div>
     `;
 
@@ -409,7 +962,6 @@ const classifyKind = (desc) => {
         <div>Comissão (info): <b id="vv-total-comissao">R$ 0,00</b></div>
         <div>Total produtos após ajuste: <b id="vv-total-ajustado">R$ 0,00</b></div>
 
-        <!-- Totais por categoria (FINAIS p/ OMIE) -->
         <div style="margin-top:10px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; padding-top:8px; border-top:1px dashed #e5e7eb;">
           <div>🔹 Total (Produto): <b id="vv-cat-produto">R$ 0,00</b></div>
           <div>🔹 Total (Serviço): <b id="vv-cat-servico">R$ 0,00</b></div>
@@ -421,6 +973,7 @@ const classifyKind = (desc) => {
         </small>
       </div>
       <div class="acoes" style="display:flex; gap:8px;">
+        <button class="vv-btn" id="vv-comissoes">Comissão…</button>
         <button class="vv-btn" id="vv-marcar-todos">Marcar todos como ignorados</button>
         <button class="vv-btn" id="vv-desmarcar-todos">Limpar marcações</button>
         <button class="vv-btn" id="vv-cancelar">Cancelar</button>
@@ -500,9 +1053,8 @@ const classifyKind = (desc) => {
     const getModoDesconto = () => (controls.querySelector('input[name="discModo"]:checked')?.value) || 'percent';
     const getModoComissao = () => (controls.querySelector('input[name="comModo"]:checked')?.value) || 'percent';
 
-    // --------- helpers numéricos ---------
     const sum = (arr) => arr.reduce((a,b)=>a+b,0);
-    const toCents = (v) => Math.round(v * 100);      // materializa centavos só no fim
+    const toCents = (v) => Math.round(v * 100);
     const fromCents = (c) => c / 100;
 
     // ============== FILTROS (visuais) ==============
@@ -511,23 +1063,23 @@ const classifyKind = (desc) => {
     const btnVidros   = filtros.querySelector('#filtroVidros');
     const btnServ     = filtros.querySelector('#filtroServicos');
 
-  function aplicarFiltro(tipo = 'todos'){
-  const termo = (filtroInput.value || '').toLowerCase().trim();
-  [...tbody.querySelectorAll('tr')].forEach(tr=>{
-    const desc = (tr.children[2]?.innerText || '').toLowerCase();
-    const amb  = (tr.children[1]?.innerText || '').toLowerCase();
-    const kind = tr.dataset.kind;
-    const isLabor = tr.dataset.islabor === '1';
+    function aplicarFiltro(tipo = 'todos'){
+      const termo = (filtroInput.value || '').toLowerCase().trim();
+      [...tbody.querySelectorAll('tr')].forEach(tr=>{
+        const desc = (tr.children[2]?.innerText || '').toLowerCase();
+        const amb  = (tr.children[1]?.innerText || '').toLowerCase();
+        const kind = tr.dataset.kind;
+        const isLabor = tr.dataset.islabor === '1';
 
-    let mostra = true;
-    if (tipo === 'vidros')   mostra = (kind === 'vidro');
-    if (tipo === 'servicos') mostra = (kind === 'servico' || isLabor);
+        let mostra = true;
+        if (tipo === 'vidros')   mostra = (kind === 'vidro');
+        if (tipo === 'servicos') mostra = (kind === 'servico' || isLabor);
 
-    if (termo && !(desc.includes(termo) || amb.includes(termo))) mostra = false;
+        if (termo && !(desc.includes(termo) || amb.includes(termo))) mostra = false;
 
-    tr.style.display = mostra ? '' : 'none';
-  });
-}
+        tr.style.display = mostra ? '' : 'none';
+      });
+    }
 
     filtroInput.addEventListener('input', ()=>aplicarFiltro());
     btnTodos.addEventListener('click', ()=>aplicarFiltro('todos'));
@@ -535,186 +1087,167 @@ const classifyKind = (desc) => {
     btnServ.addEventListener('click',  ()=>aplicarFiltro('servicos'));
 
     // ===================== RECALC =====================
-  function recalc(){
-  const rows = [...tbody.querySelectorAll('tr')];
-  const isIgnoredKey = (key) => !!chkAll.find(c => c.dataset.key===key)?.checked;
+    function recalc(){
+      const rows = [...tbody.querySelectorAll('tr')];
+      const isIgnoredKey = (key) => !!chkAll.find(c => c.dataset.key===key)?.checked;
 
-  // -------- 0) Aux: total de VIDRO (sempre, mesmo ignorados) --------
-  const catVidroC_all = rows.reduce((acc, tr) => {
-    if (tr.dataset.kind === "vidro") {
-      const original = Number(tr.dataset.valor || 0) || 0;
-      return acc + toCents(original);
+      const catVidroC_all = rows.reduce((acc, tr) => {
+        if (tr.dataset.kind === "vidro") {
+          const original = Number(tr.dataset.valor || 0) || 0;
+          return acc + toCents(original);
+        }
+        return acc;
+      }, 0);
+
+      const totalTodos = rows.reduce((acc, tr) => acc + (Number(tr.dataset.valor||0) || 0), 0);
+
+      let descontoTotal = 0;
+      if (getModoDesconto()==='percent'){
+        const p = Number($discPercent.value||0);
+        descontoTotal = (p/100) * totalTodos;
+      } else {
+        descontoTotal = vv_parseBRL($discValor.value||'0');
+      }
+      descontoTotal = Math.max(0, Math.min(descontoTotal, totalTodos));
+
+      const aprovadosRows = rows.filter(tr => !isIgnoredKey(tr.dataset.key));
+      const nAprov = aprovadosRows.length;
+
+      if (nAprov === 0){
+        rows.forEach(tr=>{
+          tr.querySelector('[data-col="part"]').textContent = '0%';
+          tr.querySelector('[data-col="ajustado"]').textContent = vv_fmtBRL(Number(tr.dataset.valor||0));
+          tr.querySelector('[data-col="final"]').textContent = vv_fmtBRL(0);
+        });
+        $totAprov.textContent = vv_fmtBRL(0);
+        $totServ.textContent  = vv_fmtBRL(0);
+        $totDesc.textContent  = vv_fmtBRL(descontoTotal);
+        $totCom.textContent   = vv_fmtBRL(0);
+        $totAjust.textContent = vv_fmtBRL(0);
+        $catProduto.textContent = vv_fmtBRL(0);
+        $catServico.textContent = vv_fmtBRL(0);
+        $catVidro.textContent   = vv_fmtBRL(fromCents(catVidroC_all));
+        _lastTotalBaseMO = 0;
+        return;
+      }
+
+      const laborIgnoredTotal = rows.reduce((acc, tr) => {
+        const isLab = tr.dataset.islabor === '1';
+        const isIgn = isIgnoredKey(tr.dataset.key);
+        return acc + (isLab && isIgn ? (Number(tr.dataset.valor||0) || 0) : 0);
+      }, 0);
+      const cotaMO = laborIgnoredTotal > 0 ? (laborIgnoredTotal / nAprov) : 0;
+
+      const baseMOMap = new Map();
+      let totalBaseMO = 0;
+      aprovadosRows.forEach(tr => {
+        const original = Number(tr.dataset.valor||0) || 0;
+        const base = original + cotaMO;
+        baseMOMap.set(tr.dataset.key, base);
+        totalBaseMO += base;
+      });
+
+      let servicosTotal = 0;
+      if (getModoServicos()==='percent'){
+        const p = Number($srvPercent.value||0);
+        servicosTotal = (p/100) * totalBaseMO;
+      } else {
+        servicosTotal = vv_parseBRL($srvValor.value||'0');
+      }
+      servicosTotal = Math.max(0, Math.min(servicosTotal, totalBaseMO));
+
+      const descontoAplicavel = Math.min(descontoTotal, totalBaseMO);
+      const cotaDescontoIgual = nAprov > 0 ? (descontoAplicavel / nAprov) : 0;
+
+      const linhas = [];
+      aprovadosRows.forEach(tr => {
+        const key = tr.dataset.key;
+        const base = baseMOMap.get(key) || 0;
+        const share = totalBaseMO > 0 ? (base / totalBaseMO) : 0;
+        const servAbat = servicosTotal * share;
+        const final = Math.max(0, base - servAbat - cotaDescontoIgual);
+        linhas.push({ key, baseFloat: base, servFloat: servAbat, finalFloat: final });
+      });
+
+      const targetTotalFinal = totalBaseMO - servicosTotal - descontoAplicavel;
+      const targetCents = toCents(targetTotalFinal);
+
+      let finalsCents = linhas.map(l => toCents(l.finalFloat));
+      let somaCents   = sum(finalsCents);
+      let delta = targetCents - somaCents;
+
+      let i = 0;
+      while (delta !== 0 && linhas.length > 0){
+        finalsCents[i % linhas.length] += (delta > 0 ? 1 : -1);
+        delta += (delta > 0 ? -1 : 1);
+        i++;
+      }
+
+      rows.forEach(tr => {
+        const key = tr.dataset.key;
+        const $part = tr.querySelector('[data-col="part"]');
+        const $aj   = tr.querySelector('[data-col="ajustado"]');
+        const $fin  = tr.querySelector('[data-col="final"]');
+
+        const ignorado = !!chkAll.find(c => c.dataset.key===key)?.checked;
+        if (ignorado || !baseMOMap.has(key)){
+          $part.textContent = '0%';
+          $aj.textContent   = vv_fmtBRL(Number(tr.dataset.valor||0));
+          $fin.textContent  = vv_fmtBRL(0);
+          return;
+        }
+
+        const base = baseMOMap.get(key);
+        const share = totalBaseMO>0 ? (base / totalBaseMO) : 0;
+        const idx = linhas.findIndex(l => l.key === key);
+        const finCents = finalsCents[idx] ?? 0;
+
+        $part.textContent = (share*100).toFixed(2) + '%';
+        $aj.textContent   = vv_fmtBRL(fromCents(toCents(base)));
+        $fin.textContent  = vv_fmtBRL(fromCents(finCents));
+      });
+
+      const totAprovCents = toCents(totalBaseMO);
+      const totServCents  = toCents(servicosTotal);
+      const totDescCents  = toCents(descontoTotal);
+      const totFinalCents = targetCents;
+
+      let catProdutoC = 0;
+      const kindByKey = new Map();
+      rows.forEach(tr => { kindByKey.set(tr.dataset.key, tr.dataset.kind); });
+
+      linhas.forEach((l, idx) => {
+        const finC = finalsCents[idx] || 0;
+        const kind = kindByKey.get(l.key) || "produto";
+        if (kind !== "vidro") catProdutoC += finC;
+      });
+
+      const catServicoC = totServCents;
+      const catVidroC   = rows.reduce((acc, tr) => {
+        if (tr.dataset.kind === "vidro") {
+          const original = Number(tr.dataset.valor || 0) || 0;
+          return acc + toCents(original);
+        }
+        return acc;
+      }, 0);
+
+      $totAprov.textContent = vv_fmtBRL(fromCents(totAprovCents));
+      $totServ.textContent  = vv_fmtBRL(fromCents(totServCents));
+      $totDesc.textContent  = vv_fmtBRL(fromCents(totDescCents));
+
+      const comDisplay = getModoComissao()==='percent'
+        ? fromCents( toCents( (Number($comPercent.value||0)/100) * totalBaseMO ) )
+        : fromCents( toCents( vv_parseBRL($comValor.value||'0') ) );
+      $totCom.textContent   = vv_fmtBRL(comDisplay);
+
+      $totAjust.textContent = vv_fmtBRL(fromCents(totFinalCents));
+      $catProduto.textContent = vv_fmtBRL(fromCents(catProdutoC));
+      $catServico.textContent = vv_fmtBRL(fromCents(catServicoC));
+      $catVidro.textContent   = vv_fmtBRL(fromCents(catVidroC));
+
+      _lastTotalBaseMO = totalBaseMO;
     }
-    return acc;
-  }, 0);
 
-  // -------- 1) DESCONTO (primeiro) sobre o TOTAL de TODOS os itens (originais) --------
-  const totalTodos = rows.reduce((acc, tr) => acc + (Number(tr.dataset.valor||0) || 0), 0);
-
-  let descontoTotal = 0;
-  if (getModoDesconto()==='percent'){
-    const p = Number($discPercent.value||0);
-    descontoTotal = (p/100) * totalTodos;
-  } else {
-    descontoTotal = vv_parseBRL($discValor.value||'0');
-  }
-  // clamp entre 0 e total
-  descontoTotal = Math.max(0, Math.min(descontoTotal, totalTodos));
-
-  // -------- 2) Ignorados / Aprovados --------
-  const aprovadosRows = rows.filter(tr => !isIgnoredKey(tr.dataset.key));
-  const nAprov = aprovadosRows.length;
-
-  // Se nada aprovado, pinta UI básica e mantém Vidro somando todos os vidros
-  if (nAprov === 0){
-    rows.forEach(tr=>{
-      tr.querySelector('[data-col="part"]').textContent = '0%';
-      tr.querySelector('[data-col="ajustado"]').textContent = vv_fmtBRL(Number(tr.dataset.valor||0));
-      tr.querySelector('[data-col="final"]').textContent = vv_fmtBRL(0);
-    });
-    $totAprov.textContent = vv_fmtBRL(0);
-    $totServ.textContent  = vv_fmtBRL(0);
-    $totDesc.textContent  = vv_fmtBRL(descontoTotal);
-    $totCom.textContent   = vv_fmtBRL(0);
-    $totAjust.textContent = vv_fmtBRL(0);
-    $catProduto.textContent = vv_fmtBRL(0);
-    $catServico.textContent = vv_fmtBRL(0);
-    $catVidro.textContent   = vv_fmtBRL(fromCents(catVidroC_all)); // vidros sempre aparecem
-    return;
-  }
-
-  // -------- 3) MO ignorada total (divisão IGUAL entre aprovados) --------
-  const laborIgnoredTotal = rows.reduce((acc, tr) => {
-    const isLab = tr.dataset.islabor === '1';
-    const isIgn = isIgnoredKey(tr.dataset.key);
-    return acc + (isLab && isIgn ? (Number(tr.dataset.valor||0) || 0) : 0);
-  }, 0);
-  const cotaMO = laborIgnoredTotal > 0 ? (laborIgnoredTotal / nAprov) : 0;
-
-  // -------- 4) Base + MO por item aprovado (sem arredondar) --------
-  const baseMOMap = new Map(); // key -> baseWithMO
-  let totalBaseMO = 0;
-  aprovadosRows.forEach(tr => {
-    const original = Number(tr.dataset.valor||0) || 0;
-    const base = original + cotaMO;
-    baseMOMap.set(tr.dataset.key, base);
-    totalBaseMO += base;
-  });
-
-  // -------- 5) Serviços sobre a base+MO (apenas aprovados) --------
-  let servicosTotal = 0;
-  if (getModoServicos()==='percent'){
-    const p = Number($srvPercent.value||0);
-    servicosTotal = (p/100) * totalBaseMO;
-  } else {
-    servicosTotal = vv_parseBRL($srvValor.value||'0');
-  }
-  // serviços não pode ultrapassar a base aprovada
-  servicosTotal = Math.max(0, Math.min(servicosTotal, totalBaseMO));
-
-  // -------- 6) Aplicação do DESCONTO nos aprovados (igual por item) --------
-  // o desconto foi calculado sobre TODOS; só a parte que cabe aos aprovados pode ser aplicada
-  const descontoAplicavel = Math.min(descontoTotal, totalBaseMO);
-  const cotaDescontoIgual = nAprov > 0 ? (descontoAplicavel / nAprov) : 0;
-
-  // -------- 7) Finais por item (sem arredondar) --------
-  const linhas = []; // { key, baseFloat, servFloat, finalFloat }
-  aprovadosRows.forEach(tr => {
-    const key = tr.dataset.key;
-    const base = baseMOMap.get(key) || 0;
-    const share = totalBaseMO > 0 ? (base / totalBaseMO) : 0;
-    const servAbat = servicosTotal * share; // abatimento proporcional de serviços
-    const final = Math.max(0, base - servAbat - cotaDescontoIgual);
-    linhas.push({ key, baseFloat: base, servFloat: servAbat, finalFloat: final });
-  });
-
-  // -------- 8) Arredonda só no final + corrige resíduo de centavos --------
-  const sumCents  = (arr) => arr.reduce((a,b)=>a+b,0);
-
-  const targetTotalFinal = totalBaseMO - servicosTotal - descontoAplicavel;
-  const targetCents = toCents(targetTotalFinal);
-
-  let finalsCents = linhas.map(l => toCents(l.finalFloat));
-  let somaCents   = sumCents(finalsCents);
-  let delta = targetCents - somaCents;
-
-  // distribui o resíduo centavo a centavo
-  let i = 0;
-  while (delta !== 0 && linhas.length > 0){
-    finalsCents[i % linhas.length] += (delta > 0 ? 1 : -1);
-    delta += (delta > 0 ? -1 : 1);
-    i++;
-  }
-
-  // -------- 9) Render por linha --------
-  rows.forEach(tr => {
-    const key = tr.dataset.key;
-    const $part = tr.querySelector('[data-col="part"]');
-    const $aj   = tr.querySelector('[data-col="ajustado"]');
-    const $fin  = tr.querySelector('[data-col="final"]');
-
-    const ignorado = isIgnoredKey(key);
-    if (ignorado || !baseMOMap.has(key)){
-      $part.textContent = '0%';
-      $aj.textContent   = vv_fmtBRL(Number(tr.dataset.valor||0));
-      $fin.textContent  = vv_fmtBRL(0);
-      return;
-    }
-
-    const base = baseMOMap.get(key);
-    const share = totalBaseMO>0 ? (base / totalBaseMO) : 0;
-    const idx = linhas.findIndex(l => l.key === key);
-    const finCents = finalsCents[idx] ?? 0;
-
-    $part.textContent = (share*100).toFixed(2) + '%';
-    $aj.textContent   = vv_fmtBRL(fromCents(toCents(base))); // exibe base+MO (sem desconto/serv)
-    $fin.textContent  = vv_fmtBRL(fromCents(finCents));      // final p/ Omie
-  });
-
-  // -------- 10) Totais --------
-  const totAprovCents = toCents(totalBaseMO);
-  const totServCents  = toCents(servicosTotal);
-  const totDescCents  = toCents(descontoTotal); // desconto sobre TODOS
-  const totFinalCents = targetCents;
-
-  // === Totais por categoria ===
-  // Produto = finais aprovados que NÃO são vidro
-  // Serviço = total de serviços calculado (apenas aprovados)
-  // Vidro   = soma dos valores ORIGINAIS de TODOS os itens classificados como vidro (mesmo ignorados)
-  let catProdutoC = 0;
-
-  const kindByKey = new Map();
-  rows.forEach(tr => { kindByKey.set(tr.dataset.key, tr.dataset.kind); });
-
-  linhas.forEach((l, idx) => {
-    const finC = finalsCents[idx] || 0;
-    const kind = kindByKey.get(l.key) || "produto";
-    if (kind !== "vidro") catProdutoC += finC;
-  });
-
-  const catServicoC = totServCents;   // serviços (controle)
-  const catVidroC   = catVidroC_all;  // vidros (originais de todos)
-
-  // Pinta totais
-  $totAprov.textContent = vv_fmtBRL(fromCents(totAprovCents));
-  $totServ.textContent  = vv_fmtBRL(fromCents(totServCents));
-  $totDesc.textContent  = vv_fmtBRL(fromCents(totDescCents));
-
-  // Comissão (apenas display; não entra no final)
-  const comDisplay = getModoComissao()==='percent'
-    ? fromCents( toCents( (Number($comPercent.value||0)/100) * totalBaseMO ) )
-    : fromCents( toCents( vv_parseBRL($comValor.value||'0') ) );
-  $totCom.textContent   = vv_fmtBRL(comDisplay);
-
-  $totAjust.textContent = vv_fmtBRL(fromCents(totFinalCents));
-  $catProduto.textContent = vv_fmtBRL(fromCents(catProdutoC));
-  $catServico.textContent = vv_fmtBRL(fromCents(catServicoC));
-  $catVidro.textContent   = vv_fmtBRL(fromCents(catVidroC));
-}
-
-
-
-    // eventos
     controls.querySelectorAll('input[name="srvModo"]').forEach(r=> r.addEventListener('change', recalc));
     controls.querySelectorAll('input[name="discModo"]').forEach(r=> r.addEventListener('change', recalc));
     controls.querySelectorAll('input[name="comModo"]').forEach(r=> r.addEventListener('change', recalc));
@@ -735,12 +1268,55 @@ const classifyKind = (desc) => {
     });
     [...tbody.querySelectorAll('.vv-ignorar')].forEach(c => c.addEventListener('change', recalc));
 
+    footer.querySelector('#vv-comissoes').addEventListener('click', async ()=>{
+      await abrirPopupComissao();
+    });
+
     footer.querySelector('#vv-cancelar').addEventListener('click', ()=>{
       document.body.removeChild(backdrop);
       resolve(null);
     });
 
-    footer.querySelector('#vv-confirmar').addEventListener('click', ()=>{
+    // ===== helper: envio com confirmação (toast) =====
+    async function tentarEnviarComissoes(payload){
+      try { document.dispatchEvent(new CustomEvent('vv:comissoes:prontas', { detail: payload })); } catch(e){}
+      if (typeof window.enviarComissoes !== 'function'){
+        vvToast('Comissões preparadas, mas função enviarComissoes() não está disponível.', 'info');
+        return { ok:false, resposta:null, erro:'Função enviarComissoes() ausente' };
+      }
+      vvToast('Enviando comissões…', 'info', 2000);
+      try{
+        const r = await Promise.resolve(window.enviarComissoes(payload));
+        const ok = (typeof r?.ok === 'boolean') ? r.ok : true;
+        if (ok){
+          const arqV = payload?.arquiteto?.valorCalculado || 0;
+          const venV = payload?.vendedor?.valorCalculado || 0;
+          const arqPrev = payload?.arquiteto?.previsao || payload?.arquiteto?.prev || '';
+          const arqVenc = payload?.arquiteto?.vencimento || payload?.arquiteto?.venc || '';
+          const venPrev = payload?.vendedor?.previsao || payload?.vendedor?.prev || '';
+          const venVenc = payload?.vendedor?.vencimento || payload?.vendedor?.venc || '';
+          vvToast(
+            `Comissões enviadas com sucesso — Arquiteto: ${vv_fmtBRL(arqV)} (Prev: ${arqPrev || '-'} | Venc: ${arqVenc || '-'}) · Vendedor: ${vv_fmtBRL(venV)} (Prev: ${venPrev || '-'} | Venc: ${venVenc || '-'})`,
+            'ok',
+            6000
+          );
+          try { document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', { detail: { ok:true, resposta:r, payload } })); } catch(_){}
+          return { ok:true, resposta:r, erro:null };
+        } else {
+          const msg = r?.message || r?.erro || 'Falha ao enviar comissões.';
+          vvToast(msg, 'erro', 6000);
+          try { document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', { detail: { ok:false, resposta:r, erro:msg, payload } })); } catch(_){}
+          return { ok:false, resposta:r, erro:msg };
+        }
+      } catch(e){
+        const msg = e?.message || 'Erro inesperado ao enviar comissões.';
+        vvToast(msg, 'erro', 6000);
+        try { document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', { detail: { ok:false, resposta:null, erro:msg, payload } })); } catch(_){}
+        return { ok:false, resposta:null, erro:msg };
+      }
+    }
+
+    footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
       const ignoradosKeys = new Set(
         [...tbody.querySelectorAll('.vv-ignorar')].filter(c => c.checked).map(c => c.dataset.key)
       );
@@ -769,6 +1345,46 @@ const classifyKind = (desc) => {
       const valorDesconto          = vv_parseBRL($totDesc.textContent||'0');
       const totalFinalProdutos     = vv_parseBRL($totAjust.textContent||'0');
 
+      const calcFromState = (s, base)=> s.modo==='percent'
+        ? (Number(s.percent||0)/100) * base
+        : Number(s.valorManual||0);
+
+      const arqCalc  = calcFromState(_comArq, _lastTotalBaseMO);
+      const vendCalc = calcFromState(_comVend, _lastTotalBaseMO);
+
+      const comissoesParaEnvio = {
+        baseConsiderada: _lastTotalBaseMO,
+        // OBS: nome, codigo (fornecedor), previsao, vencimento e observacao vão para o backend
+        arquiteto: {
+          nome: _comArq?.nome||'',
+          codigo: _comArq?.codigo||'',
+          modo: _comArq?.modo||'percent',
+          percent: Number(_comArq?.percent||0),
+          valorManual: Number(_comArq?.valorManual||0),
+          valorCalculado: arqCalc,
+          previsao: _comArq?.prev||'',
+          vencimento: _comArq?.venc||'',
+          observacao: _comArq?.obs||'',
+          codigo_categoria: "2.08.02" // força categoria do ARQUITETO no front
+        },
+        vendedor: {
+          nome: _comVend?.nome||'',
+          codigo: _comVend?.codigo||'',
+          modo: _comVend?.modo||'percent',
+          percent: Number(_comVend?.percent||0),
+          valorManual: Number(_comVend?.valorManual||0),
+          valorCalculado: vendCalc,
+          previsao: _comVend?.prev||'',
+          vencimento: _comVend?.venc||'',
+          observacao: _comVend?.obs||'',
+          codigo_categoria: "2.07.99" // força categoria do VENDEDOR no front
+        }
+      };
+
+      // envia comissões (com confirmação visual)
+      await tentarEnviarComissoes(comissoesParaEnvio);
+
+      // fecha modal e resolve payload principal
       document.body.removeChild(backdrop);
       resolve({
         aprovadosParaOmie: aprovados,
@@ -778,6 +1394,12 @@ const classifyKind = (desc) => {
           valorServicos,
           valorDesconto,
           totalFinalProdutos,
+          comissoes: {
+            baseConsiderada: _lastTotalBaseMO,
+            arquiteto: { ...comissoesParaEnvio.arquiteto },
+            vendedor:  { ...comissoesParaEnvio.vendedor },
+            total: Math.max(0, arqCalc) + Math.max(0, vendCalc)
+          },
           porCategoria: {
             produto: vv_parseBRL($catProduto.textContent||'0'),
             servico: vv_parseBRL($catServico.textContent||'0'),
@@ -787,10 +1409,164 @@ const classifyKind = (desc) => {
       });
     });
 
-    // primeira pintura
     recalc();
   });
 }
+
+/* ======================================================================
+   FUNÇÃO GLOBAL DE ENVIO (usa seu backend /api/omie/comissao e
+   respeita: codigo_cliente_fornecedor + observacao vindos do front,
+   e força codigo_categoria conforme papel)
+   ====================================================================== */
+(function () {
+  if (window.enviarComissoes) return; // evita redefinir
+
+  const API_URL = "http://localhost:3000/api/omie/comissao";
+
+  const toISODate = (d) => {
+    if (!d) return "";
+    try {
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return "";
+      const m = String(dt.getMonth() + 1).padStart(2, "0");
+      const day = String(dt.getDate()).padStart(2, "0");
+      return `${dt.getFullYear()}-${m}-${day}`;
+    } catch { return ""; }
+  };
+
+  function toast(msg, ok = true) {
+    try {
+      const id = "vv-comm-toast";
+      let t = document.getElementById(id);
+      if (!t) {
+        t = document.createElement("div");
+        t.id = id;
+        t.style.cssText =
+          "position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:999999;padding:10px 14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);font:500 14px/1.2 Inter,system-ui;max-width:92vw;white-space:pre-line;text-align:center";
+        document.body.appendChild(t);
+      }
+      t.textContent = msg;
+      t.style.background = ok ? "#10b981" : "#ef4444";
+      t.style.color = "#fff";
+      t.style.opacity = "0";
+      t.style.transition = "opacity .2s ease";
+      requestAnimationFrame(() => { t.style.opacity = "1"; });
+      setTimeout(() => { t.style.opacity = "0"; }, 2600);
+    } catch {}
+  }
+
+  // tipo: "arquiteto" | "vendedor"
+  function montarLancamento(tipo, fonte, baseConsiderada) {
+    const calc = Number(fonte?.valorCalculado || 0);
+    const manual = Number(fonte?.valorManual || 0);
+    const valor_documento = Number((calc > 0 ? calc : manual).toFixed(2));
+
+    const data_previsao   = toISODate(fonte?.previsao || "");
+    const data_vencimento = toISODate(fonte?.vencimento || "");
+
+    // categoria forçada no front, mas se vier vazia tenta inferir
+    let codigo_categoria = String(fonte?.codigo_categoria || "").trim();
+    if (!codigo_categoria) {
+      codigo_categoria = (String(tipo).toLowerCase() === "arquiteto") ? "2.08.02" : "2.07.99";
+    }
+
+    // payload para a sua rota (back usa exatamente estes campos)
+    const payload = {
+      valor_documento,
+      data_previsao,
+      data_vencimento,
+      codigo_categoria, // envia já definido: vendedor 2.07.99 | arquiteto 2.08.02
+      // importantíssimo: fornecedor e observação vindos do front
+      ...(fonte?.codigo ? { codigo_cliente_fornecedor: String(fonte.codigo).trim() } : {}),
+      ...(fonte?.observacao ? { observacao: String(fonte.observacao).trim() } : {}),
+      // se quiser sobrepor a conta, descomente e informe:
+      // id_conta_corrente: "2523861035",
+    };
+
+    return payload;
+  }
+
+  function validarLancamento(lanc, papel) {
+    const erros = [];
+    if (!(lanc?.valor_documento > 0)) erros.push("valor_documento inválido");
+    if (!lanc?.data_previsao)  erros.push("data_previsao ausente");
+    if (!lanc?.data_vencimento) erros.push("data_vencimento ausente");
+    if (!lanc?.codigo_cliente_fornecedor) erros.push("codigo_cliente_fornecedor ausente");
+    if (!lanc?.codigo_categoria) erros.push("codigo_categoria ausente");
+    return { valido: erros.length === 0, erros, papel };
+  }
+
+  async function postarLancamento(lanc, papel) {
+    try {
+      const r = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lanc)
+      });
+      const json = await r.json().catch(() => ({}));
+      if (!r.ok || json?.ok === false) {
+        const msg = json?.error || `HTTP ${r.status}`;
+        return { ok: false, papel, erro: msg, resposta: json, enviado: lanc };
+      }
+      return { ok: true, papel, resposta: json, enviado: lanc };
+    } catch (e) {
+      return { ok: false, papel, erro: e?.message || "Falha de rede", enviado: lanc };
+    }
+  }
+
+  // expõe para o popup
+  window.enviarComissoes = async function (payload) {
+    try { document.dispatchEvent(new CustomEvent("vv:comissoes:prontas", { detail: { payload } })); } catch {}
+
+    const lancArq  = montarLancamento("arquiteto", payload?.arquiteto, payload?.baseConsiderada);
+    const lancVend = montarLancamento("vendedor",  payload?.vendedor,  payload?.baseConsiderada);
+
+    const vArq = validarLancamento(lancArq, "arquiteto");
+    const vVend = validarLancamento(lancVend, "vendedor");
+
+    if (!vArq.valido || !vVend.valido) {
+      const msgs = []
+        .concat(!vArq.valido ? [`Arquiteto: ${vArq.erros.join(", ")}`] : [])
+        .concat(!vVend.valido ? [`Vendedor: ${vVend.erros.join(", ")}`] : []);
+      const erro = "Dados incompletos para enviar comissões.\n" + msgs.join("\n");
+      toast(erro, false);
+      try {
+        document.dispatchEvent(new CustomEvent("vv:comissoes:enviadas", {
+          detail: { ok: false, erro, resultados: { vArq, vVend } }
+        }));
+      } catch {}
+      return { ok: false, erro, resultados: { vArq, vVend } };
+    }
+
+    const [resArq, resVend] = await Promise.all([
+      postarLancamento(lancArq, "arquiteto"),
+      postarLancamento(lancVend, "vendedor"),
+    ]);
+
+    const okGeral = !!(resArq?.ok && resVend?.ok);
+
+    if (okGeral) {
+      toast("Comissões enviadas com sucesso (arquiteto + vendedor).");
+    } else {
+      let msg = "Falha ao enviar comissões.\n";
+      if (!resArq.ok) msg += `Arquiteto: ${resArq.erro || "erro"}\n`;
+      if (!resVend.ok) msg += `Vendedor: ${resVend.erro || "erro"}\n`;
+      toast(msg.trim(), false);
+    }
+
+    try {
+      document.dispatchEvent(new CustomEvent("vv:comissoes:enviadas", {
+        detail: { ok: okGeral, resultados: { arquiteto: resArq, vendedor: resVend } }
+      }));
+    } catch {}
+
+    return { ok: okGeral, resultados: { arquiteto: resArq, vendedor: resVend } };
+  };
+})();
+
+
+
+
 
 
 
