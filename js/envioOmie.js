@@ -290,7 +290,7 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
    ---------------------------------------------------------
    - Mantém a assinatura: window.enviarComissoes(payload)
    - Envia arquiteto e vendedor em paralelo para sua rota
-     https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/omie/comissao
+    https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/api/omie/comissao
    - Dispara eventos:
        vv:comissoes:prontas    (antes do POST)
        vv:comissoes:enviadas   (após POST, com resultados)
