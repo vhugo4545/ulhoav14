@@ -290,7 +290,7 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
    ---------------------------------------------------------
    - Mantém a assinatura: window.enviarComissoes(payload)
    - Envia arquiteto e vendedor em paralelo para sua rota
-     http://localhost:3000/api/omie/comissao
+     https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/omie/comissao
    - Dispara eventos:
        vv:comissoes:prontas    (antes do POST)
        vv:comissoes:enviadas   (após POST, com resultados)
@@ -298,7 +298,7 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
 (function () {
   if (window.enviarComissoes) return; // evita redefinir
 
-  const API_URL = "http://localhost:3000/api/omie/comissao";
+  const API_URL = "https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/omie/comissao";
 
   // Utilitário: normaliza para YYYY-MM-DD (aceita Date, string ou vazio)
   const toISODate = (d) => {
@@ -1421,7 +1421,7 @@ async function abrirPopupSelecaoItensOmie(itens){
 (function () {
   if (window.enviarComissoes) return; // evita redefinir
 
-  const API_URL = "http://localhost:3000/api/omie/comissao";
+  const API_URL = "https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/omie/comissao";
 
   const toISODate = (d) => {
     if (!d) return "";
