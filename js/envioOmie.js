@@ -1576,63 +1576,7 @@ async function abrirPopupSelecaoItensOmie(itens){
 /* =========================================================
    4) ITENS IGNORADOS → "PRODUTOS FATURADOS DIRETO" (opcional)
    ========================================================= */
-async function produtosFaturadosParaOCliente(ignorados) {
-  try {
-    if (!Array.isArray(ignorados) || !ignorados.length) return null;
 
-    const clienteNome = vv_getClienteNome();
-    const numeroOrcamento = vv_getNumeroOrcamento();
-    const previsaoISO = vv_getPrimeiraDataParcelaISO();
-
-    const docs = ignorados.map(item => ({
-      numeroPedido: numeroOrcamento || '',
-      cliente: clienteNome,
-      fornecedor: '',
-      vidro: item.descricao || '',
-      tipo: '',
-      quantidade: 1,
-      orcamentoEnviado: '',
-      aprovacao: '',
-      moldeEnviado: '',
-      recebemosLinkPagamento: '',
-      pagamento: 'Pendente',
-      previsao: previsaoISO || undefined,
-      numeroPedidoFornecedor: '',
-      vidrosProntos: '',
-      naEmpresa: '',
-      faturamento: 'Pendente',
-      responsavelVendedor: '',
-      numeroOrcFornecedor: '',
-      valorReal: Number(item.valorTotalGrupo) || 0,
-      numeroNotaFiscal: '',
-      formaPagamento: '',
-      observacao: `Ignorado no envio à Omie | Ambiente: ${item.ambiente || '-'} | Grupo: ${item.grupoId || '-'} | Código: ${item.codigo || '-'}`,
-      meta: {
-        origem: 'produtosFaturadosParaOCliente',
-        numeroOrcamento: numeroOrcamento || null,
-        chavePopup: item.key || null
-      }
-    }));
-
-    const res = await fetch('https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/produtos/bulk', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: docs })
-    });
-    const j = await res.json();
-    if (!j.ok) throw new Error(j.error || 'Falha ao salvar itens ignorados');
-
-    console.log(`✅ ${j.inserted} item(ns) criado(s) na "Aba de produtos faturados direto".`);
-    alert(`✅ ${j.inserted} produto(s) foram criados na aba de Produtos Faturados Direto.\nEles não foram enviados para a Omie.`);
-
-    if (typeof carregarProdutos === 'function') carregarProdutos();
-    return j.data;
-  } catch (err) {
-    console.error('❌ produtosFaturadosParaOCliente() erro:', err);
-    alert('Erro ao salvar itens ignorados: ' + err.message);
-    return null;
-  }
-}
 
 // helpers usados acima
 function vv_getClienteNome() {
@@ -1941,10 +1885,68 @@ async function atualizarNaOmie() {
   }
 }
 
+async function produtosFaturadosParaOCliente(ignorados) {
+  try {
+    if (!Array.isArray(ignorados) || !ignorados.length) return null;
+
+    const clienteNome = vv_getClienteNome();
+    const numeroOrcamento = vv_getNumeroOrcamento();
+    const previsaoISO = vv_getPrimeiraDataParcelaISO();
+
+    const docs = ignorados.map(item => ({
+      numeroPedido: numeroOrcamento || '',
+      cliente: clienteNome,
+      fornecedor: '',
+      vidro: item.descricao || '',
+      tipo: '',
+      quantidade: 1,
+      orcamentoEnviado: '',
+      aprovacao: '',
+      moldeEnviado: '',
+      recebemosLinkPagamento: '',
+      pagamento: 'Pendente',
+      previsao: previsaoISO || undefined,
+      numeroPedidoFornecedor: '',
+      vidrosProntos: '',
+      naEmpresa: '',
+      faturamento: 'Pendente',
+      responsavelVendedor: '',
+      numeroOrcFornecedor: '',
+      valorReal: Number(item.valorTotalGrupo) || 0,
+      numeroNotaFiscal: '',
+      formaPagamento: '',
+      observacao: `Ignorado no envio à Omie | Ambiente: ${item.ambiente || '-'} | Grupo: ${item.grupoId || '-'} | Código: ${item.codigo || '-'}`,
+      meta: {
+        origem: 'produtosFaturadosParaOCliente',
+        numeroOrcamento: numeroOrcamento || null,
+        chavePopup: item.key || null
+      }
+    }));
+
+    const res = await fetch('http://localhost:3000/api/produtos/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: docs })
+    });
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error || 'Falha ao salvar itens ignorados');
+
+    console.log(`✅ ${j.inserted} item(ns) criado(s) na "Aba de produtos faturados direto".`);
+    alert(`✅ ${j.inserted} produto(s) foram criados na aba de Produtos Faturados Direto.\nEles não foram enviados para a Omie.`);
+
+    if (typeof carregarProdutos === 'function') carregarProdutos();
+    return j.data;
+  } catch (err) {
+    console.error('❌ produtosFaturadosParaOCliente() erro:', err);
+    alert('Erro ao salvar itens ignorados: ' + err.message);
+    return null;
+  }
+}
+
 
 /* ================== CONFIG ================== */
 const OS_SERVICOS_ENDPOINT = window.OS_SERVICOS_ENDPOINT
-  || "https://ulhoa-servico-ec4e1aa95355.herokuapp.com/os";
+  || "http://localhost:3000/os";
 
 /* Defaults (podem ser ajustados) */
 const CCOD_LC116_DEFAULT = "7.01";
@@ -1977,15 +1979,41 @@ function vv_fmtBRL(n){ return (Number(n)||0).toLocaleString("pt-BR",{style:"curr
 /* ================== CONTEXTOS DA TELA ================== */
 /* Caso você tenha inputs dedicados (inpCodInt, inpData, inpCli, inpParc, inpAdicNF),
    mapeie seus IDs aqui para captar valores com prioridade. */
+function gerarCodigoOs7() {
+  const now = new Date();
+
+  // minutos, segundos e milissegundos do momento
+  const baseTime =
+    now.getMinutes() * 60 * 1000 +
+    now.getSeconds() * 1000 +
+    now.getMilliseconds();
+
+  // "sal" aleatório para reduzir colisão
+  const random = Math.floor(Math.random() * 36); // 0–35
+
+  // base36 -> 0-9 + a-z, em maiúsculo
+  const raw = (baseTime.toString(36) + random.toString(36)).toUpperCase();
+
+  // garante no máximo 7 caracteres (pegando o final, mais variável)
+  return raw.slice(-7);
+}
+
 function ctxFormOS() {
   const byId = (id) => document.getElementById(id);
 
-  const codInt  = byId("os-codint")?.value?.trim();           // ex: inpCodInt.value
-  const dataBr  = byId("os-data")?.value?.trim();             // se já vier em DD/MM/AAAA
-  const dataIso = byId("os-data-iso")?.value?.trim();         // se vier ISO
-  const codCli  = byId("os-codcli")?.value?.trim();           // ex: inpCli.value
-  const qtParc  = byId("os-qtd-parc")?.value?.trim();         // ex: inpParc.value
-  const dadosNF = byId("os-dados-adicnf")?.value?.trim();     // ex: inpAdicNF.value
+  // gera código único se não houver valor digitado
+  let codInt = byId("os-codint")?.value?.trim();
+  if (!codInt) {
+    codInt = gerarCodigoOs7();
+    const inputCodInt = byId("os-codint");
+    if (inputCodInt) inputCodInt.value = codInt; // opcional: já mostra na tela
+  }
+
+  const dataBr  = byId("os-data")?.value?.trim();       // se já vier em DD/MM/AAAA
+  const dataIso = byId("os-data-iso")?.value?.trim();   // se vier ISO
+  const codCli  = byId("os-codcli")?.value?.trim();     // ex: inpCli.value
+  const qtParc  = byId("os-qtd-parc")?.value?.trim();   // ex: inpParc.value
+  const dadosNF = byId("os-dados-adicnf")?.value?.trim(); // ex: inpAdicNF.value
 
   return {
     cCodIntOS_form: codInt || "",
@@ -1995,6 +2023,7 @@ function ctxFormOS() {
     cDadosAdicNF_form: dadosNF || ""
   };
 }
+
 
 function ctxParcelasOS() {
   const linhas = Array.from(document.querySelectorAll("#listaParcelas .row"));
