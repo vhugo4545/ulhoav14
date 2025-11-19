@@ -1889,7 +1889,7 @@ async function atualizarNaOmie() {
 
 
 
-const API_BASE_PRODUTOS = 'http://localhost:3000'; 
+const API_BASE_PRODUTOS = 'https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com'; 
 // TROQUE isso pela URL real quando publicar o server.
 
 /**
