@@ -1885,6 +1885,17 @@ async function atualizarNaOmie() {
   }
 }
 
+
+
+
+
+const API_BASE_PRODUTOS = 'http://localhost:3000'; 
+// TROQUE isso pela URL real quando publicar o server.
+
+/**
+ * Envia os grupos ignorados para a API de "Produtos Faturados Direto"
+ * (um documento por vez).
+ */
 async function produtosFaturadosParaOCliente(ignorados) {
   try {
     if (!Array.isArray(ignorados) || !ignorados.length) return null;
@@ -1893,9 +1904,10 @@ async function produtosFaturadosParaOCliente(ignorados) {
     const numeroOrcamento = vv_getNumeroOrcamento();
     const previsaoISO = vv_getPrimeiraDataParcelaISO();
 
+    // Monta os docs que vão virar "PedidoVidro" no Mongo
     const docs = ignorados.map(item => ({
-      numeroPedido: numeroOrcamento || '',
-      cliente: clienteNome,
+      numeroPedido: String(numeroOrcamento || ''), // garante string
+      cliente: clienteNome || '',
       fornecedor: '',
       vidro: item.descricao || '',
       tipo: '',
@@ -1905,7 +1917,7 @@ async function produtosFaturadosParaOCliente(ignorados) {
       moldeEnviado: '',
       recebemosLinkPagamento: '',
       pagamento: 'Pendente',
-      previsao: previsaoISO || undefined,
+      previsao: previsaoISO ? new Date(previsaoISO) : undefined,
       numeroPedidoFornecedor: '',
       vidrosProntos: '',
       naEmpresa: '',
@@ -1923,19 +1935,37 @@ async function produtosFaturadosParaOCliente(ignorados) {
       }
     }));
 
-    const res = await fetch('http://localhost:3000/api/produtos/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: docs })
-    });
-    const j = await res.json();
-    if (!j.ok) throw new Error(j.error || 'Falha ao salvar itens ignorados');
+    let inseridos = 0;
+    const resultados = [];
 
-    console.log(`✅ ${j.inserted} item(ns) criado(s) na "Aba de produtos faturados direto".`);
-    alert(`✅ ${j.inserted} produto(s) foram criados na aba de Produtos Faturados Direto.\nEles não foram enviados para a Omie.`);
+    // Envia UM POR UM para o servidor
+    for (const doc of docs) {
+      const res = await fetch(`${API_BASE_PRODUTOS}/api/produtos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(doc)
+      });
 
-    if (typeof carregarProdutos === 'function') carregarProdutos();
-    return j.data;
+      const j = await res.json();
+      if (!j.ok) {
+        throw new Error(j.error || 'Falha ao salvar itens ignorados');
+      }
+
+      inseridos++;
+      resultados.push(j.data);
+    }
+
+    console.log(`✅ ${inseridos} item(ns) criado(s) na "Aba de produtos faturados direto".`);
+    alert(
+      `✅ ${inseridos} produto(s) foram criados na aba de Produtos Faturados Direto.\n` +
+      `Eles não foram enviados para a Omie.`
+    );
+
+    if (typeof carregarProdutos === 'function') {
+      carregarProdutos();
+    }
+
+    return resultados;
   } catch (err) {
     console.error('❌ produtosFaturadosParaOCliente() erro:', err);
     alert('Erro ao salvar itens ignorados: ' + err.message);
@@ -1944,9 +1974,11 @@ async function produtosFaturadosParaOCliente(ignorados) {
 }
 
 
+
+
 /* ================== CONFIG ================== */
 const OS_SERVICOS_ENDPOINT = window.OS_SERVICOS_ENDPOINT
-  || "http://localhost:3000/os";
+  || "https://ulhoa-servico-ec4e1aa95355.herokuapp.com/os";
 
 /* Defaults (podem ser ajustados) */
 const CCOD_LC116_DEFAULT = "7.01";
@@ -2023,7 +2055,6 @@ function ctxFormOS() {
     cDadosAdicNF_form: dadosNF || ""
   };
 }
-
 
 function ctxParcelasOS() {
   const linhas = Array.from(document.querySelectorAll("#listaParcelas .row"));
@@ -2243,3 +2274,4 @@ async function enviarOSServico({ valorServicos, endpoint = OS_SERVICOS_ENDPOINT 
 
 /* Expor global */
 window.enviarOSServico = enviarOSServico;
+
