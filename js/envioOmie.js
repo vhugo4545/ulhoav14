@@ -1296,7 +1296,7 @@ async function abrirPopupSelecaoItensOmie(itens){
           const venPrev = payload?.vendedor?.previsao || payload?.vendedor?.prev || '';
           const venVenc = payload?.vendedor?.vencimento || payload?.vendedor?.venc || '';
           vvToast(
-            `Comissões enviadas com sucesso — Arquiteto: ${vv_fmtBRL(arqV)} (Prev: ${arqPrev || '-'} | Venc: ${arqVenc || '-'}) · Vendedor: ${vv_fmtBRL(venV)} (Prev: ${venPrev || '-'} | Venc: ${venVenc || '-'})`,
+            `Comissões enviadas com sucesso — Arquiteto: ${vv_fmtBRL(arqV)} (Prev: ${arqPrev || '-'} | Venc: ${arqVenc || '-'} ) · Vendedor: ${vv_fmtBRL(venV)} (Prev: ${venPrev || '-'} | Venc: ${venVenc || '-'})`,
             'ok',
             6000
           );
@@ -1318,11 +1318,14 @@ async function abrirPopupSelecaoItensOmie(itens){
 
     footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
       const ignoradosKeys = new Set(
-        [...tbody.querySelectorAll('.vv-ignorar')].filter(c => c.checked).map(c => c.dataset.key)
+        [...tbody.querySelectorAll('.vv-ignorar')]
+          .filter(c => c.checked)
+          .map(c => c.dataset.key)
       );
 
       const aprovados = [];
       const ignorados = [];
+
       [...tbody.querySelectorAll('tr')].forEach(tr=>{
         const key  = tr.dataset.key;
         const item = itens.find(i=> i.key===key);
@@ -1343,6 +1346,7 @@ async function abrirPopupSelecaoItensOmie(itens){
       const totalAprovadoBaseComMO = vv_parseBRL($totAprov.textContent||'0');
       const valorServicos          = vv_parseBRL($totServ.textContent||'0');
       const valorDesconto          = vv_parseBRL($totDesc.textContent||'0');
+      const valorComissaoInfo      = vv_parseBRL($totCom.textContent||'0');
       const totalFinalProdutos     = vv_parseBRL($totAjust.textContent||'0');
 
       const calcFromState = (s, base)=> s.modo==='percent'
@@ -1354,7 +1358,6 @@ async function abrirPopupSelecaoItensOmie(itens){
 
       const comissoesParaEnvio = {
         baseConsiderada: _lastTotalBaseMO,
-        // OBS: nome, codigo (fornecedor), previsao, vencimento e observacao vão para o backend
         arquiteto: {
           nome: _comArq?.nome||'',
           codigo: _comArq?.codigo||'',
@@ -1365,7 +1368,7 @@ async function abrirPopupSelecaoItensOmie(itens){
           previsao: _comArq?.prev||'',
           vencimento: _comArq?.venc||'',
           observacao: _comArq?.obs||'',
-          codigo_categoria: "2.08.02" // força categoria do ARQUITETO no front
+          codigo_categoria: "2.08.02"
         },
         vendedor: {
           nome: _comVend?.nome||'',
@@ -1377,9 +1380,42 @@ async function abrirPopupSelecaoItensOmie(itens){
           previsao: _comVend?.prev||'',
           vencimento: _comVend?.venc||'',
           observacao: _comVend?.obs||'',
-          codigo_categoria: "2.07.99" // força categoria do VENDEDOR no front
+          codigo_categoria: "2.07.99"
         }
       };
+
+      // 🔹 Monta objeto de totais completo para uso posterior
+      const totaisPayload = {
+        totalAprovadoBaseComMO,
+        valorServicos,
+        valorDesconto,
+        valorComissaoInfo,
+        totalFinalProdutos,
+        comissoes: {
+          baseConsiderada: _lastTotalBaseMO,
+          arquiteto: { ...comissoesParaEnvio.arquiteto },
+          vendedor:  { ...comissoesParaEnvio.vendedor },
+          total: Math.max(0, arqCalc) + Math.max(0, vendCalc)
+        },
+        porCategoria: {
+          produto: vv_parseBRL($catProduto.textContent||'0'),
+          servico: vv_parseBRL($catServico.textContent||'0'),
+          vidro:   vv_parseBRL($catVidro.textContent||'0')
+        }
+      };
+
+      // ⭐ Expõe em variáveis globais para o pedido e outras funções usarem depois
+      window.vvUltimosTotaisSelecaoItensOmie = totaisPayload;
+      window.vvUltimoTotalFinalProdutosOmie  = totalFinalProdutos;
+      window.vvTotalAprovadoBaseMO          = totalAprovadoBaseComMO;
+      window.vvTotalServicosAplicado        = valorServicos;
+      window.vvTotalDescontoAplicado        = valorDesconto;
+      window.vvTotalComissaoInfo            = valorComissaoInfo;
+      window.vvTotalProdutoCategoria        = totaisPayload.porCategoria.produto;
+      window.vvTotalServicoCategoria        = totaisPayload.porCategoria.servico;
+      window.vvTotalVidroCategoria          = totaisPayload.porCategoria.vidro;
+
+      console.log('💾 Totais da seleção Omie gravados em window:', totaisPayload);
 
       // envia comissões (com confirmação visual)
       await tentarEnviarComissoes(comissoesParaEnvio);
@@ -1389,29 +1425,14 @@ async function abrirPopupSelecaoItensOmie(itens){
       resolve({
         aprovadosParaOmie: aprovados,
         ignorados,
-        totais: {
-          totalAprovadoBaseComMO,
-          valorServicos,
-          valorDesconto,
-          totalFinalProdutos,
-          comissoes: {
-            baseConsiderada: _lastTotalBaseMO,
-            arquiteto: { ...comissoesParaEnvio.arquiteto },
-            vendedor:  { ...comissoesParaEnvio.vendedor },
-            total: Math.max(0, arqCalc) + Math.max(0, vendCalc)
-          },
-          porCategoria: {
-            produto: vv_parseBRL($catProduto.textContent||'0'),
-            servico: vv_parseBRL($catServico.textContent||'0'),
-            vidro:   vv_parseBRL($catVidro.textContent||'0')
-          }
-        }
+        totais: totaisPayload
       });
     });
 
     recalc();
   });
 }
+
 
 /* ======================================================================
    FUNÇÃO GLOBAL DE ENVIO (usa seu backend /api/omie/comissao e
@@ -1892,73 +1913,488 @@ async function atualizarNaOmie() {
 const API_BASE_PRODUTOS = 'https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com'; 
 // TROQUE isso pela URL real quando publicar o server.
 
-/**
- * Envia os grupos ignorados para a API de "Produtos Faturados Direto"
- * (um documento por vez).
- */
-async function produtosFaturadosParaOCliente(ignorados) {
+// =============================
+// 🔹 Função GLOBAL: primeiro insumo da tabela do grupo
+// =============================
+// =============================
+// 🔹 GLOBAL: primeiro insumo do grupo (continua igual)
+// =============================
+// =============================
+// 🔹 Função GLOBAL: primeiro insumo do grupo
+// =============================
+// =============================
+// 🔹 Lista COMPLETA de insumos do grupo (linhas da tabela)
+//     Pega coluna "Quantidade" e "Valor de Custo Final"
+// =============================
+// =============================
+// 🔹 Pega o nome do grupo no accordion
+//     <span id="titulo-accordion-bloco-0">Vidro</span>
+// =============================
+window.getNomeGrupo = function (grupoId) {
+  if (!grupoId) return '';
+
+  const span = document.querySelector(`#titulo-accordion-${grupoId}`);
+  if (!span) {
+    console.warn(
+      `⚠️ Não encontrei #titulo-accordion-${grupoId} para pegar o nome do grupo.`
+    );
+    return '';
+  }
+
+  const nome = (span.textContent || '').trim();
+  console.log(`🏷️ Nome do grupo (${grupoId}):`, nome);
+  return nome;
+};
+
+// =============================
+// 🔹 Lista COMPLETA de insumos do grupo (linhas da tabela)
+//     Pega coluna "Quantidade" (6ª) e "Valor de Custo Final" (3ª)
+// =============================
+window.getListaInsumosGrupo = function (grupoId) {
+  if (!grupoId) return [];
+
+  const tabela = document.querySelector(`#tabela-${grupoId}`);
+  if (!tabela) return [];
+
+  const theadRow = tabela.querySelector('thead tr');
+  const tbody    = tabela.querySelector('tbody');
+  if (!theadRow || !tbody) return [];
+
+  const ths = Array.from(theadRow.querySelectorAll('th'));
+
+  let idxCodigo          = -1;
+  let idxDescricao       = -1;
+  let idxUnidade         = -1;
+  let idxQuantidade      = -1;
+  let idxValorCustoFinal = -1;
+
+  // tenta detectar pelos textos (caso mude a ordem no futuro)
+  ths.forEach((th, i) => {
+    const txt = (th.textContent || '').trim().toLowerCase();
+
+    if (txt.includes('código') || txt.includes('codigo'))   idxCodigo    = i;
+    if (txt.includes('descrição') || txt.includes('descricao')) idxDescricao = i;
+    if (txt.includes('unidade') || txt.includes('un.'))     idxUnidade   = i;
+    if (txt.includes('quantidade'))                         idxQuantidade = i;
+    if (txt.includes('valor de custo final'))               idxValorCustoFinal = i;
+  });
+
+  // 👇 Força os índices conforme você informou:
+  // 3ª coluna = valor, 6ª coluna = quantidade
+  if (ths.length >= 3) idxValorCustoFinal = 2;  // índice 2 = 3ª coluna
+  if (ths.length >= 6) idxQuantidade      = 5;  // índice 5 = 6ª coluna
+
+  if (idxQuantidade === -1) {
+    console.warn(
+      `⚠️ Não encontrei coluna "Quantidade" em #tabela-${grupoId}. Confere o texto do cabeçalho/ordem.`
+    );
+  }
+
+  if (idxValorCustoFinal === -1) {
+    console.warn(
+      `⚠️ Não encontrei coluna "Valor de Custo Final" em #tabela-${grupoId}. Confere o texto do cabeçalho/ordem.`
+    );
+  }
+
+  // helper para pegar valor atual da célula (input > span > texto)
+  function extrairTextoCelula(td) {
+    if (!td) return '';
+    const input = td.querySelector('input');
+    if (input) return input.value || '';
+    const span = td.querySelector('span');
+    if (span) return (span.textContent || '').trim();
+    return (td.textContent || '').trim();
+  }
+
+  const linhas = Array.from(tbody.querySelectorAll('tr'));
+  const insumos = [];
+
+  linhas.forEach((tr, index) => {
+    const tds = tr.querySelectorAll('td');
+
+    insumos.push({
+      ordem: index + 1,
+      codigo:           idxCodigo          >= 0 ? extrairTextoCelula(tds[idxCodigo])          : '',
+      descricao:        idxDescricao       >= 0 ? extrairTextoCelula(tds[idxDescricao])       : '',
+      unidade:          idxUnidade         >= 0 ? extrairTextoCelula(tds[idxUnidade])         : '',
+      quantidade:       idxQuantidade      >= 0 ? extrairTextoCelula(tds[idxQuantidade])      : '',
+      valorCustoFinal:  idxValorCustoFinal >= 0 ? extrairTextoCelula(tds[idxValorCustoFinal]) : '',
+    });
+  });
+
+  console.log(`🧾 Insumos lidos da tabela do grupo ${grupoId}:`, insumos);
+  return insumos;
+};
+
+// =============================
+// 🔹 Helper: converter número BR
+//     "R$ 1.234,56"  → 1234.56
+//     "159.698,78"   → 159698.78
+//     "159698.78"    → 159698.78
+// =============================
+function parseNumeroBR(valor) {
+  if (valor == null) return 0;
+  if (typeof valor === 'number') return valor;
+
+  let str = String(valor).trim();
+  if (!str) return 0;
+
+  // remove tudo que não é dígito, vírgula, ponto ou sinal
+  str = str.replace(/[^\d.,-]/g, '');
+
+  if (!str) return 0;
+
+  const hasComma = str.includes(',');
+  const hasDot   = str.includes('.');
+
+  if (hasComma && hasDot) {
+    // formato "1.234,56" → tira pontos de milhar e troca vírgula por ponto
+    str = str.replace(/\./g, '').replace(',', '.');
+  } else if (hasComma && !hasDot) {
+    // formato "1234,56" → vírgula como decimal
+    str = str.replace(',', '.');
+  } else {
+    // apenas ponto ou só números → deixa como está
+  }
+
+  const n = Number(str);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// =============================
+// 🔹 Função GLOBAL: valores vindos do popup do grupo
+//    (Total produtos após ajuste / Total (Produto) / Total (Serviço))
+// =============================
+window.getValoresPopupGrupo = function (grupoId, valorGrupoFallback = 0) {
+  const popupData =
+    (window.groupPopupsData && window.groupPopupsData[grupoId]) || {};
+
+  // 🟦 Total produtos após ajuste  → valorTotalPedido
+  const rawTotalProdutosAjuste =
+    popupData.totalProdutosAposAjuste ??
+    popupData.totalProdutosAjustado ??
+    popupData.totalProdutosAjuste ??
+    popupData.totalPedidoComDesconto ??
+    null;
+
+  // 🟩 Total (Produto)
+  const rawProdutos =
+    popupData.totalProdutos ??
+    popupData.totalProduto ??
+    popupData.valorTotalNFProdutos ??
+    0;
+
+  // 🟥 Total (Serviço)
+  const rawServicos =
+    popupData.totalServicos ??
+    popupData.totalServico ??
+    popupData.valorTotalNFServicos ??
+    0;
+
+  const totalPedidoCalc =
+    rawTotalProdutosAjuste != null
+      ? Number(rawTotalProdutosAjuste)
+      : Number(rawProdutos || 0) + Number(rawServicos || 0);
+
+  return {
+    valorTotalPedido:
+      Number.isFinite(totalPedidoCalc) && totalPedidoCalc > 0
+        ? totalPedidoCalc
+        : Number(valorGrupoFallback) || 0,
+
+    valorTotalNFProdutos: Number(rawProdutos) || 0,
+    valorTotalNFServicos: Number(rawServicos) || 0,
+  };
+};
+
+// =============================
+// 🔹 Função principal: cada INSUMO vira um PRODUTO enviado
+// =============================
+window.produtosFaturadosParaOCliente = async function (ignorados) {
   try {
     if (!Array.isArray(ignorados) || !ignorados.length) return null;
 
-    const clienteNome = vv_getClienteNome();
-    const numeroOrcamento = vv_getNumeroOrcamento();
-    const previsaoISO = vv_getPrimeiraDataParcelaISO();
+    const clienteNome     = vv_getClienteNome?.() || '';
+    const numeroOrcamento = vv_getNumeroOrcamento?.() || '';
+    const previsaoISO     = vv_getPrimeiraDataParcelaISO?.() || null;
 
-    // Monta os docs que vão virar "PedidoVidro" no Mongo
-    const docs = ignorados.map(item => ({
-      numeroPedido: String(numeroOrcamento || ''), // garante string
-      cliente: clienteNome || '',
-      fornecedor: '',
-      vidro: item.descricao || '',
-      tipo: '',
-      quantidade: 1,
-      orcamentoEnviado: '',
-      aprovacao: '',
-      moldeEnviado: '',
-      recebemosLinkPagamento: '',
-      pagamento: 'Pendente',
-      previsao: previsaoISO ? new Date(previsaoISO) : undefined,
-      numeroPedidoFornecedor: '',
-      vidrosProntos: '',
-      naEmpresa: '',
-      faturamento: 'Pendente',
-      responsavelVendedor: '',
-      numeroOrcFornecedor: '',
-      valorReal: Number(item.valorTotalGrupo) || 0,
-      numeroNotaFiscal: '',
-      formaPagamento: '',
-      observacao: `Ignorado no envio à Omie | Ambiente: ${item.ambiente || '-'} | Grupo: ${item.grupoId || '-'} | Código: ${item.codigo || '-'}`,
-      meta: {
-        origem: 'produtosFaturadosParaOCliente',
-        numeroOrcamento: numeroOrcamento || null,
-        chavePopup: item.key || null
+    const totaisSelecao = window.vvUltimosTotaisSelecaoItensOmie || null;
+
+    const valorTotalPedidoAjustado =
+      (typeof window.vvUltimoTotalFinalProdutosOmie === 'number'
+        ? window.vvUltimoTotalFinalProdutosOmie
+        : totaisSelecao?.totalFinalProdutos) || 0;
+
+    console.log('💰 Valor total do pedido ajustado (usado nos docs):', valorTotalPedidoAjustado);
+    console.log(
+      '📊 Totais completos da seleção Omie disponíveis em window.vvUltimosTotaisSelecaoItensOmie:',
+      totaisSelecao
+    );
+
+    const docs = [];
+
+    // 🔁 Para cada GRUPO ignorado…
+    ignorados.forEach((item) => {
+      const valorGrupo = Number(item.valorTotalGrupo) || 0;
+
+      // 🏷️ Nome do grupo (produto acabado)
+      const nomeGrupo =
+        (typeof window.getNomeGrupo === 'function'
+          ? window.getNomeGrupo(item.grupoId)
+          : '') || '';
+
+      const nomePrimeiroInsumo =
+        (typeof window.getPrimeiroInsumoDescricao === 'function'
+          ? window.getPrimeiroInsumoDescricao(item.grupoId)
+          : '') ||
+        item.descricao ||
+        '';
+
+      const insumosGrupo =
+        typeof window.getListaInsumosGrupo === 'function'
+          ? window.getListaInsumosGrupo(item.grupoId)
+          : [];
+
+      let valorNFProdutosGrupo = 0;
+      let valorNFServicosGrupo = 0;
+
+      if (typeof window.getValoresPopupGrupo === 'function') {
+        const r = window.getValoresPopupGrupo(item.grupoId, valorGrupo) || {};
+        valorNFProdutosGrupo = Number(r.valorTotalNFProdutos) || 0;
+        valorNFServicosGrupo = Number(r.valorTotalNFServicos) || 0;
       }
-    }));
+
+      const valorTotalNFProdutos =
+        totaisSelecao?.porCategoria?.produto ?? valorNFProdutosGrupo;
+
+      const valorTotalNFServicos =
+        totaisSelecao?.porCategoria?.servico ?? valorNFServicosGrupo;
+
+      // 🔸 Caso não haja linhas de insumo na tabela, cria doc único do grupo
+      if (!insumosGrupo.length) {
+        console.warn(
+          `⚠️ Grupo ${item.grupoId} não tem linhas de insumos na tabela. Criando doc único do grupo.`
+        );
+
+        const docGrupoFallback = {
+          numeroPedido: String(numeroOrcamento || ''),
+          cliente: clienteNome || '',
+          fornecedor: '',
+          vidro: nomePrimeiroInsumo || nomeGrupo,
+          tipo: '',
+          quantidade: 1,
+
+          grupoNome: nomeGrupo,
+          grupoTipo: 'PRODUTO_ACABADO',
+          produtoAcabadoCodigo: item.codigo || '',
+          produtoAcabadoDescricao: nomeGrupo || nomePrimeiroInsumo,
+          produtoAcabadoGrupoId: item.grupoId || '',
+          produtoAcabadoAmbiente: item.ambiente || '',
+
+          orcamentoEnviado: '',
+          aprovacao: '',
+          moldeEnviado: '',
+          recebemosLinkPagamento: '',
+          pagamento: 'Pendente',
+
+          previsao: previsaoISO ? new Date(previsaoISO) : null,
+          numeroPedidoFornecedor: '',
+          vidrosProntos: null,
+          naEmpresa: null,
+
+          faturamento: 'Pendente',
+          responsavelVendedor: '',
+          numeroOrcFornecedor: '',
+
+          valorTotalPedido: valorTotalPedidoAjustado,
+          valorTotalFaturamentoDiretoOrcado: valorGrupo,
+          valorAproximadoUF: 0,
+
+          valorTotalNFProdutos,
+          valorTotalNFServicos,
+
+          valorReal: valorGrupo,
+          residuoDiferencaFaturamentoServico: 0,
+
+          numeroNotaFiscal: '',
+          formaPagamento: '',
+
+          observacao: `Ignorado no envio à Omie | Ambiente: ${item.ambiente || '-'} | Grupo: ${
+            item.grupoId || '-'
+          } | Código: ${item.codigo || '-'}`,
+
+          meta: {
+            origem: 'produtosFaturadosParaOCliente',
+            numeroOrcamento: numeroOrcamento || null,
+            chavePopup: item.key || null,
+            totaisSelecaoOmie: totaisSelecao
+              ? {
+                  totalAprovadoBaseComMO: totaisSelecao.totalAprovadoBaseComMO ?? 0,
+                  valorServicos:         totaisSelecao.valorServicos         ?? 0,
+                  valorDesconto:         totaisSelecao.valorDesconto         ?? 0,
+                  valorComissaoInfo:     totaisSelecao.valorComissaoInfo     ?? 0,
+                  totalFinalProdutos:    totaisSelecao.totalFinalProdutos    ?? 0,
+                  porCategoria: {
+                    produto: totaisSelecao.porCategoria?.produto ?? 0,
+                    servico: totaisSelecao.porCategoria?.servico ?? 0,
+                    vidro:   totaisSelecao.porCategoria?.vidro   ?? 0,
+                  },
+                }
+              : null,
+            infoGrupo: {
+              grupoId: item.grupoId || null,
+              ambiente: item.ambiente || null,
+              codigoGrupo: item.codigo || null,
+              nomeGrupo,
+            },
+          },
+        };
+
+        console.log('📦 Documento (FALLBACK GRUPO) pronto para envio:', docGrupoFallback);
+        docs.push(docGrupoFallback);
+        return;
+      }
+
+      // 🔁 Para cada INSUMO da tabela, criamos um "produto" individual
+      insumosGrupo.forEach((insumo) => {
+        const valorTotalInsumo = parseNumeroBR(insumo.valorCustoFinal);
+        const quantidadeInsumo = parseNumeroBR(insumo.quantidade) || 1;
+
+        const valorUnitarioInsumo =
+          valorTotalInsumo && quantidadeInsumo
+            ? valorTotalInsumo / quantidadeInsumo
+            : valorTotalInsumo;
+
+        const doc = {
+          numeroPedido: String(numeroOrcamento || ''),
+          cliente: clienteNome || '',
+          fornecedor: '',
+          vidro: insumo.descricao || nomePrimeiroInsumo || nomeGrupo,
+          tipo: '',
+          quantidade: quantidadeInsumo,
+
+          grupoNome: nomeGrupo,
+          grupoTipo: 'PRODUTO_ACABADO',
+          produtoAcabadoCodigo: item.codigo || '',
+          produtoAcabadoDescricao: nomeGrupo || nomePrimeiroInsumo,
+          produtoAcabadoGrupoId: item.grupoId || '',
+          produtoAcabadoAmbiente: item.ambiente || '',
+
+          orcamentoEnviado: '',
+          aprovacao: '',
+          moldeEnviado: '',
+          recebemosLinkPagamento: '',
+          pagamento: 'Pendente',
+
+          previsao: previsaoISO ? new Date(previsaoISO) : null,
+          numeroPedidoFornecedor: '',
+          vidrosProntos: null,
+          naEmpresa: null,
+
+          faturamento: 'Pendente',
+          responsavelVendedor: '',
+          numeroOrcFornecedor: '',
+
+          valorTotalPedido: valorTotalPedidoAjustado,
+          valorTotalFaturamentoDiretoOrcado: valorTotalInsumo || valorGrupo,
+          valorAproximadoUF: 0,
+
+          valorTotalNFProdutos,
+          valorTotalNFServicos,
+
+          valorReal: valorTotalInsumo || valorGrupo,
+          residuoDiferencaFaturamentoServico: 0,
+
+          numeroNotaFiscal: '',
+          formaPagamento: '',
+
+          observacao:
+            `Ignorado no envio à Omie | Ambiente: ${item.ambiente || '-'} | Grupo: ${
+              item.grupoId || '-'
+            } | Código grupo: ${item.codigo || '-'} | ` +
+            `Insumo: ${insumo.descricao || '-'} (linha ${insumo.ordem})`,
+
+          meta: {
+            origem: 'produtosFaturadosParaOCliente',
+            numeroOrcamento: numeroOrcamento || null,
+            chavePopup: item.key || null,
+
+            totaisSelecaoOmie: totaisSelecao
+              ? {
+                  totalAprovadoBaseComMO: totaisSelecao.totalAprovadoBaseComMO ?? 0,
+                  valorServicos:         totaisSelecao.valorServicos         ?? 0,
+                  valorDesconto:         totaisSelecao.valorDesconto         ?? 0,
+                  valorComissaoInfo:     totaisSelecao.valorComissaoInfo     ?? 0,
+                  totalFinalProdutos:    totaisSelecao.totalFinalProdutos    ?? 0,
+                  porCategoria: {
+                    produto: totaisSelecao.porCategoria?.produto ?? 0,
+                    servico: totaisSelecao.porCategoria?.servico ?? 0,
+                    vidro:   totaisSelecao.porCategoria?.vidro   ?? 0,
+                  },
+                }
+              : null,
+
+            insumo: {
+              ordem: insumo.ordem,
+              codigo: insumo.codigo,
+              descricao: insumo.descricao,
+              unidade: insumo.unidade,
+              quantidadeTexto: insumo.quantidade,
+              valorCustoFinalTexto: insumo.valorCustoFinal,
+              quantidadeNumero: quantidadeInsumo,
+              valorUnitarioNumero: valorUnitarioInsumo,
+              valorTotalNumero: valorTotalInsumo,
+            },
+
+            infoGrupo: {
+              grupoId: item.grupoId || null,
+              ambiente: item.ambiente || null,
+              codigoGrupo: item.codigo || null,
+              valorTotalGrupo: valorGrupo,
+              nomeGrupo,
+            },
+          },
+        };
+
+        console.log('📦 Documento (INSUMO → produto) pronto para envio:', doc);
+        docs.push(doc);
+      });
+    });
+
+    console.log('📦 docs prontos para envio a /api/produtos:', {
+      totalDocs: docs.length,
+      docs,
+    });
 
     let inseridos = 0;
     const resultados = [];
 
-    // Envia UM POR UM para o servidor
     for (const doc of docs) {
+      console.log('🚚 Enviando insumo como produto para /api/produtos:', doc);
+
       const res = await fetch(`${API_BASE_PRODUTOS}/api/produtos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(doc)
+        body: JSON.stringify(doc),
       });
 
       const j = await res.json();
+      console.log('📥 Resposta do POST /api/produtos:', j);
+
       if (!j.ok) {
-        throw new Error(j.error || 'Falha ao salvar itens ignorados');
+        throw new Error(j.error || 'Falha ao salvar itens ignorados (insumos)');
       }
 
       inseridos++;
       resultados.push(j.data);
     }
 
-    console.log(`✅ ${inseridos} item(ns) criado(s) na "Aba de produtos faturados direto".`);
+    console.log(
+      `✅ ${inseridos} produto(s)/insumo(s) criado(s) na "Aba de produtos faturados direto".`
+    );
     alert(
-      `✅ ${inseridos} produto(s) foram criados na aba de Produtos Faturados Direto.\n` +
-      `Eles não foram enviados para a Omie.`
+      `✅ ${inseridos} produto(s)/insumo(s) foram criados na aba de Produtos Faturados Direto.\n` +
+        `Eles não foram enviados para a Omie.`
     );
 
     if (typeof carregarProdutos === 'function') {
@@ -1971,7 +2407,7 @@ async function produtosFaturadosParaOCliente(ignorados) {
     alert('Erro ao salvar itens ignorados: ' + err.message);
     return null;
   }
-}
+};
 
 
 
