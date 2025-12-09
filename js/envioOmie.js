@@ -463,7 +463,39 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
    - Inclui previsão/vencimento/observação para Arquiteto e Vendedor
    - Chama window.enviarComissoes(...) no confirmar
    ========================================================= */
+
+const dispararAtualizacaoClientes = () =>
+  fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes/atualizar").catch(() => {});
+
+async function verificarClienteEAtualizar() {
+  const inp = document.querySelector('input.form-control.razaoSocial');
+  if (!inp) return;
+  const norm = s => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const alvo = norm(inp.value || inp.dataset.valorOriginal);
+  if (!alvo) return;
+
+  const [o, l] = await Promise.all([
+    fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes").then(r => r.json()).catch(() => null),
+    fetch("https://ulhoa-0a02024d350a.herokuapp.com/clientes/visualizar").then(r => r.json()).catch(() => null)
+  ]);
+
+  const lo = Array.isArray(o?.clientes) ? o.clientes : (Array.isArray(o) ? o : []);
+  const ll = Array.isArray(l?.clientes) ? l.clientes : (Array.isArray(l) ? l : []);
+
+  const existeOmie  = lo.some(c => norm(c.razao_social || c.nome_fantasia) === alvo);
+  const existeLocal = ll.some(c => norm(c.razao_social || c.nome_fantasia) === alvo);
+
+  if (!existeOmie || !existeLocal) {
+    alert("Cliente não encontrado em ambas as bases. Atualizando lista de clientes…");
+    dispararAtualizacaoClientes();
+  } else {
+    console.log("✅ Cliente encontrado nas duas bases (Omie e sistema local).");
+  }
+}
+
 async function abrirPopupSelecaoItensOmie(itens){
+verificarClienteEAtualizar();
+
   if (typeof ocultarCarregando === 'function') ocultarCarregando();
 
   // ===== helpers de UI: toast =====
@@ -829,8 +861,8 @@ async function abrirPopupSelecaoItensOmie(itens){
   }
   const VENDEDORES_CODIGO = [
     { nome:"FELIPE ULHOA FERREIRA", codigo:"2452908656", aliases:["FELIPE ULHOA","FELIPE U","FELIPE F","FELIPE FERREIRA"] },
-    { nome:"JOAO CLEBER MARTINS",   codigo:"2458334366", aliases:["JOAO CLEBER","JOÃO CLEBER","JOAO C MARTINS","J C MARTINS","JOAO MARTINS"] },
-    { nome:"RAFAEL ANGELO ARAUJO DA SILVA", codigo:"2458334372", aliases:["RAFAEL ANGELO","RAFAEL A A SILVA","RAFAEL ARAUJO","RAFAEL SILVA"] }
+    { nome:"JOAO CLEBER MARTINS",   codigo:"2487961636", aliases:["JOAO CLEBER","JOÃO CLEBER","JOAO C MARTINS","J C MARTINS","JOAO MARTINS"] },
+    { nome:"RAFAEL ANGELO ARAUJO DA SILVA", codigo:"2458334379", aliases:["RAFAEL ANGELO","RAFAEL A A SILVA","RAFAEL ARAUJO","RAFAEL SILVA"] }
   ];
   function resolverCodigoVendedor(nome){
     const n = _vv_normNome(nome);
@@ -2707,6 +2739,10 @@ async function enviarOSServico({ valorServicos, endpoint = OS_SERVICOS_ENDPOINT 
     return { ok:false, error: msg };
   }
 }
+
+
+
+
 
 /* Expor global */
 window.enviarOSServico = enviarOSServico;
