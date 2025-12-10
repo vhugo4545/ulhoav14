@@ -1943,7 +1943,7 @@ async function atualizarNaOmie() {
         console.error("❌ Erro de envio (produtos):", erro);
       }
 
-      // 🔸 AGORA: OS de Serviços é enviada independentemente do sucesso dos produtos
+      // 🔸 AGORA: sempre tenta enviar OS de Serviços, independente de sucessoProdutos
       try {
         const selecao = window.__vvUltimaSelecaoOmie || null;
         const valorServicos = selecao?.totais?.valorServicos || 0; // 🛠️ Total (Serviço) do popup
