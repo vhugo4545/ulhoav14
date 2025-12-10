@@ -1924,51 +1924,62 @@ async function atualizarNaOmie() {
           console.log("📤 Enviado à Omie (produtos):", data);
         } else {
           if (typeof mostrarPopupCustomizado === "function") {
-            mostrarPopupCustomizado("❌ Erro ao enviar produtos", data?.erro || "Erro desconhecido ao enviar.", "error");
+            mostrarPopupCustomizado(
+              "❌ Erro ao enviar produtos",
+              data?.erro || "Erro desconhecido ao enviar.",
+              "error"
+            );
           }
           console.error("❌ Erro (produtos):", data);
         }
       } catch (erro) {
         if (typeof mostrarPopupCustomizado === "function") {
-          mostrarPopupCustomizado("❌ Erro na conexão", "Falha ao enviar PRODUTOS. Verifique o servidor.", "error");
+          mostrarPopupCustomizado(
+            "❌ Erro na conexão",
+            "Falha ao enviar PRODUTOS. Verifique o servidor.",
+            "error"
+          );
         }
         console.error("❌ Erro de envio (produtos):", erro);
       }
 
-      // 🔸 MÍNIMA ALTERAÇÃO: após sucesso dos produtos, tenta enviar a OS de Serviços
-      if (sucessoProdutos) {
-        try {
-          const selecao = window.__vvUltimaSelecaoOmie || null;
-          const valorServicos = selecao?.totais?.valorServicos || 0; // 🛠️ Total (Serviço) do popup
+      // 🔸 AGORA: OS de Serviços é enviada independentemente do sucesso dos produtos
+      try {
+        const selecao = window.__vvUltimaSelecaoOmie || null;
+        const valorServicos = selecao?.totais?.valorServicos || 0; // 🛠️ Total (Serviço) do popup
 
-          if (valorServicos > 0 && typeof enviarOSServico === "function") {
-            console.log("🛠️ Enviando OS de Serviços. Valor:", valorServicos);
-            const osResp = await enviarOSServico({ valorServicos });
-            if (osResp?.ok) {
-              if (typeof mostrarPopupCustomizado === "function") {
-                mostrarPopupCustomizado(
-                  "✅ Serviços enviados",
-                  `OS de Serviços criada com sucesso.<br>Valor: ${vv_fmtBRL(valorServicos)}.`,
-                  "success"
-                );
-              }
-            } else {
-              if (typeof mostrarPopupCustomizado === "function") {
-                mostrarPopupCustomizado(
-                  "⚠️ Serviços não enviados",
-                  `Não foi possível criar a OS de Serviços agora.<br>Motivo: ${osResp?.error || "desconhecido"}`,
-                  "warning"
-                );
-              }
+        if (valorServicos > 0 && typeof enviarOSServico === "function") {
+          console.log("🛠️ Enviando OS de Serviços. Valor:", valorServicos);
+          const osResp = await enviarOSServico({ valorServicos });
+
+          if (osResp?.ok) {
+            if (typeof mostrarPopupCustomizado === "function") {
+              mostrarPopupCustomizado(
+                "✅ Serviços enviados",
+                `OS de Serviços criada com sucesso.<br>Valor: ${vv_fmtBRL(valorServicos)}.`,
+                "success"
+              );
             }
           } else {
-            console.log("ℹ️ Sem serviços para enviar (valor 0) ou função enviarOSServico indisponível.");
+            if (typeof mostrarPopupCustomizado === "function") {
+              mostrarPopupCustomizado(
+                "⚠️ Serviços não enviados",
+                `Não foi possível criar a OS de Serviços agora.<br>Motivo: ${osResp?.error || "desconhecido"}`,
+                "warning"
+              );
+            }
           }
-        } catch (err) {
-          console.error("❌ Falha ao enviar OS de Serviços:", err);
-          if (typeof mostrarPopupCustomizado === "function") {
-            mostrarPopupCustomizado("⚠️ Serviços não enviados", "Ocorreu um erro ao criar a OS de Serviços.", "warning");
-          }
+        } else {
+          console.log("ℹ️ Sem serviços para enviar (valor 0) ou função enviarOSServico indisponível.");
+        }
+      } catch (err) {
+        console.error("❌ Falha ao enviar OS de Serviços:", err);
+        if (typeof mostrarPopupCustomizado === "function") {
+          mostrarPopupCustomizado(
+            "⚠️ Serviços não enviados",
+            "Ocorreu um erro ao criar a OS de Serviços.",
+            "warning"
+          );
         }
       }
 
