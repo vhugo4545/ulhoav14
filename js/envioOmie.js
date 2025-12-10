@@ -295,6 +295,8 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
        vv:comissoes:prontas    (antes do POST)
        vv:comissoes:enviadas   (após POST, com resultados)
    ========================================================= */
+
+
 (function () {
   if (window.enviarComissoes) return; // evita redefinir
 
@@ -390,70 +392,70 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
 
   // === Função global que o popup chama no Confirmar ===
   // Espera payload: { baseConsiderada, arquiteto:{...}, vendedor:{...} }
-  window.enviarComissoes = async function (payload) {
-    try {
-      document.dispatchEvent(
-        new CustomEvent("vv:comissoes:prontas", { detail: { payload } })
-      );
-    } catch {}
+ window.enviarComissoes = async function (payload) {
+  try {
+    document.dispatchEvent(
+      new CustomEvent("vv:comissoes:prontas", { detail: { payload } })
+    );
+  } catch {}
 
-    const lancArq  = montarLancamento("arquiteto", payload?.arquiteto, payload?.baseConsiderada);
-    const lancVend = montarLancamento("vendedor",  payload?.vendedor,  payload?.baseConsiderada);
+  const lancArq = montarLancamento("arquiteto", payload?.arquiteto, payload?.baseConsiderada);
+  const lancVend = montarLancamento("vendedor", payload?.vendedor, payload?.baseConsiderada);
 
-    const vArq  = validarLancamento(lancArq,  "arquiteto");
-    const vVend = validarLancamento(lancVend, "vendedor");
+  const vArq = validarLancamento(lancArq, "arquiteto");
+  const vVend = validarLancamento(lancVend, "vendedor");
 
-    if (!vArq.valido || !vVend.valido) {
-      const msgs = []
-        .concat(!vArq.valido ? [`Arquiteto: ${vArq.erros.join(", ")}`] : [])
-        .concat(!vVend.valido ? [`Vendedor: ${vVend.erros.join(", ")}`] : []);
-      const erro = "Dados incompletos para enviar comissões.\n" + msgs.join("\n");
-      toast(erro, false);
-      try {
-        document.dispatchEvent(
-          new CustomEvent("vv:comissoes:enviadas", {
-            detail: { ok: false, erro, resultados: { vArq, vVend } }
-          })
-        );
-      } catch {}
-      return { ok: false, erro, resultados: { vArq, vVend } };
-    }
+  let resArq = { ok: false }, resVend = { ok: false };
 
-    const [resArq, resVend] = await Promise.all([
-      postarLancamento(lancArq,  "arquiteto"),
-      postarLancamento(lancVend, "vendedor"),
-    ]);
-
-    const okGeral = !!(resArq?.ok && resVend?.ok);
-
-    if (okGeral) {
-      toast("Comissões enviadas com sucesso (arquiteto + vendedor).");
+  // Envio separado para ARQUITETO
+  if (vArq.valido) {
+    resArq = await postarLancamento(lancArq, "arquiteto");
+    if (resArq.ok) {
+      toast("Comissão enviada com sucesso (arquiteto).");
     } else {
-      let msg = "Falha ao enviar comissões.\n";
-      if (!resArq.ok)  msg += `Arquiteto: ${resArq.erro || "erro"}\n`;
-      if (!resVend.ok) msg += `Vendedor: ${resVend.erro || "erro"}\n`;
-      toast(msg.trim(), false);
+      toast(`Falha ao enviar comissão do arquiteto: ${resArq.erro || "erro"}`, false);
     }
+  } else {
+    toast(`Comissão do arquiteto inválida: ${vArq.erros.join(", ")}`, false);
+  }
 
-    try {
-      document.dispatchEvent(
-        new CustomEvent("vv:comissoes:enviadas", {
-          detail: {
-            ok: okGeral,
-            resultados: { arquiteto: resArq, vendedor: resVend }
+  // Envio separado para VENDEDOR
+  if (vVend.valido) {
+    resVend = await postarLancamento(lancVend, "vendedor");
+    if (resVend.ok) {
+      toast("Comissão enviada com sucesso (vendedor).");
+    } else {
+      toast(`Falha ao enviar comissão do vendedor: ${resVend.erro || "erro"}`, false);
+    }
+  } else {
+    toast(`Comissão do vendedor inválida: ${vVend.erros.join(", ")}`, false);
+  }
+
+  const okGeral = resArq.ok || resVend.ok;
+
+  try {
+    document.dispatchEvent(
+      new CustomEvent("vv:comissoes:enviadas", {
+        detail: {
+          ok: okGeral,
+          resultados: {
+            arquiteto: resArq,
+            vendedor: resVend
           }
-        })
-      );
-    } catch {}
+        }
+      })
+    );
+  } catch {}
 
-    return {
-      ok: okGeral,
-      resultados: {
-        arquiteto: resArq,
-        vendedor: resVend
-      }
-    };
+  return {
+    ok: okGeral,
+    resultados: {
+      arquiteto: resArq,
+      vendedor: resVend
+    }
   };
+};
+
 })();
 
 /* =========================================================
@@ -468,33 +470,73 @@ const dispararAtualizacaoClientes = () =>
   fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes/atualizar").catch(() => {});
 
 async function verificarClienteEAtualizar() {
-  const inp = document.querySelector('input.form-control.razaoSocial');
-  if (!inp) return;
-  const norm = s => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-  const alvo = norm(inp.value || inp.dataset.valorOriginal);
-  if (!alvo) return;
+  // tenta pelo seletor novo E pelo antigo (.razaoSocial)
+  const inp = document.querySelector(
+    '#clientesWrapper > div > div.col-md-6.position-relative.d-flex.align-items-end.gap-2 > div > input, ' +
+    'input.form-control.razaoSocial'
+  );
 
+  if (!inp) {
+    console.warn("⚠️ verificarClienteEAtualizar: input de razão social não encontrado.");
+    return;
+  }
+
+  const norm = s => (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+  const alvo = norm(inp.value || inp.dataset.valorOriginal);
+  if (!alvo) {
+    console.warn("⚠️ verificarClienteEAtualizar: razão social vazia.");
+    return;
+  }
+
+  // Busca nas duas bases
   const [o, l] = await Promise.all([
-    fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes").then(r => r.json()).catch(() => null),
-    fetch("https://ulhoa-0a02024d350a.herokuapp.com/clientes/visualizar").then(r => r.json()).catch(() => null)
+    fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes")
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null),
+    fetch("https://ulhoa-0a02024d350a.herokuapp.com/clientes/visualizar")
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null)
   ]);
 
+  // API de serviços: { total, ultimaAtualizacao, clientes: [...] }
   const lo = Array.isArray(o?.clientes) ? o.clientes : (Array.isArray(o) ? o : []);
+  // API local: pode ser { clientes: [...] } ou array direto
   const ll = Array.isArray(l?.clientes) ? l.clientes : (Array.isArray(l) ? l : []);
 
-  const existeOmie  = lo.some(c => norm(c.razao_social || c.nome_fantasia) === alvo);
-  const existeLocal = ll.some(c => norm(c.razao_social || c.nome_fantasia) === alvo);
+  // Atualiza cache global para outras funções (getCodigoClientePorRazao)
+  if (Array.isArray(lo) && lo.length) {
+    window.listaClientesServico = lo;
+  }
+
+  // Compatível tanto com nome_fantasia quanto razao_social
+  const existeOmie = lo.some(c =>
+    norm(c.razao_social || c.nome_fantasia) === alvo
+  );
+
+  const existeLocal = ll.some(c =>
+    norm(c.razao_social || c.nome_fantasia) === alvo
+  );
 
   if (!existeOmie || !existeLocal) {
     alert("Cliente não encontrado em ambas as bases. Atualizando lista de clientes…");
-    dispararAtualizacaoClientes();
+    if (typeof dispararAtualizacaoClientes === "function") {
+      dispararAtualizacaoClientes();
+    } else {
+      console.warn("⚠️ dispararAtualizacaoClientes não está definida.");
+    }
   } else {
     console.log("✅ Cliente encontrado nas duas bases (Omie e sistema local).");
   }
 }
 
+
 async function abrirPopupSelecaoItensOmie(itens){
-verificarClienteEAtualizar();
+verificarClienteEAtualizar()
 
   if (typeof ocultarCarregando === 'function') ocultarCarregando();
 
@@ -862,7 +904,7 @@ verificarClienteEAtualizar();
   const VENDEDORES_CODIGO = [
     { nome:"FELIPE ULHOA FERREIRA", codigo:"2452908656", aliases:["FELIPE ULHOA","FELIPE U","FELIPE F","FELIPE FERREIRA"] },
     { nome:"JOAO CLEBER MARTINS",   codigo:"2487961636", aliases:["JOAO CLEBER","JOÃO CLEBER","JOAO C MARTINS","J C MARTINS","JOAO MARTINS"] },
-    { nome:"RAFAEL ANGELO ARAUJO DA SILVA", codigo:"2458334379", aliases:["RAFAEL ANGELO","RAFAEL A A SILVA","RAFAEL ARAUJO","RAFAEL SILVA"] }
+    { nome:"RAFAEL ANGELO ARAUJO DA SILVA", codigo:"2458334379w", aliases:["RAFAEL ANGELO","RAFAEL A A SILVA","RAFAEL ARAUJO","RAFAEL SILVA"] }
   ];
   function resolverCodigoVendedor(nome){
     const n = _vv_normNome(nome);
@@ -1568,53 +1610,55 @@ verificarClienteEAtualizar();
   }
 
   // expõe para o popup
-  window.enviarComissoes = async function (payload) {
-    try { document.dispatchEvent(new CustomEvent("vv:comissoes:prontas", { detail: { payload } })); } catch {}
+ window.enviarComissoes = async function (payload) {
+  try {
+    document.dispatchEvent(new CustomEvent("vv:comissoes:prontas", { detail: { payload } }));
+  } catch {}
 
-    const lancArq  = montarLancamento("arquiteto", payload?.arquiteto, payload?.baseConsiderada);
-    const lancVend = montarLancamento("vendedor",  payload?.vendedor,  payload?.baseConsiderada);
+  const lancArq  = montarLancamento("arquiteto", payload?.arquiteto, payload?.baseConsiderada);
+  const lancVend = montarLancamento("vendedor",  payload?.vendedor,  payload?.baseConsiderada);
 
-    const vArq = validarLancamento(lancArq, "arquiteto");
-    const vVend = validarLancamento(lancVend, "vendedor");
+  const vArq = validarLancamento(lancArq, "arquiteto");
+  const vVend = validarLancamento(lancVend, "vendedor");
 
-    if (!vArq.valido || !vVend.valido) {
-      const msgs = []
-        .concat(!vArq.valido ? [`Arquiteto: ${vArq.erros.join(", ")}`] : [])
-        .concat(!vVend.valido ? [`Vendedor: ${vVend.erros.join(", ")}`] : []);
-      const erro = "Dados incompletos para enviar comissões.\n" + msgs.join("\n");
-      toast(erro, false);
-      try {
-        document.dispatchEvent(new CustomEvent("vv:comissoes:enviadas", {
-          detail: { ok: false, erro, resultados: { vArq, vVend } }
-        }));
-      } catch {}
-      return { ok: false, erro, resultados: { vArq, vVend } };
-    }
+  const resultados = {};
+  let mensagensErro = [];
 
-    const [resArq, resVend] = await Promise.all([
-      postarLancamento(lancArq, "arquiteto"),
-      postarLancamento(lancVend, "vendedor"),
-    ]);
+  // Tenta enviar do arquiteto, se válido
+  if (vArq.valido) {
+    resultados.arquiteto = await postarLancamento(lancArq, "arquiteto");
+    if (!resultados.arquiteto.ok) mensagensErro.push(`Arquiteto: ${resultados.arquiteto.erro || "erro"}`);
+  } else {
+    mensagensErro.push(`Arquiteto: ${vArq.erros.join(", ")}`);
+    resultados.arquiteto = { ok: false, erro: vArq.erros.join(", ") };
+  }
 
-    const okGeral = !!(resArq?.ok && resVend?.ok);
+  // Tenta enviar do vendedor, se válido
+  if (vVend.valido) {
+    resultados.vendedor = await postarLancamento(lancVend, "vendedor");
+    if (!resultados.vendedor.ok) mensagensErro.push(`Vendedor: ${resultados.vendedor.erro || "erro"}`);
+  } else {
+    mensagensErro.push(`Vendedor: ${vVend.erros.join(", ")}`);
+    resultados.vendedor = { ok: false, erro: vVend.erros.join(", ") };
+  }
 
-    if (okGeral) {
-      toast("Comissões enviadas com sucesso (arquiteto + vendedor).");
-    } else {
-      let msg = "Falha ao enviar comissões.\n";
-      if (!resArq.ok) msg += `Arquiteto: ${resArq.erro || "erro"}\n`;
-      if (!resVend.ok) msg += `Vendedor: ${resVend.erro || "erro"}\n`;
-      toast(msg.trim(), false);
-    }
+  const okGeral = !!(resultados.arquiteto?.ok || resultados.vendedor?.ok);
 
-    try {
-      document.dispatchEvent(new CustomEvent("vv:comissoes:enviadas", {
-        detail: { ok: okGeral, resultados: { arquiteto: resArq, vendedor: resVend } }
-      }));
-    } catch {}
+  if (okGeral) {
+    toast("Comissões enviadas com sucesso.");
+  } else {
+    toast("Falha ao enviar comissões:\n" + mensagensErro.join("\n"), false);
+  }
 
-    return { ok: okGeral, resultados: { arquiteto: resArq, vendedor: resVend } };
-  };
+  try {
+    document.dispatchEvent(new CustomEvent("vv:comissoes:enviadas", {
+      detail: { ok: okGeral, resultados }
+    }));
+  } catch {}
+
+  return { ok: okGeral, resultados };
+};
+
 })();
 
 
@@ -2443,7 +2487,6 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
 
 
 
-
 /* ================== CONFIG ================== */
 const OS_SERVICOS_ENDPOINT = window.OS_SERVICOS_ENDPOINT
   || "https://ulhoa-servico-ec4e1aa95355.herokuapp.com/os";
@@ -2474,7 +2517,83 @@ function toISO(iso) {
   const da = String(d.getDate()).padStart(2,"0");
   return `${y}-${m}-${da}`;
 }
-function vv_fmtBRL(n){ return (Number(n)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+function vv_fmtBRL(n){
+  return (Number(n)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+}
+
+/* ====== AJUSTE: BUSCA DE CÓDIGO DO CLIENTE PELO NOVO RETORNO DA API ====== */
+/*
+  Esperado da API /clientes:
+  {
+    "total": 3478,
+    "ultimaAtualizacao": "2025-12-10T12:39:38.194Z",
+    "clientes": [
+      {
+        "nome_fantasia": "PKO DO BRASIL IMP. E EXP. LTDA",
+        "codigo_cliente_omie": 10922418046
+      },
+      ...
+    ]
+  }
+
+  Em algum lugar do código você deve fazer algo como:
+    const resp = await fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes");
+    const data = await resp.json();
+    window.listaClientesServico = data.clientes || [];
+*/
+
+function normalizarTexto(str) {
+  if (!str) return "";
+  return str
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+window.listaClientesServico = window.listaClientesServico || [];
+
+/**
+ * Retorna o codigo_cliente_omie (número) a partir da razão social / nome fantasia.
+ * Usada em ctxHeaderOS -> getCodigoClientePorRazao(razao)
+ */
+function getCodigoClientePorRazao(razaoBusca) {
+  if (!razaoBusca) return "";
+
+  const lista = window.listaClientesServico;
+  if (!Array.isArray(lista) || !lista.length) {
+    console.warn("⚠️ listaClientesServico ainda não carregada.");
+    return "";
+  }
+
+  const alvo = normalizarTexto(razaoBusca);
+
+  // 1) Match exato
+  let cliente = lista.find(
+    (c) => normalizarTexto(c.nome_fantasia) === alvo
+  );
+
+  // 2) Fallback: contém
+  if (!cliente) {
+    cliente = lista.find(
+      (c) => normalizarTexto(c.nome_fantasia).includes(alvo)
+    );
+  }
+
+  if (!cliente) {
+    console.warn("⚠️ Cliente não encontrado na lista para:", razaoBusca);
+    return "";
+  }
+
+  const codigo = cliente.codigo_cliente_omie;
+  if (!codigo) {
+    console.warn("⚠️ Cliente encontrado mas sem codigo_cliente_omie:", cliente);
+    return "";
+  }
+
+  return Number(codigo);
+}
 
 /* ================== CONTEXTOS DA TELA ================== */
 /* Caso você tenha inputs dedicados (inpCodInt, inpData, inpCli, inpParc, inpAdicNF),
@@ -2740,10 +2859,5 @@ async function enviarOSServico({ valorServicos, endpoint = OS_SERVICOS_ENDPOINT 
   }
 }
 
-
-
-
-
 /* Expor global */
 window.enviarOSServico = enviarOSServico;
-
