@@ -1,5 +1,6 @@
 async function salvarPropostaEditavel() {
   try {
+    console.log("editaveis")
     abrirTodasSanfonas();
     mostrarCarregando()
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -159,11 +160,59 @@ async function salvarPropostaEditavel() {
       }
     });
 
-    if (!grupos.length) {
-      ocultarCarregando()
-      mostrarPopupCustomizado("⚠️ Atenção", "Nenhum grupo ou item foi adicionado à proposta.", "warning");
-      return { erro: "Nenhum produto informado." };
+
+    // ✅ Validação de campos obrigatórios (texto puro, sem HTML)
+const errosObrigatorios = [];
+
+// Origem do Cliente
+if (!camposFormulario.origemCliente) {
+  errosObrigatorios.push("O campo Origem do Cliente é obrigatório.");
+}
+
+// Vendedor Responsável (texto do select)
+if (!textoSelecionado) {
+  errosObrigatorios.push("O campo Vendedor Responsável é obrigatório.");
+}
+
+
+// Clientes: Nome / Razão Social e Função
+if (!clientes.length) {
+  errosObrigatorios.push(
+    "É obrigatório informar pelo menos um Cliente (Nome / Razão Social e Função)."
+  );
+} else {
+  clientes.forEach((c, idx) => {
+    const linha = idx + 1;
+
+    if (!c.nome_razao_social) {
+      errosObrigatorios.push(
+        `O campo Nome / Razão Social do cliente ${linha} é obrigatório.`
+      );
     }
+
+    if (!c.funcao) {
+      errosObrigatorios.push(
+        `O campo Função do cliente ${linha} é obrigatório.`
+      );
+    }
+  });
+}
+
+// Se tiver erro, interrompe o fluxo e não envia
+if (errosObrigatorios.length) {
+  const mensagem =
+    "Preencha os seguintes campos obrigatórios:\n\n" +
+    errosObrigatorios.map(msg => `• ${msg}`).join("\n");
+
+  ocultarCarregando();
+  mostrarPopupCustomizado("⚠️ Campos obrigatórios", mensagem, "warning");
+
+  return {
+    erro: "Campos obrigatórios não preenchidos",
+    detalhes: errosObrigatorios
+  };
+}
+
 
     // 🧾 Proposta final
     const numeroProposta = camposFormulario.numeroOrcamento || Date.now().toString();
