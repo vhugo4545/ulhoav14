@@ -352,8 +352,12 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     </table>
     ` : '';
 
-  // 7) HTML completo (sem “Contato Responsável”)
-  const condicoesGeraisFormatada = (dados.condicoesGerais || "").replace(/•/g, "<br>•");
+  // 7) HTML completo (sem “Contato Responsável”) preciso que isto funcione agora 
+const condicoesGeraisFormatada = (dados.condicoesGerais || "")
+  .replace(/\r\n/g, "\n")   // normaliza quebras de linha
+  .replace(/\n/g, "<br>");  // cada quebra de linha vira um <br>
+  console.log(condicoesGeraisFormatada)
+
   const htmlCompleto = `
     <html>
       <head>
