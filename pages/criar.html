@@ -314,45 +314,99 @@
 
   </main>
   <!-- Modal de Incluir Cliente -->
-  <div class="modal fade" id="popupClienteModal" tabindex="-1" aria-labelledby="popupClienteLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="popupClienteLabel">Incluir Cliente</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          <form id="popupCliente_form">
-            <div class="mb-3 d-none">
-              <label class="form-label">Código de Integração</label>
-              <input type="text" class="form-control" id="popupCliente_codigo" readonly>
-            </div>
-            <div class="mb-3">
+<div class="modal fade" id="popupClienteModal" tabindex="-1" aria-labelledby="popupClienteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="popupClienteLabel">Incluir Cliente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <form id="popupCliente_form">
+          <div class="mb-3 d-none">
+            <label class="form-label">Código de Integração</label>
+            <input type="text" class="form-control" id="popupCliente_codigo" readonly>
+          </div>
+
+          <div class="row">
+            <div class="mb-3 col-md-6">
               <label class="form-label">Razão Social</label>
               <input type="text" class="form-control" id="popupCliente_razao" required>
             </div>
-            <div class="mb-3">
+
+            <div class="mb-3 col-md-6">
               <label class="form-label">Nome Fantasia</label>
               <input type="text" class="form-control" id="popupCliente_fantasia" required>
             </div>
-            <div class="mb-3">
+          </div>
+
+          <div class="row">
+            <div class="mb-3 col-md-6">
               <label class="form-label">E-mail</label>
               <input type="email" class="form-control" id="popupCliente_email" required>
             </div>
-            <div class="mb-3">
+
+            <div class="mb-3 col-md-6">
               <label class="form-label">CNPJ ou CPF</label>
               <input type="text" class="form-control" id="popupCliente_cnpjcpf" required>
             </div>
-          
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button class="btn btn-primary" onclick="enviarClienteParaAPI()">Salvar Cliente</button>
-        </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Endereço</label>
+            <input type="text" class="form-control" id="popupCliente_endereco" required>
+          </div>
+
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Bairro</label>
+              <input type="text" class="form-control" id="popupCliente_bairro" required>
+            </div>
+
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Cidade</label>
+              <input type="text" class="form-control" id="popupCliente_cidade" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Estado (UF)</label>
+              <input type="text" class="form-control" id="popupCliente_estado" maxlength="2" required>
+            </div>
+
+            <div class="mb-3 col-md-6">
+              <label class="form-label">CEP</label>
+              <input type="text" class="form-control" id="popupCliente_cep" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Contato</label>
+              <input type="text" class="form-control" id="popupCliente_contato">
+            </div>
+
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Inscrição Municipal</label>
+              <input type="text" class="form-control" id="popupCliente_inscricao_municipal">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Inscrição Estadual</label>
+            <input type="text" class="form-control" id="popupCliente_inscricao_estadual">
+          </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="enviarClienteParaAPI()">Salvar Cliente</button>
       </div>
     </div>
   </div>
+</div>
 
   <!-- Script -->
    <script src="../js/validarToken.js" defer></script>
