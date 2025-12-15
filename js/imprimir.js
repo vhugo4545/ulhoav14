@@ -156,16 +156,18 @@ function mostrarPopupSelecaoGruposEstetico(grupos, valorFinal, onConfirmar) {
  overlay.querySelector("#btnCancelarModalCustom").onclick = function() {
     overlay.style.display = "none";
   };
-  overlay.querySelector("#btnConfirmarModalCustom").onclick = function() {
-    const checkboxes = overlay.querySelectorAll("input[name='ocultarProduto']");
-    const opcoes = {};
-    checkboxes.forEach(cb => {
-      const key = (cb.dataset.grupoid || "").trim(); // 🔹 aqui
-      opcoes[key] = !!cb.checked; // 🔹 garante booleano
-    });
-    overlay.style.display = "none";
-    onConfirmar(opcoes);
-  };
+ overlay.querySelector("#btnConfirmarModalCustom").onclick = function() {
+  const checkboxes = overlay.querySelectorAll("input[name='ocultarProduto']");
+  const opcoes = {};
+  checkboxes.forEach(cb => {
+    const key = (cb.dataset.grupoid || "").trim();
+    // ✅ marcado = ocultar (false para exibir, true para ocultar – conforme sua lógica atual)
+    opcoes[key] = !cb.checked;
+  });
+  overlay.style.display = "none";
+  onConfirmar(opcoes);
+};
+
 }
 
 
@@ -373,8 +375,8 @@ const condicoesGeraisFormatada = (dados.condicoesGerais || "")
           <table class="table table-bordered table-sm w-100">
             <tr>
               <td style="width:40%;text-align:center;vertical-align:middle;">
-                <img src="../js/logo.jpg" style="max-height:65px;"><br><br>
-                CNPJ: 02.836.048/0001-60 <br>(31) 3332- 0616 / (31) 3271-9449<br>
+                <img src="../js/logo.jpg" style="max-height:65px;"><br>
+             <br>(31) 3332- 0616 / (31) 98457-7573<br>
               </td>
               <td style="width:40%;">
                 <table class="table table-sm w-100">
@@ -389,10 +391,10 @@ const condicoesGeraisFormatada = (dados.condicoesGerais || "")
           <table class="table table-bordered table-sm w-100 mt-2">
             <tr><td><strong>Cliente (Responsável):</strong></td><td>${dados.nomeCliente}</td></tr>
             <tr><td><strong>CPF/CNPJ:</strong></td><td>${dados.cpfCnpj}</td></tr>
-            <tr><td><strong>Telefone Cliente:</strong></td><td>${dados.telefoneCliente}</td></tr>
+          
             <tr><td><strong>Endereço da Obra:</strong></td><td>${dados.enderecoObra}</td></tr>
             <tr><td><strong>Vendedor:</strong></td><td>${dados.vendedor}</td></tr>
-            <tr><td><strong>Operador:</strong></td><td>${dados.operador}</td></tr>
+        
           </table>
 
           ${tabelaContatosHTML}
