@@ -376,7 +376,7 @@ const condicoesGeraisFormatada = (dados.condicoesGerais || "")
             <tr>
               <td style="width:40%;text-align:center;vertical-align:middle;">
                 <img src="../js/logo.jpg" style="max-height:65px;"><br>
-             <br>(31) 3332- 0616 / (31) 98457-7573<br>
+             <br> (31) 98457-7573<br>
               </td>
               <td style="width:40%;">
                 <table class="table table-sm w-100">
