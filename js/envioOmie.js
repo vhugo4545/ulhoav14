@@ -904,7 +904,7 @@ verificarClienteEAtualizar()
   const VENDEDORES_CODIGO = [
     { nome:"FELIPE ULHOA FERREIRA", codigo:"2452908656", aliases:["FELIPE ULHOA","FELIPE U","FELIPE F","FELIPE FERREIRA"] },
     { nome:"JOAO CLEBER MARTINS",   codigo:"2487961636", aliases:["JOAO CLEBER","JOÃO CLEBER","JOAO C MARTINS","J C MARTINS","JOAO MARTINS"] },
-    { nome:"RAFAEL ANGELO ARAUJO DA SILVA", codigo:"2458334379w", aliases:["RAFAEL ANGELO","RAFAEL A A SILVA","RAFAEL ARAUJO","RAFAEL SILVA"] }
+    { nome:"RAFAEL ANGELO ARAUJO DA SILVA", codigo:"2458334379", aliases:["RAFAEL ANGELO","RAFAEL A A SILVA","RAFAEL ARAUJO","RAFAEL SILVA"] }
   ];
   function resolverCodigoVendedor(nome){
     const n = _vv_normNome(nome);
