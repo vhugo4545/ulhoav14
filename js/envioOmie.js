@@ -637,260 +637,348 @@ verificarClienteEAtualizar()
   }
 
   // ===== SUB-POPUP: COMISSÕES =====
-  function abrirPopupComissao(){
-    return new Promise((resolveC)=>{
-      const ARQUITETOS = coletarArquitetosCadastrados();
-      const valorComissaoResumo = lerComissaoArquitetoDoResumo();
+ // ===== SUB-POPUP: COMISSÕES =====
+function abrirPopupComissao(){
+  return new Promise((resolveC)=>{
+    const ARQUITETOS = coletarArquitetosCadastrados();
+    const valorComissaoResumo = lerComissaoArquitetoDoResumo();
 
-      const bd = document.createElement('div'); bd.className = 'vv-modal-backdrop';
-      const md = document.createElement('div'); md.className = 'vv-modal';
-      const hd = document.createElement('header');
-      hd.innerHTML = `<h3>Comissões — base: Total aprovado (base + MO)</h3>`;
+    // ✅ Defaults (ao abrir: percent + 1%)
+    if (!_comArq) _comArq = {};
+    if (!_comVend) _comVend = {};
 
-      const by = document.createElement('div'); by.className = 'vv-body';
+    if (!_comArq.modo) _comArq.modo = 'percent';
+    if (_comArq.percent == null || isNaN(Number(_comArq.percent))) _comArq.percent = 1;
 
-      const optsArq = ARQUITETOS.map(a=>{
-        const txt = a.codigo ? `${a.nome} — ${a.codigo}` : a.nome;
-        const sel = (a.nome && a.nome === (_comArq?.nome||'')) ? 'selected' : '';
-        return `<option value="${a.nome.replace(/"/g,'&quot;')}" data-codigo="${(a.codigo||'').replace(/"/g,'&quot;')}" ${sel}>${txt}</option>`;
-      }).join('');
+    if (!_comVend.modo) _comVend.modo = 'percent';
+    if (_comVend.percent == null || isNaN(Number(_comVend.percent))) _comVend.percent = 1;
 
-      by.innerHTML = `
-        <div style="display:grid; gap:16px;">
-          <div style="display:grid; gap:8px;">
-            <div class="vv-help">Base atual para cálculo: <b id="vv-com-base">${vv_fmtBRL(_lastTotalBaseMO||0)}</b></div>
+    // ✅ Estado do desconto (persistente opcional)
+    if (!window._comDesc) window._comDesc = { modo:'percent', percent:0, valorManual:0 };
+
+    const bd = document.createElement('div'); bd.className = 'vv-modal-backdrop';
+    const md = document.createElement('div'); md.className = 'vv-modal';
+    const hd = document.createElement('header');
+    hd.innerHTML = `<h3>Comissões — base: Total aprovado (Produto + Serviço + Vidro)</h3>`;
+
+    const by = document.createElement('div'); by.className = 'vv-body';
+
+    const optsArq = ARQUITETOS.map(a=>{
+      const txt = a.codigo ? `${a.nome} — ${a.codigo}` : a.nome;
+      const sel = (a.nome && a.nome === (_comArq?.nome||'')) ? 'selected' : '';
+      return `<option value="${a.nome.replace(/"/g,'&quot;')}" data-codigo="${(a.codigo||'').replace(/"/g,'&quot;')}" ${sel}>${txt}</option>`;
+    }).join('');
+
+    by.innerHTML = `
+      <div style="display:grid; gap:16px;">
+        <div style="display:grid; gap:8px;">
+          <div class="vv-help">
+            Base atual para cálculo:
+            <b id="vv-com-base">${vv_fmtBRL(_lastTotalBaseMO||0)}</b>
+            <span class="vv-help" style="margin-left:8px;">(auto: Produto + Serviço + Vidro)</span>
           </div>
-
-          <div style="display:grid; gap:16px; grid-template-columns: repeat(auto-fit, minmax(280px,1fr));">
-            <!-- Arquiteto -->
-            <section style="border:1px solid #e5e7eb; border-radius:12px; padding:12px;">
-              <h4 style="margin:0 0 8px 0;">Arquiteto</h4>
-
-              <label class="form-label">Selecionar arquiteto cadastrado</label>
-              <select id="comArqSelect" class="form-select" style="margin-bottom:8px;">
-                <option value="">— escolher —</option>
-                ${optsArq}
-              </select>
-
-              <div class="row g-2" style="margin-bottom:8px;">
-                <div class="col-8">
-                  <label class="form-label">Nome</label>
-                  <input id="comArqNome" class="form-control" placeholder="Nome do arquiteto" value="${_comArq?.nome||''}">
-                </div>
-                <div class="col-4">
-                  <label class="form-label">Código</label>
-                  <input id="comArqCodigo" class="form-control" placeholder="Código" value="${_comArq?.codigo||''}">
-                </div>
-              </div>
-
-              <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
-                <label><input type="radio" name="comArqModo" value="percent" ${_comArq?.modo!=='valor'?'checked':''}> % do total aprovado</label>
-                <label><input type="radio" name="comArqModo" value="valor" ${_comArq?.modo==='valor'?'checked':''}> Valor fixo (R$)</label>
-              </div>
-
-              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                <label class="form-label" style="min-width:90px;">Valor</label>
-                <input id="comArqPercent" type="number" min="0" step="0.01" value="${_comArq?.percent||0}" class="form-control" style="max-width:140px;">
-                <input id="comArqValor"   type="text"   value="${vv_fmtBRL(_comArq?.valorManual ?? valorComissaoResumo ?? 0)}" class="form-control" style="max-width:180px;">
-              </div>
-
-              <div class="row g-2" style="margin-top:8px;">
-                <div class="col-6">
-                  <label class="form-label">Previsão</label>
-                  <input type="date" id="arqPrev" class="form-control" value="${_comArq?.prev||''}">
-                </div>
-                <div class="col-6">
-                  <label class="form-label">Vencimento</label>
-                  <input type="date" id="arqVenc" class="form-control" value="${_comArq?.venc||''}">
-                </div>
-              </div>
-              <div style="margin-top:8px;">
-                <label class="form-label">Observação (opcional)</label>
-                <textarea id="arqObs" rows="2" class="form-control" placeholder="Ex: Comissão arquiteto">${_comArq?.obs||''}</textarea>
-              </div>
-
-              <div class="vv-help" style="margin-top:6px;">Calculado: <b id="comArqCalc">R$ 0,00</b></div>
-            </section>
-
-            <!-- Vendedor -->
-            <section style="border:1px solid #e5e7eb; border-radius:12px; padding:12px;">
-              <h4 style="margin:0 0 8px 0;">Vendedor</h4>
-
-              <div class="row g-2" style="margin-bottom:8px;">
-                <div class="col-8">
-                  <label class="form-label">Nome</label>
-                  <input id="comVendNome" class="form-control" placeholder="Nome do vendedor" value="${_comVend?.nome|| (document.getElementById('vendedorResponsavel')?.value||'')}">
-                </div>
-                <div class="col-4">
-                  <label class="form-label">Código</label>
-                  <input id="comVendCodigo" class="form-control" placeholder="Código" value="${_comVend?.codigo|| (document.getElementById('codigoVendedor')?.value||'')}">
-                </div>
-              </div>
-
-              <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
-                <label><input type="radio" name="comVendModo" value="percent" ${_comVend?.modo!=='valor'?'checked':''}> % do total aprovado</label>
-                <label><input type="radio" name="comVendModo" value="valor" ${_comVend?.modo==='valor'?'checked':''}> Valor fixo (R$)</label>
-              </div>
-
-              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                <label class="form-label" style="min-width:90px;">Valor</label>
-                <input id="comVendPercent" type="number" min="0" step="0.01" value="${_comVend?.percent||0}" class="form-control" style="max-width:140px;">
-                <input id="comVendValor"   type="text"   value="${vv_fmtBRL(_comVend?.valorManual||0)}" class="form-control" style="max-width:180px;">
-              </div>
-
-              <div class="row g-2" style="margin-top:8px;">
-                <div class="col-6">
-                  <label class="form-label">Previsão</label>
-                  <input type="date" id="vendPrev" class="form-control" value="${_comVend?.prev||''}">
-                </div>
-                <div class="col-6">
-                  <label class="form-label">Vencimento</label>
-                  <input type="date" id="vendVenc" class="form-control" value="${_comVend?.venc||''}">
-                </div>
-              </div>
-              <div style="margin-top:8px;">
-                <label class="form-label">Observação (opcional)</label>
-                <textarea id="vendObs" rows="2" class="form-control" placeholder="Ex: Comissão consultor">${_comVend?.obs||''}</textarea>
-              </div>
-
-              <div class="vv-help" style="margin-top:6px;">Calculado: <b id="comVendCalc">R$ 0,00</b></div>
-            </section>
-
-            <!-- Resumo -->
-            <section style="border:1px solid #e5e7eb; border-radius:12px; padding:12px;">
-              <h4 style="margin:0 0 8px 0;">Resumo</h4>
-              <div class="vv-help">Arquiteto: <b id="sumArq">R$ 0,00</b></div>
-              <div class="vv-help">Vendedor: <b id="sumVend">R$ 0,00</b></div>
-              <div class="vv-help" style="margin-top:4px;">Total: <b id="sumTot">R$ 0,00</b></div>
-            </section>
-          </div>
+          <div class="vv-help">Desconto aplicado no vendedor: <b id="vv-com-desc">R$ 0,00</b></div>
+          <div class="vv-help">Base do vendedor (já com desconto): <b id="vv-com-base-vend">R$ 0,00</b></div>
         </div>
-      `;
 
-      const ft = document.createElement('div'); ft.className = 'vv-footer';
-      ft.innerHTML = `
-        <div class="vv-help">Informativo — não altera valores enviados à Omie.</div>
-        <div style="display:flex; gap:8px;">
-          <button class="vv-btn" id="commCancel">Cancelar</button>
-          <button class="vv-btn primary" id="commSave">Salvar</button>
+        <div style="display:grid; gap:16px; grid-template-columns: repeat(auto-fit, minmax(280px,1fr));">
+          <!-- Arquiteto -->
+          <section style="border:1px solid #e5e7eb; border-radius:12px; padding:12px;">
+            <h4 style="margin:0 0 8px 0;">Arquiteto</h4>
+
+            <label class="form-label">Selecionar arquiteto cadastrado</label>
+            <select id="comArqSelect" class="form-select" style="margin-bottom:8px;">
+              <option value="">— escolher —</option>
+              ${optsArq}
+            </select>
+
+            <div class="row g-2" style="margin-bottom:8px;">
+              <div class="col-8">
+                <label class="form-label">Nome</label>
+                <input id="comArqNome" class="form-control" placeholder="Nome do arquiteto" value="${_comArq?.nome||''}">
+              </div>
+              <div class="col-4">
+                <label class="form-label">Código</label>
+                <input id="comArqCodigo" class="form-control" placeholder="Código" value="${_comArq?.codigo||''}">
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+              <label><input type="radio" name="comArqModo" value="percent" ${_comArq?.modo!=='valor'?'checked':''}> % do total aprovado</label>
+              <label><input type="radio" name="comArqModo" value="valor" ${_comArq?.modo==='valor'?'checked':''}> Valor fixo (R$)</label>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <label class="form-label" style="min-width:90px;">Valor</label>
+              <input id="comArqPercent" type="number" min="0" step="0.01" value="${Number(_comArq?.percent||1)}" class="form-control" style="max-width:140px;">
+              <input id="comArqValor"   type="text"   value="${vv_fmtBRL(_comArq?.valorManual ?? valorComissaoResumo ?? 0)}" class="form-control" style="max-width:180px;">
+            </div>
+
+            <div class="row g-2" style="margin-top:8px;">
+              <div class="col-6">
+                <label class="form-label">Previsão</label>
+                <input type="date" id="arqPrev" class="form-control" value="${_comArq?.prev||''}">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Vencimento</label>
+                <input type="date" id="arqVenc" class="form-control" value="${_comArq?.venc||''}">
+              </div>
+            </div>
+            <div style="margin-top:8px;">
+              <label class="form-label">Observação (opcional)</label>
+              <textarea id="arqObs" rows="2" class="form-control" placeholder="Ex: Comissão arquiteto">${_comArq?.obs||''}</textarea>
+            </div>
+
+            <div class="vv-help" style="margin-top:6px;">Calculado: <b id="comArqCalc">R$ 0,00</b></div>
+          </section>
+
+          <!-- Vendedor -->
+          <section style="border:1px solid #e5e7eb; border-radius:12px; padding:12px;">
+            <h4 style="margin:0 0 8px 0;">Vendedor</h4>
+
+            <div class="row g-2" style="margin-bottom:8px;">
+              <div class="col-8">
+                <label class="form-label">Nome</label>
+                <input id="comVendNome" class="form-control" placeholder="Nome do vendedor" value="${_comVend?.nome|| (document.getElementById('vendedorResponsavel')?.value||'')}">
+              </div>
+              <div class="col-4">
+                <label class="form-label">Código</label>
+                <input id="comVendCodigo" class="form-control" placeholder="Código" value="${_comVend?.codigo|| (document.getElementById('codigoVendedor')?.value||'')}">
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+              <label><input type="radio" name="comVendModo" value="percent" ${_comVend?.modo!=='valor'?'checked':''}> % do total aprovado</label>
+              <label><input type="radio" name="comVendModo" value="valor" ${_comVend?.modo==='valor'?'checked':''}> Valor fixo (R$)</label>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <label class="form-label" style="min-width:90px;">Valor</label>
+              <input id="comVendPercent" type="number" min="0" step="0.01" value="${Number(_comVend?.percent||1)}" class="form-control" style="max-width:140px;">
+              <input id="comVendValor"   type="text"   value="${vv_fmtBRL(_comVend?.valorManual||0)}" class="form-control" style="max-width:180px;">
+            </div>
+
+            <div class="row g-2" style="margin-top:8px;">
+              <div class="col-6">
+                <label class="form-label">Previsão</label>
+                <input type="date" id="vendPrev" class="form-control" value="${_comVend?.prev||''}">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Vencimento</label>
+                <input type="date" id="vendVenc" class="form-control" value="${_comVend?.venc||''}">
+              </div>
+            </div>
+            <div style="margin-top:8px;">
+              <label class="form-label">Observação (opcional)</label>
+              <textarea id="vendObs" rows="2" class="form-control" placeholder="Ex: Comissão consultor">${_comVend?.obs||''}</textarea>
+            </div>
+
+            <div class="vv-help" style="margin-top:6px;">Calculado: <b id="comVendCalc">R$ 0,00</b></div>
+          </section>
+
+          <!-- Resumo + Desconto -->
+          <section style="border:1px solid #e5e7eb; border-radius:12px; padding:12px;">
+            <h4 style="margin:0 0 8px 0;">Resumo</h4>
+
+            <!-- ✅ DESCONTO -->
+            <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
+              <label style="font-weight:600;">Desconto (primeiro, sobre o <b>TOTAL</b> dos itens)</label>
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <label><input type="radio" name="discModo" value="percent" ${window._comDesc?.modo!=='valor'?'checked':''} data-valor-original="percent"> % do total</label>
+                <label><input type="radio" name="discModo" value="valor" ${window._comDesc?.modo==='valor'?'checked':''} data-valor-original="valor"> Valor fixo (R$)</label>
+              </div>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input id="discPercent" type="number" min="0" step="0.01" value="${Number(window._comDesc?.percent||0)}"
+                  class="vv-input" style="width:120px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;" data-valor-original="${Number(window._comDesc?.percent||0)}">
+                <input id="discValor" type="text" value="${vv_fmtBRL(window._comDesc?.valorManual||0)}"
+                  class="vv-input" style="width:160px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;" data-valor-original="${vv_fmtBRL(window._comDesc?.valorManual||0)}">
+              </div>
+              <small class="vv-help">Depois o desconto é <b>dividido igualmente</b> entre os aprovados.</small>
+            </div>
+
+            <div class="vv-help">Arquiteto: <b id="sumArq">R$ 0,00</b></div>
+            <div class="vv-help">Vendedor: <b id="sumVend">R$ 0,00</b></div>
+            <div class="vv-help" style="margin-top:4px;">Total: <b id="sumTot">R$ 0,00</b></div>
+          </section>
         </div>
-      `;
+      </div>
+    `;
 
-      md.appendChild(hd); md.appendChild(by); md.appendChild(ft);
-      bd.appendChild(md); document.body.appendChild(bd);
+    const ft = document.createElement('div'); ft.className = 'vv-footer';
+    ft.innerHTML = `
+      <div class="vv-help">Informativo — não altera valores enviados à Omie.</div>
+      <div style="display:flex; gap:8px;">
+        <button class="vv-btn" id="commCancel">Cancelar</button>
+        <button class="vv-btn primary" id="commSave">Salvar</button>
+      </div>
+    `;
 
-      const $selArq       = by.querySelector('#comArqSelect');
-      const $comArqNome   = by.querySelector('#comArqNome');
-      const $comArqCodigo = by.querySelector('#comArqCodigo');
-      const $comArqPercent= by.querySelector('#comArqPercent');
-      const $comArqValor  = by.querySelector('#comArqValor');
-      const $arqPrev      = by.querySelector('#arqPrev');
-      const $arqVenc      = by.querySelector('#arqVenc');
-      const $arqObs       = by.querySelector('#arqObs');
+    md.appendChild(hd); md.appendChild(by); md.appendChild(ft);
+    bd.appendChild(md); document.body.appendChild(bd);
 
-      const $comVendNome   = by.querySelector('#comVendNome');
-      const $comVendCodigo = by.querySelector('#comVendCodigo');
-      const $comVendPercent= by.querySelector('#comVendPercent');
-      const $comVendValor  = by.querySelector('#comVendValor');
-      const $vendPrev      = by.querySelector('#vendPrev');
-      const $vendVenc      = by.querySelector('#vendVenc');
-      const $vendObs       = by.querySelector('#vendObs');
+    const $selArq        = by.querySelector('#comArqSelect');
+    const $comArqNome    = by.querySelector('#comArqNome');
+    const $comArqCodigo  = by.querySelector('#comArqCodigo');
+    const $comArqPercent = by.querySelector('#comArqPercent');
+    const $comArqValor   = by.querySelector('#comArqValor');
+    const $arqPrev       = by.querySelector('#arqPrev');
+    const $arqVenc       = by.querySelector('#arqVenc');
+    const $arqObs        = by.querySelector('#arqObs');
 
-      const $comArqCalc = by.querySelector('#comArqCalc');
-      const $comVendCalc= by.querySelector('#comVendCalc');
-      const $sumArq = by.querySelector('#sumArq');
-      const $sumVend= by.querySelector('#sumVend');
-      const $sumTot = by.querySelector('#sumTot');
+    const $comVendNome    = by.querySelector('#comVendNome');
+    const $comVendCodigo  = by.querySelector('#comVendCodigo');
+    const $comVendPercent = by.querySelector('#comVendPercent');
+    const $comVendValor   = by.querySelector('#comVendValor');
+    const $vendPrev       = by.querySelector('#vendPrev');
+    const $vendVenc       = by.querySelector('#vendVenc');
+    const $vendObs        = by.querySelector('#vendObs');
 
-      const getModoArq  = ()=> by.querySelector('input[name="comArqModo"]:checked')?.value || 'percent';
-      const getModoVend = ()=> by.querySelector('input[name="comVendModo"]:checked')?.value || 'percent';
-      const parseBRL = (s)=> (window.vv_parseBRL ? vv_parseBRL(s) : Number(String(s).replace(/[^\d,-]/g,'').replace(/\./g,'').replace(',','.'))||0);
-      const fmtBRL   = (n)=> (window.vv_fmtBRL   ? vv_fmtBRL(n)   : `R$ ${Number(n||0).toFixed(2)}`);
+    const $comArqCalc  = by.querySelector('#comArqCalc');
+    const $comVendCalc = by.querySelector('#comVendCalc');
+    const $sumArq      = by.querySelector('#sumArq');
+    const $sumVend     = by.querySelector('#sumVend');
+    const $sumTot      = by.querySelector('#sumTot');
 
-      if ($selArq){
-        $selArq.addEventListener('change', ()=>{
-          const opt = $selArq.selectedOptions[0];
-          if (!opt) return;
-          $comArqNome.value   = opt.value || '';
-          $comArqCodigo.value = opt.getAttribute('data-codigo') || '';
-          $comArqNome.dispatchEvent(new Event('change'));
-        });
-      }
+    // ✅ desconto
+    const $discPercent = by.querySelector('#discPercent');
+    const $discValor   = by.querySelector('#discValor');
 
-      function recalcComm(){
-        const base = _lastTotalBaseMO || 0;
+    // labels de base/desc
+    const $baseLabel     = by.querySelector('#vv-com-base');
+    const $descLabel     = by.querySelector('#vv-com-desc');
+    const $baseVendLabel = by.querySelector('#vv-com-base-vend');
 
-        const arq = (getModoArq()==='percent')
-          ? (Number($comArqPercent.value||0)/100) * base
-          : parseBRL($comArqValor.value||'0');
+    const getModoArq  = ()=> by.querySelector('input[name="comArqModo"]:checked')?.value || 'percent';
+    const getModoVend = ()=> by.querySelector('input[name="comVendModo"]:checked')?.value || 'percent';
+    const getModoDisc = ()=> by.querySelector('input[name="discModo"]:checked')?.value || 'percent';
 
-        const vend = (getModoVend()==='percent')
-          ? (Number($comVendPercent.value||0)/100) * base
-          : parseBRL($comVendValor.value||'0');
+    const parseBRL = (s)=> (window.vv_parseBRL ? vv_parseBRL(s) : Number(String(s).replace(/&nbsp;/g,' ').replace(/[^\d,-]/g,'').replace(/\./g,'').replace(',','.'))||0);
+    const fmtBRL   = (n)=> (window.vv_fmtBRL   ? vv_fmtBRL(n)   : `R$ ${Number(n||0).toFixed(2)}`);
 
-        $comArqCalc.textContent = fmtBRL(arq);
-        $comVendCalc.textContent= fmtBRL(vend);
-        $sumArq.textContent = fmtBRL(arq);
-        $sumVend.textContent= fmtBRL(vend);
-        $sumTot.textContent = fmtBRL(Math.max(0,arq)+Math.max(0,vend));
-      }
+    // ✅ base = soma dos 3 totais (Produto + Serviço + Vidro)
+    function lerBasePorCategorias(){
+      const p = document.getElementById('vv-cat-produto')?.textContent || '';
+      const s = document.getElementById('vv-cat-servico')?.textContent || '';
+      const v = document.getElementById('vv-cat-vidro')?.textContent   || '';
+      const soma = parseBRL(p) + parseBRL(s) + parseBRL(v);
+      // fallback se não achar os elementos (mantém compatível)
+      return soma > 0 ? soma : (_lastTotalBaseMO || 0);
+    }
 
-      by.querySelectorAll('input[name="comArqModo"]').forEach(r=> r.addEventListener('change', recalcComm));
-      by.querySelectorAll('input[name="comVendModo"]').forEach(r=> r.addEventListener('change', recalcComm));
-      [$comArqPercent,$comArqValor,$comVendPercent,$comVendValor].forEach(inp=>{
-        inp.addEventListener('input', recalcComm);
-        if (inp===$comArqValor || inp===$comVendValor){
-          inp.addEventListener('blur', ()=>{ inp.value = fmtBRL(parseBRL(inp.value||'0')); });
-        }
+    if ($selArq){
+      $selArq.addEventListener('change', ()=>{
+        const opt = $selArq.selectedOptions[0];
+        if (!opt) return;
+        $comArqNome.value   = opt.value || '';
+        $comArqCodigo.value = opt.getAttribute('data-codigo') || '';
+        $comArqNome.dispatchEvent(new Event('change'));
       });
+    }
 
-      recalcComm();
+    function recalcComm(){
+      const baseBruta = lerBasePorCategorias();
 
-      ft.querySelector('#commCancel').addEventListener('click', ()=>{
-        document.body.removeChild(bd);
-        resolveC(null);
-      });
+      // desconto sobre o TOTAL dos itens (base bruta)
+      const desconto = (getModoDisc()==='percent')
+        ? (Number($discPercent.value||0)/100) * baseBruta
+        : parseBRL($discValor.value||'0');
 
-      ft.querySelector('#commSave').addEventListener('click', ()=>{
-        _comArq = {
-          modo: getModoArq(),
-          percent: Number($comArqPercent.value||0),
-          valorManual: parseBRL($comArqValor.value||'0'),
-          nome: $comArqNome.value||'',
-          codigo: $comArqCodigo.value||'',
-          prev: $arqPrev.value||'',
-          venc: $arqVenc.value||'',
-          obs: $arqObs.value||''
-        };
-        _comVend = {
-          modo: getModoVend(),
-          percent: Number($comVendPercent.value||0),
-          valorManual: parseBRL($comVendValor.value||'0'),
-          nome: $comVendNome.value||'',
-          codigo: $comVendCodigo.value||'',
-          prev: $vendPrev.value||'',
-          venc: $vendVenc.value||'',
-          obs: $vendObs.value||''
-        };
+      // vendedor recebe base já com desconto debitado
+      const baseVendedor = Math.max(0, baseBruta - Math.max(0,desconto));
 
-        atualizarComissaoArquitetoNoResumo(_comArq.modo==='percent'
-          ? (_lastTotalBaseMO * (Number(_comArq.percent||0)/100))
-          : _comArq.valorManual
-        );
+      // arquiteto: base bruta
+      const arq = (getModoArq()==='percent')
+        ? (Number($comArqPercent.value||0)/100) * baseBruta
+        : parseBRL($comArqValor.value||'0');
 
-        const arqCalc  = vv_parseBRL($sumArq.textContent||'0');
-        const venCalc  = vv_parseBRL($sumVend.textContent||'0');
+      // vendedor: percent usa baseVendedor; valor fixo = manual (sem mexer)
+      const vend = (getModoVend()==='percent')
+        ? (Number($comVendPercent.value||0)/100) * baseVendedor
+        : parseBRL($comVendValor.value||'0');
 
-        document.body.removeChild(bd);
-        resolveC({
-          baseConsiderada: _lastTotalBaseMO,
-          arquiteto: { ..._comArq, valorCalculado: arqCalc },
-          vendedor:  { ..._comVend, valorCalculado: venCalc },
-          total: arqCalc + venCalc
-        });
+      // UI
+      $baseLabel.textContent     = fmtBRL(baseBruta);
+      $descLabel.textContent     = fmtBRL(desconto);
+      $baseVendLabel.textContent = fmtBRL(baseVendedor);
+
+      $comArqCalc.textContent = fmtBRL(arq);
+      $comVendCalc.textContent= fmtBRL(vend);
+
+      $sumArq.textContent  = fmtBRL(arq);
+      $sumVend.textContent = fmtBRL(vend);
+      $sumTot.textContent  = fmtBRL(Math.max(0,arq) + Math.max(0,vend));
+    }
+
+    // listeners
+    by.querySelectorAll('input[name="comArqModo"]').forEach(r=> r.addEventListener('change', recalcComm));
+    by.querySelectorAll('input[name="comVendModo"]').forEach(r=> r.addEventListener('change', recalcComm));
+    by.querySelectorAll('input[name="discModo"]').forEach(r=> r.addEventListener('change', recalcComm));
+
+    [$comArqPercent,$comArqValor,$comVendPercent,$comVendValor,$discPercent,$discValor].forEach(inp=>{
+      inp.addEventListener('input', recalcComm);
+      if (inp===$comArqValor || inp===$comVendValor || inp===$discValor){
+        inp.addEventListener('blur', ()=>{ inp.value = fmtBRL(parseBRL(inp.value||'0')); });
+      }
+    });
+
+    // primeira atualização (já com 1% por padrão)
+    recalcComm();
+
+    ft.querySelector('#commCancel').addEventListener('click', ()=>{
+      document.body.removeChild(bd);
+      resolveC(null);
+    });
+
+    ft.querySelector('#commSave').addEventListener('click', ()=>{
+      // salva desconto (para próxima abertura já vir igual)
+      window._comDesc = {
+        modo: getModoDisc(),
+        percent: Number($discPercent.value||0),
+        valorManual: parseBRL($discValor.value||'0')
+      };
+
+      _comArq = {
+        modo: getModoArq(),
+        percent: Number($comArqPercent.value||0),
+        valorManual: parseBRL($comArqValor.value||'0'),
+        nome: $comArqNome.value||'',
+        codigo: $comArqCodigo.value||'',
+        prev: $arqPrev.value||'',
+        venc: $arqVenc.value||'',
+        obs: $arqObs.value||''
+      };
+
+      _comVend = {
+        modo: getModoVend(),
+        percent: Number($comVendPercent.value||0),
+        valorManual: parseBRL($comVendValor.value||'0'),
+        nome: $comVendNome.value||'',
+        codigo: $comVendCodigo.value||'',
+        prev: $vendPrev.value||'',
+        venc: $vendVenc.value||'',
+        obs: $vendObs.value||''
+      };
+
+      atualizarComissaoArquitetoNoResumo(_comArq.modo==='percent'
+        ? (lerBasePorCategorias() * (Number(_comArq.percent||0)/100)) // arquiteto base bruta
+        : _comArq.valorManual
+      );
+
+      const arqCalc = vv_parseBRL($sumArq.textContent||'0');
+      const venCalc = vv_parseBRL($sumVend.textContent||'0');
+
+      document.body.removeChild(bd);
+      resolveC({
+        baseConsiderada: lerBasePorCategorias(),
+        desconto: { ...window._comDesc },
+        arquiteto: { ..._comArq, valorCalculado: arqCalc },
+        vendedor:  { ..._comVend, valorCalculado: venCalc },
+        total: arqCalc + venCalc
       });
     });
-  }
+  });
+}
+
 
   // === Normalização nome->código vendedor ===
   function _vv_normNome(s){
