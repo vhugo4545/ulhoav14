@@ -209,7 +209,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
   // 2) Coleta múltiplos clientes/contatos
   const clientes = Array.from(document.querySelectorAll('#clientesWrapper .cliente-item'))
     .map(row => ({
-      nomeCliente:  getTextOrValue(row.querySelector('.razaoSocial')),
+      nomeCliente:  getTextOrValue(row.querySelector('.nomeContato')),
       cpfCnpj:      getTextOrValue(row.querySelector('.cpfCnpj')),
       codigo:       getTextOrValue(row.querySelector('.codigoCliente')),
       nomeContato:  getTextOrValue(row.querySelector('.nomeContato')),
@@ -408,8 +408,18 @@ const condicoesGeraisFormatada = (dados.condicoesGerais || "")
           <strong>Prazo:</strong><br>${dados.prazos}<br><br>
           <strong>Condições de Pagamento:</strong><br>${dados.condicao}<br><br>
           <strong>Condições Gerais:</strong><br>${condicoesGeraisFormatada}
-          <br>
+          
         </div>
+
+       
+          <br>
+          <br>
+          <center>
+          Assinatura do cliente:
+          <br>
+           <br>
+          _______________________________________________________________
+          </center>
       </body>
     </html>`;
 
