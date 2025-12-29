@@ -157,7 +157,7 @@ mostrarCarregando()
   } else {
     console.warn("⚠️ Campo 'vendedorResponsavel' ainda não está disponível no DOM.");
   }
-}, 1000); // aguarda 1s para garantir que o campo foi carregado
+}, 3000); // aguarda 1s para garantir que o campo foi carregado
 
 
     setIfExists("operadorInterno", dados.operadorInterno);
@@ -200,23 +200,42 @@ if (campo2) {
 
      console.log(dados.desconto)
     // 👥 Clientes
-    const containerClientes = document.getElementById("clientesWrapper");
-    const clienteBase = containerClientes?.querySelector(".cliente-item");
-    if (clienteBase) {
-      containerClientes.querySelectorAll(".cliente-item:not(:first-child)").forEach(el => el.remove());
-      (dados.clientes || []).forEach((cliente, i) => {
-        const ref = i === 0 ? clienteBase : clienteBase.cloneNode(true);
-        ref.querySelector(".razaoSocial").value = cliente.nome_razao_social || "";
-           ref.querySelector(".razaoSocial").value = cliente.nome_razao_social || "";
-        ref.querySelector(".nomeContato").value = cliente.nome_contato || "";
-        ref.querySelector(".codigoCliente").value = cliente.codigoOmie || "";
-        ref.querySelector(".cpfCnpj").value = cliente.cpfCnpj || "";
-        ref.querySelector(".funcaoCliente").value = cliente.funcao || "";
-        ref.querySelector(".telefoneCliente").value = cliente.telefone || "";
-        
-        if (i > 0) containerClientes.appendChild(ref);
-      });
+ // 👥 Clientes
+const containerClientes = document.getElementById("clientesWrapper");
+const clienteBase = containerClientes?.querySelector(".cliente-item");
+
+if (clienteBase) {
+  containerClientes.querySelectorAll(".cliente-item:not(:first-child)").forEach(el => el.remove());
+
+  (dados.clientes || []).forEach((cliente, i) => {
+    const ref = i === 0 ? clienteBase : clienteBase.cloneNode(true);
+
+    const razaoEl = ref.querySelector(".razaoSocial");
+    if (razaoEl) razaoEl.value = cliente.nome_razao_social || "";
+
+    const nomeContatoEl = ref.querySelector(".nomeContato");
+    if (nomeContatoEl) {
+      const valorNome = (cliente.nome ?? cliente.nome_contato ?? "").toString();
+      nomeContatoEl.value = valorNome;
+      nomeContatoEl.dataset.valorOriginal = valorNome;
     }
+
+    const codEl = ref.querySelector(".codigoCliente");
+    if (codEl) codEl.value = cliente.codigoOmie || "";
+
+    const cpfEl = ref.querySelector(".cpfCnpj");
+    if (cpfEl) cpfEl.value = cliente.cpfCnpj || "";
+
+    const funcEl = ref.querySelector(".funcaoCliente");
+    if (funcEl) funcEl.value = cliente.funcao || "";
+
+    const telEl = ref.querySelector(".telefoneCliente");
+    if (telEl) telEl.value = cliente.telefone || "";
+
+    if (i > 0) containerClientes.appendChild(ref);
+  });
+}
+
 
     // 💳 Parcelas
     const containerParcelas = document.getElementById("listaParcelas");
