@@ -32,7 +32,8 @@ async function carregarPropostaModelo() {
     if (!res.ok) throw new Error("Erro ao buscar proposta por ID");
 
     const proposta = await res.json();
-
+    console.log(proposta)
+    console.log("proposta")
     if (!proposta?.grupos) {
       console.warn("❌ Proposta com ID não encontrada ou sem grupos.");
       return;
@@ -90,6 +91,7 @@ function renderLista(filtro = "") {
             if (!ultimoBloco) return;
 
             const parametros = grupoSelecionado.parametros || {};
+            console.log("os paramentros",grupoSelecionado.itens[0].formula_custo)
             const inputs = ultimoBloco.querySelectorAll(`input[name]`);
             inputs.forEach(input => {
               const param = input.name;
@@ -140,6 +142,18 @@ ${item.descricao_utilizacao|| "Utilização Barra de pesquisa"}
     <button class="btn btn-sm btn-secondary d-block" onclick="abrirSubstituirProduto(this)">Substituir</button>
   </td>`;
 
+
+  // resumo 
+  const resumoTextarea = ultimoBloco.querySelector(`textarea[id^="resumo-"]`);
+
+if (resumoTextarea) {
+  const texto = grupoSelecionado?.itens?.[0]?.formula_custo || "";
+  resumoTextarea.value = texto;
+  resumoTextarea.dataset.valorOriginal = texto; // opcional
+}
+
+
+  
   tabela.appendChild(tr);
   total += valorTotal;
 });
