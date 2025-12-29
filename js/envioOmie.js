@@ -627,6 +627,7 @@ verificarClienteEAtualizar()
       return true;
     });
   }
+
   function lerComissaoArquitetoDoResumo(){
     const el = document.querySelector(ARQ_COMISSAO_SEL);
     return el ? (window.vv_parseBRL ? vv_parseBRL(el.textContent||'0') : 0) : 0;
@@ -642,6 +643,53 @@ function abrirPopupComissao(){
   return new Promise((resolveC)=>{
     const ARQUITETOS = coletarArquitetosCadastrados();
     const valorComissaoResumo = lerComissaoArquitetoDoResumo();
+
+    // ================== DEFAULTS DE DATAS AO ABRIR POPUP ==================
+const toISODate = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`; // formato do <input type="date">
+};
+
+// Arquiteta: próximo dia 15 (se hoje <= 15, usa 15 do mês atual; senão, 15 do próximo mês)
+const proximoDia15 = (base = new Date()) => {
+  const y = base.getFullYear();
+  const m = base.getMonth();
+  const diaHoje = base.getDate();
+
+  const alvo = (diaHoje <= 15)
+    ? new Date(y, m, 15)
+    : new Date(y, m + 1, 15);
+
+  return toISODate(alvo);
+};
+
+// Vendedor: 1º dia útil do próximo mês (considera só fim de semana)
+const primeiroDiaUtilProxMes = (base = new Date()) => {
+  const y = base.getFullYear();
+  const m = base.getMonth();
+
+  let d = new Date(y, m + 1, 1); // dia 01 do próximo mês
+  while (d.getDay() === 0 || d.getDay() === 6) { // 0=Dom, 6=Sáb
+    d.setDate(d.getDate() + 1);
+  }
+  return toISODate(d);
+};
+
+const hoje = new Date();
+const defaultArq = proximoDia15(hoje);
+const defaultVend = primeiroDiaUtilProxMes(hoje);
+
+// Só seta se estiver vazio (pra respeitar o que já foi salvo)
+if (!_comArq.prev) _comArq.prev = defaultArq;
+if (!_comArq.venc) _comArq.venc = defaultArq;
+
+if (!_comVend.prev) _comVend.prev = defaultVend;
+if (!_comVend.venc) _comVend.venc = defaultVend;
+// =====================================================================
+
+
 
     // ✅ Defaults (ao abrir: percent + 1%)
     if (!_comArq) _comArq = {};
@@ -781,7 +829,7 @@ function abrirPopupComissao(){
             <h4 style="margin:0 0 8px 0;">Resumo</h4>
 
             <!-- ✅ DESCONTO -->
-            <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
+            <div style="display:none; flex-direction:column; gap:6px; margin-bottom:10px;">
               <label style="font-weight:600;">Desconto (primeiro, sobre o <b>TOTAL</b> dos itens)</label>
               <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                 <label><input type="radio" name="discModo" value="percent" ${window._comDesc?.modo!=='valor'?'checked':''} data-valor-original="percent"> % do total</label>
