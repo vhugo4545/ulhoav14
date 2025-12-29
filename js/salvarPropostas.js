@@ -1,7 +1,7 @@
 async function salvarPropostaEditavel() {
   try {
     console.log("editaveis")
-    abrirTodasSanfonas();
+   
     mostrarCarregando()
     await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -263,7 +263,7 @@ document.body.appendChild(btn);
 
 async function atualizarPropostaEditavel() {
   try {
-    abrirTodasSanfonas();
+    //abrirTodasSanfonas();
     mostrarCarregando();
     await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -440,7 +440,7 @@ async function atualizarPropostaEditavel() {
 
 async function atualizarPropostaModelo() {
   try {
-    abrirTodasSanfonas();
+   // abrirTodasSanfonas();
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     const idProposta = "68746e305b9691a7ed3b3f97";
