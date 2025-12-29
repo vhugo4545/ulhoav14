@@ -276,14 +276,15 @@ async function atualizarPropostaEditavel() {
     const select = document.getElementById("vendedorResponsavel");
     const textoSelecionado = select?.options[select.selectedIndex]?.text?.trim() || "";
 
-    const clientes = Array.from(document.querySelectorAll(".cliente-item")).map(el => ({
-      nome_razao_social: el.querySelector(".razaoSocial")?.value || "",
-      nome_contato: el.querySelector(".nomeContato")?.value || "",
-      codigoOmie: el.querySelector(".codigoCliente")?.value || "",
-      cpfCnpj: el.querySelector(".cpfCnpj")?.value || "",
-      funcao: el.querySelector(".funcaoCliente")?.value || "",
-      telefone: el.querySelector(".telefoneCliente")?.value || ""
-    }));
+ const clientes = Array.from(document.querySelectorAll(".cliente-item")).map(el => ({
+  nome_razao_social: el.querySelector(".razaoSocial")?.value || "",
+  nome: el.querySelector(".nomeContato")?.value || "", // ✅ AQUI
+  codigoOmie: el.querySelector(".codigoCliente")?.value || "",
+  cpfCnpj: el.querySelector(".cpfCnpj")?.value || "",
+  funcao: el.querySelector(".funcaoCliente")?.value || "",
+  telefone: el.querySelector(".telefoneCliente")?.value || ""
+}));
+
 
     const condicaoPagamento = document.getElementById("condicaoPagamento")?.value?.trim() || "";
     const linhas = document.querySelectorAll("#listaParcelas .row");
