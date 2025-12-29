@@ -172,6 +172,153 @@ function adicionarClienteRelacionado() {
   console.log("➕ Cliente relacionado adicionado.");
 }
 
+function abrirPopupExcluirClienteRelacionado() {
+  const wrapper = document.getElementById("clientesWrapper");
+  if (!wrapper) {
+    console.warn("⚠️ Wrapper de clientes não encontrado.");
+    return;
+  }
+
+  const itens = Array.from(wrapper.querySelectorAll(".cliente-item"));
+  if (!itens.length) {
+    alert("Nenhum cliente para excluir.");
+    return;
+  }
+
+  // Injeta estilos do modal 1x (se você já tem vv-modal/vv-modal-backdrop, pode remover isso)
+  if (!document.getElementById("vv-modal-style")) {
+    const st = document.createElement("style");
+    st.id = "vv-modal-style";
+    st.textContent = `
+      .vv-modal-backdrop{
+        position:fixed; inset:0; background:rgba(0,0,0,.45);
+        display:flex; align-items:center; justify-content:center; z-index:9999;
+        padding:16px;
+      }
+      .vv-modal{
+        width:min(720px, 100%); background:#fff; border-radius:14px;
+        box-shadow:0 10px 30px rgba(0,0,0,.2); overflow:hidden;
+      }
+      .vv-modal header{ padding:14px 16px; border-bottom:1px solid #e5e7eb; }
+      .vv-modal header h3{ margin:0; font-size:16px; }
+      .vv-body{ padding:14px 16px; }
+      .vv-footer{ padding:12px 16px; border-top:1px solid #e5e7eb; display:flex; justify-content:flex-end; gap:8px; }
+      .vv-help{ color:#6b7280; font-size:12px; }
+      .vv-list{ display:grid; gap:8px; max-height:320px; overflow:auto; margin-top:10px; }
+      .vv-item{ border:1px solid #e5e7eb; border-radius:12px; padding:10px; display:flex; gap:10px; align-items:flex-start; }
+      .vv-item strong{ font-size:13px; }
+      .vv-btn{ border:1px solid #cbd5e1; background:#fff; padding:8px 12px; border-radius:10px; cursor:pointer; }
+      .vv-btn.danger{ border-color:#ef4444; color:#ef4444; }
+      .vv-btn.primary{ border-color:#2563eb; background:#2563eb; color:#fff; }
+    `;
+    document.head.appendChild(st);
+  }
+
+  // Helpers para ler "nome" do bloco
+  function resumoDoCliente(el, idx) {
+    const razao = el.querySelector(".razaoSocial")?.value?.trim()
+      || el.querySelector('input[name="razao_social"]')?.value?.trim()
+      || el.querySelector('input[name="nome_fantasia"]')?.value?.trim()
+      || "";
+
+    const doc = el.querySelector(".cnpjCpf")?.value?.trim()
+      || el.querySelector('input[name="cnpj"]')?.value?.trim()
+      || el.querySelector('input[name="cpf"]')?.value?.trim()
+      || "";
+
+    const titulo = razao || `Cliente ${idx + 1}`;
+    const subt = doc ? `Documento: ${doc}` : "Sem documento";
+    return { titulo, subt };
+  }
+
+  function removerComHr(el) {
+    // remove <hr> "colado" ao bloco (preferência: o anterior; senão o próximo)
+    const prev = el.previousElementSibling;
+    const next = el.nextElementSibling;
+
+    if (prev && prev.tagName === "HR") prev.remove();
+    else if (next && next.tagName === "HR") next.remove();
+
+    el.remove();
+  }
+
+  const bd = document.createElement("div");
+  bd.className = "vv-modal-backdrop";
+
+  const md = document.createElement("div");
+  md.className = "vv-modal";
+
+  const hd = document.createElement("header");
+  hd.innerHTML = `<h3>Excluir cliente relacionado</h3>`;
+
+  const by = document.createElement("div");
+  by.className = "vv-body";
+
+  const lista = itens.map((el, idx) => {
+    const { titulo, subt } = resumoDoCliente(el, idx);
+    return `
+      <label class="vv-item">
+        <input type="radio" name="vv-del-cli" value="${idx}" style="margin-top:2px;">
+        <div>
+          <strong>${titulo.replace(/</g,"&lt;")}</strong><br>
+          <span class="vv-help">${subt.replace(/</g,"&lt;")}</span>
+        </div>
+      </label>
+    `;
+  }).join("");
+
+  by.innerHTML = `
+    <div class="vv-help">Selecione o cliente que deseja excluir e confirme.</div>
+    <div class="vv-list">${lista}</div>
+    <div class="vv-help" style="margin-top:10px;">
+      Obs: se existir apenas 1 cliente, o sistema limpa os campos em vez de remover o bloco.
+    </div>
+  `;
+
+  const ft = document.createElement("div");
+  ft.className = "vv-footer";
+  ft.innerHTML = `
+    <button class="vv-btn" id="vv-del-cancel">Cancelar</button>
+    <button class="vv-btn danger" id="vv-del-confirm">Excluir</button>
+  `;
+
+  md.appendChild(hd);
+  md.appendChild(by);
+  md.appendChild(ft);
+  bd.appendChild(md);
+  document.body.appendChild(bd);
+
+  ft.querySelector("#vv-del-cancel").addEventListener("click", () => {
+    document.body.removeChild(bd);
+  });
+
+  ft.querySelector("#vv-del-confirm").addEventListener("click", () => {
+    const idx = Number(by.querySelector('input[name="vv-del-cli"]:checked')?.value);
+    if (Number.isNaN(idx)) {
+      alert("Selecione um cliente para excluir.");
+      return;
+    }
+
+    const atuais = Array.from(wrapper.querySelectorAll(".cliente-item"));
+    const alvo = atuais[idx];
+    if (!alvo) {
+      alert("Cliente não encontrado.");
+      return;
+    }
+
+    if (atuais.length === 1) {
+      // Se só tem 1, limpa ao invés de remover
+      alvo.querySelectorAll("input").forEach(i => i.value = "");
+      alvo.querySelectorAll("textarea").forEach(t => t.value = "");
+      console.log("🧹 Único cliente: campos limpos.");
+    } else {
+      removerComHr(alvo);
+      console.log("🗑️ Cliente removido.");
+    }
+
+    document.body.removeChild(bd);
+  });
+}
 
 
 // Inicializa o autocomplete no cliente principal ao carregar a página
