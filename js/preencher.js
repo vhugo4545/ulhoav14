@@ -128,23 +128,16 @@ async function carregarPropostaEditavel(proposta) {
     };
 
     // 🧾 Campos do formulário
-    setIfExists("operadorInterno", dados.operadorInterno);
-setIfExists("prazosArea", dados.prazosArea);
-setIfExists("condicaoPagamento", dados.condicaoPagamento);
-setIfExists("condicoesGerais", dados.condicoesGerais);
-
-// ✅ NOVOS CAMPOS (Acompanhamento do Pedido/Obra/Projeto)
-setIfExists("prazoEntrega",             dados.prazoEntrega);
-setIfExists("dataPedidoEnviadoCliente", dados.dataPedidoEnviadoCliente);
-setIfExists("meioEnvioPedido",          dados.meioEnvioPedido);
-setIfExists("dataPedidoAssinado",       dados.dataPedidoAssinado);
-setIfExists("obraLiberada",             dados.obraLiberada);
-setIfExists("itensLiberacaoObra",       dados.itensLiberacaoObra);
-setIfExists("dataLiberacaoObra",        dados.dataLiberacaoObra);
-setIfExists("dataProjetoEnviado",       dados.dataProjetoEnviado);
-setIfExists("dataProjetoAssinado",      dados.dataProjetoAssinado);
-setIfExists("dataMedicaoRealizada",     dados.dataMedicaoRealizada);
-;
+    setIfExists("numeroOrcamento", dados.numeroOrcamento || proposta.numeroProposta);
+    setIfExists("dataOrcamento", dados.dataOrcamento);
+    setIfExists("origemCliente", dados.origemCliente);
+    setIfExists("cep", dados.cep);
+    setIfExists("rua", dados.rua);
+    setIfExists("numero", dados.numero);
+    setIfExists("complemento", dados.complemento);
+    setIfExists("bairro", dados.bairro);
+    setIfExists("cidade", dados.cidade);
+    setIfExists("estado", dados.estado);
     
     setTimeout(() => {
   const vendedorEl = document.getElementById("vendedorResponsavel");
