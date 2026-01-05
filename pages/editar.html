@@ -619,6 +619,83 @@ async function openOsPopup({ endpoint = "https://ulhoa-servico-ec4e1aa95355.hero
             </div>
           </div>
 
+<!-- Aba NOVA: Acompanhamento (Pedido/Obra/Projeto) -->
+<div class="accordion-item">
+  <h2 class="accordion-header" id="headingAbaObraPedido">
+    <button class="accordion-button collapsed" type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#collapseAbaObraPedido"
+      aria-expanded="false"
+      aria-controls="collapseAbaObraPedido">
+      Acompanhamento do Pedido, Obra e Projeto
+    </button>
+  </h2>
+
+  <div id="collapseAbaObraPedido"
+    class="accordion-collapse collapse"
+    aria-labelledby="headingAbaObraPedido"
+    data-bs-parent="#accordionProposta">
+    <div class="accordion-body">
+
+      <div class="mb-3">
+        <label class="form-label">Prazo de entrega</label>
+        <input type="text" class="form-control" id="prazoEntrega" placeholder="Ex.: 20 dias úteis após aprovação">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Data que o pedido foi enviado para o cliente</label>
+        <input type="date" class="form-control" id="dataPedidoEnviadoCliente">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Por onde foi enviado</label>
+        <input type="text" class="form-control" id="meioEnvioPedido" placeholder="Ex.: WhatsApp, e-mail, presencial...">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Data que o pedido foi assinado</label>
+        <input type="date" class="form-control" id="dataPedidoAssinado">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Obra está liberada?</label>
+        <select class="form-select" id="obraLiberada">
+          <option value="">Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+          <option value="parcial">Parcial</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Quais itens / observações sobre a liberação</label>
+        <textarea class="form-control" id="itensLiberacaoObra" rows="4"
+          placeholder="Descreva quais itens estão liberados, pendências, restrições, etc."></textarea>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Data da liberação da obra</label>
+        <input type="date" class="form-control" id="dataLiberacaoObra">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Data do projeto enviado</label>
+        <input type="date" class="form-control" id="dataProjetoEnviado">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Data do projeto assinado</label>
+        <input type="date" class="form-control" id="dataProjetoAssinado">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Data da medição realizada</label>
+        <input type="date" class="form-control" id="dataMedicaoRealizada">
+      </div>
+
+    </div>
+  </div>
+</div>
 
 
         </div>
