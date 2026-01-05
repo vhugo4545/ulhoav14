@@ -37,7 +37,7 @@ async function salvarPropostaEditavel() {
     // --- Exemplo de uso: chamar antes de criar o objeto camposFormulario ---
     async function preencherNumeroOrcamento() {
       try {
-        const res = await fetch('http://localhost:3000/contador/somar/orcamentos', { method: 'POST' });
+        const res = await fetch('https://ulhoa-0a02024d350a.herokuapp.com/contador/somar/orcamentos', { method: 'POST' });
         const data = await res.json();
         const numFormatado = String(data.novoValor).padStart(5, '0');
         document.getElementById('numeroOrcamento').value = numFormatado;
@@ -50,46 +50,39 @@ async function salvarPropostaEditavel() {
     }
     const numeroOrcamento = await preencherNumeroOrcamento();
 
-  const camposFormulario = {
-  numeroOrcamento: numeroOrcamento, // já vem preenchido do backend
-  dataOrcamento: document.getElementById("dataOrcamento")?.value || "",
-  origemCliente: document.getElementById("origemCliente")?.value || "",
-  clientes,
+    const camposFormulario = {
+      numeroOrcamento: numeroOrcamento, // já vem preenchido do backend
+      dataOrcamento: document.getElementById("dataOrcamento")?.value || "",
+      origemCliente: document.getElementById("origemCliente")?.value || "",
+      clientes,
+      cep: document.getElementById("cep")?.value || "",
+      rua: document.getElementById("rua")?.value || "",
+      numero: document.getElementById("numero")?.value || "",
+      complemento: document.getElementById("complemento")?.value || "",
+      bairro: document.getElementById("bairro")?.value || "",
+      cidade: document.getElementById("cidade")?.value || "",
+      estado: document.getElementById("estado")?.value || "",
+      vendedorResponsavel: textoSelecionado,
+      operadorInterno: document.getElementById("operadorInterno")?.value || "",
+      prazosArea: document.getElementById("prazosArea")?.value || "",
+      condicaoPagamento,
+      condicoesGerais: document.getElementById("condicoesGerais")?.value || "",
+      parcelas, 
 
-  cep: document.getElementById("cep")?.value || "",
-  rua: document.getElementById("rua")?.value || "",
-  numero: document.getElementById("numero")?.value || "",
-  complemento: document.getElementById("complemento")?.value || "",
-  bairro: document.getElementById("bairro")?.value || "",
-  cidade: document.getElementById("cidade")?.value || "",
-  estado: document.getElementById("estado")?.value || "",
+        // ✅ NOVOS CAMPOS (Aba nova de acompanhamento)
+      prazoEntrega: document.getElementById("prazoEntrega")?.value || "",
+      dataPedidoEnviadoCliente: document.getElementById("dataPedidoEnviadoCliente")?.value || "",
+      meioEnvioPedido: document.getElementById("meioEnvioPedido")?.value || "",
+      dataPedidoAssinado: document.getElementById("dataPedidoAssinado")?.value || "",
+      obraLiberada: document.getElementById("obraLiberada")?.value || "",
+      itensLiberacaoObra: document.getElementById("itensLiberacaoObra")?.value || "",
+      dataLiberacaoObra: document.getElementById("dataLiberacaoObra")?.value || "",
+      dataProjetoEnviado: document.getElementById("dataProjetoEnviado")?.value || "",
+      dataProjetoAssinado: document.getElementById("dataProjetoAssinado")?.value || "",
+      dataMedicaoRealizada: document.getElementById("dataMedicaoRealizada")?.value || ""
 
-  vendedorResponsavel: textoSelecionado,
-  operadorInterno: document.getElementById("operadorInterno")?.value || "",
-
-  // ✅ CAMPOS ANTIGOS (continua usando)
-  prazosArea: document.getElementById("prazosArea")?.value || "",
-  condicaoPagamento,
-  condicoesGerais: document.getElementById("condicoesGerais")?.value || "",
-  parcelas,
-
-  // ✅ NOVOS CAMPOS (Aba nova de acompanhamento)
-  prazoEntrega: document.getElementById("prazoEntrega")?.value || "",
-  dataPedidoEnviadoCliente: document.getElementById("dataPedidoEnviadoCliente")?.value || "",
-  meioEnvioPedido: document.getElementById("meioEnvioPedido")?.value || "",
-  dataPedidoAssinado: document.getElementById("dataPedidoAssinado")?.value || "",
-  obraLiberada: document.getElementById("obraLiberada")?.value || "",
-  itensLiberacaoObra: document.getElementById("itensLiberacaoObra")?.value || "",
-  dataLiberacaoObra: document.getElementById("dataLiberacaoObra")?.value || "",
-  dataProjetoEnviado: document.getElementById("dataProjetoEnviado")?.value || "",
-  dataProjetoAssinado: document.getElementById("dataProjetoAssinado")?.value || "",
-  dataMedicaoRealizada: document.getElementById("dataMedicaoRealizada")?.value || "",
-
-  // (se você tiver desconto no form, pode manter também)
-  desconto: document.getElementById("desconto")?.value || ""
-};
-
-
+      
+    };
 
     // 🔄 Grupos e produtos
     const grupos = [];
@@ -245,7 +238,7 @@ if (errosObrigatorios.length) {
     };
 
     // 🚀 Envia para o servidor
-    const resposta = await fetch("http://localhost:3000/api/propostas", {
+    const resposta = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/propostas", {
       method: "POST",
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(proposta)
@@ -318,47 +311,39 @@ async function atualizarPropostaEditavel() {
     });
 
     const desconto = document.querySelector("#campoDescontoFinal")?.value || "";
-const numeroOrcamento = (document.getElementById("numeroOrcamento")?.value || "").trim();
 
-const camposFormulario = {
-  numeroOrcamento,
-  dataOrcamento: document.getElementById("dataOrcamento")?.value || "",
-  origemCliente: document.getElementById("origemCliente")?.value || "",
-  clientes,
+    const camposFormulario = {
+      numeroOrcamento: document.getElementById("numeroOrcamento")?.value || "",
+      dataOrcamento: document.getElementById("dataOrcamento")?.value || "",
+      origemCliente: document.getElementById("origemCliente")?.value || "",
+      clientes,
+      cep: document.getElementById("cep")?.value || "",
+      rua: document.getElementById("rua")?.value || "",
+      numero: document.getElementById("numero")?.value || "",
+      complemento: document.getElementById("complemento")?.value || "",
+      bairro: document.getElementById("bairro")?.value || "",
+      cidade: document.getElementById("cidade")?.value || "",
+      estado: document.getElementById("estado")?.value || "",
+      vendedorResponsavel: textoSelecionado,
+      operadorInterno: document.getElementById("operadorInterno")?.value || "",
+      prazosArea: document.getElementById("prazosArea")?.value || "",
+      condicaoPagamento,
+      condicoesGerais: document.getElementById("condicoesGerais")?.value || "",
+      desconto,
+      parcelas, 
 
-  cep: document.getElementById("cep")?.value || "",
-  rua: document.getElementById("rua")?.value || "",
-  numero: document.getElementById("numero")?.value || "",
-  complemento: document.getElementById("complemento")?.value || "",
-  bairro: document.getElementById("bairro")?.value || "",
-  cidade: document.getElementById("cidade")?.value || "",
-  estado: document.getElementById("estado")?.value || "",
-
-  vendedorResponsavel: textoSelecionado,
-  operadorInterno: document.getElementById("operadorInterno")?.value || "",
-
-  // ✅ CAMPOS ANTIGOS (continua usando)
-  prazosArea: document.getElementById("prazosArea")?.value || "",
-  condicaoPagamento,
-  condicoesGerais: document.getElementById("condicoesGerais")?.value || "",
-  parcelas,
-
-  // ✅ NOVOS CAMPOS (Aba nova de acompanhamento)
-  prazoEntrega: document.getElementById("prazoEntrega")?.value || "",
-  dataPedidoEnviadoCliente: document.getElementById("dataPedidoEnviadoCliente")?.value || "",
-  meioEnvioPedido: document.getElementById("meioEnvioPedido")?.value || "",
-  dataPedidoAssinado: document.getElementById("dataPedidoAssinado")?.value || "",
-  obraLiberada: document.getElementById("obraLiberada")?.value || "",
-  itensLiberacaoObra: document.getElementById("itensLiberacaoObra")?.value || "",
-  dataLiberacaoObra: document.getElementById("dataLiberacaoObra")?.value || "",
-  dataProjetoEnviado: document.getElementById("dataProjetoEnviado")?.value || "",
-  dataProjetoAssinado: document.getElementById("dataProjetoAssinado")?.value || "",
-  dataMedicaoRealizada: document.getElementById("dataMedicaoRealizada")?.value || "",
-
-  // (se você tiver desconto no form, pode manter também)
-  desconto: document.getElementById("desconto")?.value || ""
-};
-
+        // ✅ NOVOS CAMPOS (Aba nova de acompanhamento)
+      prazoEntrega: document.getElementById("prazoEntrega")?.value || "",
+      dataPedidoEnviadoCliente: document.getElementById("dataPedidoEnviadoCliente")?.value || "",
+      meioEnvioPedido: document.getElementById("meioEnvioPedido")?.value || "",
+      dataPedidoAssinado: document.getElementById("dataPedidoAssinado")?.value || "",
+      obraLiberada: document.getElementById("obraLiberada")?.value || "",
+      itensLiberacaoObra: document.getElementById("itensLiberacaoObra")?.value || "",
+      dataLiberacaoObra: document.getElementById("dataLiberacaoObra")?.value || "",
+      dataProjetoEnviado: document.getElementById("dataProjetoEnviado")?.value || "",
+      dataProjetoAssinado: document.getElementById("dataProjetoAssinado")?.value || "",
+      dataMedicaoRealizada: document.getElementById("dataMedicaoRealizada")?.value || ""
+    };
 
     // 🔄 Grupos e produtos
     const grupos = [];
@@ -454,7 +439,7 @@ const camposFormulario = {
       grupos
     };
 
-    const resposta = await fetch(`http://localhost:3000/api/propostas/${idProposta}`, {
+    const resposta = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${idProposta}`, {
       method: "PUT",
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(propostaAtualizada)
@@ -632,7 +617,7 @@ const camposFormulario = {
 console.log("🔍 Desconto informado:", propostaAtualizada.camposFormulario.desconto);
 
     // 🚀 Envia para o backend com PUT
-    const resposta = await fetch(`http://localhost:3000/api/propostas/${idProposta}`, {
+    const resposta = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${idProposta}`, {
       method: "PUT",
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(propostaAtualizada)
@@ -716,7 +701,7 @@ async function atualizarStatus(novoStatus) {
       return;
     }
 
-    const resposta = await fetch(`http://localhost:3000/api/propostas/${id}`, {
+    const resposta = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"
@@ -799,8 +784,8 @@ function mostrarPopupCustomizado(titulo, mensagem, tipo = "info") {
 
 
 async function marcarPrecosDivergentesOmie() {
-  const ENDPOINT = "http://localhost:3000/produtos/visualizar";
-  const LOGIN_URL = "http://localhost:3000/api/auth/login";
+  const ENDPOINT = "https://ulhoa-0a02024d350a.herokuapp.com/produtos/visualizar";
+  const LOGIN_URL = "https://ulhoa-0a02024d350a.herokuapp.com/api/auth/login";
 
   const toNumber = (v) => {
     if (v === undefined || v === null) return 0;
