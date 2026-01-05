@@ -1844,13 +1844,24 @@ function vv_getPrimeiraDataParcelaISO() {
 /* =======================================
    5) GERAR PAYLOAD (estrutura antiga)
    ======================================= */
-async function gerarPayloadOmie(){
+async function gerarPayloadOmie() {
   const pendencias = [];
+
+  // ✅ garante vendedor válido (não pode ser "Selecione")
+  const vendedorSelectEl = document.getElementById("vendedorResponsavel");
+  const textoSelecionado =
+    vendedorSelectEl?.options?.[vendedorSelectEl.selectedIndex]?.text?.trim() ||
+    vendedorSelectEl?.value?.trim() ||
+    "";
 
   // validações
   const clientes = document.querySelectorAll("#clientesWrapper .cliente-item");
   const codigoCliente = clientes[0]?.querySelector(".codigoCliente")?.value?.trim();
   if (!codigoCliente) pendencias.push("Código do cliente não preenchido.");
+
+  if (!textoSelecionado || textoSelecionado.toUpperCase() === "SELECIONE") {
+    pendencias.push("Selecione um Vendedor Responsável válido.");
+  }
 
   const primeiraDataParcelaRaw = Array.from(document.querySelectorAll(".data-parcela"))
     .map(el => (el.value || "").trim())
@@ -1865,12 +1876,101 @@ async function gerarPayloadOmie(){
   const linhasParcelas = document.querySelectorAll("#listaParcelas .row");
   if (!linhasParcelas.length) pendencias.push("Nenhuma parcela informada.");
 
+  // ✅ garantir que tem produtos listados
+  const blocosContainer = document.getElementById("blocosProdutosContainer");
+  const temProdutosNaTela =
+    !!blocosContainer &&
+    (
+      blocosContainer.querySelectorAll("table tbody tr:not(.extra-summary-row)").length > 0 ||
+      blocosContainer.querySelectorAll("tbody tr:not(.extra-summary-row)").length > 0
+    );
+
+  if (!temProdutosNaTela) {
+    pendencias.push("Nenhum produto listado na proposta (blocosProdutosContainer vazio).");
+  }
+
   if (pendencias.length > 0) {
-    if (typeof mostrarPopupPendencias === 'function') {
+    if (typeof mostrarPopupPendencias === "function") {
       mostrarPopupPendencias(pendencias);
     } else {
       alert("Pendências:\n- " + pendencias.join("\n- "));
     }
+    return null;
+  }
+
+  // =========================================================
+  // ✅ Funções auxiliares (dentro do trecho completo, pra copiar e colar)
+  // =========================================================
+  async function esperarSelectCarregar(selectId, {
+    minOptions = 2,      // 1 = só "Selecione", 2+ = lista carregada
+    timeoutMs = 15000,
+    intervalMs = 200
+  } = {}) {
+    const inicio = Date.now();
+
+    while (Date.now() - inicio < timeoutMs) {
+      const sel = document.getElementById(selectId);
+      if (sel && sel.options && sel.options.length >= minOptions) return sel;
+      await new Promise(r => setTimeout(r, intervalMs));
+    }
+    return document.getElementById(selectId) || null;
+  }
+
+  async function pegarVendedorSelecionadoComCodigo(selectId = "vendedorResponsavel") {
+    const select = await esperarSelectCarregar(selectId, { minOptions: 2, timeoutMs: 15000 });
+    if (!select) return null;
+
+    const opt = select.options?.[select.selectedIndex];
+    const nomeSelecionado = (select.value || opt?.text || "").trim();
+
+    if (!nomeSelecionado || nomeSelecionado.toUpperCase() === "SELECIONE") return null;
+
+    const normalizar = (s) =>
+      (s ?? "")
+        .toString()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toUpperCase();
+
+    const nomeNorm = normalizar(nomeSelecionado);
+
+    const res = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/omie/vendedores");
+    const json = await res.json();
+    const lista = Array.isArray(json?.cadastro) ? json.cadastro : [];
+
+    // 1) match exato (normalizado)
+    let match = lista.find(v => normalizar(v.nome) === nomeNorm);
+
+    // 2) fallback: match parcial (caso select esteja abreviado)
+    if (!match) {
+      const candidatos = lista.filter(v => {
+        const api = normalizar(v.nome);
+        return api.includes(nomeNorm) || nomeNorm.includes(api);
+      });
+
+      if (candidatos.length === 1) match = candidatos[0];
+      else if (candidatos.length > 1) {
+        match = candidatos.find(v => String(v.inativo).toUpperCase() === "N") || candidatos[0];
+      }
+    }
+
+    if (!match) return null;
+
+    return {
+      nomeSelect: nomeSelecionado,
+      nomeApi: match.nome,
+      codigo: Number(match.codigo)
+    };
+  }
+
+  // =========================================================
+  // ✅ Recupera codVend (espera select carregar + bate com API)
+  // =========================================================
+  const vendedorInfo = await pegarVendedorSelecionadoComCodigo("vendedorResponsavel");
+
+  if (!vendedorInfo?.codigo) {
+    alert("Selecione um Vendedor Responsável válido (não foi possível recuperar o código).");
     return null;
   }
 
@@ -1881,24 +1981,25 @@ async function gerarPayloadOmie(){
 
   // 2) candidatos
   const candidatos = coletarItensPorGrupoParaOmie(ambientesMarcados);
-  if (!candidatos.length){
+  if (!candidatos.length) {
     alert("Nenhum item elegível encontrado nos ambientes marcados.");
     return null;
   }
 
   // 3) popup seleção
   const selecao = await abrirPopupSelecaoItensOmie(candidatos);
-  if (!selecao){
+  if (!selecao) {
     console.log("🚫 Seleção cancelada pelo usuário.");
     return null;
   }
+
   const { aprovadosParaOmie, ignorados } = selecao;
-  if (!aprovadosParaOmie.length){
+  if (!aprovadosParaOmie.length) {
     alert("Selecione ao menos um item para enviar à Omie.");
     return null;
   }
 
-  // 🔸 MÍNIMA ALTERAÇÃO: guardar a última seleção (inclui Total (Serviço))
+  // 🔸 guarda última seleção
   window.__vvUltimaSelecaoOmie = selecao;
 
   // 4) ignorados → produtos faturados direto (opcional)
@@ -1906,7 +2007,7 @@ async function gerarPayloadOmie(){
     if (typeof produtosFaturadosParaOCliente === "function") {
       produtosFaturadosParaOCliente(ignorados);
     }
-  } catch(e){
+  } catch (e) {
     console.warn("produtosFaturadosParaOCliente falhou:", e);
   }
 
@@ -1932,7 +2033,8 @@ async function gerarPayloadOmie(){
       codigo_categoria: "1.01.01",
       codigo_conta_corrente: 2523861035,
       consumidor_final: "S",
-      enviar_email: "N"
+      enviar_email: "N",
+      codVend: vendedorInfo.codigo // ✅ AQUI (código do vendedor recuperado)
     },
     agropecuario: {
       cNumReceita: "",
@@ -1949,6 +2051,7 @@ async function gerarPayloadOmie(){
     const valorFinal = vv_round2(Number(item.valorAjustadoParaOmie) || 0);
     const codigo_produto = item.codigo || "SEM-CODIGO";
     const descricao = item.descricao || "Item sem descrição";
+
     payload.det.push({
       ide: { codigo_item_integracao: numeroPedido },
       inf_adic: { peso_bruto: 1, peso_liquido: 1 },
@@ -1964,6 +2067,7 @@ async function gerarPayloadOmie(){
         valor_unitario: valorFinal
       }
     });
+
     payload.cabecalho.quantidade_itens++;
   });
 
@@ -1997,22 +2101,28 @@ async function gerarPayloadOmie(){
 
   const somaParcelas = vv_round2(valores.reduce((acc, v) => acc + v, 0));
   let somaPerc = 0;
+
   parcelasPayload.forEach((p, idx) => {
     let pct = somaParcelas > 0 ? (p.valor / somaParcelas) * 100 : 0;
     pct = vv_round2(pct);
     parcelasPayload[idx].percentual = pct.toFixed(2);
     somaPerc = vv_round2(somaPerc + pct);
   });
+
   if (parcelasPayload.length) {
     const diff = vv_round2(100 - somaPerc);
     const last = parcelasPayload[parcelasPayload.length - 1];
     last.percentual = vv_round2(parseFloat(last.percentual) + diff).toFixed(2);
   }
+
   payload.lista_parcelas.parcela = parcelasPayload;
 
+  console.log("✅ Vendedor resolvido:", vendedorInfo);
   console.log("📦 Payload final (estrutura antiga; valores ajustados):", payload);
+
   return payload;
 }
+
 
 /* =======================================
    6) ENVIAR PARA OMIE (botão/onclick)
@@ -2643,7 +2753,7 @@ const CCOD_LC116_DEFAULT = "7.01";
 const CCOD_MUN_DEFAULT   = "0701-0/01-88";
 const CCODPARC_DEFAULT   = "999";
 const CETAPA_DEFAULT     = "20";
-const CCODCATEG_DEFAULT  = "1.02.02";
+const CCODCATEG_DEFAULT  = "1.01.99";
 const NCODCC_DEFAULT     = 10937506623;
 
 /* ================== UTILS ================== */
