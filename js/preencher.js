@@ -138,6 +138,19 @@ async function carregarPropostaEditavel(proposta) {
     setIfExists("bairro", dados.bairro);
     setIfExists("cidade", dados.cidade);
     setIfExists("estado", dados.estado);
+
+        // ✅ NOVOS CAMPOS (Acompanhamento do Pedido/Obra/Projeto)
+    setIfExists("prazoEntrega",             dados.prazoEntrega);
+    setIfExists("dataPedidoEnviadoCliente", dados.dataPedidoEnviadoCliente);
+    setIfExists("meioEnvioPedido",          dados.meioEnvioPedido);
+    setIfExists("dataPedidoAssinado",       dados.dataPedidoAssinado);
+    setIfExists("obraLiberada",             dados.obraLiberada);
+    setIfExists("itensLiberacaoObra",       dados.itensLiberacaoObra);
+    setIfExists("dataLiberacaoObra",        dados.dataLiberacaoObra);
+    setIfExists("dataProjetoEnviado",       dados.dataProjetoEnviado);
+    setIfExists("dataProjetoAssinado",      dados.dataProjetoAssinado);
+    setIfExists("dataMedicaoRealizada",     dados.dataMedicaoRealizada);
+
     
     setTimeout(() => {
   const vendedorEl = document.getElementById("vendedorResponsavel");
