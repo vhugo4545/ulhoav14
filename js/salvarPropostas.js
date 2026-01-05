@@ -176,38 +176,41 @@ async function salvarPropostaEditavel() {
 
 
     // ✅ Validação de campos obrigatórios (texto puro, sem HTML)
+// ✅ Validação de campos obrigatórios (texto puro, sem HTML)
 const errosObrigatorios = [];
 
 // Origem do Cliente
-if (!camposFormulario.origemCliente) {
+if (!camposFormulario.origemCliente || !String(camposFormulario.origemCliente).trim()) {
   errosObrigatorios.push("O campo Origem do Cliente é obrigatório.");
 }
 
-// Vendedor Responsável (texto do select)
-if (!textoSelecionado) {
+// ✅ Vendedor Responsável (obrigatório e não pode ser "Selecione")
+const vendedorEl = document.getElementById("vendedorResponsavel");
+const vendedorValue = (vendedorEl?.value || "").trim();               // value do <option>
+const vendedorTexto = (textoSelecionado || "").trim();                // texto do option selecionado
+
+if (
+  !vendedorValue ||
+  vendedorValue.toLowerCase() === "selecione" ||
+  !vendedorTexto ||
+  vendedorTexto.toLowerCase() === "selecione"
+) {
   errosObrigatorios.push("O campo Vendedor Responsável é obrigatório.");
 }
 
-
 // Clientes: Nome / Razão Social e Função
 if (!clientes.length) {
-  errosObrigatorios.push(
-    "É obrigatório informar pelo menos um Cliente (Nome / Razão Social e Função)."
-  );
+  errosObrigatorios.push("É obrigatório informar pelo menos um Cliente (Nome / Razão Social e Função).");
 } else {
   clientes.forEach((c, idx) => {
     const linha = idx + 1;
 
-    if (!c.nome_razao_social) {
-      errosObrigatorios.push(
-        `O campo Nome / Razão Social do cliente ${linha} é obrigatório.`
-      );
+    if (!c.nome_razao_social || !String(c.nome_razao_social).trim()) {
+      errosObrigatorios.push(`O campo Nome / Razão Social do cliente ${linha} é obrigatório.`);
     }
 
-    if (!c.funcao) {
-      errosObrigatorios.push(
-        `O campo Função do cliente ${linha} é obrigatório.`
-      );
+    if (!c.funcao || !String(c.funcao).trim()) {
+      errosObrigatorios.push(`O campo Função do cliente ${linha} é obrigatório.`);
     }
   });
 }
@@ -226,6 +229,7 @@ if (errosObrigatorios.length) {
     detalhes: errosObrigatorios
   };
 }
+
 
 
     // 🧾 Proposta final
