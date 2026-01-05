@@ -115,6 +115,7 @@ function arredondarCimaSeguro(valor, context = {}) {
 async function carregarPropostaEditavel(proposta) {
 
   console.log(proposta)
+  console.log(proposta.grupos[0].itens[0].formula_custo)
   console.log("🔍 Desconto informado:", proposta.camposFormulario.desconto);
 
   try {
@@ -127,16 +128,23 @@ async function carregarPropostaEditavel(proposta) {
     };
 
     // 🧾 Campos do formulário
-    setIfExists("numeroOrcamento", dados.numeroOrcamento || proposta.numeroProposta);
-    setIfExists("dataOrcamento", dados.dataOrcamento);
-    setIfExists("origemCliente", dados.origemCliente);
-    setIfExists("cep", dados.cep);
-    setIfExists("rua", dados.rua);
-    setIfExists("numero", dados.numero);
-    setIfExists("complemento", dados.complemento);
-    setIfExists("bairro", dados.bairro);
-    setIfExists("cidade", dados.cidade);
-    setIfExists("estado", dados.estado);
+    setIfExists("operadorInterno", dados.operadorInterno);
+setIfExists("prazosArea", dados.prazosArea);
+setIfExists("condicaoPagamento", dados.condicaoPagamento);
+setIfExists("condicoesGerais", dados.condicoesGerais);
+
+// ✅ NOVOS CAMPOS (Acompanhamento do Pedido/Obra/Projeto)
+setIfExists("prazoEntrega",             dados.prazoEntrega);
+setIfExists("dataPedidoEnviadoCliente", dados.dataPedidoEnviadoCliente);
+setIfExists("meioEnvioPedido",          dados.meioEnvioPedido);
+setIfExists("dataPedidoAssinado",       dados.dataPedidoAssinado);
+setIfExists("obraLiberada",             dados.obraLiberada);
+setIfExists("itensLiberacaoObra",       dados.itensLiberacaoObra);
+setIfExists("dataLiberacaoObra",        dados.dataLiberacaoObra);
+setIfExists("dataProjetoEnviado",       dados.dataProjetoEnviado);
+setIfExists("dataProjetoAssinado",      dados.dataProjetoAssinado);
+setIfExists("dataMedicaoRealizada",     dados.dataMedicaoRealizada);
+;
     
     setTimeout(() => {
   const vendedorEl = document.getElementById("vendedorResponsavel");
@@ -286,6 +294,7 @@ if (clienteBase) {
       const grupo = proposta.grupos[i];
       const nomeGrupo = grupo.nome || `Grupo ${i + 1}`;
       const nomeAmbiente = grupo.ambiente || "";
+      console.log(" O grupo",proposta)
 
       await esperarElemento("#blocosProdutosContainer");
       const idSuffix = criarBlocoDeProposta(nomeGrupo, nomeAmbiente);
@@ -341,6 +350,8 @@ grupo.itens.forEach(item => {
   }
 
   const tr = document.createElement("tr");
+  console.log(item.formula_custo
+)
   tr.innerHTML = `
  <td>
   <textarea class="form-control form-control-sm" rows="3">
@@ -395,7 +406,7 @@ ${item.descricao_utilizacao|| "Utilização Preencher"}
   
 }
 
- 
+
       ocultarCarregando()
    
   } catch (erro) {
