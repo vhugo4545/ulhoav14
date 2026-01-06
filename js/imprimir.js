@@ -415,11 +415,21 @@ const condicoesGeraisFormatada = (dados.condicoesGerais || "")
           <br>
           <br>
           <center>
-          Assinatura do cliente:
+          Assinatura  Contratante:
           <br>
            <br>
           _______________________________________________________________
           </center>
+
+           <br>
+          <br>
+          <center>
+          Assinatura Contratada:
+          <br>
+           <br>
+          _______________________________________________________________
+          </center>
+
       </body>
     </html>`;
 
