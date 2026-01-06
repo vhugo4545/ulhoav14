@@ -541,6 +541,8 @@ async function verificarClienteEAtualizar() {
 async function abrirPopupSelecaoItensOmie(itens){
 verificarClienteEAtualizar()
 
+
+
   if (typeof ocultarCarregando === 'function') ocultarCarregando();
 
   // ===== helpers de UI: toast =====
@@ -692,6 +694,17 @@ if (!_comVend.prev) _comVend.prev = defaultVend;
 if (!_comVend.venc) _comVend.venc = defaultVend;
 // =====================================================================
 
+// ===== OBS padrão: "Orçamento: XXXX" =====
+const elOrc = document.getElementById("numeroOrcamento");
+const numeroOrcamento =
+  (elOrc?.value || "").trim() ||
+  (elOrc?.dataset?.valorOriginal || "").trim();
+
+const obsPadrao = numeroOrcamento ? `Orçamento: ${numeroOrcamento}` : "";
+
+// Só preenche se estiver vazio (pra não sobrescrever o que já foi salvo)
+if (!_comArq.obs)  _comArq.obs  = obsPadrao;
+if (!_comVend.obs) _comVend.obs = obsPadrao;
 
 
     // ✅ Defaults (ao abrir: percent + 1%)
