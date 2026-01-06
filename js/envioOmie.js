@@ -466,8 +466,11 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
    - Chama window.enviarComissoes(...) no confirmar
    ========================================================= */
 
-const dispararAtualizacaoClientes = () =>
+const dispararAtualizacaoClientes = () => {
   fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes/atualizar").catch(() => {});
+  fetch("https://ulhoa-0a02024d350a.herokuapp.com/clientes/atualizar").catch(() => {});
+};
+
 
 async function verificarClienteEAtualizar() {
   // tenta pelo seletor novo E pelo antigo (.razaoSocial)
