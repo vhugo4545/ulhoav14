@@ -188,6 +188,28 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     return "";
   };
 
+  // Helpers BRL
+  const parseBRL = (s) => {
+    if (window.vv_parseBRL) return vv_parseBRL(s || "0");
+    const str = String(s || "0").replace(/\u00A0/g, ' ');
+    const limpo = str.replace(/[^\d,.-]/g, '').replace(/\./g,'').replace(',', '.');
+    const n = Number(limpo);
+    return isNaN(n) ? 0 : n;
+  };
+
+  const fmtBRL = (n) => {
+    if (window.vv_fmtBRL) return vv_fmtBRL(Number(n) || 0);
+    return `R$ ${(Number(n) || 0).toFixed(2)}`;
+  };
+
+  const formatarDataBR = (iso) => {
+    if (!iso) return "-";
+    // iso: YYYY-MM-DD
+    const [y,m,d] = String(iso).split("-");
+    if (!y || !m || !d) return "-";
+    return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;
+  };
+
   // 1) Dados gerais do orçamento
   const dados = {
     numero: getValue("numeroOrcamento"),
@@ -218,13 +240,11 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     }))
     .filter(c => c.nomeCliente || c.nomeContato || c.telefone || c.cpfCnpj);
 
-  // Primeiro cliente = responsável
   const principal = clientes[0] || {};
   dados.nomeCliente      = principal.nomeCliente || "-";
   dados.cpfCnpj          = principal.cpfCnpj || "-";
   dados.telefoneCliente  = principal.telefone || "-";
 
-  // Armazena todos para a tabela extra
   dados.contatos = clientes.map((c, idx) => ({
     cliente:  idx === 0 ? `${c.nomeCliente || "-"} (Responsável)` : (c.nomeCliente || "-"),
     cpfCnpj:  c.cpfCnpj || "-",
@@ -309,6 +329,76 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     `;
   });
 
+  // 4.5) ✅ PARCELAS (depois dos produtos)
+  const parcelas = Array.from(document.querySelectorAll('#listaParcelas .row'))
+    .map((row, idx) => {
+      const selTipo = row.querySelector('select.tipo-monetario');
+      const tipo = selTipo?.selectedOptions?.[0]?.textContent?.trim()
+                || selTipo?.value?.trim()
+                || "-";
+
+      const wrapCond = row.querySelector('.condicao-wrapper');
+      const selCond = wrapCond?.querySelector('select.condicao-pagto');
+      const inputCond = wrapCond?.querySelector('input, textarea'); // caso vc crie input personalizado
+
+      const condicao = (inputCond && getTextOrValue(inputCond))
+        ? getTextOrValue(inputCond)
+        : (selCond?.selectedOptions?.[0]?.textContent?.trim() || selCond?.value?.trim() || "-");
+
+      const valorRaw = (row.querySelector('input.valor-parcela')?.value || "").trim();
+      let valorExib = valorRaw || "-";
+
+      // se for número puro tipo "1000" mostra em BRL; se for "30%" mantém
+      if (valorRaw && !valorRaw.includes('%')) {
+        const num = parseBRL(valorRaw);
+        // se digitou "1000" sem R$, parseBRL ainda converte
+        valorExib = fmtBRL(num);
+      }
+
+      const vencISO = (row.querySelector('input.data-parcela')?.value || "").trim();
+      const venc = vencISO ? formatarDataBR(vencISO) : "-";
+
+      // ignora linha 100% vazia
+      const temAlgo = (tipo !== "-" || condicao !== "-" || valorExib !== "-" || venc !== "-");
+      if (!temAlgo) return null;
+
+      return { idx: idx + 1, tipo, condicao, valorExib, venc };
+    })
+    .filter(Boolean);
+
+  const totalParcelasTxt = document.getElementById('totalParcelas')?.textContent?.trim() || "";
+
+  const parcelasHTML = (parcelas.length)
+    ? `
+      <div class="mt-4">
+        <h6 class="text-center fw-bold">Parcelas</h6>
+        <table class="table table-bordered table-sm w-100">
+          <thead class="table-light">
+            <tr>
+              <th style="width:40px;">#</th>
+              <th style="width:140px;">Tipo</th>
+              <th>Condição</th>
+              <th style="width:140px;">Valor</th>
+              <th style="width:130px;">Vencimento</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${parcelas.map(p => `
+              <tr>
+                <td>${p.idx}</td>
+                <td>${p.tipo}</td>
+                <td>${p.condicao}</td>
+                <td>${p.valorExib}</td>
+                <td>${p.venc}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ${totalParcelasTxt ? `<div class="text-end"><strong>Total das parcelas:</strong> ${totalParcelasTxt}</div>` : ``}
+      </div>
+    `
+    : ``;
+
   // 5) Totais gerais
   const valorFinalComDescontoStr = document.getElementById("valorFinalTotal")?.textContent || "R$ 0,00";
   const valorFinalComDesconto = parseFloat(
@@ -332,33 +422,30 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
   const tabelaContatosHTML = (dados.contatos && dados.contatos.length)
     ? `
       <h6 class="mt-3 text-center fw-bold">Clientes & Contatos</h6>
-    <table class="table table-bordered table-sm w-100">
-      <thead class="table-light">
-        <tr>
-          <th>Cliente</th>
-         
-          <th>Função</th>
-          <th>Telefone</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${dados.contatos.map(c => `
+      <table class="table table-bordered table-sm w-100">
+        <thead class="table-light">
           <tr>
-            <td>${c.cliente}</td>
-           
-            <td>${c.funcao}</td>
-            <td>${c.telefone}</td>
+            <th>Cliente</th>
+            <th>Função</th>
+            <th>Telefone</th>
           </tr>
-        `).join('')}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          ${dados.contatos.map(c => `
+            <tr>
+              <td>${c.cliente}</td>
+              <td>${c.funcao}</td>
+              <td>${c.telefone}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
     ` : '';
 
-  // 7) HTML completo (sem “Contato Responsável”) preciso que isto funcione agora 
-const condicoesGeraisFormatada = (dados.condicoesGerais || "")
-  .replace(/\r\n/g, "\n")   // normaliza quebras de linha
-  .replace(/\n/g, "<br>");  // cada quebra de linha vira um <br>
-  console.log(condicoesGeraisFormatada)
+  // 7) HTML completo
+  const condicoesGeraisFormatada = (dados.condicoesGerais || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n/g, "<br>");
 
   const htmlCompleto = `
     <html>
@@ -376,7 +463,7 @@ const condicoesGeraisFormatada = (dados.condicoesGerais || "")
             <tr>
               <td style="width:40%;text-align:center;vertical-align:middle;">
                 <img src="../js/logo.jpg" style="max-height:65px;"><br>
-             <br> (31) 98457-7573<br>
+                <br> (31) 98457-7573<br>
               </td>
               <td style="width:40%;">
                 <table class="table table-sm w-100">
@@ -389,16 +476,13 @@ const condicoesGeraisFormatada = (dados.condicoesGerais || "")
           </table>
 
           <table class="table table-bordered table-sm w-100 mt-2">
-        <tr>
-  <td><strong>Cliente (Responsável):</strong></td>
-  <td>${(document.querySelector("input.razaoSocial")?.value || document.querySelector("input.razaoSocial")?.dataset?.valorOriginal || "-")}</td>
-</tr>
-
+            <tr>
+              <td><strong>Cliente (Responsável):</strong></td>
+              <td>${(document.querySelector("input.razaoSocial")?.value || document.querySelector("input.razaoSocial")?.dataset?.valorOriginal || "-")}</td>
+            </tr>
             <tr><td><strong>CPF/CNPJ:</strong></td><td>${dados.cpfCnpj}</td></tr>
-          
             <tr><td><strong>Endereço da Obra:</strong></td><td>${dados.enderecoObra}</td></tr>
             <tr><td><strong>Vendedor:</strong></td><td>${dados.vendedor}</td></tr>
-        
           </table>
 
           ${tabelaContatosHTML}
@@ -406,33 +490,30 @@ const condicoesGeraisFormatada = (dados.condicoesGerais || "")
 
         ${corpoHTML}
 
+        <!-- ✅ PARCELAS AQUI (depois dos produtos) -->
+        ${parcelasHTML}
+
         ${totalizadoresHTML}
 
         <div class="border p-2 mt-3">
           <strong>Prazo:</strong><br>${dados.prazos}<br><br>
           <strong>Condições de Pagamento:</strong><br>${dados.condicao}<br><br>
           <strong>Condições Gerais:</strong><br>${condicoesGeraisFormatada}
-          
         </div>
 
-       
-          <br>
-          <br>
-          <center>
-          Assinatura  Contratante:
-          <br>
-           <br>
+        <br><br>
+        <center>
+          Assinatura Contratante:
+          <br><br>
           _______________________________________________________________
-          </center>
+        </center>
 
-           <br>
-          <br>
-          <center>
+        <br><br>
+        <center>
           Assinatura Contratada:
-          <br>
-           <br>
+          <br><br>
           _______________________________________________________________
-          </center>
+        </center>
 
       </body>
     </html>`;
@@ -452,3 +533,4 @@ const condicoesGeraisFormatada = (dados.condicoesGerais || "")
   }
   abrirJanelaParaImpressao(htmlCompleto);
 }
+
