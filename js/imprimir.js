@@ -389,7 +389,11 @@ const condicoesGeraisFormatada = (dados.condicoesGerais || "")
           </table>
 
           <table class="table table-bordered table-sm w-100 mt-2">
-            <tr><td><strong>Cliente (Responsável):</strong></td><td>${dados.nomeCliente}</td></tr>
+        <tr>
+  <td><strong>Cliente (Responsável):</strong></td>
+  <td>${(document.querySelector("input.razaoSocial")?.value || document.querySelector("input.razaoSocial")?.dataset?.valorOriginal || "-")}</td>
+</tr>
+
             <tr><td><strong>CPF/CNPJ:</strong></td><td>${dados.cpfCnpj}</td></tr>
           
             <tr><td><strong>Endereço da Obra:</strong></td><td>${dados.enderecoObra}</td></tr>
