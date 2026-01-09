@@ -430,8 +430,8 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
             `).join('')}
           </tbody>
         </table>
-      ${totalParcelasTxt ? `<div class="text-end ocultar-total-parcelas"><strong>Total das parcelas:</strong> ${totalParcelasTxt}</div>` : ``}
 
+     
       </div>
     `
     : ``;
