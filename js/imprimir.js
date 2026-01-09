@@ -204,10 +204,37 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
 
   const formatarDataBR = (iso) => {
     if (!iso) return "-";
-    // iso: YYYY-MM-DD
     const [y,m,d] = String(iso).split("-");
     if (!y || !m || !d) return "-";
     return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;
+  };
+
+  // ✅ NORMALIZA CONDIÇÃO (vazia ou "Selecione..." => "")
+  const normalizarCondicao = (txt) => {
+    const t = String(txt || "").trim();
+    if (!t) return "";
+    if (/^selecione/i.test(t)) return ""; // "Selecione", "Selecione...", etc.
+    return t;
+  };
+
+  // ✅ Helper: converte quebras de linha em <br>
+  const multilineToBR = (txt) => {
+    const t = String(txt || "").trim();
+    if (!t) return "";
+    return t.replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
+  };
+
+  // ✅ Helper fallback caso você tenha usado formatarReal em outro arquivo
+  const formatarReal = (n) => {
+    // tenta usar helpers globais, se existirem
+    if (window.formatarReal) return window.formatarReal(n);
+    if (window.vv_fmtBRL) return vv_fmtBRL(Number(n) || 0);
+    // fallback simples
+    try {
+      return (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    } catch {
+      return fmtBRL(Number(n) || 0);
+    }
   };
 
   // 1) Dados gerais do orçamento
@@ -227,6 +254,9 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     condicoesGerais: getValue("condicoesGerais"),
     vendedor: document.getElementById("vendedorResponsavel")?.selectedOptions[0]?.textContent || "-"
   };
+
+  // ✅ AQUI: PRAZOS COM QUEBRAS DE LINHA (igual condições gerais)
+  dados.prazos = (dados.prazos && dados.prazos !== "-") ? multilineToBR(dados.prazos) : "-";
 
   // 2) Coleta múltiplos clientes/contatos
   const clientes = Array.from(document.querySelectorAll('#clientesWrapper .cliente-item'))
@@ -339,11 +369,18 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
 
       const wrapCond = row.querySelector('.condicao-wrapper');
       const selCond = wrapCond?.querySelector('select.condicao-pagto');
-      const inputCond = wrapCond?.querySelector('input, textarea'); // caso vc crie input personalizado
+      const inputCond = wrapCond?.querySelector('input, textarea');
 
-      const condicao = (inputCond && getTextOrValue(inputCond))
-        ? getTextOrValue(inputCond)
-        : (selCond?.selectedOptions?.[0]?.textContent?.trim() || selCond?.value?.trim() || "-");
+      // ✅ pega texto e normaliza (vazio/"Selecione..." => "")
+      let condicaoRaw = "";
+      if (inputCond && getTextOrValue(inputCond)) {
+        condicaoRaw = getTextOrValue(inputCond);
+      } else {
+        condicaoRaw = selCond?.selectedOptions?.[0]?.textContent?.trim()
+                  || selCond?.value?.trim()
+                  || "";
+      }
+      const condicao = normalizarCondicao(condicaoRaw);
 
       const valorRaw = (row.querySelector('input.valor-parcela')?.value || "").trim();
       let valorExib = valorRaw || "-";
@@ -351,15 +388,14 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       // se for número puro tipo "1000" mostra em BRL; se for "30%" mantém
       if (valorRaw && !valorRaw.includes('%')) {
         const num = parseBRL(valorRaw);
-        // se digitou "1000" sem R$, parseBRL ainda converte
         valorExib = fmtBRL(num);
       }
 
       const vencISO = (row.querySelector('input.data-parcela')?.value || "").trim();
       const venc = vencISO ? formatarDataBR(vencISO) : "-";
 
-      // ignora linha 100% vazia
-      const temAlgo = (tipo !== "-" || condicao !== "-" || valorExib !== "-" || venc !== "-");
+      // ✅ ignora linha 100% vazia (condição vazia conta como vazia mesmo)
+      const temAlgo = (tipo !== "-" || condicao !== "" || valorExib !== "-" || venc !== "-");
       if (!temAlgo) return null;
 
       return { idx: idx + 1, tipo, condicao, valorExib, venc };
@@ -387,14 +423,15 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
               <tr>
                 <td>${p.idx}</td>
                 <td>${p.tipo}</td>
-                <td>${p.condicao}</td>
+                <td>${p.condicao || ""}</td>
                 <td>${p.valorExib}</td>
                 <td>${p.venc}</td>
               </tr>
             `).join('')}
           </tbody>
         </table>
-        ${totalParcelasTxt ? `<div class="text-end"><strong>Total das parcelas:</strong> ${totalParcelasTxt}</div>` : ``}
+      ${totalParcelasTxt ? `<div class="text-end ocultar-total-parcelas"><strong>Total das parcelas:</strong> ${totalParcelasTxt}</div>` : ``}
+
       </div>
     `
     : ``;
@@ -404,6 +441,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
   const valorFinalComDesconto = parseFloat(
     valorFinalComDescontoStr.replace(/[^\d,\.]/g, "").replace(",", ".")
   );
+
   const campoDesconto = document.getElementById("campoDescontoFinal")?.value?.trim();
   const temDescontoValido = campoDesconto && valorFinalComDesconto > 0 && valorFinalComDesconto < totalGeral;
   const descontoAplicado = temDescontoValido ? totalGeral - valorFinalComDesconto : 0;
@@ -443,9 +481,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     ` : '';
 
   // 7) HTML completo
-  const condicoesGeraisFormatada = (dados.condicoesGerais || "")
-    .replace(/\r\n/g, "\n")
-    .replace(/\n/g, "<br>");
+  const condicoesGeraisFormatada = multilineToBR(dados.condicoesGerais || "");
 
   const htmlCompleto = `
     <html>
@@ -531,6 +567,9 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       printWindow.print();
     };
   }
+
   abrirJanelaParaImpressao(htmlCompleto);
 }
+
+
 
