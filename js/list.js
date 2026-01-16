@@ -1,6 +1,8 @@
 document.addEventListener("DOMContentLoaded", async () => {
   mostrarCarregando();
 
+  
+
   const tableBody       = document.querySelector("#data-table tbody");
   const prevPageBtn     = document.getElementById("prev-page");
   const nextPageBtn     = document.getElementById("next-page");
