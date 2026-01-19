@@ -573,3 +573,377 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
 
 
 
+// ✅ NOVO NOME: gerarOrdemDeServicoParaImpressao
+function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
+  const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
+
+  const getTextOrValue = (el) => {
+    if (!el) return "";
+    const v = (typeof el.value === "string" ? el.value : "").trim();
+    if (v) return v;
+    const t = (typeof el.textContent === "string" ? el.textContent : "").trim();
+    if (t) return t;
+    return "";
+  };
+
+  const multilineToBR = (txt) => {
+    const t = String(txt || "").trim();
+    if (!t) return "-";
+    return t.replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
+  };
+
+  const formatarDataBR = (iso) => {
+    if (!iso) return "-";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      const [y, m, d] = iso.split("-");
+      return `${d}/${m}/${y}`;
+    }
+    const dt = new Date(iso);
+    if (isNaN(dt.getTime())) return "-";
+    return dt.toLocaleDateString("pt-BR");
+  };
+
+  // ✅ fixa “largura visual” para campos vazios/curtos (sem quebrar estética)
+  const padVisual = (txt, minLen = 18) => {
+    const t = String(txt || "").trim();
+    if (t.length >= minLen) return t;
+    // usa NBSP para “segurar” o espaço no layout sem aparecer underline estranho
+    const faltam = Math.max(0, minLen - t.length);
+    return (t || "-") + "&nbsp;".repeat(faltam);
+  };
+
+  // ========= 1) DADOS CABEÇALHO =========
+  const numero = getValue("numeroOrcamento");
+  const dataOrc = getValue("dataOrcamento");
+  const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
+
+  const vendedorEl = document.getElementById("vendedorResponsavel");
+  const vendedor =
+    vendedorEl?.selectedOptions?.[0]?.textContent?.trim() ||
+    getTextOrValue(vendedorEl) ||
+    "-";
+
+  const operador = getValue("operadorInterno");
+  const origem = getValue("origemCliente");
+
+  const nomeClienteResponsavel =
+    (document.querySelector("input.razaoSocial")?.value || "")?.trim() ||
+    (document.querySelector("input.razaoSocial")?.dataset?.valorOriginal || "")?.trim() ||
+    "-";
+
+  const enderecoObra = `Rua/Avenida: ${getValue("rua")}, Número: ${getValue("numero")}, Bairro: ${getValue("bairro")} - Complemento: ${getValue("complemento")} - Cidade: ${getValue("cidade")}/${getValue("estado")} - CEP: ${getValue("cep")}`;
+
+  // ========= 2) CLIENTES/CONTATOS =========
+  const clientes = Array.from(document.querySelectorAll("#clientesWrapper .cliente-item"))
+    .map((row) => ({
+      nomeCliente:
+        getTextOrValue(row.querySelector(".nomeContato")) ||
+        getTextOrValue(row.querySelector(".razaoSocial")),
+      cpfCnpj: getTextOrValue(row.querySelector(".cpfCnpj")),
+      nomeContato: getTextOrValue(row.querySelector(".nomeContato")),
+      funcao: getTextOrValue(row.querySelector(".funcaoCliente")),
+      telefone: getTextOrValue(row.querySelector(".telefoneCliente")),
+      email: getTextOrValue(row.querySelector(".emailCliente")),
+    }))
+    .filter((c) => c.nomeCliente || c.nomeContato || c.telefone || c.cpfCnpj || c.email || c.funcao);
+
+  const principal = clientes[0] || {};
+  const cpfCnpj = principal.cpfCnpj || "-";
+
+  // monta tabela “estável” mesmo com campos vazios/curtos
+  const contatosHTML = (clientes.length
+    ? clientes
+        .map((c, idx) => {
+          const label = idx === 0 ? "Contato (Responsável)" : `Contato ${idx + 1}`;
+          const nome = padVisual(c.nomeContato || c.nomeCliente || "-", 22);
+          const funcao = padVisual(c.funcao || "-", 18);
+          const tel = padVisual(c.telefone || "-", 16);
+          const email = padVisual(c.email || "-", 22);
+
+          return `
+            <tr>
+              <td class="k">${label}:</td>
+              <td class="v">${nome}</td>
+              <td class="k">Função:</td>
+              <td class="v">${funcao}</td>
+            </tr>
+            <tr>
+              <td class="k">Telefone:</td>
+              <td class="v">${tel}</td>
+              <td class="k">E-mail:</td>
+              <td class="v">${email}</td>
+            </tr>
+          `;
+        })
+        .join("")
+    : `
+      <tr>
+        <td class="k">Contato:</td><td class="v">${padVisual("-", 22)}</td>
+        <td class="k">Função:</td><td class="v">${padVisual("-", 18)}</td>
+      </tr>
+      <tr>
+        <td class="k">Telefone:</td><td class="v">${padVisual("-", 16)}</td>
+        <td class="k">E-mail:</td><td class="v">${padVisual("-", 22)}</td>
+      </tr>
+    `);
+
+  // ========= 3) PRAZOS NO CABEÇALHO =========
+  const prazosRaw = getValue("prazosArea");
+  const prazosHTML = prazosRaw !== "-" ? multilineToBR(prazosRaw) : "-";
+
+  // ========= 4) COLETA ITENS (GRUPOS) + INSUMOS =========
+  const gruposDados = [];
+
+  document.querySelectorAll("table[id^='tabela-bloco-']").forEach((tabela) => {
+    const grupoId = tabela.id.replace("tabela-", "").trim();
+
+    const ocultar = !!(gruposOcultarProduto && gruposOcultarProduto[grupoId]);
+    if (ocultar) return;
+
+    const inputAmbiente = document.querySelector(
+      `input[data-id-grupo='${grupoId}'][placeholder='Ambiente']`
+    );
+    const nomeAmbiente = inputAmbiente?.value?.trim() || "Sem Ambiente";
+
+    let resumoGrupo = document.getElementById(`resumo-${grupoId}`)?.value?.trim() || "";
+    resumoGrupo = resumoGrupo ? resumoGrupo.replace(/\r\n/g, "\n").replace(/\n/g, "<br>") : "";
+
+    const linhas = Array.from(tabela.querySelectorAll("tbody tr"))
+      .filter((tr) => {
+        if (tr.querySelector("td[colspan]")) return false;
+        if (tr.classList.contains("extra-summary-row")) return false;
+        const tds = tr.querySelectorAll("td");
+        return tds && tds.length >= 2;
+      })
+      .map((tr) => {
+        const tds = Array.from(tr.querySelectorAll("td"));
+
+        let descricao = (tds[1]?.textContent || "").trim();
+        if (!descricao) {
+          const candidato = tds
+            .map((td) => (td.textContent || "").trim())
+            .sort((a, b) => b.length - a.length)[0];
+          descricao = candidato || "-";
+        }
+
+        const qtdInput =
+          tr.querySelector("input.quantidade") ||
+          tr.querySelector("input.quantidade_sugerida") ||
+          tr.querySelector("input[name='quantidade']") ||
+          tr.querySelector("input[data-campo='quantidade']");
+
+        let qtd = (qtdInput?.value || "").trim();
+        if (!qtd) qtd = (tds[tds.length - 1]?.textContent || "").trim();
+        if (!qtd) qtd = "1";
+
+        return { descricao, qtd };
+      })
+      .filter((x) => x.descricao && x.descricao !== "-");
+
+    gruposDados.push({
+      grupoId,
+      nomeAmbiente,
+      resumoGrupo,
+      itens: linhas,
+    });
+  });
+
+  // ========= 5) HTML ITENS (NUMERAÇÃO SEQUENCIAL) =========
+  let contadorGrupo = 1;
+
+  const itensHTML = gruposDados
+    .map((g) => {
+      let contadorInsumo = 1;
+
+      const linhasHTML = g.itens?.length
+        ? g.itens
+            .map(
+              (it) => `
+              <tr>
+                <td class="num">${contadorInsumo++}</td>
+                <td>${it.descricao}</td>
+                <td class="qtd">${it.qtd}</td>
+              </tr>
+            `
+            )
+            .join("")
+        : `
+          <tr>
+            <td class="num">1</td>
+            <td>-</td>
+            <td class="qtd">-</td>
+          </tr>
+        `;
+
+      const resumoHTML = g.resumoGrupo
+        ? `<div class="obs"><strong>Observações:</strong><br>${g.resumoGrupo}</div>`
+        : "";
+
+      return `
+        <div class="item">
+          <div class="item-head">
+            <div class="item-title">ITEM ${contadorGrupo++}</div>
+            <div class="item-sub">AMBIENTE: ${String(g.nomeAmbiente || "").toUpperCase()}</div>
+          </div>
+
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th style="width:44px;">#</th>
+                <th>Descrição</th>
+                <th style="width:110px;">Quantidade</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${linhasHTML}
+            </tbody>
+          </table>
+
+          ${resumoHTML}
+        </div>
+      `;
+    })
+    .join("");
+
+  // ========= 6) HTML COMPLETO (ESCALA 80%) =========
+  const htmlCompleto = `
+  <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>Ordem de Serviço - ${numero}</title>
+      <style>
+        @page { size: A4; margin: 10mm; }
+
+        /* ✅ escala 80% na impressão */
+        body { margin: 0; }
+        .print-scale {
+          transform: scale(0.8);
+          transform-origin: top left;
+          width: 125%; /* compensa a escala (1/0.8) pra não “encolher” o conteúdo */
+        }
+
+        .wrap { border: 2px solid #111; padding: 10px; font-family: Arial, sans-serif; font-size: 12px; color: #111; }
+
+        .topbar { display: flex; align-items: stretch; gap: 10px; margin-bottom: 10px; }
+        .logoBox {
+          flex: 1;
+          border: 2px solid #111;
+          padding: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 64px;
+          text-align: center;
+          font-weight: 700;
+          letter-spacing: .3px;
+        }
+        .logoBox img { max-height: 52px; }
+
+        .opBox { width: 360px; border: 2px solid #111; padding: 8px 10px; }
+        .opTitle { font-weight: 800; font-size: 14px; text-align: center; margin-bottom: 6px; }
+        .opRow { display: flex; gap: 10px; font-weight: 700; justify-content: space-between; }
+
+        .tblInfo { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        .tblInfo td { border: 1px solid #111; padding: 6px 8px; vertical-align: top; }
+
+        .k { width: 160px; font-weight: 700; white-space: nowrap; }
+        .v { min-width: 220px; } /* ✅ segura “corpo” visual */
+        .vSmall { min-width: 160px; }
+
+        .line2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+        .miniBox { border: 1px solid #111; padding: 8px; font-weight: 700; }
+        .muted { color: #333; font-weight: 400; }
+
+        .prazos { border: 1px solid #111; padding: 8px; margin-top: 8px; }
+        .prazos .t { font-weight: 800; margin-bottom: 6px; }
+        .prazos .c { font-weight: 400; line-height: 1.35; }
+
+        .item { border: 2px solid #111; margin-top: 12px; page-break-inside: avoid; }
+        .item-head { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #111; padding: 8px 10px; font-weight: 800; }
+        .item-title { font-size: 14px; }
+        .item-sub { font-size: 12px; }
+
+        .tbl { width: 100%; border-collapse: collapse; }
+        .tbl th, .tbl td { border: 1px solid #111; padding: 6px 8px; }
+        .tbl thead th { background: #f2f2f2; font-weight: 800; }
+
+        .num { text-align: center; width: 44px; }
+        .qtd { text-align: right; width: 110px; }
+
+        .obs { border-top: 1px solid #111; padding: 8px 10px; font-style: italic; color: #333; line-height: 1.35; }
+
+        @media print {
+          .no-print { display: none !important; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="print-scale">
+        <div class="wrap">
+
+          <div class="topbar">
+            <div class="logoBox">
+              <img src="../js/logo.jpg"><br>
+            </div>
+
+            <div class="opBox">
+              <div class="opTitle">Ordem de Serviço</div>
+              <div class="opRow">
+                <div>Nº do Pedido&nbsp;&nbsp;<span class="muted">${numero}</span></div>
+                <div>Data:&nbsp;<span class="muted">${data}</span></div>
+              </div>
+            </div>
+          </div>
+
+          <table class="tblInfo">
+            <tr>
+              <td class="k">Nome / Razão social:</td>
+              <td class="v">${padVisual(nomeClienteResponsavel, 30)}</td>
+              <td class="k">CPF / CNPJ:</td>
+              <td class="vSmall">${padVisual(cpfCnpj, 18)}</td>
+              <td class="k">Origem:</td>
+              <td class="vSmall">${padVisual(origem, 18)}</td>
+            </tr>
+            <tr>
+              <td class="k">Endereço da obra:</td>
+              <td colspan="5">${enderecoObra}</td>
+            </tr>
+
+            ${contatosHTML}
+          </table>
+
+          <div class="line2col">
+            <div class="miniBox">Operador: <span class="muted">${padVisual(operador, 18)}</span></div>
+            <div class="miniBox">Vendedor: <span class="muted">${padVisual(vendedor, 18)}</span></div>
+          </div>
+
+          <div class="prazos">
+            <div class="t">Prazos</div>
+            <div class="c">${prazosHTML}</div>
+          </div>
+
+          ${itensHTML || `<div class="item" style="padding:10px;"><strong>Nenhum item encontrado para impressão.</strong></div>`}
+
+        </div>
+      </div>
+
+      <script>
+        window.onload = function () {
+          setTimeout(function () {
+            window.focus();
+            window.print();
+          }, 250);
+        };
+      </script>
+    </body>
+  </html>
+  `;
+
+  // ========= 7) ABRE JANELA E IMPRIME =========
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) return;
+
+  printWindow.document.open();
+  printWindow.document.write(htmlCompleto);
+  printWindow.document.close();
+}
