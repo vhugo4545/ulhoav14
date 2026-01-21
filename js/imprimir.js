@@ -607,7 +607,6 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   const padVisual = (txt, minLen = 18) => {
     const t = String(txt || "").trim();
     if (t.length >= minLen) return t;
-    // usa NBSP para “segurar” o espaço no layout sem aparecer underline estranho
     const faltam = Math.max(0, minLen - t.length);
     return (t || "-") + "&nbsp;".repeat(faltam);
   };
@@ -650,7 +649,6 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   const principal = clientes[0] || {};
   const cpfCnpj = principal.cpfCnpj || "-";
 
-  // monta tabela “estável” mesmo com campos vazios/curtos
   const contatosHTML = (clientes.length
     ? clientes
         .map((c, idx) => {
@@ -805,6 +803,189 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
     })
     .join("");
 
+  // ========= 5.5) ✅ PÁGINA FINAL (GRIDS DE PROCESSOS + TERCEIROS + INSTALAÇÃO) =========
+  // Obs: Responsáveis ficam vazios (não preencher)
+  const processos = [
+    { titulo: "Desenho" },
+    { titulo: "Corte" },
+    { titulo: "Pré-solda" },
+    { titulo: "Acabamento" },
+    { titulo: "Montagem" },
+    { titulo: "Finalização do Acabamento" },
+  ];
+
+  const linhasProcessoHTML = (titulo) => {
+    // cada INSUMO vira 1 linha
+    const linhas = (gruposDados || []).flatMap((g) =>
+      (g.itens || []).map((it, idx) => ({
+        item: idx + 1,
+        insumo: it.descricao || "-",
+      }))
+    );
+
+    const corpo = (linhas.length ? linhas : [{ item: 1, insumo: "-" }])
+      .map(
+        (x) => `
+        <tr>
+          <td class="cItem">${x.item}</td>
+          <td class="cData"></td>
+          <td class="cData"></td>
+          <td class="cResp">&nbsp;</td>
+        </tr>
+      `
+      )
+      .join("");
+
+    return `
+      <div class="gridBox">
+        <div class="gridTitle">${titulo}</div>
+        <table class="gridTbl">
+          <thead>
+            <tr>
+              <th style="width:40px;">Item</th>
+              <th style="width:84px;">Início</th>
+              <th style="width:84px;">Final</th>
+              <th>Responsáveis</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${corpo}
+          </tbody>
+        </table>
+      </div>
+    `;
+  };
+
+  const servicosTerceirosHTML = (() => {
+    // linhas em branco (como no modelo)
+    const linhas = Array.from({ length: 4 }).map(
+      (_, i) => `
+      <tr>
+        <td class="cItem">${i + 1}</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td class="cData"></td>
+        <td class="cData"></td>
+        <td class="cData"></td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    `
+    ).join("");
+
+    return `
+      <div class="gridWide">
+        <div class="gridTitleWide">Serviço(s) de Terceiros</div>
+        <table class="gridTbl">
+          <thead>
+            <tr>
+              <th style="width:40px;">Item</th>
+              <th style="width:110px;">Fornecedor</th>
+              <th style="width:140px;">Nome contato</th>
+              <th style="width:120px;">Telefone contato</th>
+              <th style="width:90px;">Data saída</th>
+              <th style="width:90px;">Previsão</th>
+              <th style="width:110px;">Data retorno efetivo</th>
+              <th style="width:140px;">Retorno conferido por</th>
+              <th style="width:120px;">Assinatura interno</th>
+              <th style="width:120px;">Assinatura terceiro</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${linhas}
+          </tbody>
+        </table>
+        <div class="tinyNote">
+          O material enviado permanece de propriedade da empresa contratante. Qualquer dano, extravio ou não conformidade será de responsabilidade do prestador de serviço.
+        </div>
+      </div>
+    `;
+  })();
+
+  const instalacaoHTML = (() => {
+    const linhas = Array.from({ length: 4 }).map(
+      (_, i) => `
+      <tr>
+        <td class="cItem">${i + 1}</td>
+        <td class="cData"></td>
+        <td class="cData"></td>
+        <td class="cResp">&nbsp;</td>
+      </tr>
+    `
+    ).join("");
+
+    return `
+      <div class="gridWide">
+        <div class="gridTitleWide">Instalação</div>
+
+        <div class="instGrid">
+          <div class="instCol">
+            <div class="instSub">Estrutura</div>
+            <table class="gridTbl">
+              <thead>
+                <tr>
+                  <th style="width:40px;">Item</th>
+                  <th style="width:84px;">Início</th>
+                  <th style="width:84px;">Final</th>
+                  <th>Responsáveis</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${linhas}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="instCol">
+            <div class="instSub">Vidro</div>
+            <table class="gridTbl">
+              <thead>
+                <tr>
+                  <th style="width:40px;">Item</th>
+                  <th style="width:84px;">Início</th>
+                  <th style="width:84px;">Final</th>
+                  <th>Responsáveis</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${linhas}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  })();
+
+  const paginaFinalHTML = `
+    <div class="page-break"></div>
+
+    <div class="wrap">
+      <div class="topbar">
+        <div class="logoBox">
+          <img src="../js/logo.jpg"><br>
+        </div>
+
+        <div class="opBox">
+          <div class="opTitle">Ordem de Produção / Serviço</div>
+          <div class="opRow">
+            <div>Nº do Pedido&nbsp;&nbsp;<span class="muted">${numero}</span></div>
+            <div>Data:&nbsp;<span class="muted">${data}</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gridArea">
+        ${processos.map((p) => linhasProcessoHTML(p.titulo)).join("")}
+      </div>
+
+      ${servicosTerceirosHTML}
+      ${instalacaoHTML}
+    </div>
+  `;
+
   // ========= 6) HTML COMPLETO (ESCALA 80%) =========
   const htmlCompleto = `
   <html>
@@ -814,12 +995,11 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
       <style>
         @page { size: A4; margin: 10mm; }
 
-        /* ✅ escala 80% na impressão */
         body { margin: 0; }
         .print-scale {
           transform: scale(0.8);
           transform-origin: top left;
-          width: 125%; /* compensa a escala (1/0.8) pra não “encolher” o conteúdo */
+          width: 125%;
         }
 
         .wrap { border: 2px solid #111; padding: 10px; font-family: Arial, sans-serif; font-size: 12px; color: #111; }
@@ -847,7 +1027,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
         .tblInfo td { border: 1px solid #111; padding: 6px 8px; vertical-align: top; }
 
         .k { width: 160px; font-weight: 700; white-space: nowrap; }
-        .v { min-width: 220px; } /* ✅ segura “corpo” visual */
+        .v { min-width: 220px; }
         .vSmall { min-width: 160px; }
 
         .line2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
@@ -871,6 +1051,27 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
         .qtd { text-align: right; width: 110px; }
 
         .obs { border-top: 1px solid #111; padding: 8px 10px; font-style: italic; color: #333; line-height: 1.35; }
+
+        /* ===== página final (grid) ===== */
+        .page-break { page-break-before: always; break-before: page; }
+
+        .gridArea { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .gridBox { border: 1px solid #111; }
+        .gridTitle { background: #e9e9e9; border-bottom: 1px solid #111; padding: 6px 8px; font-weight: 800; text-align: center; }
+        .gridTbl { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .gridTbl th, .gridTbl td { border: 1px solid #111; padding: 4px 6px; }
+        .gridTbl thead th { background: #f3f3f3; font-weight: 800; }
+
+        .cItem { text-align: center; width: 40px; }
+        .cData { text-align: center; width: 84px; white-space: nowrap; }
+        .cResp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .gridWide { border: 1px solid #111; margin-top: 8px; }
+        .gridTitleWide { background: #dcdcdc; border-bottom: 1px solid #111; padding: 6px 8px; font-weight: 900; text-align: center; }
+        .tinyNote { font-size: 10px; padding: 4px 6px; color: #222; }
+
+        .instGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; }
+        .instSub { font-weight: 800; text-align: center; margin-bottom: 4px; }
 
         @media print {
           .no-print { display: none !important; }
@@ -925,6 +1126,10 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
           ${itensHTML || `<div class="item" style="padding:10px;"><strong>Nenhum item encontrado para impressão.</strong></div>`}
 
         </div>
+
+        <!-- ✅ página final adicionada ao final -->
+        ${paginaFinalHTML}
+
       </div>
 
       <script>
