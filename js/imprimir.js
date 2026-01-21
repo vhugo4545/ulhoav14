@@ -573,7 +573,12 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
 
 
 
-// ✅ NOVO NOME: gerarOrdemDeServicoParaImpressao
+// ✅ ORDEM DE SERVIÇO + ✅ PÁGINA FINAL (ORDEM DE PRODUÇÃO / SERVIÇO)
+// - Mantém sua estrutura principal
+// - Adiciona uma ÚLTIMA PÁGINA com os grids (processos, serviços de terceiros e instalação)
+// - Quantidade de linhas em CADA processo = quantidade de grupos (blocos) visíveis
+// - "Responsáveis" fica em branco (não preenche com nada)
+
 function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
@@ -803,38 +808,125 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
     })
     .join("");
 
-  // ========= 5.5) ✅ PÁGINA FINAL (GRIDS DE PROCESSOS + TERCEIROS + INSTALAÇÃO) =========
-  // Obs: Responsáveis ficam vazios (não preencher)
-  const processos = [
-    { titulo: "Desenho" },
-    { titulo: "Corte" },
-    { titulo: "Pré-solda" },
-    { titulo: "Acabamento" },
-    { titulo: "Montagem" },
-    { titulo: "Finalização do Acabamento" },
-  ];
+  // ========= 6.1) ✅ PÁGINA FINAL: ORDEM DE PRODUÇÃO / SERVIÇO =========
+  const qtdLinhas = Math.max(1, (gruposDados || []).length);
 
-  const linhasProcessoHTML = (titulo) => {
-    // cada INSUMO vira 1 linha
-    const linhas = (gruposDados || []).flatMap((g) =>
-      (g.itens || []).map((it, idx) => ({
-        item: idx + 1,
-        insumo: it.descricao || "-",
-      }))
-    );
-
-    const corpo = (linhas.length ? linhas : [{ item: 1, insumo: "-" }])
-      .map(
-        (x) => `
-        <tr>
-          <td class="cItem">${x.item}</td>
-          <td class="cData"></td>
-          <td class="cData"></td>
-          <td class="cResp">&nbsp;</td>
-        </tr>
-      `
-      )
+  const linhasSimples = (cols) => {
+    // cols: array de funções (i) => <td>...</td>
+    return Array.from({ length: qtdLinhas })
+      .map((_, i) => `<tr>${cols.map(fn => fn(i)).join("")}</tr>`)
       .join("");
+  };
+
+  // Tabelas superiores (layout do grid)
+  const tabelaPedidoHTML = `
+    <div class="miniCard">
+      <div class="miniTitle">Pedido</div>
+      <table class="miniTbl">
+        <thead>
+          <tr>
+            <th style="width:38px;">Item</th>
+            <th>Enviado ao</th>
+            <th>Assinado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${linhasSimples([
+            (i) => `<td class="cItem">${i + 1}</td>`,
+            ()  => `<td></td>`,
+            ()  => `<td></td>`,
+          ])}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const tabelaProjetoHTML = `
+    <div class="miniCard">
+      <div class="miniTitle">Projeto</div>
+      <table class="miniTbl">
+        <thead>
+          <tr>
+            <th style="width:38px;">Item</th>
+            <th>Enviado ao</th>
+            <th>Assinado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${linhasSimples([
+            (i) => `<td class="cItem">${i + 1}</td>`,
+            ()  => `<td></td>`,
+            ()  => `<td></td>`,
+          ])}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const tabelaMedicaoHTML = `
+    <div class="miniCard">
+      <div class="miniTitle">Medição</div>
+      <table class="miniTbl">
+        <thead>
+          <tr>
+            <th style="width:38px;">Item</th>
+            <th>Liberação obra</th>
+            <th>Medição realizada</th>
+            <th>Medidor</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${linhasSimples([
+            (i) => `<td class="cItem">${i + 1}</td>`,
+            ()  => `<td></td>`,
+            ()  => `<td></td>`,
+            ()  => `<td>&nbsp;</td>`,
+          ])}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const tabelaVidroHTML = `
+    <div class="miniCard">
+      <div class="miniTitle">Vidro</div>
+      <table class="miniTbl">
+        <thead>
+          <tr>
+            <th style="width:38px;">Item</th>
+            <th>Data compra</th>
+            <th>Fornecedor</th>
+            <th>Previsto</th>
+            <th>Tipo</th>
+            <th style="width:56px;">Qnt.</th>
+            <th>Na empresa</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${linhasSimples([
+            (i) => `<td class="cItem">${i + 1}</td>`,
+            ()  => `<td></td>`,
+            ()  => `<td></td>`,
+            ()  => `<td></td>`,
+            ()  => `<td></td>`,
+            ()  => `<td class="cQtd"></td>`,
+            ()  => `<td></td>`,
+          ])}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // Processos (2 colunas)
+  const linhasProcessoHTML = (titulo) => {
+    const corpo = Array.from({ length: qtdLinhas }).map((_, i) => `
+      <tr>
+        <td class="cItem">${i + 1}</td>
+        <td class="cData"></td>
+        <td class="cData"></td>
+        <td class="cResp">&nbsp;</td>
+      </tr>
+    `).join("");
 
     return `
       <div class="gridBox">
@@ -848,121 +940,114 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
               <th>Responsáveis</th>
             </tr>
           </thead>
-          <tbody>
-            ${corpo}
-          </tbody>
+          <tbody>${corpo}</tbody>
         </table>
       </div>
     `;
   };
 
-  const servicosTerceirosHTML = (() => {
-    // linhas em branco (como no modelo)
-    const linhas = Array.from({ length: 4 }).map(
-      (_, i) => `
-      <tr>
-        <td class="cItem">${i + 1}</td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td class="cData"></td>
-        <td class="cData"></td>
-        <td class="cData"></td>
-        <td></td>
-        <td></td>
-        <td></td>
-      </tr>
-    `
-    ).join("");
-
-    return `
-      <div class="gridWide">
-        <div class="gridTitleWide">Serviço(s) de Terceiros</div>
-        <table class="gridTbl">
-          <thead>
+  // Serviços de terceiros (tabela grande – linhas = qtd de grupos)
+  const servicosTerceirosHTML = `
+    <div class="fullBox">
+      <div class="gridTitle">Serviço(s) de Terceiros</div>
+      <table class="bigTbl">
+        <thead>
+          <tr>
+            <th style="width:40px;">Item</th>
+            <th style="width:90px;">Fornecedor</th>
+            <th>Nome contato</th>
+            <th style="width:110px;">Telefone contato</th>
+            <th style="width:84px;">Data saída</th>
+            <th style="width:84px;">Previsão</th>
+            <th style="width:110px;">Data retorno efetivo</th>
+            <th style="width:130px;">Retorno conferido por</th>
+            <th style="width:120px;">Assinatura interno</th>
+            <th style="width:120px;">Assinatura terceiro</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array.from({ length: qtdLinhas }).map((_, i) => `
             <tr>
-              <th style="width:40px;">Item</th>
-              <th style="width:110px;">Fornecedor</th>
-              <th style="width:140px;">Nome contato</th>
-              <th style="width:120px;">Telefone contato</th>
-              <th style="width:90px;">Data saída</th>
-              <th style="width:90px;">Previsão</th>
-              <th style="width:110px;">Data retorno efetivo</th>
-              <th style="width:140px;">Retorno conferido por</th>
-              <th style="width:120px;">Assinatura interno</th>
-              <th style="width:120px;">Assinatura terceiro</th>
+              <td class="cItem">${i + 1}</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td class="cData"></td>
+              <td class="cData"></td>
+              <td class="cData"></td>
+              <td class="cResp">&nbsp;</td>
+              <td></td>
+              <td></td>
             </tr>
-          </thead>
-          <tbody>
-            ${linhas}
-          </tbody>
-        </table>
-        <div class="tinyNote">
-          O material enviado permanece de propriedade da empresa contratante. Qualquer dano, extravio ou não conformidade será de responsabilidade do prestador de serviço.
+          `).join("")}
+        </tbody>
+      </table>
+      <div class="noteSmall">
+        O material enviado permanece de propriedade da empresa contratante. Qualquer dano, extravio ou não conformidade será de responsabilidade do prestador de serviço.
+      </div>
+    </div>
+  `;
+
+  // Instalação (Estrutura / Vidro) – linhas = qtd de grupos
+  const instalacaoHTML = `
+    <div class="fullBox">
+      <div class="gridTitle">Instalação</div>
+      <div class="instGrid">
+        <div class="instCol">
+          <div class="instSub">Estrutura</div>
+          <table class="gridTbl">
+            <thead>
+              <tr>
+                <th style="width:40px;">Item</th>
+                <th style="width:84px;">Início</th>
+                <th style="width:84px;">Final</th>
+                <th>Responsáveis</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Array.from({ length: qtdLinhas }).map((_, i) => `
+                <tr>
+                  <td class="cItem">${i + 1}</td>
+                  <td class="cData"></td>
+                  <td class="cData"></td>
+                  <td class="cResp">&nbsp;</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="instCol">
+          <div class="instSub">Vidro</div>
+          <table class="gridTbl">
+            <thead>
+              <tr>
+                <th style="width:40px;">Item</th>
+                <th style="width:84px;">Início</th>
+                <th style="width:84px;">Final</th>
+                <th>Responsáveis</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Array.from({ length: qtdLinhas }).map((_, i) => `
+                <tr>
+                  <td class="cItem">${i + 1}</td>
+                  <td class="cData"></td>
+                  <td class="cData"></td>
+                  <td class="cResp">&nbsp;</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
         </div>
       </div>
-    `;
-  })();
-
-  const instalacaoHTML = (() => {
-    const linhas = Array.from({ length: 4 }).map(
-      (_, i) => `
-      <tr>
-        <td class="cItem">${i + 1}</td>
-        <td class="cData"></td>
-        <td class="cData"></td>
-        <td class="cResp">&nbsp;</td>
-      </tr>
-    `
-    ).join("");
-
-    return `
-      <div class="gridWide">
-        <div class="gridTitleWide">Instalação</div>
-
-        <div class="instGrid">
-          <div class="instCol">
-            <div class="instSub">Estrutura</div>
-            <table class="gridTbl">
-              <thead>
-                <tr>
-                  <th style="width:40px;">Item</th>
-                  <th style="width:84px;">Início</th>
-                  <th style="width:84px;">Final</th>
-                  <th>Responsáveis</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${linhas}
-              </tbody>
-            </table>
-          </div>
-
-          <div class="instCol">
-            <div class="instSub">Vidro</div>
-            <table class="gridTbl">
-              <thead>
-                <tr>
-                  <th style="width:40px;">Item</th>
-                  <th style="width:84px;">Início</th>
-                  <th style="width:84px;">Final</th>
-                  <th>Responsáveis</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${linhas}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    `;
-  })();
+    </div>
+  `;
 
   const paginaFinalHTML = `
     <div class="page-break"></div>
 
-    <div class="wrap">
+    <div class="prodHeader">
       <div class="topbar">
         <div class="logoBox">
           <img src="../js/logo.jpg"><br>
@@ -977,13 +1062,31 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
         </div>
       </div>
 
-      <div class="gridArea">
-        ${processos.map((p) => linhasProcessoHTML(p.titulo)).join("")}
+      <div class="miniGridTop">
+        ${tabelaPedidoHTML}
+        ${tabelaProjetoHTML}
+        ${tabelaMedicaoHTML}
+        ${tabelaVidroHTML}
       </div>
-
-      ${servicosTerceirosHTML}
-      ${instalacaoHTML}
     </div>
+
+    <div class="procGrid">
+      <div class="procRow">
+        ${linhasProcessoHTML("Desenho")}
+        ${linhasProcessoHTML("Corte")}
+      </div>
+      <div class="procRow">
+        ${linhasProcessoHTML("Pré-solda")}
+        ${linhasProcessoHTML("Acabamento")}
+      </div>
+      <div class="procRow">
+        ${linhasProcessoHTML("Montagem")}
+        ${linhasProcessoHTML("Finalização do Acabamento")}
+      </div>
+    </div>
+
+    ${servicosTerceirosHTML}
+    ${instalacaoHTML}
   `;
 
   // ========= 6) HTML COMPLETO (ESCALA 80%) =========
@@ -995,6 +1098,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
       <style>
         @page { size: A4; margin: 10mm; }
 
+        /* ✅ escala 80% na impressão */
         body { margin: 0; }
         .print-scale {
           transform: scale(0.8);
@@ -1052,26 +1156,102 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
 
         .obs { border-top: 1px solid #111; padding: 8px 10px; font-style: italic; color: #333; line-height: 1.35; }
 
-        /* ===== página final (grid) ===== */
-        .page-break { page-break-before: always; break-before: page; }
+        .page-break { page-break-before: always; }
 
-        .gridArea { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        /* ======= ✅ PÁGINA FINAL (GRIDS) ======= */
+        .prodHeader { margin-top: 10px; }
+        .miniGridTop {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr 1fr;
+          gap: 8px;
+          margin-top: 8px;
+        }
+        .miniCard {
+          border: 1px solid #111;
+        }
+        .miniTitle {
+          font-weight: 800;
+          text-align: center;
+          padding: 4px 6px;
+          border-bottom: 1px solid #111;
+          background: #f2f2f2;
+        }
+        .miniTbl {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 11px;
+        }
+        .miniTbl th, .miniTbl td {
+          border: 1px solid #111;
+          padding: 3px 4px;
+          vertical-align: middle;
+        }
+        .miniTbl thead th { background: #fafafa; font-weight: 800; }
+
+        .procGrid { margin-top: 10px; }
+        .procRow {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          margin-top: 8px;
+        }
         .gridBox { border: 1px solid #111; }
-        .gridTitle { background: #e9e9e9; border-bottom: 1px solid #111; padding: 6px 8px; font-weight: 800; text-align: center; }
-        .gridTbl { width: 100%; border-collapse: collapse; font-size: 11px; }
-        .gridTbl th, .gridTbl td { border: 1px solid #111; padding: 4px 6px; }
-        .gridTbl thead th { background: #f3f3f3; font-weight: 800; }
+        .gridTitle {
+          font-weight: 800;
+          text-align: center;
+          padding: 5px 6px;
+          border-bottom: 1px solid #111;
+          background: #f2f2f2;
+        }
+        .gridTbl {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 11px;
+        }
+        .gridTbl th, .gridTbl td {
+          border: 1px solid #111;
+          padding: 3px 4px;
+        }
+        .gridTbl thead th { background: #fafafa; font-weight: 800; }
 
-        .cItem { text-align: center; width: 40px; }
-        .cData { text-align: center; width: 84px; white-space: nowrap; }
-        .cResp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .fullBox { border: 1px solid #111; margin-top: 10px; }
+        .bigTbl {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 10.5px;
+        }
+        .bigTbl th, .bigTbl td {
+          border: 1px solid #111;
+          padding: 3px 4px;
+        }
+        .bigTbl thead th { background: #fafafa; font-weight: 800; }
 
-        .gridWide { border: 1px solid #111; margin-top: 8px; }
-        .gridTitleWide { background: #dcdcdc; border-bottom: 1px solid #111; padding: 6px 8px; font-weight: 900; text-align: center; }
-        .tinyNote { font-size: 10px; padding: 4px 6px; color: #222; }
+        .noteSmall {
+          font-size: 10px;
+          padding: 4px 6px;
+          border-top: 1px solid #111;
+          color: #333;
+        }
 
-        .instGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; }
-        .instSub { font-weight: 800; text-align: center; margin-bottom: 4px; }
+        .instGrid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          padding: 6px;
+        }
+        .instCol { border: 1px solid #111; }
+        .instSub {
+          font-weight: 800;
+          text-align: center;
+          padding: 5px 6px;
+          border-bottom: 1px solid #111;
+          background: #f2f2f2;
+        }
+
+        .cItem { text-align: center; }
+        .cData { text-align: center; white-space: nowrap; }
+        .cQtd { text-align: right; }
+        .cResp { color: #111; }
 
         @media print {
           .no-print { display: none !important; }
@@ -1125,11 +1305,10 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
 
           ${itensHTML || `<div class="item" style="padding:10px;"><strong>Nenhum item encontrado para impressão.</strong></div>`}
 
+          <!-- ✅ ÚLTIMA PÁGINA: ORDEM DE PRODUÇÃO / SERVIÇO -->
+          ${paginaFinalHTML}
+
         </div>
-
-        <!-- ✅ página final adicionada ao final -->
-        ${paginaFinalHTML}
-
       </div>
 
       <script>
