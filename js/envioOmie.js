@@ -2117,7 +2117,7 @@ async function gerarPayloadOmie() {
       codigo_categoria: "1.01.01",
       codigo_conta_corrente: 2523861035,
       consumidor_final: "S",
-      enviar_email: "N",
+      enviar_email:"S",
       codVend: vendedorInfo.codigo // ✅ AQUI (código do vendedor recuperado)
     },
     agropecuario: {
