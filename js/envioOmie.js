@@ -1728,19 +1728,18 @@ const getModoComissao = () => (controls.querySelector('input[name="comModo"]:che
    e força codigo_categoria conforme papel)
    ====================================================================== */
 (function () {
-  if (window.enviarComissoes) return; // evita redefinir
+  // evita redefinir
+  if (window.enviarComissoes && window.enviarComissoes.__vvFixCategorias) return;
 
   const API_URL = "https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/omie/comissao";
 
   const toISODate = (d) => {
     if (!d) return "";
-    try {
-      const dt = new Date(d);
-      if (isNaN(dt.getTime())) return "";
-      const m = String(dt.getMonth() + 1).padStart(2, "0");
-      const day = String(dt.getDate()).padStart(2, "0");
-      return `${dt.getFullYear()}-${m}-${day}`;
-    } catch { return ""; }
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return "";
+    const m = String(dt.getMonth() + 1).padStart(2, "0");
+    const day = String(dt.getDate()).padStart(2, "0");
+    return `${dt.getFullYear()}-${m}-${day}`;
   };
 
   function toast(msg, ok = true) {
@@ -1759,46 +1758,54 @@ const getModoComissao = () => (controls.querySelector('input[name="comModo"]:che
       t.style.color = "#fff";
       t.style.opacity = "0";
       t.style.transition = "opacity .2s ease";
-      requestAnimationFrame(() => { t.style.opacity = "1"; });
-      setTimeout(() => { t.style.opacity = "0"; }, 2600);
+      requestAnimationFrame(() => (t.style.opacity = "1"));
+      setTimeout(() => (t.style.opacity = "0"), 2600);
     } catch {}
   }
 
-  // tipo: "arquiteto" | "vendedor"
-  function montarLancamento(tipo, fonte, baseConsiderada) {
+  const norm = (s) =>
+    String(s || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+  function montarLancamento(tipo, fonte) {
     const calc = Number(fonte?.valorCalculado || 0);
     const manual = Number(fonte?.valorManual || 0);
     const valor_documento = Number((calc > 0 ? calc : manual).toFixed(2));
 
-    const data_previsao   = toISODate(fonte?.previsao || "");
+    const data_previsao = toISODate(fonte?.previsao || "");
     const data_vencimento = toISODate(fonte?.vencimento || "");
 
-    // categoria forçada no front, mas se vier vazia tenta inferir
-    let codigo_categoria = String(fonte?.codigo_categoria || "").trim();
-    if (!codigo_categoria) {
-      codigo_categoria = (String(tipo).toLowerCase() === "arquiteto") ? "2.08.02" : "2.07.99";
-    }
+    const tipoNorm = norm(tipo);
 
-    // payload para a sua rota (back usa exatamente estes campos)
-    const payload = {
+    // ✅ categoria SEMPRE fixa por tipo
+    const codigo_categoria = tipoNorm.includes("arquit")
+      ? "2.08.02"
+      : "2.07.99";
+
+    // ✅ monte o payload EXPLÍCITO (o back já lê catFromBody / tipo / papel)
+    return {
       valor_documento,
       data_previsao,
       data_vencimento,
-      codigo_categoria, // envia já definido: vendedor 2.07.99 | arquiteto 2.08.02
-      // importantíssimo: fornecedor e observação vindos do front
-      ...(fonte?.codigo ? { codigo_cliente_fornecedor: String(fonte.codigo).trim() } : {}),
-      ...(fonte?.observacao ? { observacao: String(fonte.observacao).trim() } : {}),
-      // se quiser sobrepor a conta, descomente e informe:
-      // id_conta_corrente: "2523861035",
+      codigo_categoria,
+      tipo: tipoNorm,   // ajuda a inferência se precisar
+      papel: tipoNorm,  // idem
+      ...(fonte?.codigo
+        ? { codigo_cliente_fornecedor: String(fonte.codigo).trim() }
+        : {}),
+      ...(fonte?.observacao
+        ? { observacao: String(fonte.observacao).trim() }
+        : {}),
     };
-
-    return payload;
   }
 
   function validarLancamento(lanc, papel) {
     const erros = [];
     if (!(lanc?.valor_documento > 0)) erros.push("valor_documento inválido");
-    if (!lanc?.data_previsao)  erros.push("data_previsao ausente");
+    if (!lanc?.data_previsao) erros.push("data_previsao ausente");
     if (!lanc?.data_vencimento) erros.push("data_vencimento ausente");
     if (!lanc?.codigo_cliente_fornecedor) erros.push("codigo_cliente_fornecedor ausente");
     if (!lanc?.codigo_categoria) erros.push("codigo_categoria ausente");
@@ -1806,73 +1813,72 @@ const getModoComissao = () => (controls.querySelector('input[name="comModo"]:che
   }
 
   async function postarLancamento(lanc, papel) {
-    try {
-      const r = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(lanc)
-      });
-      const json = await r.json().catch(() => ({}));
-      if (!r.ok || json?.ok === false) {
-        const msg = json?.error || `HTTP ${r.status}`;
-        return { ok: false, papel, erro: msg, resposta: json, enviado: lanc };
-      }
-      return { ok: true, papel, resposta: json, enviado: lanc };
-    } catch (e) {
-      return { ok: false, papel, erro: e?.message || "Falha de rede", enviado: lanc };
+    // ✅ LOG antes do envio (confirma que está indo)
+    console.log("📤 POST /comissao", papel, {
+      codigo_categoria: lanc.codigo_categoria,
+      tipo: lanc.tipo,
+      papel: lanc.papel,
+      valor_documento: lanc.valor_documento,
+      codigo_cliente_fornecedor: lanc.codigo_cliente_fornecedor,
+      observacao: lanc.observacao,
+    });
+
+    const r = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lanc),
+    });
+
+    const json = await r.json().catch(() => ({}));
+    if (!r.ok || json?.ok === false) {
+      const msg = json?.error || `HTTP ${r.status}`;
+      return { ok: false, papel, erro: msg, resposta: json, enviado: lanc };
     }
+    return { ok: true, papel, resposta: json, enviado: lanc };
   }
 
-  // expõe para o popup
- window.enviarComissoes = async function (payload) {
-  try {
-    document.dispatchEvent(new CustomEvent("vv:comissoes:prontas", { detail: { payload } }));
-  } catch {}
+  window.enviarComissoes = async function (payload) {
+    const lancArq = montarLancamento("arquiteto", payload?.arquiteto);
+    const lancVend = montarLancamento("vendedor", payload?.vendedor);
 
-  const lancArq  = montarLancamento("arquiteto", payload?.arquiteto, payload?.baseConsiderada);
-  const lancVend = montarLancamento("vendedor",  payload?.vendedor,  payload?.baseConsiderada);
+    // ✅ conferência local
+    console.log("🧾 Pré-envio (tem que ser diferente):", {
+      arquiteto: lancArq.codigo_categoria,
+      vendedor: lancVend.codigo_categoria,
+    });
 
-  const vArq = validarLancamento(lancArq, "arquiteto");
-  const vVend = validarLancamento(lancVend, "vendedor");
+    const vArq = validarLancamento(lancArq, "arquiteto");
+    const vVend = validarLancamento(lancVend, "vendedor");
 
-  const resultados = {};
-  let mensagensErro = [];
+    const resultados = {};
+    const erros = [];
 
-  // Tenta enviar do arquiteto, se válido
-  if (vArq.valido) {
-    resultados.arquiteto = await postarLancamento(lancArq, "arquiteto");
-    if (!resultados.arquiteto.ok) mensagensErro.push(`Arquiteto: ${resultados.arquiteto.erro || "erro"}`);
-  } else {
-    mensagensErro.push(`Arquiteto: ${vArq.erros.join(", ")}`);
-    resultados.arquiteto = { ok: false, erro: vArq.erros.join(", ") };
-  }
+    if (vArq.valido) {
+      resultados.arquiteto = await postarLancamento(lancArq, "arquiteto");
+      if (!resultados.arquiteto.ok) erros.push(`Arquiteto: ${resultados.arquiteto.erro || "erro"}`);
+    } else {
+      erros.push(`Arquiteto: ${vArq.erros.join(", ")}`);
+      resultados.arquiteto = { ok: false, erro: vArq.erros.join(", ") };
+    }
 
-  // Tenta enviar do vendedor, se válido
-  if (vVend.valido) {
-    resultados.vendedor = await postarLancamento(lancVend, "vendedor");
-    if (!resultados.vendedor.ok) mensagensErro.push(`Vendedor: ${resultados.vendedor.erro || "erro"}`);
-  } else {
-    mensagensErro.push(`Vendedor: ${vVend.erros.join(", ")}`);
-    resultados.vendedor = { ok: false, erro: vVend.erros.join(", ") };
-  }
+    if (vVend.valido) {
+      resultados.vendedor = await postarLancamento(lancVend, "vendedor");
+      if (!resultados.vendedor.ok) erros.push(`Vendedor: ${resultados.vendedor.erro || "erro"}`);
+    } else {
+      erros.push(`Vendedor: ${vVend.erros.join(", ")}`);
+      resultados.vendedor = { ok: false, erro: vVend.erros.join(", ") };
+    }
 
-  const okGeral = !!(resultados.arquiteto?.ok || resultados.vendedor?.ok);
+    const okGeral = !!(resultados.arquiteto?.ok || resultados.vendedor?.ok);
 
-  if (okGeral) {
-    toast("Comissões enviadas com sucesso.");
-  } else {
-    toast("Falha ao enviar comissões:\n" + mensagensErro.join("\n"), false);
-  }
+    if (okGeral) toast("Comissões enviadas com sucesso.");
+    else toast("Falha ao enviar comissões:\n" + erros.join("\n"), false);
 
-  try {
-    document.dispatchEvent(new CustomEvent("vv:comissoes:enviadas", {
-      detail: { ok: okGeral, resultados }
-    }));
-  } catch {}
+    return { ok: okGeral, resultados };
+  };
 
-  return { ok: okGeral, resultados };
-};
-
+  // marca que é a versão corrigida
+  window.enviarComissoes.__vvFixCategorias = true;
 })();
 
 
