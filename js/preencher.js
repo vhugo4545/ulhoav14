@@ -152,26 +152,110 @@ async function carregarPropostaEditavel(proposta) {
     setIfExists("dataMedicaoRealizada",     dados.dataMedicaoRealizada);
 
     
-    setTimeout(() => {
-  const vendedorEl = document.getElementById("vendedorResponsavel");
-mostrarCarregando()
-  if (vendedorEl) {
-    const options = Array.from(vendedorEl.options || []);
-    const match = options.find(opt => opt.value === dados.vendedorResponsavel || opt.text === dados.vendedorResponsavel);
+   // ✅ Lista fixa (fallback na 2ª tentativa)
+const VENDEDORES_FIXOS_FALLBACK = {
+  "pagina": 1,
+  "total_de_paginas": 1,
+  "registros": 12,
+  "total_de_registros": 12,
+  "cadastro": [
+    {"codInt":"","codigo":2452905334,"comissao":1,"email":"joaomartins@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"N","nome":"JOAO CLEBER MARTINS","visualiza_pedido":"N"},
+    {"codInt":"","codigo":2452905376,"comissao":0,"email":"","fatura_pedido":"N","inativo":"S","nome":"Paulo Sergio Machado da Silva","visualiza_pedido":"N"},
+    {"codInt":"","codigo":2452905381,"comissao":0,"email":"marilena.ulhoa@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"N","nome":"MARILENA DE ALMEIDA ULHOA","visualiza_pedido":"N"},
+    {"codInt":"","codigo":2452905445,"comissao":1,"email":"rafael.angelo@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"N","nome":"RAFAEL ANGELO ARAUJO DA SILVA","visualiza_pedido":"N"},
+    {"codInt":"","codigo":2452905491,"comissao":0,"email":"","fatura_pedido":"N","inativo":"S","nome":"DOUGLAS VITOR DA SILVA","visualiza_pedido":"N"},
+    {"codInt":"","codigo":2452905509,"comissao":0,"email":"","fatura_pedido":"N","inativo":"S","nome":"GABRIEL JUNIOR DO COUTO NEPOMUCENO","visualiza_pedido":"N"},
+    {"codInt":"","codigo":2452905682,"comissao":0,"email":"felipe.ulhoa@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"N","nome":"FELIPE ULHOA FERREIRA","visualiza_pedido":"N"},
+    {"codInt":"","codigo":2452911859,"comissao":0,"email":"","fatura_pedido":"N","inativo":"S","nome":"MAURO LUCIO","visualiza_pedido":"N"},
+    {"codInt":"","codigo":2452927579,"comissao":0,"email":"projetos@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"S","nome":"ANA FLAVIA RODRIGUES PRATES","visualiza_pedido":"N"},
+    {"codInt":"","codigo":2618640819,"comissao":0,"email":"lais.rabelo@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"S","nome":"LAIS MAGALHÃES RABELO","visualiza_pedido":"N"},
+    {"codInt":"","codigo":2698639092,"comissao":0,"email":"servidor@ferreiraulhoa.com.br","fatura_pedido":"S","inativo":"S","nome":"VANESSA ULHOA","visualiza_pedido":"N"},
+    {"codInt":"Enviado via API","codigo":2698811257,"comissao":0,"email":"","fatura_pedido":"N","inativo":"S","nome":"Enviado via API","visualiza_pedido":"N"}
+  ]
+};
 
-    if (match) {
-      vendedorEl.value = match.value;
-    } else if ("value" in vendedorEl) {
-      
-      vendedorEl.value = dados.vendedorResponsavel ?? "";
-    } else {
-       
-      vendedorEl.textContent = dados.vendedorResponsavel ?? "";
-    }
-  } else {
-    console.warn("⚠️ Campo 'vendedorResponsavel' ainda não está disponível no DOM.");
+function tentarPreencherVendedor({ vendedorNome, tentativas = 3, delay = 900 }) {
+  let tentativaAtual = 0;
+
+  const normalizar = (v) => String(v || "").trim().toUpperCase();
+
+  function garantirOpcao(select, nome) {
+    const nomeNorm = normalizar(nome);
+    if (!nomeNorm) return null;
+
+    const options = Array.from(select.options || []);
+    let match = options.find(opt => normalizar(opt.value) === nomeNorm || normalizar(opt.text) === nomeNorm);
+    if (match) return match;
+
+    // se não existir, cria uma opção e seleciona (pra nunca ficar vazio)
+    const opt = new Option(nomeNorm, nomeNorm);
+    select.appendChild(opt);
+    return opt;
   }
-}, 3000); // aguarda 1s para garantir que o campo foi carregado
+
+  function preencherListaFixaNoSelect(select) {
+    const atuais = new Set(Array.from(select.options || []).map(o => normalizar(o.value)));
+    (VENDEDORES_FIXOS_FALLBACK.cadastro || []).forEach(v => {
+      const nome = normalizar(v.nome);
+      if (!nome || atuais.has(nome)) return;
+      select.appendChild(new Option(nome, nome));
+      atuais.add(nome);
+    });
+  }
+
+  const tick = () => {
+    tentativaAtual++;
+
+    const vendedorEl = document.getElementById("vendedorResponsavel");
+    if (!vendedorEl) {
+      if (tentativaAtual < tentativas) return setTimeout(tick, delay);
+      alert("Falha ao preencher o vendedor: campo não encontrado no DOM.");
+      return;
+    }
+
+    // ✅ NA 2ª TENTATIVA: injeta a lista fixa no select
+    if (tentativaAtual === 2) {
+      preencherListaFixaNoSelect(vendedorEl);
+    }
+
+    // se ainda não tem opções suficientes, tenta de novo
+    const options = Array.from(vendedorEl.options || []);
+    if (options.length <= 1 && tentativaAtual < tentativas) {
+      return setTimeout(tick, delay);
+    }
+
+    const nome = vendedorNome ?? "";
+    const opt = garantirOpcao(vendedorEl, nome);
+
+    if (opt) {
+      vendedorEl.value = opt.value;
+      vendedorEl.dispatchEvent(new Event("change", { bubbles: true }));
+      vendedorEl.dispatchEvent(new Event("input", { bubbles: true }));
+      
+      console.log("✅ Vendedor preenchido:", vendedorEl.value, `(tentativa ${tentativaAtual})`),  mostrarCarregando();;
+      ocultarCarregando() 
+      return;
+    }
+
+    if (tentativaAtual < tentativas) return setTimeout(tick, delay);
+
+    alert(`Falha ao preencher o vendedor: valor inválido ("${nome}").`);
+  };
+
+  tick();
+}
+
+/* ====== COMO USAR NO SEU FLUXO ====== */
+setTimeout(() => {
+  if (typeof mostrarCarregando === "function") mostrarCarregando();
+
+  tentarPreencherVendedor({
+    vendedorNome: dados?.vendedorResponsavel,
+    tentativas: 3,
+    delay: 900
+  });
+}, 5000);
+
 
 
     setIfExists("operadorInterno", dados.operadorInterno);
