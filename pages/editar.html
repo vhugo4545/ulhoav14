@@ -15,7 +15,69 @@
 
 </head>
 
+
+
 <body>
+  
+<script>
+  // Overlay simples de carregamento (4s)
+  function mostrarOverlayCarregando(duracaoMs = 4000) {
+    // evita duplicar
+    if (document.getElementById("vv-loading-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = "vv-loading-overlay";
+    overlay.setAttribute("role", "status");
+    overlay.setAttribute("aria-live", "polite");
+    overlay.innerHTML = `
+      <div style="
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        gap:10px; text-align:center;
+      ">
+        <div style="
+          width:42px; height:42px; border:4px solid rgba(255,255,255,.35);
+          border-top-color:#fff; border-radius:50%;
+          animation: vvSpin 0.85s linear infinite;
+        "></div>
+        <div style="font: 600 14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#fff;">
+          Carregando...
+        </div>
+      </div>
+    `;
+
+    // estilo do overlay (inline pra ser direto)
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(3px);
+    `;
+
+    // keyframes do spinner
+    const style = document.createElement("style");
+    style.id = "vv-loading-overlay-style";
+    style.textContent = `
+      @keyframes vvSpin { to { transform: rotate(360deg); } }
+    `;
+
+    document.head.appendChild(style);
+    document.body.appendChild(overlay);
+
+    setTimeout(() => {
+      overlay.remove();
+      const s = document.getElementById("vv-loading-overlay-style");
+      if (s) s.remove();
+    }, duracaoMs);
+  }
+
+  // Exemplo de uso:
+  // mostrarOverlayCarregando(); // 4s
+  mostrarOverlayCarregando(); 
+</script>
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <ul>
@@ -35,6 +97,7 @@
     <span class="material-icons-outlined">lock_open</span><br> Destravar Campos
   </button>
 </div>
+
 
 <script>
 function destravarCampos() {
@@ -65,9 +128,6 @@ function destravarCampos() {
 
  <button id="btn-visualizar-proposta" class="sidebar-button" onclick="gerarOrcamentoParaImpressaoCompleta()">
   <span class="material-icons-outlined">visibility</span><br><P></P>  Visualizar Proposta
-</button>
-   <button id="btn-visualizar-proposta" class="sidebar-button" onclick="gerarOrdemDeServicoParaImpressao()">
-  <span class="material-icons-outlined">visibility</span><br><P></P>   Ordem de Produção
 </button>
 
 
