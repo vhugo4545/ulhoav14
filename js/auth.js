@@ -1,48 +1,49 @@
-﻿
+
     function toggleForms() {
       const login = document.getElementById('loginForm');
       const cad = document.getElementById('cadastroForm');
       login.style.display = login.style.display === 'none' ? 'block' : 'none';
       cad.style.display = cad.style.display === 'none' ? 'block' : 'none';
     }
-async function carregarVendedores() {
-  const TOKEN = localStorage.getItem('accessToken');
-
+async function carregarVendedores({ incluirInativos = true } = {}) {
   try {
-    const response = await fetch('https://ulhoa-0a02024d350a.herokuapp.com/omie/vendedores', {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${TOKEN}`
-      },
-    });
-
-    if (!response.ok) throw new Error('Erro ao buscar vendedores');
-
-    const vendedores = await response.json(); // contém { cadastro: [...] }
-
-    const select = document.getElementById('vendedorResponsavel');
+    const select = document.getElementById("vendedorResponsavel");
     if (!select) {
-      console.warn('⚠️ Elemento #vendedorResponsavel não encontrado no DOM.');
+      console.warn("⚠️ Elemento #vendedorResponsavel não encontrado no DOM.");
       return;
     }
 
+    // Placeholder
     select.innerHTML = '<option value="">Selecione</option>';
 
-    (vendedores.cadastro || []).forEach(v => {
-      const nomeMaiusculo = v.nome.toUpperCase();
-      const opt = new Option(nomeMaiusculo, nomeMaiusculo); // nome como texto e valor
+    const normalizar = (s) => String(s || "").trim().toUpperCase();
+    const jaTem = new Set();
+
+    (VENDEDORES_FIXOS_FALLBACK.cadastro || []).forEach((v) => {
+      if (!incluirInativos && String(v.inativo).toUpperCase() === "S") return;
+
+      const nomeMaiusculo = normalizar(v.nome);
+      if (!nomeMaiusculo || jaTem.has(nomeMaiusculo)) return;
+
+      const opt = new Option(nomeMaiusculo, nomeMaiusculo); // texto e valor
       select.appendChild(opt);
+      jaTem.add(nomeMaiusculo);
     });
 
+    // Dispara eventos para quem escuta change/input
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    select.dispatchEvent(new Event("input", { bubbles: true }));
+
     console.log(
-      `%c✅ ${vendedores.cadastro?.length || 0} vendedores carregados com sucesso.`,
-      'color: green; font-weight: bold;'
+      `%c✅ ${jaTem.size} vendedores fixos carregados com sucesso.`,
+      "color: green; font-weight: bold;"
     );
 
   } catch (err) {
-    console.error('❌ Erro ao carregar vendedores:', err);
+    console.error("❌ Erro ao carregar vendedores fixos:", err);
   }
 }
+
 
 
     async function cadastrar() {
@@ -98,24 +99,43 @@ async function carregarVendedores() {
         alert(data.erro || 'Erro no login');
       }
     }
-    async function carregarVendedoresCadastro() {
-  try {
-    const res = await fetch('https://ulhoa-0a02024d350a.herokuapp.com/omie/vendedores');
-    const dados = await res.json();
-    const vendedores = dados.cadastro || [];
+    // ✅ 100% local (sem fetch) usando seus vendedores fixos
+function carregarVendedoresCadastro({ incluirInativos = true } = {}) {
+  const select = document.getElementById("cadastroNome");
+  if (!select) return;
 
-    const select = document.getElementById('cadastroNome');
-    if (!select) return;
+  const normalizar = (s) => String(s || "").trim().toUpperCase();
 
-    vendedores.forEach(v => {
-      const opt = new Option(v.nome, v.nome); // nome como valor
-      select.appendChild(opt);
-    });
+  // Mantém a primeira opção se parecer placeholder
+  const primeira = select.options?.[0];
+  const manterPrimeira =
+    primeira && (primeira.value === "" || /selecione|escolha/i.test(primeira.textContent || ""));
 
-  } catch (err) {
-    console.error('❌ Erro ao carregar vendedores para o cadastro:', err);
-  }
+  // Limpa options (mantendo placeholder se existir)
+  select.innerHTML = "";
+  if (manterPrimeira) select.appendChild(primeira);
+
+  // Evita duplicados
+  const jaTem = new Set(Array.from(select.options).map(o => normalizar(o.value)));
+
+  (VENDEDORES_FIXOS_FALLBACK.cadastro || []).forEach(v => {
+    if (!incluirInativos && String(v.inativo).toUpperCase() === "S") return;
+
+    const nome = String(v.nome || "").trim();
+    const key = normalizar(nome);
+    if (!key || jaTem.has(key)) return;
+
+    select.appendChild(new Option(nome, nome));
+    jaTem.add(key);
+  });
+
+  // (Opcional) dispara change/input se você tiver listeners dependentes
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+  select.dispatchEvent(new Event("input", { bubbles: true }));
+
+  console.log(`✅ cadastroNome preenchido com fallback (${select.options.length} opções)`);
 }
+
 
 
     document.addEventListener('DOMContentLoaded', carregarVendedoresCadastro);
