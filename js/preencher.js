@@ -174,76 +174,245 @@ const VENDEDORES_FIXOS_FALLBACK = {
   ]
 };
 
-function tentarPreencherVendedor({ vendedorNome, tentativas = 3, delay = 900 }) {
+/* =========================================================
+   ✅ CORREÇÃO DE VENDEDOR VIA SELEÇÃO (SEM DIGITAR)
+   - abrirModalSelecaoVendedor(): abre modal com <select> dos vendedores padrão
+   - tentarPreencherVendedor(): valida/normaliza/força correção e seleciona no #vendedorResponsavel
+   Requisitos:
+   - const VENDEDORES_FIXOS_FALLBACK = { cadastro: [ { nome: ... } ] }
+   ========================================================= */
+
+// 1) Modal (retorna Promise<string|null>)
+// - resolve com: nome escolhido (string), "" (vazio), ou null (cancelado)
+function abrirModalSelecaoVendedor({ valorInvalido = "" } = {}) {
+  return new Promise((resolve) => {
+    // remove modal antigo se existir
+    const antigo = document.getElementById("modal-correcao-vendedor");
+    if (antigo) antigo.remove();
+
+    const lista = (VENDEDORES_FIXOS_FALLBACK?.cadastro || [])
+      .map((v) => String(v.nome || "").trim().toUpperCase())
+      .filter(Boolean);
+
+    const backdrop = document.createElement("div");
+    backdrop.id = "modal-correcao-vendedor";
+    backdrop.style.cssText = `
+      position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 99999; padding: 16px;
+    `;
+
+    const box = document.createElement("div");
+    box.style.cssText = `
+      width: 100%; max-width: 560px; background: #fff; border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25); padding: 16px 16px 12px;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    `;
+
+    const safeValor = String(valorInvalido || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    box.innerHTML = `
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+        <div>
+          <div style="font-size:16px; font-weight:700; color:#111827;">Corrigir vendedor</div>
+          <div style="margin-top:6px; font-size:13px; color:#6b7280;">
+            Valor inválido encontrado: <b style="color:#111827;">${safeValor}</b>
+          </div>
+          <div style="margin-top:6px; font-size:12px; color:#6b7280;">
+            Selecione um vendedor válido da lista padrão (ou deixe vazio).
+          </div>
+        </div>
+        <button id="btn-fechar-modal-vend" type="button" aria-label="Fechar" style="
+          border:0; background:transparent; font-size:22px; line-height:1; cursor:pointer; color:#6b7280;">×</button>
+      </div>
+
+      <div style="margin-top:14px;">
+        <label style="display:block; font-size:12px; color:#6b7280; margin-bottom:6px;">Vendedor</label>
+        <select id="select-correcao-vendedor" style="
+          width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:10px; font-size:14px;">
+          <option value="">(deixar vazio / não selecionar)</option>
+          ${lista.map((n) => `<option value="${n}">${n}</option>`).join("")}
+        </select>
+      </div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
+        <button id="btn-cancelar-vend" type="button" style="
+          padding:9px 12px; border-radius:10px; border:1px solid #e5e7eb; background:#fff; cursor:pointer;">
+          Cancelar
+        </button>
+        <button id="btn-confirmar-vend" type="button" style="
+          padding:9px 12px; border-radius:10px; border:0; background:#2563eb; color:#fff; cursor:pointer; font-weight:600;">
+          Confirmar
+        </button>
+      </div>
+    `;
+
+    backdrop.appendChild(box);
+    document.body.appendChild(backdrop);
+
+    const fechar = (val) => {
+      backdrop.remove();
+      resolve(val);
+    };
+
+    // clicar fora cancela
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) fechar(null);
+    });
+
+    document.getElementById("btn-fechar-modal-vend").onclick = () => fechar(null);
+    document.getElementById("btn-cancelar-vend").onclick = () => fechar(null);
+
+    document.getElementById("btn-confirmar-vend").onclick = () => {
+      const sel = document.getElementById("select-correcao-vendedor");
+      fechar(sel?.value || "");
+    };
+  });
+}
+
+
+// 2) Preencher vendedor com validação rígida + correção por seleção
+async function tentarPreencherVendedor({ vendedorNome, tentativas = 3, delay = 900 }) {
   let tentativaAtual = 0;
 
-  const normalizar = (v) => String(v || "").trim().toUpperCase();
+  const norm = (v) =>
+    String(v || "")
+      .trim()
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, ""); // remove acentos
 
-  function garantirOpcao(select, nome) {
-    const nomeNorm = normalizar(nome);
-    if (!nomeNorm) return null;
+  // IDs tipo ObjectId (24 hex) => inválido SEMPRE
+  const isHex24 = (s) => /^[a-f0-9]{24}$/i.test(String(s || "").trim());
 
-    const options = Array.from(select.options || []);
-    let match = options.find(opt => normalizar(opt.value) === nomeNorm || normalizar(opt.text) === nomeNorm);
-    if (match) return match;
+  // ✅ Aliases permitidos (pequenas variações)
+  const ALIASES_VENDEDORES = {
+    [norm("MARILENA")]: "MARILENA DE ALMEIDA ULHOA",
+    [norm("MARILENA ULHOA")]: "MARILENA DE ALMEIDA ULHOA",
+    [norm("RAFAEL ANGELO")]: "RAFAEL ANGELO ARAUJO DA SILVA",
+    [norm("RAFAEL ÂNGELO")]: "RAFAEL ANGELO ARAUJO DA SILVA",
+  };
 
-    // se não existir, cria uma opção e seleciona (pra nunca ficar vazio)
-    const opt = new Option(nomeNorm, nomeNorm);
-    select.appendChild(opt);
-    return opt;
-  }
+  // ✅ Set de nomes válidos (somente os do fallback)
+  const VALIDOS_SET = new Set(
+    (VENDEDORES_FIXOS_FALLBACK?.cadastro || []).map((v) => norm(v.nome))
+  );
 
   function preencherListaFixaNoSelect(select) {
-    const atuais = new Set(Array.from(select.options || []).map(o => normalizar(o.value)));
-    (VENDEDORES_FIXOS_FALLBACK.cadastro || []).forEach(v => {
-      const nome = normalizar(v.nome);
-      if (!nome || atuais.has(nome)) return;
+    const atuais = new Set(Array.from(select.options || []).map((o) => norm(o.value)));
+    (VENDEDORES_FIXOS_FALLBACK?.cadastro || []).forEach((v) => {
+      const nome = String(v.nome || "").trim().toUpperCase();
+      const key = norm(nome);
+      if (!key || atuais.has(key)) return;
       select.appendChild(new Option(nome, nome));
-      atuais.add(nome);
+      atuais.add(key);
     });
   }
 
-  const tick = () => {
+  function buscarOpcao(select, nome) {
+    const k = norm(nome);
+    if (!k) return null;
+    return (
+      Array.from(select.options || []).find(
+        (opt) => norm(opt.value) === k || norm(opt.text) === k
+      ) || null
+    );
+  }
+
+  // ✅ valida rígido + força correção por modal (seleção)
+  async function validarOuSelecionar(valorAtual) {
+    const bruto = String(valorAtual || "").trim();
+    if (!bruto) return "";
+
+    // aplica alias
+    const alias = ALIASES_VENDEDORES[norm(bruto)];
+    const candidato = (alias || bruto).trim().toUpperCase();
+
+    // se válido, ok
+    if (VALIDOS_SET.has(norm(candidato))) return candidato;
+
+    // inválido => alerta e força seleção
+    const motivo = isHex24(candidato) ? " (ID inválido)" : "";
+    alert(`⚠️ Vendedor inválido encontrado${motivo}: "${bruto}".\nSelecione um vendedor válido para continuar.`);
+
+    const escolhido = await abrirModalSelecaoVendedor({ valorInvalido: bruto });
+
+    // cancelou -> sem seleção
+    if (escolhido === null) return "";
+
+    // vazio -> sem seleção
+    if (!String(escolhido).trim()) return "";
+
+    const finalNome = String(escolhido).trim().toUpperCase();
+
+    if (!VALIDOS_SET.has(norm(finalNome))) {
+      alert(`❌ Seleção inválida: "${finalNome}". Vou deixar vazio.`);
+      return "";
+    }
+
+    return finalNome;
+  }
+
+  const tick = async () => {
     tentativaAtual++;
 
     const vendedorEl = document.getElementById("vendedorResponsavel");
     if (!vendedorEl) {
-      if (tentativaAtual < tentativas) return setTimeout(tick, delay);
-      alert("Falha ao preencher o vendedor: campo não encontrado no DOM.");
+      if (tentativaAtual < tentativas) return setTimeout(() => tick(), delay);
+      alert("❌ Falha ao preencher: campo #vendedorResponsavel não encontrado no DOM.");
       return;
     }
 
-    // ✅ NA 2ª TENTATIVA: injeta a lista fixa no select
-    if (tentativaAtual === 2) {
+    // garante que o select tenha a lista padrão
+    if ((vendedorEl.options?.length || 0) <= 1) {
       preencherListaFixaNoSelect(vendedorEl);
     }
 
-    // se ainda não tem opções suficientes, tenta de novo
-    const options = Array.from(vendedorEl.options || []);
-    if (options.length <= 1 && tentativaAtual < tentativas) {
-      return setTimeout(tick, delay);
-    }
+    // ✅ valida/corrige via modal
+    const corrigido = await validarOuSelecionar(vendedorNome);
 
-    const nome = vendedorNome ?? "";
-    const opt = garantirOpcao(vendedorEl, nome);
-
-    if (opt) {
-      vendedorEl.value = opt.value;
+    // se ficou vazio, limpa e sai
+    if (!corrigido) {
+      vendedorEl.value = "";
       vendedorEl.dispatchEvent(new Event("change", { bubbles: true }));
       vendedorEl.dispatchEvent(new Event("input", { bubbles: true }));
-      
-      console.log("✅ Vendedor preenchido:", vendedorEl.value, `(tentativa ${tentativaAtual})`),  mostrarCarregando();;
-      ocultarCarregando() 
+      console.log("ℹ️ Vendedor ficou vazio (sem seleção).");
+      if (typeof ocultarCarregando === "function") ocultarCarregando();
       return;
     }
 
-    if (tentativaAtual < tentativas) return setTimeout(tick, delay);
+    // tenta achar option existente
+    let opt = buscarOpcao(vendedorEl, corrigido);
 
-    alert(`Falha ao preencher o vendedor: valor inválido ("${nome}").`);
+    // se não achar, injeta fallback e tenta de novo
+    if (!opt) {
+      preencherListaFixaNoSelect(vendedorEl);
+      opt = buscarOpcao(vendedorEl, corrigido);
+    }
+
+    // se achou, seleciona
+    if (opt) {
+      if (typeof mostrarCarregando === "function") mostrarCarregando();
+
+      vendedorEl.value = opt.value;
+      vendedorEl.dispatchEvent(new Event("change", { bubbles: true }));
+      vendedorEl.dispatchEvent(new Event("input", { bubbles: true }));
+
+      console.log("✅ Vendedor preenchido:", vendedorEl.value, `(tentativa ${tentativaAtual})`);
+
+      if (typeof ocultarCarregando === "function") ocultarCarregando();
+      return;
+    }
+
+    if (tentativaAtual < tentativas) return setTimeout(() => tick(), delay);
+
+    alert(`❌ Não foi possível selecionar o vendedor após ${tentativas} tentativas.`);
+    if (typeof ocultarCarregando === "function") ocultarCarregando();
   };
 
-  tick();
+  await tick();
 }
+
 
 /* ====== COMO USAR NO SEU FLUXO ====== */
 setTimeout(() => {
@@ -254,7 +423,7 @@ setTimeout(() => {
     tentativas: 3,
     delay: 900
   });
-}, 5000);
+}, 1000);
 
 
 
