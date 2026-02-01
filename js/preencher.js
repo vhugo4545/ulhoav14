@@ -170,7 +170,7 @@ const VENDEDORES_FIXOS_FALLBACK = {
     {"codInt":"","codigo":2452927579,"comissao":0,"email":"projetos@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"S","nome":"ANA FLAVIA RODRIGUES PRATES","visualiza_pedido":"N"},
     {"codInt":"","codigo":2618640819,"comissao":0,"email":"lais.rabelo@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"S","nome":"LAIS MAGALHÃES RABELO","visualiza_pedido":"N"},
     {"codInt":"","codigo":2698639092,"comissao":0,"email":"servidor@ferreiraulhoa.com.br","fatura_pedido":"S","inativo":"S","nome":"VANESSA ULHOA","visualiza_pedido":"N"},
-    {"codInt":"Enviado via API","codigo":2698811257,"comissao":0,"email":"","fatura_pedido":"N","inativo":"S","nome":"Enviado via API","visualiza_pedido":"N"}
+   
   ]
 };
 
@@ -284,12 +284,6 @@ if (campo) {
      ocultarCarregando() 
 }
 
-if (campo2) {
-  campo2.value = dados.vendedorResponsavel ?? "";
-  console.log( campo2.value)
-} else {
-  console.warn("⚠️ Campo 'vendedorResponsavel' não encontrado.");
-}
 
 }, 4000);
 
