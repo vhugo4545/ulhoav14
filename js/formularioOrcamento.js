@@ -1,46 +1,6 @@
 // formularioOrcamento.js
 
 
-async function carregarVendedores() {
-  const TOKEN = localStorage.getItem('accessToken');
-
-  try {
-    const response = await fetch('https://ulhoa-0a02024d350a.herokuapp.com/omie/vendedores', {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${TOKEN}`
-      },
-    });
-
-    if (!response.ok) throw new Error('Erro ao buscar vendedores');
-
-    const vendedores = await response.json(); // contém { cadastro: [...] }
-
-    const select = document.getElementById('vendedorResponsavel');
-    if (!select) {
-      console.warn('⚠️ Elemento #vendedorResponsavel não encontrado no DOM.');
-      return;
-    }
-
-    select.innerHTML = '<option value="">Selecione</option>';
-
-    (vendedores.cadastro || []).forEach(v => {
-      const nomeMaiusculo = v.nome.toUpperCase();
-      const opt = new Option(nomeMaiusculo, nomeMaiusculo); // nome como texto e valor
-      select.appendChild(opt);
-    });
-
-    console.log(
-      `%c✅ ${vendedores.cadastro?.length || 0} vendedores carregados com sucesso.`,
-      'color: green; font-weight: bold;'
-    );
-
-  } catch (err) {
-    console.error('❌ Erro ao carregar vendedores:', err);
-  }
-}
-
-
 // Chame após o DOM estar carregado
 document.addEventListener("DOMContentLoaded", carregarVendedores);
 
