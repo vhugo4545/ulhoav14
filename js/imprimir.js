@@ -572,13 +572,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
 }
 
 
-
-// ✅ ORDEM DE SERVIÇO + ✅ PÁGINA FINAL (ORDEM DE PRODUÇÃO / SERVIÇO)
-// - Mantém sua estrutura principal
-// - Adiciona uma ÚLTIMA PÁGINA com os grids (processos, serviços de terceiros e instalação)
-// - Quantidade de linhas em CADA processo = quantidade de grupos (blocos) visíveis
-// - "Responsáveis" fica em branco (não preenche com nada)
-
 function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
@@ -1112,17 +1105,49 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   `;
 
 // ================== PÁGINA 3 (RELATÓRIO) — SEM ITENS / SEM INSUMOS ==================
+// ================== PÁGINA 3 (RELATÓRIO) — ITEM + AMBIENTE + OBSERVAÇÕES (SEM INSUMOS) ==================
+const observacoesPorItemHTML = (() => {
+  let n = 1;
+
+  return (gruposDados || []).map((g) => {
+    const ambienteUpper = String(g.nomeAmbiente || "Sem Ambiente").toUpperCase();
+    const obs = String(g.resumoGrupo || "").trim();
+
+    return `
+      <div class="item item-obs-only">
+        <div class="item-head item-obs-head">
+          <div class="item-title">ITEM ${n++}</div>
+          <div class="item-sub">AMBIENTE: ${ambienteUpper}</div>
+        </div>
+
+        <div class="obs obs-only">
+          <div class="obs-label">Observações:</div>
+          <div class="obs-text">${obs || "&nbsp;"}</div>
+        </div>
+      </div>
+    `;
+  }).join("") || `
+    <div class="item item-obs-only">
+      <div class="item-head item-obs-head">
+        <div class="item-title">ITEM 1</div>
+        <div class="item-sub">AMBIENTE: -</div>
+      </div>
+
+      <div class="obs obs-only">
+        <div class="obs-label">Observações:</div>
+        <div class="obs-text">&nbsp;</div>
+      </div>
+    </div>
+  `;
+})();
+
 const pagina3HTML = `
   <!-- ======================= PAGINA 3 ======================= -->
   <div class="page-break"></div>
 
   ${cabecalhoCompletoHTML("RELATÓRIO DE ENTREGA / INSTALAÇÃO")}
 
-  <!-- (opcional) bloco de observações para preenchimento manual -->
-  <div class="fullBox" style="margin-top:10px;">
-    <div class="gridTitle">Observações</div>
-    <div style="padding:12px; min-height:520px;"></div>
-  </div>
+  ${observacoesPorItemHTML}
 `;
 
 
@@ -1285,6 +1310,35 @@ const pagina3HTML = `
         .relTbl tbody tr { height: 92px; }
 
         @media print { .no-print { display: none !important; } }
+
+        /* ===== Página 3: bloco como na imagem (sem tabela) ===== */
+.item-obs-only { page-break-inside: avoid; }
+
+.item-obs-head{
+  border-bottom: 2px solid #111;
+  padding: 8px 10px;
+}
+
+.item-obs-head .item-title{ font-size: 13px; font-weight: 900; }
+.item-obs-head .item-sub{ font-size: 13px; font-weight: 900; }
+
+.obs-only{
+  border-top: 0;
+  padding: 10px;
+  font-style: normal;
+  color: #111;
+}
+
+.obs-label{
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.obs-text{
+  line-height: 1.35;
+  min-height: 70px;
+}
+
       </style>
     </head>
 
