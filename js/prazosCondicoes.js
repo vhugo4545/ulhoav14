@@ -67,7 +67,7 @@ function preencherCondicoesGeraisComDiagramacao() {
   }
 
 const linhas = [
-  "CONTRATADA",
+  
   "──────────",
   "FERREIRA ULHOA METAIS LTDA, inscrita no CNPJ nº 02.836.048/0001-60, doravante denominada FERREIRA ULHOA METAIS; e",
   "FERREIRA ULHOA SERVIÇOS LTDA, inscrita no CNPJ nº 61.730.562/0001-85, doravante denominada FERREIRA ULHOA SERVIÇOS;",
