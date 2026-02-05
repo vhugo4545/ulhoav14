@@ -572,6 +572,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
 }
 
 
+
 function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
@@ -895,8 +896,9 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
       <div class="opBox">
         <div class="opTitle">${titulo}</div>
         <div class="opRow">
-          <div class="metaLeft">
-            <div><strong>Nº do Pedido:</strong> <span class="muted">${numeroPedido}</span></div>
+          <div>
+            Nº do Pedido
+            <div class="numeroPedidoGigante"><span class="muted">${numeroPedido}</span></div>
           </div>
           <div class="metaRight">
             <div><strong>Data:</strong> <span class="muted">${data}</span></div>
@@ -1086,7 +1088,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
           </tr>
         </thead>
         <tbody>
-          ${Array.from({ length: 8 }).map(() => `
+          ${Array.from({ length: 7 }).map(() => `
             <tr>
               <td class="relDataCell"></td>
               <td class="relHistCell"></td>
@@ -1100,7 +1102,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   // ================== PÁGINA 1 e 3 (CONTEÚDO) ==================
   const pagina1HTML = `
     <!-- ======================= PAGINA 1 ======================= -->
-    ${cabecalhoCompletoHTML("ORDEM DE SERVIÇO")}
+    ${cabecalhoCompletoHTML("Ordem de Serviço / Produção")}
     ${itensHTML_ComQtd || `<div class="item" style="padding:10px;"><strong>Nenhum item encontrado para impressão.</strong></div>`}
   `;
 
@@ -1143,7 +1145,7 @@ const observacoesPorItemHTML = (() => {
 
 const pagina3HTML = `
   <!-- ======================= PAGINA 3 ======================= -->
-  <div class="page-break"></div>
+  
 
   ${cabecalhoCompletoHTML("RELATÓRIO DE ENTREGA / INSTALAÇÃO")}
 
@@ -1203,7 +1205,7 @@ const pagina3HTML = `
         .metaRight { text-align: right; line-height: 1.25; }
 
         .numeroPedidoGigante {
-          font-size: 46px;
+          font-size: 30px;
           font-weight: 900;
           margin: 4px 0 0;
           line-height: 1;
@@ -1307,7 +1309,18 @@ const pagina3HTML = `
         .relTbl thead th { background: #f2f2f2; font-weight: 900; }
         .relData { width: 15%; }
         .relHist { width: 85%; }
-        .relTbl tbody tr { height: 92px; }
+       /* ====== HISTÓRICO (Data 15% / Histórico 85%) ====== */
+.relTbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.relTbl th, .relTbl td { border: 2px solid #111; padding: 10px; vertical-align: top; }
+.relTbl thead th { background: #f2f2f2; font-weight: 900; }
+
+.relTbl tbody tr { height: 140px; }          /* ✅ aumenta aqui (ex: 140px, 160px...) */
+.relTbl tbody td { height: 140px; }          /* ✅ reforça tamanho igual em todas as células */
+
+.relTbl tbody td{
+  height: 140px;
+  overflow: hidden;          /* ✅ não deixa crescer */
+}
 
         @media print { .no-print { display: none !important; } }
 
@@ -1337,6 +1350,28 @@ const pagina3HTML = `
 .obs-text{
   line-height: 1.35;
   min-height: 70px;
+}
+:root{ --histRowH: 140px; }
+
+.relTbl tbody tr{ height: var(--histRowH); }
+.relTbl tbody td{ height: var(--histRowH); overflow: hidden; }
+
+/* ====== AUMENTAR LINHAS APENAS NAS TABELAS DE PREENCHIMENTO (não mexe no cabeçalho) ====== */
+.bigTbl tbody td,
+.gridTbl tbody td,
+.relTbl tbody td{
+  padding-top: 18px !important;
+  padding-bottom: 18px !important;
+  line-height: 1.9 !important;
+}
+
+/* (opcional) reforçar que thead não muda */
+.bigTbl thead th,
+.gridTbl thead th,
+.relTbl thead th{
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+  line-height: 1.4 !important;
 }
 
       </style>
