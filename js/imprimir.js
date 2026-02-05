@@ -572,7 +572,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
 }
 
 
-
 function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
@@ -845,16 +844,57 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
     .join("");
 
   // ================== CABEÇALHOS ==================
+
+  const cabecalhoCompletoSemPrazosHTML = (titulo) => `
+  <div class="topbar">
+    <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
+    <div class="opBox">
+      <div class="opTitle">${titulo}</div>
+      <div class="opRow">
+    <div>
+          Nº do Pedido
+          <div class="numeroPedidoGigante"><span class="muted">${numeroPedido}</span></div>
+        </div>
+        <div class="metaRight">
+          <div><strong>Nº do orçamento:</strong> <span class="muted">${numeroOrcamento}</span></div>
+          <div><strong>Data:</strong> <span class="muted">${data}</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table class="tblInfo">
+    <tr>
+      <td class="k">Nome / Razão social:</td>
+      <td class="v">${padVisual(nomeClienteResponsavel, 30)}</td>
+      <td class="k">CPF / CNPJ:</td>
+      <td class="vSmall">${padVisual(cpfCnpj, 18)}</td>
+      <td class="k">Origem:</td>
+      <td class="vSmall">${padVisual(origem, 18)}</td>
+    </tr>
+    <tr>
+      <td class="k">Endereço da obra:</td>
+      <td colspan="5">${enderecoObra}</td>
+    </tr>
+    ${contatosHTML}
+  </table>
+
+  <div class="line2col">
+    <div class="miniBox">Operador: <span class="muted">${padVisual(operador, 18)}</span></div>
+    <div class="miniBox">Vendedor: <span class="muted">${padVisual(vendedor, 18)}</span></div>
+  </div>
+`;
+
   const cabecalhoCompletoHTML = (titulo) => `
     <div class="topbar">
       <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
       <div class="opBox">
         <div class="opTitle">${titulo}</div>
         <div class="opRow">
-          <div>
-            Nº do Pedido
-            <div class="numeroPedidoGigante"><span class="muted">${numeroPedido}</span></div>
-          </div>
+      <div>
+          Nº do Pedido
+          <div class="numeroPedidoGigante"><span class="muted">${numeroPedido}</span></div>
+        </div>
           <div class="metaRight">
             <div><strong>Nº do orçamento:</strong> <span class="muted">${numeroOrcamento}</span></div>
             <div><strong>Data:</strong> <span class="muted">${data}</span></div>
@@ -897,9 +937,9 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
         <div class="opTitle">${titulo}</div>
         <div class="opRow">
           <div>
-            Nº do Pedido
-            <div class="numeroPedidoGigante"><span class="muted">${numeroPedido}</span></div>
-          </div>
+          Nº do Pedido
+          <div class="numeroPedidoGigante"><span class="muted">${numeroPedido}</span></div>
+        </div>
           <div class="metaRight">
             <div><strong>Data:</strong> <span class="muted">${data}</span></div>
             <div><strong>Nº do orçamento:</strong> <span class="muted">${numeroOrcamento}</span></div>
@@ -1074,9 +1114,10 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   `;
 
   // ================== PÁGINA 5: HISTÓRICO (DATA 15% / HIST 85%) ==================
-  const pagina5HistoricoHTML = `
-    <!-- ======================= PAGINA 5 (HISTÓRICO) ======================= -->
-    <div class="page-break"></div>
+const pagina5HistoricoHTML = `
+  <div class="page-break"></div>
+
+  <div class="page5">
     ${cabecalhoBasicoHTML("RELATÓRIO DE ENTREGA / INSTALAÇÃO")}
 
     <div class="fullBox relFull">
@@ -1088,7 +1129,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
           </tr>
         </thead>
         <tbody>
-          ${Array.from({ length: 7 }).map(() => `
+          ${Array.from({ length: 8 }).map(() => `
             <tr>
               <td class="relDataCell"></td>
               <td class="relHistCell"></td>
@@ -1097,14 +1138,128 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
         </tbody>
       </table>
     </div>
-  `;
+  </div>
+`;
+
+
+
+ const etapasDoProcessoHTML = `
+  <div class="etapas-box vv-etapas">
+    <div class="etapas-title">Etapas do Processo</div>
+
+    <table class="etapas-grid">
+      <tr>
+        <!-- PEDIDO -->
+        <td class="etapas-col">
+          <div class="etapas-col-title">Pedido</div>
+          <table class="etapas-inner">
+            <tr>
+              <td class="etapas-cell">Enviado</td>
+              <td class="etapas-cell">Assinado</td>
+            </tr>
+
+            <tr>
+              <td class="etapas-cell blank">&nbsp;</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+            </tr>
+            <tr>
+              <td class="etapas-cell blank">&nbsp;</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+            </tr>
+            <tr>
+              <td class="etapas-cell blank">&nbsp;</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+            </tr>
+          </table>
+        </td>
+
+        <!-- PROJETO -->
+        <td class="etapas-col">
+          <div class="etapas-col-title">Projeto</div>
+          <table class="etapas-inner">
+            <tr>
+              <td class="etapas-cell w-item">Item</td>
+              <td class="etapas-cell">Enviado</td>
+              <td class="etapas-cell">Assinado</td>
+            </tr>
+
+            <tr>
+              <td class="etapas-cell w-item center">1</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+            </tr>
+            <tr>
+              <td class="etapas-cell w-item center">2</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+            </tr>
+            <tr>
+              <td class="etapas-cell w-item center">3</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+            </tr>
+          </table>
+        </td>
+
+        <!-- OBRA / MEDIÇÃO -->
+        <td class="etapas-col">
+          <div class="etapas-col-title">Obra / Medição</div>
+          <table class="etapas-inner">
+            <tr>
+              <td class="etapas-cell w-item">Item</td>
+              <td class="etapas-cell">Liberação Obra</td>
+              <td class="etapas-cell">Medição Realizada</td>
+              <td class="etapas-cell">Medidor</td>
+            </tr>
+
+            <tr>
+              <td class="etapas-cell w-item center">1</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+            </tr>
+            <tr>
+              <td class="etapas-cell w-item center">2</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+            </tr>
+            <tr>
+              <td class="etapas-cell w-item center">3</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+              <td class="etapas-cell blank">&nbsp;</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <div class="etapas-obs"><strong>Observações:</strong></div>
+    <div class="etapas-obs-area">&nbsp;</div>
+  </div>
+`;
+
 
   // ================== PÁGINA 1 e 3 (CONTEÚDO) ==================
-  const pagina1HTML = `
-    <!-- ======================= PAGINA 1 ======================= -->
-    ${cabecalhoCompletoHTML("Ordem de Serviço / Produção")}
-    ${itensHTML_ComQtd || `<div class="item" style="padding:10px;"><strong>Nenhum item encontrado para impressão.</strong></div>`}
-  `;
+ const pagina1HTML = `
+  <!-- ======================= PAGINA 1 ======================= -->
+  <div class="vv-page">
+    <div>
+      ${cabecalhoCompletoHTML("ORDEM DE SERVIÇO / PRODUÇÃO")}
+      ${itensHTML_ComQtd || `<div class="item" style="padding:10px;"><strong>Nenhum item encontrado para impressão.</strong></div>`}
+    </div>
+
+    <!-- 🔻 bloco da foto no final da página 1 -->
+    <div class="vv-page-footer">
+      ${etapasDoProcessoHTML}
+    </div>
+  </div>
+
+  <!-- força que a próxima página comece depois da página 1 -->
+  <div class="vv-break-after"></div>
+`;
+
 
 // ================== PÁGINA 3 (RELATÓRIO) — SEM ITENS / SEM INSUMOS ==================
 // ================== PÁGINA 3 (RELATÓRIO) — ITEM + AMBIENTE + OBSERVAÇÕES (SEM INSUMOS) ==================
@@ -1145,9 +1300,10 @@ const observacoesPorItemHTML = (() => {
 
 const pagina3HTML = `
   <!-- ======================= PAGINA 3 ======================= -->
-  
+  <div class="page-break"></div>
 
-  ${cabecalhoCompletoHTML("RELATÓRIO DE ENTREGA / INSTALAÇÃO")}
+  ${cabecalhoCompletoSemPrazosHTML("RELATÓRIO DE ENTREGA / INSTALAÇÃO")}
+
 
   ${observacoesPorItemHTML}
 `;
@@ -1162,7 +1318,62 @@ const pagina3HTML = `
       <style>
         @page { size: A4; margin: 10mm; }
         body { margin: 0; }
+body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
+  em { color: #444; font-style: italic; }
 
+  /* ======= PRIMEIRA PÁGINA (rodapé fixo no fim da página 1) ======= */
+  .vv-page {
+    min-height: 100vh;           /* ocupa a altura de 1 página */
+    display: flex;
+    flex-direction: column;
+  }
+  .vv-page-footer {
+    margin-top: auto;            /* empurra pro final da página */
+  }
+  .vv-break-after {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  /* ======= ETAPAS DO PROCESSO (igual a imagem) ======= */
+  .etapas-box {
+    border: 2px solid #000;
+    padding: 0;
+  }
+  .etapas-title {
+    text-align: center;
+    font-weight: 700;
+    padding: 6px 0;
+    border-bottom: 2px solid #000;
+  }
+  .etapas-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 12px;
+  }
+  .etapas-table th,
+  .etapas-table td {
+    border: 1px solid #000;
+    padding: 6px 6px;
+    vertical-align: middle;
+  }
+  .etapas-table th {
+    text-align: center;
+    font-weight: 700;
+  }
+  .etapas-sub th {
+    font-weight: 600;
+  }
+  .obs-row {
+    border-top: 1px solid #000;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  @media print {
+    body { padding: 25px; }
+  }
         .print-scale {
           transform: scale(0.8);
           transform-origin: top left;
@@ -1204,12 +1415,15 @@ const pagina3HTML = `
         }
         .metaRight { text-align: right; line-height: 1.25; }
 
-        .numeroPedidoGigante {
-          font-size: 30px;
-          font-weight: 900;
-          margin: 4px 0 0;
-          line-height: 1;
-        }
+      .numeroPedidoGigante {
+  font-size: 20px;
+  font-weight: 900; /* ✅ negrito */
+  margin: 4px 0 0;
+  line-height: 1;
+}
+.numeroPedidoGigante span{
+  font-weight: 900; /* garante no texto interno */
+}
 
         .muted { color: #333; font-weight: 400; }
 
@@ -1309,18 +1523,7 @@ const pagina3HTML = `
         .relTbl thead th { background: #f2f2f2; font-weight: 900; }
         .relData { width: 15%; }
         .relHist { width: 85%; }
-       /* ====== HISTÓRICO (Data 15% / Histórico 85%) ====== */
-.relTbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.relTbl th, .relTbl td { border: 2px solid #111; padding: 10px; vertical-align: top; }
-.relTbl thead th { background: #f2f2f2; font-weight: 900; }
-
-.relTbl tbody tr { height: 140px; }          /* ✅ aumenta aqui (ex: 140px, 160px...) */
-.relTbl tbody td { height: 140px; }          /* ✅ reforça tamanho igual em todas as células */
-
-.relTbl tbody td{
-  height: 140px;
-  overflow: hidden;          /* ✅ não deixa crescer */
-}
+        .relTbl tbody tr { height: 92px; }
 
         @media print { .no-print { display: none !important; } }
 
@@ -1351,27 +1554,144 @@ const pagina3HTML = `
   line-height: 1.35;
   min-height: 70px;
 }
-:root{ --histRowH: 140px; }
 
-.relTbl tbody tr{ height: var(--histRowH); }
-.relTbl tbody td{ height: var(--histRowH); overflow: hidden; }
+/* ======= PRIMEIRA PÁGINA (rodapé no final) ======= */
+.vv-page{
+  min-height: 100vh;
+  display:flex;
+  flex-direction:column;
+}
+.vv-page-footer{ margin-top:auto; }
+.vv-break-after{ page-break-after: always; break-after: page; }
 
-/* ====== AUMENTAR LINHAS APENAS NAS TABELAS DE PREENCHIMENTO (não mexe no cabeçalho) ====== */
-.bigTbl tbody td,
-.gridTbl tbody td,
-.relTbl tbody td{
-  padding-top: 18px !important;
-  padding-bottom: 18px !important;
-  line-height: 1.9 !important;
+/* ======= ETAPAS DO PROCESSO (igual a imagem) ======= */
+.vv-etapas{ margin-top: 10px; }
+
+.etapas-box{
+  border: 2px solid #000;
+  padding: 0;
 }
 
-/* (opcional) reforçar que thead não muda */
-.bigTbl thead th,
-.gridTbl thead th,
-.relTbl thead th{
-  padding-top: 10px !important;
-  padding-bottom: 10px !important;
-  line-height: 1.4 !important;
+.etapas-title{
+  text-align:center;
+  font-weight:700;
+  padding: 6px 0;
+  border-bottom: 2px solid #000;
+}
+
+.etapas-grid{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+.etapas-col{
+  vertical-align: top;
+  border-right: 1px solid #000;
+  padding: 0;
+}
+.etapas-col:last-child{ border-right:0; }
+
+.etapas-col-title{
+  text-align:center;
+  font-weight:700;
+  padding: 6px 0;
+  border-bottom: 1px solid #000;
+}
+
+.etapas-inner{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+  font-size:12px;
+}
+
+.etapas-cell{
+  border: 1px solid #000;
+  padding: 6px 6px;
+  text-align:center;
+  vertical-align:middle;
+}
+
+.etapas-cell.blank{ height: 26px; }
+.etapas-cell.w-item{ width: 52px; }
+.etapas-cell.center{ text-align:center; }
+
+.etapas-obs{
+  border-top: 1px solid #000;
+  padding: 6px 8px;
+  font-size:12px;
+}
+.etapas-obs-area{
+  height: 38px;
+  border-top: 1px solid #000;
+}
+/* =========================
+   NÃO QUEBRAR TABELAS NA IMPRESSÃO
+   ========================= */
+@media print {
+
+  /* evita quebra dentro de qualquer tabela e seus blocos */
+  table, thead, tbody, tfoot, tr, td, th {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* seus blocos principais (evita quebrar o item e as tabelas grandes) */
+  .item,
+  .fullBox,
+  .gridBox,
+  .instCol,
+  .relFull,
+  .vv-etapas,
+  .prazos,
+  .tblInfo,
+  .topbar,
+  .line2col {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
+/* =======================
+   PÁGINA 5 MAIS "ALTA"
+   (na prática: linhas bem maiores + mais área útil)
+   ======================= */
+.page5 .relFull{
+  margin-top: 10px;
+}
+
+.page5 .relTbl tbody tr{
+  height: 180px; /* antes era 92px -> aqui você "dobra" */
+}
+
+.page5 .relTbl td{
+  padding: 14px; /* aumenta espaço pra escrita */
+}
+
+/* opcional: dá ainda mais área útil na folha (menos "respiro") */
+@media print{
+  body{ padding: 18px !important; } /* antes 25/40 -> mais área útil */
+}
+/* ====== Página 5 preenchendo a folha (sem ficar gigante) ====== */
+.page5{
+  height: 277mm;              /* altura útil aproximada do A4 com margem 10mm */
+  display: flex;
+  flex-direction: column;
+}
+
+.page5 .relFull{
+  flex: 1;                    /* ocupa o espaço restante abaixo do cabeçalho */
+  display: flex;
+}
+
+.page5 .relTbl{
+  width: 100%;
+  height: 100%;
+  table-layout: fixed;
+}
+
+.page5 .relTbl tbody tr{
+  height: calc(100% / 8);     /* 8 linhas preenchendo igualmente */
 }
 
       </style>
@@ -1385,7 +1705,7 @@ const pagina3HTML = `
 
           ${pagina2HTML}
 
-          <div class="page-break"></div>
+        
           ${pagina3HTML}
 
           ${pagina4ProcessosInstalacaoHTML}
