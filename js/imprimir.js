@@ -1712,6 +1712,47 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
 .page5 .relTbl tbody tr{
   height: calc(100% / 8);     /* 8 linhas preenchendo igualmente */
 }
+/* =========================
+   IMPRESSÃO — PERMITIR QUEBRA NO MEIO DAS TABELAS
+   (substitui/remova o bloco antigo que protegia tabelas)
+   ========================= */
+@media print {
+
+  /* libera quebra normal dentro de tabelas */
+  table, thead, tbody, tfoot, tr, td, th {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  /* libera quebra normal nos seus blocos principais também */
+  .item,
+  .fullBox,
+  .gridBox,
+  .instCol,
+  .relFull,
+  .vv-etapas,
+  .prazos,
+  .tblInfo,
+  .topbar,
+  .line2col {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  /* se algum navegador insistir em "segurar" linhas, isso ajuda */
+  tr {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+}
+
+/* ✅ Fora do @media print, você também tinha isso na .item:
+   .item { page-break-inside: avoid; }
+   Troque para liberar quebra */
+.item {
+  page-break-inside: auto;
+  break-inside: auto;
+}
 
       </style>
     </head>
