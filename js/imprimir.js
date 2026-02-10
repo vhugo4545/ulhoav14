@@ -1629,15 +1629,19 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
 /* =========================
    NÃO QUEBRAR TABELAS NA IMPRESSÃO
    ========================= */
+/* =========================
+   IMPRESSÃO — PERMITIR QUEBRA NO MEIO DAS TABELAS
+   (substitui/remova o bloco antigo que protegia tabelas)
+   ========================= */
 @media print {
 
-  /* evita quebra dentro de qualquer tabela e seus blocos */
+  /* libera quebra normal dentro de tabelas */
   table, thead, tbody, tfoot, tr, td, th {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
   }
 
-  /* seus blocos principais (evita quebrar o item e as tabelas grandes) */
+  /* libera quebra normal nos seus blocos principais também */
   .item,
   .fullBox,
   .gridBox,
@@ -1648,10 +1652,25 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   .tblInfo,
   .topbar,
   .line2col {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  /* se algum navegador insistir em "segurar" linhas, isso ajuda */
+  tr {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
   }
 }
+
+/* ✅ Fora do @media print, você também tinha isso na .item:
+   .item { page-break-inside: avoid; }
+   Troque para liberar quebra */
+.item {
+  page-break-inside: auto;
+  break-inside: auto;
+}
+
 /* =======================
    PÁGINA 5 MAIS "ALTA"
    (na prática: linhas bem maiores + mais área útil)
