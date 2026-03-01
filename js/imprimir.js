@@ -1794,3 +1794,2120 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   printWindow.document.write(htmlCompleto);
   printWindow.document.close();
 }
+
+
+function gerarFolha4RelatorioEntrega() {
+  const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
+
+  const getTextOrValue = (el) => {
+    if (!el) return "";
+    const v = (typeof el.value === "string" ? el.value : "").trim();
+    if (v) return v;
+    const t = (typeof el.textContent === "string" ? el.textContent : "").trim();
+    if (t) return t;
+    return "";
+  };
+
+  const formatarDataBR = (iso) => {
+    if (!iso) return "-";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      const [y, m, d] = iso.split("-");
+      return `${d}/${m}/${y}`;
+    }
+    const dt = new Date(iso);
+    if (isNaN(dt.getTime())) return "-";
+    return dt.toLocaleDateString("pt-BR");
+  };
+
+  const padVisual = (txt, minLen = 18) => {
+    const t = String(txt || "").trim();
+    if (t.length >= minLen) return t;
+    const faltam = Math.max(0, minLen - t.length);
+    return (t || "-") + "&nbsp;".repeat(faltam);
+  };
+
+  const escapeHtml = (txt) =>
+    String(txt || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const multilineToBR = (txt) => {
+    const t = String(txt || "").trim();
+    if (!t) return "-";
+    return escapeHtml(t).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
+  };
+
+  // ================== DADOS DO CABEÇALHO ==================
+  const numeroPedido = getValue("numeroOrcamento");
+  const dataOrc = getValue("dataOrcamento");
+  const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
+  const numeroOrcamento =
+    getValue("numeroOrcamento2") !== "-" ? getValue("numeroOrcamento2") : numeroPedido;
+
+  const vendedorEl = document.getElementById("vendedorResponsavel");
+  const vendedor =
+    vendedorEl?.selectedOptions?.[0]?.textContent?.trim() ||
+    getTextOrValue(vendedorEl) ||
+    "-";
+
+  const operador = getValue("operadorInterno");
+  const origem = getValue("origemCliente");
+
+  const nomeClienteResponsavel =
+    (document.querySelector("input.razaoSocial")?.value || "").trim() ||
+    (document.querySelector("input.razaoSocial")?.dataset?.valorOriginal || "").trim() ||
+    "-";
+
+  const enderecoObra = `Rua/Avenida: ${getValue("rua")}, Número: ${getValue("numero")}, Bairro: ${getValue("bairro")} - Complemento: ${getValue("complemento")} - Cidade: ${getValue("cidade")}/${getValue("estado")} - CEP: ${getValue("cep")}`;
+
+  // ================== CLIENTES / CONTATOS ==================
+  const clientes = Array.from(document.querySelectorAll("#clientesWrapper .cliente-item"))
+    .map((row) => ({
+      nomeCliente:
+        getTextOrValue(row.querySelector(".nomeContato")) ||
+        getTextOrValue(row.querySelector(".razaoSocial")),
+      cpfCnpj: getTextOrValue(row.querySelector(".cpfCnpj")),
+      nomeContato: getTextOrValue(row.querySelector(".nomeContato")),
+      funcao: getTextOrValue(row.querySelector(".funcaoCliente")),
+      telefone: getTextOrValue(row.querySelector(".telefoneCliente")),
+      email: getTextOrValue(row.querySelector(".emailCliente")),
+    }))
+    .filter((c) => c.nomeCliente || c.nomeContato || c.telefone || c.cpfCnpj || c.email || c.funcao);
+
+  const principal = clientes[0] || {};
+  const cpfCnpj = principal.cpfCnpj || "-";
+
+  const contatosHTML = clientes.length
+    ? clientes.map((c, idx) => {
+        const label = idx === 0 ? "Contato (Responsável)" : `Contato ${idx + 1}`;
+        const nome = padVisual(c.nomeContato || c.nomeCliente || "-", 22);
+        const funcao = padVisual(c.funcao || "-", 18);
+        const tel = padVisual(c.telefone || "-", 16);
+        const email = padVisual(c.email || "-", 22);
+
+        return `
+          <tr>
+            <td class="k">${label}:</td>
+            <td class="v">${nome}</td>
+            <td class="k">Função:</td>
+            <td class="v">${funcao}</td>
+          </tr>
+          <tr>
+            <td class="k">Telefone:</td>
+            <td class="v">${tel}</td>
+            <td class="k">E-mail:</td>
+            <td class="v">${email}</td>
+          </tr>
+        `;
+      }).join("")
+    : `
+      <tr>
+        <td class="k">Contato:</td><td class="v">${padVisual("-", 22)}</td>
+        <td class="k">Função:</td><td class="v">${padVisual("-", 18)}</td>
+      </tr>
+      <tr>
+        <td class="k">Telefone:</td><td class="v">${padVisual("-", 16)}</td>
+        <td class="k">E-mail:</td><td class="v">${padVisual("-", 22)}</td>
+      </tr>
+    `;
+
+  // ================== COLETA DOS BLOCOS / PRODUTOS ==================
+  const produtosResumo = Array.from(
+    document.querySelectorAll("#blocosProdutosContainer .main-container[id^='bloco-']")
+  ).map((blocoEl, index) => {
+    const blocoId = blocoEl.id;
+
+    const titulo =
+      document.getElementById(`titulo-accordion-${blocoId}`)?.textContent?.trim() ||
+      "Produto sem nome";
+
+    const tabela = document.getElementById(`tabela-${blocoId}`);
+
+    const primeiraLinhaValida = tabela
+      ? Array.from(tabela.querySelectorAll("tbody tr")).find((tr) => {
+          if (!tr) return false;
+          if (tr.querySelector("td[colspan]")) return false;
+          const tds = tr.querySelectorAll("td");
+          return tds.length >= 6;
+        })
+      : null;
+
+    const quantidade =
+      primeiraLinhaValida?.querySelector("input.quantidade")?.value?.trim() ||
+      primeiraLinhaValida?.querySelector("td:nth-child(6) input")?.value?.trim() ||
+      "-";
+
+    const descricaoRaw =
+      document.getElementById(`resumo-${blocoId}`)?.value?.trim() ||
+      document.getElementById(`resumo-${blocoId}`)?.dataset?.valorOriginal?.trim() ||
+      "-";
+
+    return {
+      sequencia: index + 1,
+      blocoId,
+      titulo,
+      quantidade,
+      descricao: descricaoRaw,
+    };
+  });
+
+  const qtdItens = Math.max(1, produtosResumo.length);
+
+  // ================== CABEÇALHOS ==================
+  const cabecalhoCompletoHTML = (titulo) => `
+    <div class="topbar">
+      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
+      <div class="opBox">
+        <div class="opTitle">${titulo}</div>
+        <div class="opRow">
+          <div>
+            Nº do Pedido
+            <div class="numeroPedidoGigante"><span class="muted">${numeroPedido}</span></div>
+          </div>
+          <div class="metaRight">
+            <div><strong>Nº do orçamento:</strong> <span class="muted-meta">${numeroOrcamento}</span></div>
+            <div><strong>Data:</strong> <span class="muted-meta">${data}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <table class="tblInfo">
+      <tr>
+        <td class="k">Nome / Razão social:</td>
+        <td class="v">${padVisual(nomeClienteResponsavel, 30)}</td>
+        <td class="k">CPF / CNPJ:</td>
+        <td class="vSmall">${padVisual(cpfCnpj, 18)}</td>
+        <td class="k">Origem:</td>
+        <td class="vSmall">${padVisual(origem, 18)}</td>
+      </tr>
+      <tr>
+        <td class="k">Endereço da obra:</td>
+        <td colspan="5">${enderecoObra}</td>
+      </tr>
+      ${contatosHTML}
+    </table>
+
+    <div class="line2col">
+      <div class="miniBox">Operador: <span class="muted-meta">${padVisual(operador, 18)}</span></div>
+      <div class="miniBox">Vendedor: <span class="muted-meta">${padVisual(vendedor, 18)}</span></div>
+    </div>
+  `;
+
+  const cabecalhoBasicoHTML = (titulo) => `
+    <div class="topbar">
+      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
+      <div class="opBox">
+        <div class="opTitle">${titulo}</div>
+        <div class="opRow">
+          <div>
+            Nº do Pedido
+            <div class="numeroPedidoGigante"><span class="muted">${numeroPedido}</span></div>
+          </div>
+          <div class="metaRight">
+            <div><strong>Nº do orçamento:</strong> <span class="muted-meta">${numeroOrcamento}</span></div>
+            <div><strong>Data:</strong> <span class="muted-meta">${data}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // ================== TABELA NOVA (PÁGINA 1) ==================
+  const tabelaProdutosResumoHTML = `
+    <div class="fullBox" style="margin-top: 12px;">
+      <div class="gridTitle">Produtos / Descritivos</div>
+      <table class="bigTbl resumoProdutosTbl">
+        <thead>
+          <tr>
+            <th style="width:70px;">Sequência</th>
+            <th style="width:220px;">Produto</th>
+            <th style="width:110px;">Quantidade</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${
+            produtosResumo.length
+              ? produtosResumo.map((item) => `
+                  <tr>
+                    <td class="cItem">${item.sequencia}</td>
+                    <td>${escapeHtml(item.titulo)}</td>
+                    <td class="cQtd">${escapeHtml(item.quantidade)}</td>
+                    <td class="descCell">${multilineToBR(item.descricao)}</td>
+                  </tr>
+                `).join("")
+              : `
+                <tr>
+                  <td class="cItem">1</td>
+                  <td>-</td>
+                  <td class="cQtd">-</td>
+                  <td>-</td>
+                </tr>
+              `
+          }
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // ================== 5 LINHAS POR ITEM COM SUBNUMERAÇÃO ==================
+  const gerarLinhasCincoPorItem = (startIndex = 1) => {
+    let html = "";
+
+    for (let i = 0; i < qtdItens; i++) {
+      const numeroBase = startIndex + i;
+
+      for (let linha = 0; linha < 5; linha++) {
+        const identificador = linha === 0
+          ? `${numeroBase}`
+          : `${numeroBase}.${linha}`;
+
+        html += `
+          <tr>
+            <td class="cItem">${identificador}</td>
+            <td class="cData"></td>
+            <td class="cData"></td>
+            <td class="cResp">&nbsp;</td>
+          </tr>
+        `;
+      }
+    }
+
+    return html;
+  };
+
+  // ================== TABELAS ==================
+  const linhasProcessoHTML = (titulo, startIndex = 1) => `
+    <div class="gridBox">
+      <div class="gridTitle">${titulo}</div>
+      <table class="gridTbl">
+        <thead>
+          <tr>
+            <th style="width:44px;">Item</th>
+            <th style="width:92px;">Inicio</th>
+            <th style="width:92px;">Final</th>
+            <th>Responsáveis</th>
+          </tr>
+        </thead>
+        <tbody>${gerarLinhasCincoPorItem(startIndex)}</tbody>
+      </table>
+    </div>
+  `;
+
+  const tabelaInstalacaoHTML = (titulo, startIndex = 1) => `
+    <div class="instCol">
+      <div class="instSub">${titulo}</div>
+      <table class="gridTbl">
+        <thead>
+          <tr>
+            <th style="width:44px;">Item</th>
+            <th style="width:92px;">Inicio</th>
+            <th style="width:92px;">Final</th>
+            <th>Responsáveis</th>
+          </tr>
+        </thead>
+        <tbody>${gerarLinhasCincoPorItem(startIndex)}</tbody>
+      </table>
+    </div>
+  `;
+
+  // ================== PÁGINAS ==================
+  const pagina1HTML = `
+    <div class="page">
+      ${cabecalhoCompletoHTML("ETAPAS DO PROCESSO")}
+      ${tabelaProdutosResumoHTML}
+
+      <div class="procGrid">
+        <div class="procRow">
+          ${linhasProcessoHTML("Desenho", 1)}
+          ${linhasProcessoHTML("Corte", 1)}
+        </div>
+      </div>
+    </div>
+  `;
+
+  const pagina2HTML = `
+    <div class="page-break"></div>
+    <div class="page">
+      ${cabecalhoBasicoHTML("ETAPAS DO PROCESSO")}
+
+      <div class="procGrid">
+        <div class="procRow">
+          ${linhasProcessoHTML("Pré-Solda", 1)}
+          ${linhasProcessoHTML("Acabamento", 1)}
+        </div>
+        <div class="procRow">
+          ${linhasProcessoHTML("Montagem", 1)}
+          ${linhasProcessoHTML("Finalização do Acabamento", 1)}
+        </div>
+      </div>
+    </div>
+  `;
+
+  const pagina3HTML = `
+    <div class="page-break"></div>
+    <div class="page">
+      ${cabecalhoBasicoHTML("ETAPAS DO PROCESSO")}
+
+      <div class="linhaInstalacao">Instalação</div>
+
+      <div class="instGrid">
+        ${tabelaInstalacaoHTML("Estrutura", 1)}
+        ${tabelaInstalacaoHTML("Vidro", 1)}
+      </div>
+    </div>
+  `;
+
+  // ================== HTML FINAL ==================
+  const htmlCompleto = `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Etapas do Processo</title>
+        <style>
+          @page { size: A4; margin: 10mm; }
+
+          body {
+            margin: 0;
+            padding: 14px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #111;
+          }
+
+          .page {
+            min-height: auto;
+          }
+
+          .page-break {
+            page-break-before: always;
+            break-before: page;
+          }
+
+          .topbar {
+            display: flex;
+            align-items: stretch;
+            gap: 10px;
+            margin-bottom: 10px;
+          }
+
+          .logoBox {
+            flex: 1;
+            border: 2px solid #111;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 64px;
+          }
+
+          .logoBox img { max-height: 52px; }
+
+          .opBox {
+            width: 520px;
+            border: 2px solid #111;
+            padding: 8px 10px;
+          }
+
+          .opTitle {
+            font-weight: 900;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 6px;
+          }
+
+          .opRow {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-weight: 700;
+            align-items: flex-start;
+          }
+
+          .metaRight {
+            text-align: right;
+            line-height: 1.25;
+          }
+
+          .numeroPedidoGigante {
+            font-size: 80px;
+            font-weight: 900;
+            margin: 4px 0 0;
+            line-height: 1;
+            letter-spacing: 1px;
+          }
+
+          .numeroPedidoGigante span {
+            font-weight: 900;
+          }
+
+          .muted {
+            color: #111;
+            font-weight: 900;
+          }
+
+          .muted-meta {
+            color: #333;
+            font-weight: 400;
+          }
+
+          .tblInfo {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+          }
+
+          .tblInfo td {
+            border: 1px solid #111;
+            padding: 6px 8px;
+            vertical-align: top;
+          }
+
+          .k {
+            width: 160px;
+            font-weight: 700;
+            white-space: nowrap;
+          }
+
+          .v { min-width: 220px; }
+          .vSmall { min-width: 160px; }
+
+          .line2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 8px 0 12px;
+          }
+
+          .miniBox {
+            border: 1px solid #111;
+            padding: 8px;
+            font-weight: 700;
+          }
+
+          .fullBox {
+            border: 1px solid #111;
+            margin-top: 10px;
+            page-break-inside: auto;
+            break-inside: auto;
+          }
+
+          .bigTbl {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10.5px;
+            table-layout: fixed;
+            page-break-inside: auto;
+            break-inside: auto;
+          }
+
+          .bigTbl th,
+          .bigTbl td {
+            border: 1px solid #111;
+            padding: 12px 10px;
+            line-height: 1.35;
+            vertical-align: top;
+            box-sizing: border-box;
+          }
+
+          .bigTbl td {
+            height: 140px; /* ✅ altura vertical da tabela nova */
+          }
+
+          .bigTbl thead th {
+            background: #fafafa;
+            font-weight: 900;
+          }
+
+          .resumoProdutosTbl .descCell {
+            white-space: normal;
+            word-break: break-word;
+          }
+
+          .cItem { text-align: center; }
+          .cData { text-align: center; white-space: nowrap; }
+          .cQtd { text-align: center; }
+          .cResp { color: #111; }
+
+          .procGrid { margin-top: 12px; }
+
+          .procRow {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 8px;
+          }
+
+          .gridBox,
+          .instCol {
+            border: 1px solid #111;
+            page-break-inside: auto;
+            break-inside: auto;
+          }
+
+          .gridTitle,
+          .instSub {
+            font-weight: 900;
+            text-align: center;
+            padding: 6px;
+            border-bottom: 1px solid #111;
+            background: #f2f2f2;
+          }
+
+          .gridTbl {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            table-layout: fixed;
+            page-break-inside: auto;
+            break-inside: auto;
+          }
+
+          .gridTbl th,
+          .gridTbl td {
+            border: 1px solid #111;
+            padding: 12px 10px;
+            vertical-align: top;
+            box-sizing: border-box;
+          }
+
+          .gridTbl td {
+            height: 140px; /* ✅ altura vertical das tabelas de processo/instalação */
+          }
+
+          .gridTbl thead th {
+            background: #fafafa;
+            font-weight: 900;
+          }
+
+          .linhaInstalacao {
+            margin: 10px 0 6px;
+            border: 2px solid #111;
+            background: #f2f2f2;
+            font-weight: 900;
+            text-align: center;
+            letter-spacing: 1px;
+            padding: 10px 0;
+          }
+
+          .instGrid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+          }
+
+          @media print {
+            body { padding: 14px; }
+
+            thead {
+              display: table-header-group;
+            }
+
+            tfoot {
+              display: table-footer-group;
+            }
+
+            table {
+              page-break-inside: auto;
+              break-inside: auto;
+            }
+
+            tr {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+
+            td, th {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+
+            .gridBox,
+            .instCol,
+            .fullBox {
+              page-break-inside: auto;
+              break-inside: auto;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${pagina1HTML}
+        ${pagina2HTML}
+        ${pagina3HTML}
+
+        <script>
+          window.onload = function () {
+            setTimeout(function () {
+              window.focus();
+              window.print();
+            }, 250);
+          };
+        </script>
+      </body>
+    </html>
+  `;
+
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) return;
+
+  printWindow.document.open();
+  printWindow.document.write(htmlCompleto);
+  printWindow.document.close();
+}
+
+function gerarHistoricoDeProducaoParaImpressao() {
+  const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
+
+  const getTextOrValue = (el) => {
+    if (!el) return "";
+    const v = (typeof el.value === "string" ? el.value : "").trim();
+    if (v) return v;
+    const t = (typeof el.textContent === "string" ? el.textContent : "").trim();
+    if (t) return t;
+    return "";
+  };
+
+  const formatarDataBR = (iso) => {
+    if (!iso) return "-";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      const [y, m, d] = iso.split("-");
+      return `${d}/${m}/${y}`;
+    }
+    const dt = new Date(iso);
+    if (isNaN(dt.getTime())) return "-";
+    return dt.toLocaleDateString("pt-BR");
+  };
+
+  const padVisual = (txt, minLen = 18) => {
+    const t = String(txt || "").trim();
+    if (t.length >= minLen) return t;
+    const faltam = Math.max(0, minLen - t.length);
+    return (t || "-") + "&nbsp;".repeat(faltam);
+  };
+
+  const escapeHtml = (txt) =>
+    String(txt || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const multilineToBR = (txt) => {
+    const t = String(txt || "").trim();
+    if (!t) return "-";
+    return escapeHtml(t).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
+  };
+
+  // ================== DADOS DO CABEÇALHO ==================
+  const numeroPedido = getValue("numeroOrcamento");
+  const dataOrc = getValue("dataOrcamento");
+  const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
+  const numeroOrcamento =
+    getValue("numeroOrcamento2") !== "-" ? getValue("numeroOrcamento2") : numeroPedido;
+
+  const vendedorEl = document.getElementById("vendedorResponsavel");
+  const vendedor =
+    vendedorEl?.selectedOptions?.[0]?.textContent?.trim() ||
+    getTextOrValue(vendedorEl) ||
+    "-";
+
+  const operador = getValue("operadorInterno");
+  const origem = getValue("origemCliente");
+
+  const nomeClienteResponsavel =
+    (document.querySelector("input.razaoSocial")?.value || "").trim() ||
+    (document.querySelector("input.razaoSocial")?.dataset?.valorOriginal || "").trim() ||
+    "-";
+
+  const enderecoObra = `Rua/Avenida: ${getValue("rua")}, Número: ${getValue("numero")}, Bairro: ${getValue("bairro")} - Complemento: ${getValue("complemento")} - Cidade: ${getValue("cidade")}/${getValue("estado")} - CEP: ${getValue("cep")}`;
+
+  // ================== CLIENTES / CONTATOS ==================
+  const clientes = Array.from(document.querySelectorAll("#clientesWrapper .cliente-item"))
+    .map((row) => ({
+      nomeCliente:
+        getTextOrValue(row.querySelector(".nomeContato")) ||
+        getTextOrValue(row.querySelector(".razaoSocial")),
+      cpfCnpj: getTextOrValue(row.querySelector(".cpfCnpj")),
+      nomeContato: getTextOrValue(row.querySelector(".nomeContato")),
+      funcao: getTextOrValue(row.querySelector(".funcaoCliente")),
+      telefone: getTextOrValue(row.querySelector(".telefoneCliente")),
+      email: getTextOrValue(row.querySelector(".emailCliente")),
+    }))
+    .filter((c) => c.nomeCliente || c.nomeContato || c.telefone || c.cpfCnpj || c.email || c.funcao);
+
+  const principal = clientes[0] || {};
+  const cpfCnpj = principal.cpfCnpj || "-";
+
+  const contatosHTML = clientes.length
+    ? clientes.map((c, idx) => {
+        const label = idx === 0 ? "Contato (Responsável)" : `Contato ${idx + 1}`;
+        const nome = padVisual(c.nomeContato || c.nomeCliente || "-", 22);
+        const funcao = padVisual(c.funcao || "-", 18);
+        const tel = padVisual(c.telefone || "-", 16);
+        const email = padVisual(c.email || "-", 22);
+
+        return `
+          <tr>
+            <td class="k">${label}:</td>
+            <td class="v">${nome}</td>
+            <td class="k">Função:</td>
+            <td class="v">${funcao}</td>
+          </tr>
+          <tr>
+            <td class="k">Telefone:</td>
+            <td class="v">${tel}</td>
+            <td class="k">E-mail:</td>
+            <td class="v">${email}</td>
+          </tr>
+        `;
+      }).join("")
+    : `
+      <tr>
+        <td class="k">Contato:</td><td class="v">${padVisual("-", 22)}</td>
+        <td class="k">Função:</td><td class="v">${padVisual("-", 18)}</td>
+      </tr>
+      <tr>
+        <td class="k">Telefone:</td><td class="v">${padVisual("-", 16)}</td>
+        <td class="k">E-mail:</td><td class="v">${padVisual("-", 22)}</td>
+      </tr>
+    `;
+
+  // ================== COLETA PRODUTOS PARA RESUMO ==================
+  const produtosResumo = Array.from(
+    document.querySelectorAll("#blocosProdutosContainer .main-container[id^='bloco-']")
+  ).map((blocoEl, index) => {
+    const blocoId = blocoEl.id;
+
+    const titulo =
+      document.getElementById(`titulo-accordion-${blocoId}`)?.textContent?.trim() ||
+      "Produto sem nome";
+
+    const tabela = document.getElementById(`tabela-${blocoId}`);
+
+    const primeiraLinhaValida = tabela
+      ? Array.from(tabela.querySelectorAll("tbody tr")).find((tr) => {
+          if (!tr) return false;
+          if (tr.querySelector("td[colspan]")) return false;
+          const tds = tr.querySelectorAll("td");
+          return tds.length >= 6;
+        })
+      : null;
+
+    const quantidade =
+      primeiraLinhaValida?.querySelector("input.quantidade")?.value?.trim() ||
+      primeiraLinhaValida?.querySelector("td:nth-child(6) input")?.value?.trim() ||
+      "-";
+
+    const descricaoRaw =
+      document.getElementById(`resumo-${blocoId}`)?.value?.trim() ||
+      document.getElementById(`resumo-${blocoId}`)?.dataset?.valorOriginal?.trim() ||
+      "-";
+
+    return {
+      sequencia: index + 1,
+      blocoId,
+      titulo,
+      quantidade,
+      descricao: descricaoRaw,
+    };
+  });
+
+  // ================== CONFIGURAÇÃO DE LINHAS POR PÁGINA ==================
+  const LINHAS_PAGINA_1 = 7;            // ajuste aqui
+  const LINHAS_PAGINAS_RESTANTES = 13;  // ajuste aqui
+
+  // ================== CABEÇALHOS ==================
+  const cabecalhoCompletoHTML = (titulo, paginaAtual, totalPaginas) => `
+    <div class="topbar">
+      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
+      <div class="opBox">
+        <div class="opTitle">${titulo}</div>
+        <div class="opRow">
+          <div>
+            Nº do Pedido
+            <div class="numeroPedidoGigante"><span class="muted">${numeroPedido}</span></div>
+          </div>
+          <div class="metaRight">
+            <div><strong>Nº do orçamento:</strong> <span class="muted-meta">${numeroOrcamento}</span></div>
+            <div><strong>Data:</strong> <span class="muted-meta">${data}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pageIndicator">${titulo} — Página ${paginaAtual}/${totalPaginas}</div>
+
+    <table class="tblInfo">
+      <tr>
+        <td class="k">Nome / Razão social:</td>
+        <td class="v">${padVisual(nomeClienteResponsavel, 30)}</td>
+        <td class="k">CPF / CNPJ:</td>
+        <td class="vSmall">${padVisual(cpfCnpj, 18)}</td>
+        <td class="k">Origem:</td>
+        <td class="vSmall">${padVisual(origem, 18)}</td>
+      </tr>
+      <tr>
+        <td class="k">Endereço da obra:</td>
+        <td colspan="5">${enderecoObra}</td>
+      </tr>
+      ${contatosHTML}
+    </table>
+
+    <div class="line2col">
+      <div class="miniBox">Operador: <span class="muted-meta">${padVisual(operador, 18)}</span></div>
+      <div class="miniBox">Vendedor: <span class="muted-meta">${padVisual(vendedor, 18)}</span></div>
+    </div>
+  `;
+
+  const cabecalhoBasicoHTML = (titulo, paginaAtual, totalPaginas) => `
+    <div class="topbar">
+      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
+      <div class="opBox">
+        <div class="opTitle">${titulo}</div>
+        <div class="opRow">
+          <div>
+            Nº do Pedido
+            <div class="numeroPedidoGigante"><span class="muted">${numeroPedido}</span></div>
+          </div>
+          <div class="metaRight">
+            <div><strong>Nº do orçamento:</strong> <span class="muted-meta">${numeroOrcamento}</span></div>
+            <div><strong>Data:</strong> <span class="muted-meta">${data}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pageIndicator">${titulo} — Página ${paginaAtual}/${totalPaginas}</div>
+  `;
+
+  // ================== RESUMO PRODUTOS (SÓ PÁGINA 1) ==================
+  const tabelaProdutosResumoHTML = `
+    <div class="fullBox" style="margin-top: 12px;">
+      <div class="gridTitle">Resumo dos Produtos</div>
+      <table class="bigTbl resumoProdutosTbl">
+        <thead>
+          <tr>
+            <th style="width:70px;">Sequência</th>
+            <th style="width:220px;">Produto</th>
+            <th style="width:110px;">Quantidade</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${
+            produtosResumo.length
+              ? produtosResumo.map((item) => `
+                  <tr>
+                    <td class="cItem">${item.sequencia}</td>
+                    <td>${escapeHtml(item.titulo)}</td>
+                    <td class="cQtd">${escapeHtml(item.quantidade)}</td>
+                    <td class="descCell">${multilineToBR(item.descricao)}</td>
+                  </tr>
+                `).join("")
+              : `
+                <tr>
+                  <td class="cItem">1</td>
+                  <td>-</td>
+                  <td class="cQtd">-</td>
+                  <td>-</td>
+                </tr>
+              `
+          }
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // ================== HISTÓRICO CONTÍNUO ==================
+  const criarLinhasVazias = (quantidade) => {
+    return Array.from({ length: quantidade }).map(() => ({
+      etapa: "",
+      data: "",
+      responsavel: "",
+      observacoes: ""
+    }));
+  };
+
+  // quantidade total de linhas do histórico
+  const linhasMinimas = Math.max(
+    LINHAS_PAGINA_1 + LINHAS_PAGINAS_RESTANTES,
+    produtosResumo.length * 6
+  );
+
+  const linhasHistorico = criarLinhasVazias(linhasMinimas);
+
+  // quebra manual em páginas
+  const paginasDeLinhas = [];
+  let cursor = 0;
+
+  // primeira página
+  paginasDeLinhas.push(
+    linhasHistorico.slice(cursor, cursor + LINHAS_PAGINA_1)
+  );
+  cursor += LINHAS_PAGINA_1;
+
+  // páginas seguintes
+  while (cursor < linhasHistorico.length) {
+    paginasDeLinhas.push(
+      linhasHistorico.slice(cursor, cursor + LINHAS_PAGINAS_RESTANTES)
+    );
+    cursor += LINHAS_PAGINAS_RESTANTES;
+  }
+
+  const totalPaginas = paginasDeLinhas.length;
+
+  const tabelaHistoricoHTML = (linhasPagina) => `
+    <div class="historicoBox">
+      <div class="gridTitle">Histórico de Produção</div>
+      <table class="historicoTbl">
+        <thead>
+          <tr>
+            <th style="width:180px;">Etapa</th>
+            <th style="width:120px;">Data</th>
+            <th style="width:180px;">Responsável</th>
+            <th>Observações</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${linhasPagina.map((linha) => `
+            <tr>
+              <td>${escapeHtml(linha.etapa)}</td>
+              <td class="cData">${escapeHtml(linha.data)}</td>
+              <td>${escapeHtml(linha.responsavel)}</td>
+              <td>${escapeHtml(linha.observacoes)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // ================== MONTAGEM DAS PÁGINAS ==================
+  const paginasHTML = paginasDeLinhas.map((linhasPagina, idx) => {
+    const paginaAtual = idx + 1;
+    const ehPrimeira = idx === 0;
+
+    const cabecalho = ehPrimeira
+      ? cabecalhoCompletoHTML("HISTÓRICO DE PRODUÇÃO", paginaAtual, totalPaginas)
+      : cabecalhoBasicoHTML("HISTÓRICO DE PRODUÇÃO", paginaAtual, totalPaginas);
+
+    const resumo = ehPrimeira ? tabelaProdutosResumoHTML : "";
+
+    return `
+      ${!ehPrimeira ? `<div class="page-break"></div>` : ""}
+      <div class="page">
+        ${cabecalho}
+        ${resumo}
+        ${tabelaHistoricoHTML(linhasPagina)}
+      </div>
+    `;
+  }).join("");
+
+  // ================== HTML FINAL ==================
+  const htmlCompleto = `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Histórico de Produção</title>
+        <style>
+          @page { size: A4; margin: 10mm; }
+
+          body {
+            margin: 0;
+            padding: 14px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #111;
+          }
+
+          .page { min-height: auto; }
+
+          .page-break {
+            page-break-before: always;
+            break-before: page;
+          }
+
+          .topbar {
+            display: flex;
+            align-items: stretch;
+            gap: 10px;
+            margin-bottom: 10px;
+          }
+
+          .logoBox {
+            flex: 1;
+            border: 2px solid #111;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 64px;
+          }
+
+          .logoBox img { max-height: 52px; }
+
+          .opBox {
+            width: 520px;
+            border: 2px solid #111;
+            padding: 8px 10px;
+          }
+
+          .opTitle {
+            font-weight: 900;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 6px;
+          }
+
+          .opRow {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-weight: 700;
+            align-items: flex-start;
+          }
+
+          .metaRight {
+            text-align: right;
+            line-height: 1.25;
+          }
+
+          .numeroPedidoGigante {
+            font-size: 80px;
+            font-weight: 900;
+            margin: 4px 0 0;
+            line-height: 1;
+            letter-spacing: 1px;
+          }
+
+          .numeroPedidoGigante span {
+            font-weight: 900;
+          }
+
+          .muted {
+            color: #111;
+            font-weight: 900;
+          }
+
+          .muted-meta {
+            color: #333;
+            font-weight: 400;
+          }
+
+          .pageIndicator {
+            margin: 6px 0 10px;
+            padding: 6px 8px;
+            border: 1px solid #111;
+            font-weight: 700;
+            text-align: center;
+            background: #f8f8f8;
+          }
+
+          .tblInfo {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+          }
+
+          .tblInfo td {
+            border: 1px solid #111;
+            padding: 6px 8px;
+            vertical-align: top;
+          }
+
+          .k {
+            width: 160px;
+            font-weight: 700;
+            white-space: nowrap;
+          }
+
+          .v { min-width: 220px; }
+          .vSmall { min-width: 160px; }
+
+          .line2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 8px 0 12px;
+          }
+
+          .miniBox {
+            border: 1px solid #111;
+            padding: 8px;
+            font-weight: 700;
+          }
+
+          .fullBox,
+          .historicoBox {
+            border: 1px solid #111;
+            margin-top: 10px;
+          }
+
+          .gridTitle {
+            font-weight: 900;
+            text-align: center;
+            padding: 6px;
+            border-bottom: 1px solid #111;
+            background: #f2f2f2;
+          }
+
+          .bigTbl,
+          .historicoTbl {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+          }
+
+          .bigTbl {
+            font-size: 10.5px;
+          }
+
+          .historicoTbl {
+            font-size: 11px;
+          }
+
+          .bigTbl th,
+          .bigTbl td,
+          .historicoTbl th,
+          .historicoTbl td {
+            border: 1px solid #111;
+            padding: 10px 8px;
+            vertical-align: top;
+            box-sizing: border-box;
+          }
+
+          .bigTbl td {
+            height: 90px;
+          }
+
+          .historicoTbl td {
+            height: 95px; /* altura das linhas do histórico */
+          }
+
+          .bigTbl thead th,
+          .historicoTbl thead th {
+            background: #fafafa;
+            font-weight: 900;
+          }
+
+          .resumoProdutosTbl .descCell {
+            white-space: normal;
+            word-break: break-word;
+          }
+
+          .cItem { text-align: center; }
+          .cQtd { text-align: center; }
+          .cData { text-align: center; white-space: nowrap; }
+
+          @media print {
+            body { padding: 14px; }
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+            tr, td, th {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${paginasHTML}
+
+        <script>
+          window.onload = function () {
+            setTimeout(function () {
+              window.focus();
+              window.print();
+            }, 250);
+          };
+        </script>
+      </body>
+    </html>
+  `;
+
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) return;
+
+  printWindow.document.open();
+  printWindow.document.write(htmlCompleto);
+  printWindow.document.close();
+}
+
+
+
+function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
+  const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
+
+  const getTextOrValue = (el) => {
+    if (!el) return "";
+    const v = (typeof el.value === "string" ? el.value : "").trim();
+    if (v) return v;
+    const t = (typeof el.textContent === "string" ? el.textContent : "").trim();
+    if (t) return t;
+    return "";
+  };
+
+  const multilineToBR = (txt) => {
+    const t = String(txt || "").trim();
+    if (!t) return "-";
+    return t.replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
+  };
+
+  const formatarDataBR = (iso) => {
+    if (!iso) return "-";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      const [y, m, d] = iso.split("-");
+      return `${d}/${m}/${y}`;
+    }
+    const dt = new Date(iso);
+    if (isNaN(dt.getTime())) return "-";
+    return dt.toLocaleDateString("pt-BR");
+  };
+
+  const padVisual = (txt, minLen = 18) => {
+    const t = String(txt || "").trim();
+    if (t.length >= minLen) return t;
+    const faltam = Math.max(0, minLen - t.length);
+    return (t || "-") + "&nbsp;".repeat(faltam);
+  };
+
+  // ================== DADOS CABEÇALHO ==================
+  const numeroPedido = getValue("numeroOrcamento");
+  const dataOrc = getValue("dataOrcamento");
+  const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
+  const numeroOrcamento =
+    getValue("numeroOrcamento2") !== "-" ? getValue("numeroOrcamento2") : numeroPedido;
+
+  const vendedorEl = document.getElementById("vendedorResponsavel");
+  const vendedor =
+    vendedorEl?.selectedOptions?.[0]?.textContent?.trim() ||
+    getTextOrValue(vendedorEl) ||
+    "-";
+
+  const operador = getValue("operadorInterno");
+  const origem = getValue("origemCliente");
+
+  const nomeClienteResponsavel =
+    (document.querySelector("input.razaoSocial")?.value || "").trim() ||
+    (document.querySelector("input.razaoSocial")?.dataset?.valorOriginal || "").trim() ||
+    "-";
+
+  const enderecoObra = `Rua/Avenida: ${getValue("rua")}, Número: ${getValue("numero")}, Bairro: ${getValue("bairro")} - Complemento: ${getValue("complemento")} - Cidade: ${getValue("cidade")}/${getValue("estado")} - CEP: ${getValue("cep")}`;
+
+  // ================== CLIENTES / CONTATOS ==================
+  const clientes = Array.from(document.querySelectorAll("#clientesWrapper .cliente-item"))
+    .map((row) => ({
+      nomeCliente:
+        getTextOrValue(row.querySelector(".nomeContato")) ||
+        getTextOrValue(row.querySelector(".razaoSocial")),
+      cpfCnpj: getTextOrValue(row.querySelector(".cpfCnpj")),
+      nomeContato: getTextOrValue(row.querySelector(".nomeContato")),
+      funcao: getTextOrValue(row.querySelector(".funcaoCliente")),
+      telefone: getTextOrValue(row.querySelector(".telefoneCliente")),
+      email: getTextOrValue(row.querySelector(".emailCliente")),
+    }))
+    .filter((c) => c.nomeCliente || c.nomeContato || c.telefone || c.cpfCnpj || c.email || c.funcao);
+
+  const principal = clientes[0] || {};
+  const cpfCnpj = principal.cpfCnpj || "-";
+
+  const contatosHTML = clientes.length
+    ? clientes
+        .map((c, idx) => {
+          const label = idx === 0 ? "Contato (Responsável)" : `Contato ${idx + 1}`;
+          const nome = padVisual(c.nomeContato || c.nomeCliente || "-", 22);
+          const funcao = padVisual(c.funcao || "-", 18);
+          const tel = padVisual(c.telefone || "-", 16);
+          const email = padVisual(c.email || "-", 22);
+
+          return `
+            <tr>
+              <td class="k">${label}:</td>
+              <td class="v">${nome}</td>
+              <td class="k">Função:</td>
+              <td class="v">${funcao}</td>
+            </tr>
+            <tr>
+              <td class="k">Telefone:</td>
+              <td class="v">${tel}</td>
+              <td class="k">E-mail:</td>
+              <td class="v">${email}</td>
+            </tr>
+          `;
+        })
+        .join("")
+    : `
+      <tr>
+        <td class="k">Contato:</td><td class="v">${padVisual("-", 22)}</td>
+        <td class="k">Função:</td><td class="v">${padVisual("-", 18)}</td>
+      </tr>
+      <tr>
+        <td class="k">Telefone:</td><td class="v">${padVisual("-", 16)}</td>
+        <td class="k">E-mail:</td><td class="v">${padVisual("-", 22)}</td>
+      </tr>
+    `;
+
+  // ================== PRAZOS ==================
+  const prazosRaw = getValue("prazosArea");
+  const prazosHTML = prazosRaw !== "-" ? multilineToBR(prazosRaw) : "-";
+
+  // ================== CONFIG ==================
+  const qtdLinhas = Math.max(
+    1,
+    document.querySelectorAll("table[id^='tabela-bloco-']").length
+  );
+
+  const LINHAS_FATURAMENTO_DIRETO = 6;
+  const LINHAS_SERVICOS_TERCEIROS = Math.max(3, qtdLinhas);
+  const TOTAL_PAGINAS = 2;
+
+  // ================== COLETA ITENS ==================
+  const gruposDados = [];
+
+  document.querySelectorAll("table[id^='tabela-bloco-']").forEach((tabela) => {
+    const grupoId = tabela.id.replace("tabela-", "").trim();
+
+    const ocultar = !!(gruposOcultarProduto && gruposOcultarProduto[grupoId]);
+    if (ocultar) return;
+
+    const inputAmbiente = document.querySelector(
+      `input[data-id-grupo='${grupoId}'][placeholder='Ambiente']`
+    );
+    const nomeAmbiente = inputAmbiente?.value?.trim() || "Sem Ambiente";
+
+    let resumoGrupo = document.getElementById(`resumo-${grupoId}`)?.value?.trim() || "";
+    resumoGrupo = resumoGrupo ? resumoGrupo.replace(/\r\n/g, "\n").replace(/\n/g, "<br>") : "";
+
+    const linhas = Array.from(tabela.querySelectorAll("tbody tr"))
+      .filter((tr) => {
+        if (tr.querySelector("td[colspan]")) return false;
+        if (tr.classList.contains("extra-summary-row")) return false;
+        const tds = tr.querySelectorAll("td");
+        return tds && tds.length >= 2;
+      })
+      .map((tr) => {
+        const tds = Array.from(tr.querySelectorAll("td"));
+
+        let utilizacao =
+          getTextOrValue(tds[0]?.querySelector("textarea")) ||
+          (tds[0]?.textContent || "").trim() ||
+          "-";
+
+        let descricao = (tds[1]?.textContent || "").trim();
+        if (!descricao) {
+          const candidato = tds
+            .map((td) => (td.textContent || "").trim())
+            .sort((a, b) => b.length - a.length)[0];
+          descricao = candidato || "-";
+        }
+
+        const qtdInput =
+          tr.querySelector("input.quantidade") ||
+          tr.querySelector("input.quantidade_sugerida") ||
+          tr.querySelector("input[name='quantidade']") ||
+          tr.querySelector("input[data-campo='quantidade']");
+
+        let qtd = (qtdInput?.value || "").trim();
+        if (!qtd) qtd = "1";
+
+        return { utilizacao, descricao, qtd };
+      })
+      .filter((x) => x.descricao && x.descricao !== "-");
+
+    gruposDados.push({
+      grupoId,
+      nomeAmbiente,
+      resumoGrupo,
+      itens: linhas,
+    });
+  });
+
+  // ================== ITENS DA PÁGINA 1 ==================
+  let contadorGrupo = 1;
+  const itensHTML_ComQtd = gruposDados
+    .map((g) => {
+      let contadorInsumo = 1;
+
+      const linhasHTML = g.itens?.length
+        ? g.itens.map((it) => `
+            <tr>
+              <td class="num">${contadorInsumo++}</td>
+              <td>${it.utilizacao || "-"}</td>
+              <td>${it.descricao}</td>
+              <td class="qtd">${it.qtd}</td>
+            </tr>
+          `).join("")
+        : `
+          <tr>
+            <td class="num">1</td>
+            <td>-</td>
+            <td>-</td>
+            <td class="qtd">-</td>
+          </tr>
+        `;
+
+      const resumoHTML = g.resumoGrupo
+        ? `<div class="obs"><strong>Observações:</strong><br>${g.resumoGrupo}</div>`
+        : "";
+
+      return `
+        <div class="item">
+          <div class="item-head">
+            <div class="item-title">ITEM ${contadorGrupo++}</div>
+            <div class="item-sub">AMBIENTE: ${String(g.nomeAmbiente || "").toUpperCase()}</div>
+          </div>
+
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th style="width:44px;">#</th>
+                <th style="width:170px;">Utilização</th>
+                <th>Descrição</th>
+                <th style="width:110px;">Quantidade</th>
+              </tr>
+            </thead>
+            <tbody>${linhasHTML}</tbody>
+          </table>
+
+          ${resumoHTML}
+        </div>
+      `;
+    })
+    .join("");
+
+  // ================== CABEÇALHOS ==================
+  const cabecalhoCompletoHTML = (titulo, paginaAtual, totalPaginas) => `
+    <div class="topbar">
+      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
+      <div class="opBox">
+        <div class="opTitle">${titulo}</div>
+        <div class="opRow">
+          <div>
+            Nº do Pedido
+            <div class="numeroPedidoGigante"><span class="muted">${numeroPedido}</span></div>
+          </div>
+          <div class="metaRight">
+            <div><strong>Nº do orçamento:</strong> <span class="muted-meta">${numeroOrcamento}</span></div>
+            <div><strong>Data:</strong> <span class="muted-meta">${data}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pageIndicator">ORDEM DE SERVIÇO ${paginaAtual}/${totalPaginas}</div>
+
+    <table class="tblInfo">
+      <tr>
+        <td class="k">Nome / Razão social:</td>
+        <td class="v">${padVisual(nomeClienteResponsavel, 30)}</td>
+        <td class="k">CPF / CNPJ:</td>
+        <td class="vSmall">${padVisual(cpfCnpj, 18)}</td>
+        <td class="k">Origem:</td>
+        <td class="vSmall">${padVisual(origem, 18)}</td>
+      </tr>
+      <tr>
+        <td class="k">Endereço da obra:</td>
+        <td colspan="5">${enderecoObra}</td>
+      </tr>
+      ${contatosHTML}
+    </table>
+
+    <div class="line2col">
+      <div class="miniBox">Operador: <span class="muted-meta">${padVisual(operador, 18)}</span></div>
+      <div class="miniBox">Vendedor: <span class="muted-meta">${padVisual(vendedor, 18)}</span></div>
+    </div>
+
+    <div class="prazos">
+      <div class="t">Prazo por Área:</div>
+      <div class="c">${prazosHTML}</div>
+    </div>
+  `;
+
+  const cabecalhoBasicoHTML = (titulo, paginaAtual, totalPaginas) => `
+    <div class="topbar topbar-basico">
+      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
+      <div class="opBox">
+        <div class="opTitle">${titulo}</div>
+        <div class="opRow">
+          <div>
+            Nº do Pedido
+            <div class="numeroPedidoGigante"><span class="muted">${numeroPedido}</span></div>
+          </div>
+          <div class="metaRight">
+            <div><strong>Nº do orçamento:</strong> <span class="muted-meta">${numeroOrcamento}</span></div>
+            <div><strong>Data:</strong> <span class="muted-meta">${data}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pageIndicator pageIndicator-basico">ORDEM DE SERVIÇO ${paginaAtual}/${totalPaginas}</div>
+  `;
+
+  // ================== BLOCOS DA PÁGINA 2 ==================
+  const faturamentoDiretoHTML = `
+    <div class="fullBox fullBox-tight">
+      <div class="gridTitle">Faturamento Direto</div>
+      <table class="bigTbl">
+        <thead>
+          <tr>
+            <th style="width:44px;">Item</th>
+            <th style="width:110px;">Data Compra</th>
+            <th>Fornecedor</th>
+            <th style="width:110px;">Previsto</th>
+            <th style="width:110px;">Tipo</th>
+            <th style="width:90px;">Quant.</th>
+            <th style="width:120px;">Na Empresa</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array.from({ length: LINHAS_FATURAMENTO_DIRETO }).map((_, i) => `
+            <tr>
+              <td class="cItem">${i + 1}</td>
+              <td class="cData"></td>
+              <td></td>
+              <td class="cData"></td>
+              <td></td>
+              <td class="cQtd"></td>
+              <td></td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const servicosTerceirosHTML = `
+    <div class="fullBox fullBox-tight">
+      <div class="gridTitle">Serviço(s) de Terceiros</div>
+      <table class="bigTbl">
+        <thead>
+          <tr>
+            <th style="width:44px;">Item</th>
+            <th>Fornecedor</th>
+            <th>Nome do Contato</th>
+            <th style="width:120px;">Telefone do Contato</th>
+            <th style="width:100px;">Data Saída</th>
+            <th style="width:100px;">Previsão</th>
+            <th style="width:110px;">Data Retorno</th>
+            <th style="width:140px;">Retorno Conferido por</th>
+            <th style="width:120px;">Assinatura Interno</th>
+            <th style="width:120px;">Assinatura Terceiro</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array.from({ length: LINHAS_SERVICOS_TERCEIROS }).map((_, i) => `
+            <tr>
+              <td class="cItem">${i + 1}</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td class="cData"></td>
+              <td class="cData"></td>
+              <td class="cData"></td>
+              <td class="cResp">&nbsp;</td>
+              <td></td>
+              <td></td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const etapasDoProcessoHTML = `
+    <div class="etapas-box vv-etapas">
+      <div class="etapas-title">Etapas do Processo</div>
+
+      <table class="etapas-grid">
+        <tr>
+          <td class="etapas-col">
+            <div class="etapas-col-title">Pedido</div>
+            <table class="etapas-inner">
+              <tr>
+                <td class="etapas-cell">Enviado</td>
+                <td class="etapas-cell">Assinado</td>
+              </tr>
+              <tr>
+                <td class="etapas-cell blank">&nbsp;</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+              </tr>
+              <tr>
+                <td class="etapas-cell blank">&nbsp;</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+              </tr>
+              <tr>
+                <td class="etapas-cell blank">&nbsp;</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+              </tr>
+            </table>
+          </td>
+
+          <td class="etapas-col">
+            <div class="etapas-col-title">Projeto</div>
+            <table class="etapas-inner">
+              <tr>
+                <td class="etapas-cell w-item">Item</td>
+                <td class="etapas-cell">Enviado</td>
+                <td class="etapas-cell">Assinado</td>
+              </tr>
+              <tr>
+                <td class="etapas-cell w-item center">1</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+              </tr>
+              <tr>
+                <td class="etapas-cell w-item center">2</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+              </tr>
+              <tr>
+                <td class="etapas-cell w-item center">3</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+              </tr>
+            </table>
+          </td>
+
+          <td class="etapas-col">
+            <div class="etapas-col-title">Obra / Medição</div>
+            <table class="etapas-inner">
+              <tr>
+                <td class="etapas-cell w-item">Item</td>
+                <td class="etapas-cell">Liberação Obra</td>
+                <td class="etapas-cell">Medição Realizada</td>
+                <td class="etapas-cell">Medidor</td>
+              </tr>
+              <tr>
+                <td class="etapas-cell w-item center">1</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+              </tr>
+              <tr>
+                <td class="etapas-cell w-item center">2</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+              </tr>
+              <tr>
+                <td class="etapas-cell w-item center">3</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+                <td class="etapas-cell blank">&nbsp;</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <div class="etapas-obs"><strong>Observações:</strong></div>
+      <div class="etapas-obs-area">&nbsp;</div>
+    </div>
+  `;
+
+  // ================== PÁGINAS ==================
+  const pagina1HTML = `
+    <div class="pagina">
+      ${cabecalhoCompletoHTML("ORDEM DE SERVIÇO / PRODUÇÃO", 1, TOTAL_PAGINAS)}
+      ${itensHTML_ComQtd || `<div class="item" style="padding:10px;"><strong>Nenhum item encontrado para impressão.</strong></div>`}
+    </div>
+  `;
+
+  const pagina2HTML = `
+    <div class="page-break"></div>
+    <div class="pagina pagina-secundaria">
+      ${cabecalhoBasicoHTML("ORDEM DE SERVIÇO / PRODUÇÃO", 2, TOTAL_PAGINAS)}
+      ${faturamentoDiretoHTML}
+      ${servicosTerceirosHTML}
+      ${etapasDoProcessoHTML}
+    </div>
+  `;
+
+  // ================== HTML FINAL ==================
+  const htmlCompleto = `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Folha 1 - Ordem de Serviço</title>
+        <style>
+          @page { size: A4; margin: 10mm; }
+
+          body {
+            margin: 0;
+            padding: 18px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #111;
+          }
+
+          .pagina {
+            display: block;
+          }
+
+          .page-break {
+            page-break-before: always;
+            break-before: page;
+          }
+
+          .topbar {
+            display: flex;
+            align-items: stretch;
+            gap: 10px;
+            margin-bottom: 8px;
+          }
+
+          .topbar-basico {
+            margin-bottom: 2px;
+          }
+
+          .logoBox {
+            flex: 1;
+            border: 2px solid #111;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 56px;
+          }
+
+          .logoBox img { max-height: 46px; }
+
+          .opBox {
+            width: 520px;
+            border: 2px solid #111;
+            padding: 8px 10px;
+          }
+
+          .opTitle {
+            font-weight: 900;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 4px;
+          }
+
+          .opRow {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-weight: 700;
+            align-items: flex-start;
+          }
+
+          .metaRight {
+            text-align: right;
+            line-height: 1.2;
+          }
+
+          .numeroPedidoGigante {
+            font-size: 80px;
+            font-weight: 900;
+            margin: 2px 0 0;
+            line-height: 0.95;
+            letter-spacing: 1px;
+          }
+
+          .numeroPedidoGigante span {
+            font-weight: 900;
+          }
+
+          .muted {
+            color: #111;
+            font-weight: 900;
+          }
+
+          .muted-meta {
+            color: #333;
+            font-weight: 400;
+          }
+
+          .pageIndicator {
+            margin: 4px 0 8px;
+            padding: 5px 8px;
+            border: 1px solid #111;
+            font-weight: 700;
+            text-align: center;
+            background: #f8f8f8;
+          }
+
+          .pageIndicator-basico {
+            margin: 0 0 4px;
+          }
+
+          .tblInfo {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 6px;
+          }
+
+          .tblInfo td {
+            border: 1px solid #111;
+            padding: 5px 7px;
+            vertical-align: top;
+          }
+
+          .k {
+            width: 160px;
+            font-weight: 700;
+            white-space: nowrap;
+          }
+
+          .v { min-width: 220px; }
+          .vSmall { min-width: 160px; }
+
+          .line2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin: 6px 0;
+          }
+
+          .miniBox {
+            border: 1px solid #111;
+            padding: 6px 8px;
+            font-weight: 700;
+          }
+
+          .prazos {
+            border: 1px solid #111;
+            padding: 6px 8px;
+            margin-top: 6px;
+          }
+
+          .prazos .t {
+            font-weight: 800;
+            margin-bottom: 4px;
+          }
+
+          .prazos .c {
+            font-weight: 400;
+            line-height: 1.25;
+          }
+
+          .item {
+            border: 2px solid #111;
+            margin-top: 10px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+
+          .item-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #111;
+            padding: 7px 9px;
+            font-weight: 900;
+          }
+
+          .item-title {
+            font-size: 14px;
+          }
+
+          .item-sub {
+            font-size: 12px;
+          }
+
+          .tbl {
+            width: 100%;
+            border-collapse: collapse;
+          }
+
+          .tbl th,
+          .tbl td {
+            border: 1px solid #111;
+            padding: 5px 7px;
+          }
+
+          .tbl thead th {
+            background: #f2f2f2;
+            font-weight: 900;
+          }
+
+          .num {
+            text-align: center;
+            width: 44px;
+          }
+
+          .qtd {
+            text-align: right;
+            width: 110px;
+          }
+
+          .obs {
+            border-top: 1px solid #111;
+            padding: 7px 9px;
+            font-style: italic;
+            color: #333;
+            line-height: 1.25;
+          }
+
+          .fullBox {
+            border: 1px solid #111;
+            margin-top: 6px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+
+          .fullBox-tight {
+            margin-top: 4px;
+          }
+
+          .gridTitle {
+            font-weight: 900;
+            text-align: center;
+            padding: 5px;
+            border-bottom: 1px solid #111;
+            background: #f2f2f2;
+          }
+
+          .bigTbl {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10.5px;
+          }
+
+          .bigTbl th,
+          .bigTbl td {
+            border: 1px solid #111;
+            padding: 7px 5px;
+            line-height: 1.35;
+            vertical-align: top;
+          }
+
+          .bigTbl thead th {
+            background: #fafafa;
+            font-weight: 900;
+          }
+
+          .cItem {
+            text-align: center;
+          }
+
+          .cData {
+            text-align: center;
+            white-space: nowrap;
+          }
+
+          .cQtd {
+            text-align: right;
+          }
+
+          .cResp {
+            color: #111;
+          }
+
+          .vv-etapas {
+            margin-top: 6px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+
+          .etapas-box {
+            border: 2px solid #000;
+            padding: 0;
+          }
+
+          .etapas-title {
+            text-align: center;
+            font-weight: 700;
+            padding: 5px 0;
+            border-bottom: 2px solid #000;
+          }
+
+          .etapas-grid {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+          }
+
+          .etapas-col {
+            vertical-align: top;
+            border-right: 1px solid #000;
+            padding: 0;
+          }
+
+          .etapas-col:last-child {
+            border-right: 0;
+          }
+
+          .etapas-col-title {
+            text-align: center;
+            font-weight: 700;
+            padding: 5px 0;
+            border-bottom: 1px solid #000;
+          }
+
+          .etapas-inner {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 12px;
+          }
+
+          .etapas-cell {
+            border: 1px solid #000;
+            padding: 5px;
+            text-align: center;
+            vertical-align: middle;
+          }
+
+          .etapas-cell.blank { height: 22px; }
+          .etapas-cell.w-item { width: 52px; }
+
+          .etapas-obs {
+            border-top: 1px solid #000;
+            padding: 5px 7px;
+            font-size: 12px;
+          }
+
+          .etapas-obs-area {
+            height: 28px;
+            border-top: 1px solid #000;
+          }
+
+          @media print {
+            body {
+              padding: 18px;
+            }
+
+            .pagina,
+            .item,
+            .fullBox,
+            .vv-etapas {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${pagina1HTML}
+        ${pagina2HTML}
+
+        <script>
+          window.onload = function () {
+            setTimeout(function () {
+              window.focus();
+              window.print();
+            }, 250);
+          };
+        </script>
+      </body>
+    </html>
+  `;
+
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) return;
+
+  printWindow.document.open();
+  printWindow.document.write(htmlCompleto);
+  printWindow.document.close();
+}
