@@ -129,11 +129,141 @@ function destravarCampos() {
  <button id="btn-visualizar-proposta" class="sidebar-button" onclick="gerarOrcamentoParaImpressaoCompleta()">
   <span class="material-icons-outlined">visibility</span><br><P></P>  Visualizar Proposta
 </button>
-<button id="btn-visualizar-proposta" class="sidebar-button" onclick="gerarOrdemDeServicoParaImpressao()">
-  <span class="material-icons-outlined">visibility</span><br><P></P>  Visualizar OP
+
+<button id="btn-visualizar-proposta" class="sidebar-button" onclick="abrirPopupVisualizarOP()">
+  <span class="material-icons-outlined">visibility</span><br><p></p> Folhas de impressão
 </button>
 
+<script>
+  function abrirPopupVisualizarOP() {
+    // evita duplicar popup
+    if (document.getElementById("popup-visualizar-op-overlay")) return;
 
+    const overlay = document.createElement("div");
+    overlay.id = "popup-visualizar-op-overlay";
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      padding: 16px;
+    `;
+
+    const modal = document.createElement("div");
+    modal.style.cssText = `
+      width: 100%;
+      max-width: 420px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      padding: 20px;
+      font-family: Inter, Arial, sans-serif;
+    `;
+
+    modal.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:18px; font-weight:700; color:#111827;">
+          Folhas de impressão
+        </h3>
+        <button type="button" id="fechar-popup-visualizar-op"
+          style="
+            border:none;
+            background:#e5e7eb;
+            color:#111827;
+            width:36px;
+            height:36px;
+            border-radius:10px;
+            cursor:pointer;
+            font-size:18px;
+            font-weight:700;
+          ">
+          ×
+        </button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button type="button" id="btn-folha-ordem-servico"
+          style="
+            width:100%;
+            border:none;
+            background:#7c3aed;
+            color:#fff;
+            padding:14px 16px;
+            border-radius:12px;
+            cursor:pointer;
+            font-size:14px;
+            font-weight:600;
+          ">
+          Visualizar ORDEM DE SERVIÇO
+        </button>
+
+        <button type="button" id="btn-etapas-processo"
+          style="
+            width:100%;
+            border:none;
+            background:#2563eb;
+            color:#fff;
+            padding:14px 16px;
+            border-radius:12px;
+            cursor:pointer;
+            font-size:14px;
+            font-weight:600;
+          ">
+          Visualizar ETAPAS DO PROCESSO
+        </button>
+
+        <button type="button" id="btn-historico-producao"
+          style="
+            width:100%;
+            border:none;
+            background:#0f766e;
+            color:#fff;
+            padding:14px 16px;
+            border-radius:12px;
+            cursor:pointer;
+            font-size:14px;
+            font-weight:600;
+          ">
+          Visualizar HISTÓRICO DE PRODUÇÃO
+        </button>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const fechar = () => {
+      const el = document.getElementById("popup-visualizar-op-overlay");
+      if (el) el.remove();
+    };
+
+    document
+      .getElementById("fechar-popup-visualizar-op")
+      .addEventListener("click", fechar);
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) fechar();
+    });
+
+    document.getElementById("btn-folha-ordem-servico").addEventListener("click", () => {
+      fechar();
+      gerarFolha1OrdemDeServico();
+    });
+
+    document.getElementById("btn-etapas-processo").addEventListener("click", () => {
+      fechar();
+      gerarFolha4RelatorioEntrega();
+    });
+
+    document.getElementById("btn-historico-producao").addEventListener("click", () => {
+      fechar();
+      gerarHistoricoDeProducaoParaImpressao();
+    });
+  }
+</script>
 
   <button id="btn-enviar-cliente" class="sidebar-button" onclick="marcarEnviadoParaCliente()">
     <span class="material-icons-outlined">send</span><br> Enviar Proposta
