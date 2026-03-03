@@ -756,7 +756,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
       const linhasHTML = g.itens?.length
         ? g.itens.map((it) => `
             <tr>
-              <td class="num">${contadorInsumo++}</td>
+              <td class="num"></td>
               <td>${it.descricao}</td>
               <td class="qtd">${it.qtd}</td>
             </tr>
@@ -805,7 +805,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
       const linhasHTML = g.itens?.length
         ? g.itens.map((it) => `
             <tr>
-              <td class="num">${c++}</td>
+              <td class="num"></td>
               <td>${it.descricao}</td>
             </tr>
           `).join("")
@@ -968,7 +968,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
         <tbody>
           ${Array.from({ length: 6 }).map((_, i) => `
             <tr>
-              <td class="cItem">${i + 1}</td>
+              <td class="cItem"></td>
               <td class="cData"></td>
               <td></td>
               <td class="cData"></td>
@@ -1003,7 +1003,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
         <tbody>
           ${Array.from({ length: Math.max(3, qtdLinhas) }).map((_, i) => `
             <tr>
-              <td class="cItem">${i + 1}</td>
+              <td class="cItem"></td>
               <td></td>
               <td></td>
               <td></td>
@@ -1032,7 +1032,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   const linhasProcessoHTML = (titulo) => {
     const corpo = Array.from({ length: qtdLinhas }).map((_, i) => `
       <tr>
-        <td class="cItem">${i + 1}</td>
+        <td class="cItem"></td>
         <td class="cData"></td>
         <td class="cData"></td>
         <td class="cResp">&nbsp;</td>
@@ -1060,7 +1060,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   const tabelaInstalacaoHTML = (titulo, startIndex = 1) => {
     const corpo = Array.from({ length: qtdLinhas }).map((_, i) => `
       <tr>
-        <td class="cItem">${startIndex + i}</td>
+        <td class="cItem"></td>
         <td class="cData"></td>
         <td class="cData"></td>
         <td class="cResp">&nbsp;</td>
@@ -1474,7 +1474,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
         .bigTbl th, .bigTbl td { border: 1px solid #111; padding: 10px 6px; line-height: 1.6; }
         .bigTbl thead th { background: #fafafa; font-weight: 900; }
 
-        .cItem { text-align: center; }
+        .cItem { text-align: center; visibility: hidden; }
         .cData { text-align: center; white-space: nowrap; }
         .cQtd { text-align: right; }
         .cResp { color: #111; }
@@ -2328,7 +2328,7 @@ function gerarFolha4RelatorioEntrega() {
             word-break: break-word;
           }
 
-          .cItem { text-align: center; }
+          .cItem { text-align: center; visibility: hidden; }
           .cData { text-align: center; white-space: nowrap; }
           .cQtd { text-align: center; }
           .cResp { color: #111; }
@@ -2725,13 +2725,11 @@ function gerarHistoricoDeProducaoParaImpressao() {
     </div>
   `;
 
-  // ================== HISTÓRICO CONTÍNUO ==================
+  // ================== HISTÓRICO CONTÍNUO (agora relatório de entrega/instalação) ==================
   const criarLinhasVazias = (quantidade) => {
     return Array.from({ length: quantidade }).map(() => ({
-      etapa: "",
       data: "",
-      responsavel: "",
-      observacoes: ""
+      relatorio: ""
     }));
   };
 
@@ -2765,23 +2763,19 @@ function gerarHistoricoDeProducaoParaImpressao() {
 
   const tabelaHistoricoHTML = (linhasPagina) => `
     <div class="historicoBox">
-      <div class="gridTitle">Histórico de Produção</div>
+      <div class="gridTitle">RELATORIO DE ENTREGA / INSTALAÇÃO</div>
       <table class="historicoTbl">
         <thead>
           <tr>
-            <th style="width:180px;">Etapa</th>
             <th style="width:120px;">Data</th>
-            <th style="width:180px;">Responsável</th>
-            <th>Observações</th>
+            <th>RELATORIO DE ENTREGA / INSTALAÇÃO</th>
           </tr>
         </thead>
         <tbody>
           ${linhasPagina.map((linha) => `
             <tr>
-              <td>${escapeHtml(linha.etapa)}</td>
               <td class="cData">${escapeHtml(linha.data)}</td>
-              <td>${escapeHtml(linha.responsavel)}</td>
-              <td>${escapeHtml(linha.observacoes)}</td>
+              <td>${escapeHtml(linha.relatorio)}</td>
             </tr>
           `).join("")}
         </tbody>
@@ -2795,8 +2789,8 @@ function gerarHistoricoDeProducaoParaImpressao() {
     const ehPrimeira = idx === 0;
 
     const cabecalho = ehPrimeira
-      ? cabecalhoCompletoHTML("HISTÓRICO DE PRODUÇÃO", paginaAtual, totalPaginas)
-      : cabecalhoBasicoHTML("HISTÓRICO DE PRODUÇÃO", paginaAtual, totalPaginas);
+      ? cabecalhoCompletoHTML("RELATORIO DE ENTREGA / INSTALAÇÃO", paginaAtual, totalPaginas)
+      : cabecalhoBasicoHTML("RELATORIO DE ENTREGA / INSTALAÇÃO", paginaAtual, totalPaginas);
 
     const resumo = ehPrimeira ? tabelaProdutosResumoHTML : "";
 
@@ -2815,7 +2809,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
     <html>
       <head>
         <meta charset="utf-8" />
-        <title>Histórico de Produção</title>
+        <title>RELATORIO DE ENTREGA / INSTALAÇÃO</title>
         <style>
           @page { size: A4; margin: 10mm; }
 
@@ -2880,7 +2874,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
           }
 
           .numeroPedidoGigante {
-            font-size: 80px;
+            font-size: 40px;
             font-weight: 900;
             margin: 4px 0 0;
             line-height: 1;
@@ -3002,7 +2996,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
             word-break: break-word;
           }
 
-          .cItem { text-align: center; }
+          .cItem { text-align: center; visibility: hidden; }
           .cQtd { text-align: center; }
           .cData { text-align: center; white-space: nowrap; }
 
@@ -3238,7 +3232,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
       const linhasHTML = g.itens?.length
         ? g.itens.map((it) => `
             <tr>
-              <td class="num">${contadorInsumo++}</td>
+              <td class="num"></td>
               <td>${it.utilizacao || "-"}</td>
               <td>${it.descricao}</td>
               <td class="qtd">${it.qtd}</td>
@@ -3370,7 +3364,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
         <tbody>
           ${Array.from({ length: LINHAS_FATURAMENTO_DIRETO }).map((_, i) => `
             <tr>
-              <td class="cItem">${i + 1}</td>
+              <td class="cItem"></td>
               <td class="cData"></td>
               <td></td>
               <td class="cData"></td>
@@ -3405,7 +3399,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
         <tbody>
           ${Array.from({ length: LINHAS_SERVICOS_TERCEIROS }).map((_, i) => `
             <tr>
-              <td class="cItem">${i + 1}</td>
+              <td class="cItem"></td>
               <td></td>
               <td></td>
               <td></td>
