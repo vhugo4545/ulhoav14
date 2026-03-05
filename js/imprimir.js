@@ -2762,12 +2762,12 @@ function gerarHistoricoDeProducaoParaImpressao() {
 
   const tabelaHistoricoHTML = (linhasPagina) => `
     <div class="historicoBox">
-      <div class="gridTitle">RELATORIO DE ENTREGA / INSTALAÇÃO</div>
+      <div class="gridTitle">Histórico</div>
       <table class="historicoTbl">
         <thead>
           <tr>
             <th style="width:120px;">Data</th>
-            <th>RELATORIO DE ENTREGA / INSTALAÇÃO</th>
+            <th>Histórico</th>
           </tr>
         </thead>
         <tbody>
@@ -2788,8 +2788,8 @@ function gerarHistoricoDeProducaoParaImpressao() {
     const ehPrimeira = idx === 0;
 
     const cabecalho = ehPrimeira
-      ? cabecalhoCompletoHTML("RELATORIO DE ENTREGA / INSTALAÇÃO", paginaAtual, totalPaginas)
-      : cabecalhoBasicoHTML("RELATORIO DE ENTREGA / INSTALAÇÃO", paginaAtual, totalPaginas);
+      ? cabecalhoCompletoHTML("Histórico", paginaAtual, totalPaginas)
+      : cabecalhoBasicoHTML("Histórico", paginaAtual, totalPaginas);
 
     const resumo = ehPrimeira ? tabelaProdutosResumoHTML : "";
 
@@ -2808,7 +2808,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
     <html>
       <head>
         <meta charset="utf-8" />
-        <title>RELATORIO DE ENTREGA / INSTALAÇÃO</title>
+        <title>Histórico</title>
         <style>
           @page { size: A4; margin: 10mm; }
 
