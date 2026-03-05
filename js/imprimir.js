@@ -2460,7 +2460,6 @@ function gerarFolha4RelatorioEntrega() {
   printWindow.document.write(htmlCompleto);
   printWindow.document.close();
 }
-
 function gerarHistoricoDeProducaoParaImpressao() {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
@@ -2694,7 +2693,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
       <table class="bigTbl resumoProdutosTbl">
         <thead>
           <tr>
-            <th style="width:70px;">Itens</th>
+            <th style="width:70px;">Sequência</th>
             <th style="width:220px;">Produto</th>
             <th style="width:110px;">Quantidade</th>
             <th>Descrição</th>
@@ -3033,7 +3032,6 @@ function gerarHistoricoDeProducaoParaImpressao() {
   printWindow.document.write(htmlCompleto);
   printWindow.document.close();
 }
-
 
 
 function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
