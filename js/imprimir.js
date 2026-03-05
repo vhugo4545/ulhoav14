@@ -2693,7 +2693,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
       <table class="bigTbl resumoProdutosTbl">
         <thead>
           <tr>
-            <th style="width:70px;">Sequência</th>
+            <th style="width:70px;">Itens</th>
             <th style="width:220px;">Produto</th>
             <th style="width:110px;">Quantidade</th>
             <th>Descrição</th>
