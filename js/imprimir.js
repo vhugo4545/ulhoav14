@@ -3612,7 +3612,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
         </tr>
       </table>
 
-      <div class="etapas-obs"><strong>Observações:</strong></div>
+      <div class="etapas-obs"><strong>Descrição:</strong></div>
       <div class="etapas-obs-area">&nbsp;</div>
     </div>
   `;
