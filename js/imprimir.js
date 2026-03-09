@@ -1840,6 +1840,33 @@ function gerarFolha4RelatorioEntrega() {
     return escapeHtml(t).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
   };
 
+  // ================== VARIÁVEIS VISUAIS ==================
+  const TOTAL_PAGINAS = 2;
+
+  const FONT_SIZE_BASE = 11.2;
+  const FONT_SIZE_TABELA = 10.4;
+  const FONT_SIZE_HEADER_TABELA = 10.4;
+  const FONT_SIZE_TITULO_SECAO = 11.5;
+  const FONT_SIZE_TITULO_DOC = 14;
+  const FONT_SIZE_NUMERO_PEDIDO = 80;
+
+  const ALTURA_LINHA_RESUMO = 78;
+  const ALTURA_LINHA_PROCESSO = 26; // linha tipo "caderno"
+  const QTD_LINHAS_PROCESSO = 5;
+
+  const PADDING_CELULA_RESUMO_Y = 8;
+  const PADDING_CELULA_RESUMO_X = 8;
+
+  const PADDING_CELULA_PROCESSO_Y = 4;
+  const PADDING_CELULA_PROCESSO_X = 6;
+
+  const PADDING_TITULO_BOX = 6;
+  const GAP_GRID_PROCESSO = 8;
+  const MARGEM_TOPO_TABELAS = 8;
+
+  const LARGURA_COL_ITEM = 42;
+  const LARGURA_COL_DATA = 82;
+
   // ================== DADOS DO CABEÇALHO ==================
   const numeroPedido = getValue("numeroOrcamento");
   const dataOrc = getValue("dataOrcamento");
@@ -1861,7 +1888,11 @@ function gerarFolha4RelatorioEntrega() {
     (document.querySelector("input.razaoSocial")?.dataset?.valorOriginal || "").trim() ||
     "-";
 
-  const enderecoObra = `Rua/Avenida: ${getValue("rua")}, Número: ${getValue("numero")}, Bairro: ${getValue("bairro")} - Complemento: ${getValue("complemento")} - Cidade: ${getValue("cidade")}/${getValue("estado")} - CEP: ${getValue("cep")}`;
+  const enderecoObra = `Rua/Avenida: ${getValue("rua")}, Número: ${getValue(
+    "numero"
+  )}, Bairro: ${getValue("bairro")} - Complemento: ${getValue(
+    "complemento"
+  )} - Cidade: ${getValue("cidade")}/${getValue("estado")} - CEP: ${getValue("cep")}`;
 
   // ================== CLIENTES / CONTATOS ==================
   const clientes = Array.from(document.querySelectorAll("#clientesWrapper .cliente-item"))
@@ -1877,18 +1908,16 @@ function gerarFolha4RelatorioEntrega() {
     }))
     .filter((c) => c.nomeCliente || c.nomeContato || c.telefone || c.cpfCnpj || c.email || c.funcao);
 
-  const principal = clientes[0] || {};
-  const cpfCnpj = principal.cpfCnpj || "-";
-
   const contatosHTML = clientes.length
-    ? clientes.map((c, idx) => {
-        const label = idx === 0 ? "Contato (Responsável)" : `Contato ${idx + 1}`;
-        const nome = padVisual(c.nomeContato || c.nomeCliente || "-", 22);
-        const funcao = padVisual(c.funcao || "-", 18);
-        const tel = padVisual(c.telefone || "-", 16);
-        const email = padVisual(c.email || "-", 22);
+    ? clientes
+        .map((c, idx) => {
+          const label = idx === 0 ? "Contato (Responsável)" : `Contato ${idx + 1}`;
+          const nome = padVisual(c.nomeContato || c.nomeCliente || "-", 22);
+          const funcao = padVisual(c.funcao || "-", 18);
+          const tel = padVisual(c.telefone || "-", 16);
+          const email = padVisual(c.email || "-", 22);
 
-        return `
+          return `
           <tr>
             <td class="k">${label}:</td>
             <td class="v">${nome}</td>
@@ -1902,7 +1931,8 @@ function gerarFolha4RelatorioEntrega() {
             <td class="v">${email}</td>
           </tr>
         `;
-      }).join("")
+        })
+        .join("")
     : `
       <tr>
         <td class="k">Contato:</td><td class="v">${padVisual("-", 22)}</td>
@@ -1917,7 +1947,7 @@ function gerarFolha4RelatorioEntrega() {
   // ================== COLETA DOS BLOCOS / PRODUTOS ==================
   const produtosResumo = Array.from(
     document.querySelectorAll("#blocosProdutosContainer .main-container[id^='bloco-']")
-  ).map((blocoEl, index) => {
+  ).map((blocoEl) => {
     const blocoId = blocoEl.id;
 
     const titulo =
@@ -1931,7 +1961,7 @@ function gerarFolha4RelatorioEntrega() {
           if (!tr) return false;
           if (tr.querySelector("td[colspan]")) return false;
           const tds = tr.querySelectorAll("td");
-          return tds.length >= 6;
+          return tds.length >= 2;
         })
       : null;
 
@@ -1946,18 +1976,14 @@ function gerarFolha4RelatorioEntrega() {
       "-";
 
     return {
-      sequencia: index + 1,
-      blocoId,
       titulo,
       quantidade,
       descricao: descricaoRaw,
     };
   });
 
-  const qtdItens = Math.max(1, produtosResumo.length);
-
   // ================== CABEÇALHOS ==================
-  const cabecalhoCompletoHTML = (titulo) => `
+  const cabecalhoCompletoHTML = (titulo, paginaAtual, totalPaginas) => `
     <div class="topbar">
       <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
       <div class="opBox">
@@ -1975,18 +2001,18 @@ function gerarFolha4RelatorioEntrega() {
       </div>
     </div>
 
+    <div class="pageIndicator">ETAPAS DO PROCESSO ${paginaAtual}/${totalPaginas}</div>
+
     <table class="tblInfo">
       <tr>
         <td class="k">Nome / Razão social:</td>
         <td class="v">${padVisual(nomeClienteResponsavel, 30)}</td>
-        <td class="k">CPF / CNPJ:</td>
-        <td class="vSmall">${padVisual(cpfCnpj, 18)}</td>
         <td class="k">Origem:</td>
         <td class="vSmall">${padVisual(origem, 18)}</td>
       </tr>
       <tr>
         <td class="k">Endereço da obra:</td>
-        <td colspan="5">${enderecoObra}</td>
+        <td colspan="3">${enderecoObra}</td>
       </tr>
       ${contatosHTML}
     </table>
@@ -1997,7 +2023,7 @@ function gerarFolha4RelatorioEntrega() {
     </div>
   `;
 
-  const cabecalhoBasicoHTML = (titulo) => `
+  const cabecalhoBasicoHTML = (titulo, paginaAtual, totalPaginas) => `
     <div class="topbar">
       <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
       <div class="opBox">
@@ -2014,35 +2040,38 @@ function gerarFolha4RelatorioEntrega() {
         </div>
       </div>
     </div>
+
+    <div class="pageIndicator">ETAPAS DO PROCESSO ${paginaAtual}/${totalPaginas}</div>
   `;
 
-  // ================== TABELA NOVA (PÁGINA 1) ==================
+  // ================== TABELA RESUMO (PÁGINA 1) ==================
   const tabelaProdutosResumoHTML = `
-    <div class="fullBox" style="margin-top: 12px;">
+    <div class="fullBox" style="margin-top: 10px;">
       <div class="gridTitle">Produtos / Descritivos</div>
       <table class="bigTbl resumoProdutosTbl">
         <thead>
           <tr>
-            <th style="width:70px;">Itens</th>
             <th style="width:220px;">Produto</th>
-            <th style="width:110px;">Quantidade</th>
+            <th style="width:90px;">Quantidade</th>
             <th>Descrição</th>
           </tr>
         </thead>
         <tbody>
           ${
             produtosResumo.length
-              ? produtosResumo.map((item) => `
+              ? produtosResumo
+                  .map(
+                    (item) => `
                   <tr>
-                    <td class="cItem">${item.sequencia}</td>
                     <td>${escapeHtml(item.titulo)}</td>
                     <td class="cQtd">${escapeHtml(item.quantidade)}</td>
                     <td class="descCell">${multilineToBR(item.descricao)}</td>
                   </tr>
-                `).join("")
+                `
+                  )
+                  .join("")
               : `
                 <tr>
-                  <td class="cItem">1</td>
                   <td>-</td>
                   <td class="cQtd">-</td>
                   <td>-</td>
@@ -2054,63 +2083,37 @@ function gerarFolha4RelatorioEntrega() {
     </div>
   `;
 
-  // ================== 5 LINHAS POR ITEM COM SUBNUMERAÇÃO ==================
-  const gerarLinhasCincoPorItem = (startIndex = 1) => {
+  // ================== TABELAS DE PROCESSO ==================
+  const gerarLinhasFixasProcesso = () => {
     let html = "";
-
-    for (let i = 0; i < qtdItens; i++) {
-      const numeroBase = startIndex + i;
-
-      for (let linha = 0; linha < 5; linha++) {
-        const identificador = linha === 0
-          ? `${numeroBase}`
-          : `${numeroBase}.${linha}`;
-
-        html += `
-          <tr>
-            <td class="cItem">${identificador}</td>
-            <td class="cData"></td>
-            <td class="cData"></td>
-            <td class="cResp">&nbsp;</td>
-          </tr>
-        `;
-      }
+    for (let i = 0; i < QTD_LINHAS_PROCESSO; i++) {
+      html += `
+        <tr>
+          <td class="cItemEtapa">&nbsp;</td>
+          <td class="cData">&nbsp;</td>
+          <td class="cData">&nbsp;</td>
+          <td class="cResp">&nbsp;</td>
+        </tr>
+      `;
     }
-
     return html;
   };
 
-  // ================== TABELAS ==================
-  const linhasProcessoHTML = (titulo, startIndex = 1) => `
-    <div class="gridBox">
-      <div class="gridTitle">${titulo}</div>
+  const tabelaProcessoHTML = (titulo) => `
+    <div class="procBox">
+      <div class="procTitle">${titulo}</div>
       <table class="gridTbl">
         <thead>
           <tr>
-            <th style="width:44px;">Item</th>
-            <th style="width:92px;">Inicio</th>
-            <th style="width:92px;">Final</th>
+            <th style="width:${LARGURA_COL_ITEM}px;">Item</th>
+            <th style="width:${LARGURA_COL_DATA}px;">Início</th>
+            <th style="width:${LARGURA_COL_DATA}px;">Final</th>
             <th>Responsáveis</th>
           </tr>
         </thead>
-        <tbody>${gerarLinhasCincoPorItem(startIndex)}</tbody>
-      </table>
-    </div>
-  `;
-
-  const tabelaInstalacaoHTML = (titulo, startIndex = 1) => `
-    <div class="instCol">
-      <div class="instSub">${titulo}</div>
-      <table class="gridTbl">
-        <thead>
-          <tr>
-            <th style="width:44px;">Item</th>
-            <th style="width:92px;">Inicio</th>
-            <th style="width:92px;">Final</th>
-            <th>Responsáveis</th>
-          </tr>
-        </thead>
-        <tbody>${gerarLinhasCincoPorItem(startIndex)}</tbody>
+        <tbody>
+          ${gerarLinhasFixasProcesso()}
+        </tbody>
       </table>
     </div>
   `;
@@ -2118,46 +2121,25 @@ function gerarFolha4RelatorioEntrega() {
   // ================== PÁGINAS ==================
   const pagina1HTML = `
     <div class="page">
-      ${cabecalhoCompletoHTML("ETAPAS DO PROCESSO")}
+      ${cabecalhoCompletoHTML("ETAPAS DO PROCESSO", 1, TOTAL_PAGINAS)}
       ${tabelaProdutosResumoHTML}
-
-      <div class="procGrid">
-        <div class="procRow">
-          ${linhasProcessoHTML("Desenho", 1)}
-          ${linhasProcessoHTML("Corte", 1)}
-        </div>
-      </div>
     </div>
   `;
 
   const pagina2HTML = `
     <div class="page-break"></div>
     <div class="page">
-      ${cabecalhoBasicoHTML("ETAPAS DO PROCESSO")}
+      ${cabecalhoBasicoHTML("ETAPAS DO PROCESSO", 2, TOTAL_PAGINAS)}
 
-      <div class="procGrid">
-        <div class="procRow">
-          ${linhasProcessoHTML("Pré-Solda", 1)}
-          ${linhasProcessoHTML("Acabamento", 1)}
-        </div>
-        <div class="procRow">
-          ${linhasProcessoHTML("Montagem", 1)}
-          ${linhasProcessoHTML("Finalização do Acabamento", 1)}
-        </div>
-      </div>
-    </div>
-  `;
-
-  const pagina3HTML = `
-    <div class="page-break"></div>
-    <div class="page">
-      ${cabecalhoBasicoHTML("ETAPAS DO PROCESSO")}
-
-      <div class="linhaInstalacao">Instalação</div>
-
-      <div class="instGrid">
-        ${tabelaInstalacaoHTML("Estrutura", 1)}
-        ${tabelaInstalacaoHTML("Vidro", 1)}
+      <div class="procGridFull">
+        ${tabelaProcessoHTML("Desenho")}
+        ${tabelaProcessoHTML("Corte")}
+        ${tabelaProcessoHTML("Pré-Solda")}
+        ${tabelaProcessoHTML("Acabamento")}
+        ${tabelaProcessoHTML("Montagem")}
+        ${tabelaProcessoHTML("Finalização do Acabamento")}
+        ${tabelaProcessoHTML("Estrutura")}
+        ${tabelaProcessoHTML("Vidro")}
       </div>
     </div>
   `;
@@ -2169,43 +2151,42 @@ function gerarFolha4RelatorioEntrega() {
         <meta charset="utf-8" />
         <title>Etapas do Processo</title>
         <style>
-          @page { size: A4; margin: 10mm; }
+          @page {
+            size: A4;
+            margin: 10mm;
+            margin-bottom: 10mm;
+          }
 
           body {
             margin: 0;
-            padding: 14px;
+            padding: 12px;
+            padding-bottom: 12mm;
             font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-size: ${FONT_SIZE_BASE}px;
             color: #111;
           }
 
-          .page {
-            min-height: auto;
-          }
-
-          .page-break {
-            page-break-before: always;
-            break-before: page;
-          }
+          .page { min-height: auto; }
+          .page-break { page-break-before: always; break-before: page; }
 
           .topbar {
             display: flex;
             align-items: stretch;
             gap: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
           }
 
           .logoBox {
             flex: 1;
             border: 2px solid #111;
-            padding: 10px;
+            padding: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 64px;
+            min-height: 56px;
           }
 
-          .logoBox img { max-height: 52px; }
+          .logoBox img { max-height: 46px; }
 
           .opBox {
             width: 520px;
@@ -2215,9 +2196,9 @@ function gerarFolha4RelatorioEntrega() {
 
           .opTitle {
             font-weight: 900;
-            font-size: 14px;
+            font-size: ${FONT_SIZE_TITULO_DOC}px;
             text-align: center;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
           }
 
           .opRow {
@@ -2230,216 +2211,248 @@ function gerarFolha4RelatorioEntrega() {
 
           .metaRight {
             text-align: right;
-            line-height: 1.25;
+            line-height: 1.2;
           }
 
           .numeroPedidoGigante {
-            font-size: 80px;
+            font-size: ${FONT_SIZE_NUMERO_PEDIDO}px;
             font-weight: 900;
-            margin: 4px 0 0;
-            line-height: 1;
+            margin: 2px 0 0;
+            line-height: .95;
             letter-spacing: 1px;
           }
 
-          .numeroPedidoGigante span {
-            font-weight: 900;
-          }
+          .numeroPedidoGigante span { font-weight: 900; }
 
-          .muted {
-            color: #111;
-            font-weight: 900;
-          }
+          .muted { color: #111; font-weight: 900; }
+          .muted-meta { color: #333; font-weight: 400; }
 
-          .muted-meta {
-            color: #333;
-            font-weight: 400;
+          .pageIndicator {
+            margin: 2px 0 8px;
+            padding: 4px 8px;
+            border: 1px solid #111;
+            font-weight: 700;
+            text-align: center;
+            background: #f8f8f8;
           }
 
           .tblInfo {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
           }
 
           .tblInfo td {
             border: 1px solid #111;
-            padding: 6px 8px;
+            padding: 5px 7px;
             vertical-align: top;
+            font-size: ${FONT_SIZE_BASE}px;
           }
 
-          .k {
-            width: 160px;
-            font-weight: 700;
-            white-space: nowrap;
-          }
-
+          .k { width: 160px; font-weight: 700; white-space: nowrap; }
           .v { min-width: 220px; }
           .vSmall { min-width: 160px; }
 
           .line2col {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin: 8px 0 12px;
+            gap: 6px;
+            margin: 6px 0 8px;
           }
 
           .miniBox {
             border: 1px solid #111;
-            padding: 8px;
+            padding: 6px 8px;
             font-weight: 700;
+            font-size: ${FONT_SIZE_BASE}px;
           }
 
-          .fullBox {
+          .fullBox,
+          .procBox {
             border: 1px solid #111;
-            margin-top: 10px;
-            page-break-inside: auto;
-            break-inside: auto;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+
+          .gridTitle,
+          .procTitle {
+            font-weight: 900;
+            text-align: center;
+            padding: ${PADDING_TITULO_BOX}px;
+            border-bottom: 1px solid #111;
+            background: #f2f2f2;
+            font-size: ${FONT_SIZE_TITULO_SECAO}px;
+          }
+
+          .bigTbl,
+          .gridTbl {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
           }
 
           .bigTbl {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 10.5px;
-            table-layout: fixed;
-            page-break-inside: auto;
-            break-inside: auto;
+            font-size: ${FONT_SIZE_TABELA}px;
+          }
+
+          .gridTbl {
+            font-size: ${FONT_SIZE_TABELA}px;
           }
 
           .bigTbl th,
           .bigTbl td {
             border: 1px solid #111;
-            padding: 12px 10px;
-            line-height: 1.35;
+            padding: ${PADDING_CELULA_RESUMO_Y}px ${PADDING_CELULA_RESUMO_X}px;
+            line-height: 1.25;
             vertical-align: top;
             box-sizing: border-box;
-          }
-
-          .bigTbl td {
-            height: 140px; /* ✅ altura vertical da tabela nova */
-          }
-
-          .bigTbl thead th {
-            background: #fafafa;
-            font-weight: 900;
-          }
-
-          .resumoProdutosTbl .descCell {
-            white-space: normal;
-            word-break: break-word;
-          }
-
-          .cItem { text-align: center; visibility: hidden; }
-          .cData { text-align: center; white-space: nowrap; }
-          .cQtd { text-align: center; }
-          .cResp { color: #111; }
-
-          .procGrid { margin-top: 12px; }
-
-          .procRow {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 8px;
-          }
-
-          .gridBox,
-          .instCol {
-            border: 1px solid #111;
-            page-break-inside: auto;
-            break-inside: auto;
-          }
-
-          .gridTitle,
-          .instSub {
-            font-weight: 900;
-            text-align: center;
-            padding: 6px;
-            border-bottom: 1px solid #111;
-            background: #f2f2f2;
-          }
-
-          .gridTbl {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-            table-layout: fixed;
-            page-break-inside: auto;
-            break-inside: auto;
           }
 
           .gridTbl th,
           .gridTbl td {
             border: 1px solid #111;
-            padding: 12px 10px;
-            vertical-align: top;
+            padding: ${PADDING_CELULA_PROCESSO_Y}px ${PADDING_CELULA_PROCESSO_X}px;
+            line-height: 1.1;
+            vertical-align: middle;
             box-sizing: border-box;
           }
 
-          .gridTbl td {
-            height: 140px; /* ✅ altura vertical das tabelas de processo/instalação */
-          }
-
+          .bigTbl thead th,
           .gridTbl thead th {
             background: #fafafa;
             font-weight: 900;
+            font-size: ${FONT_SIZE_HEADER_TABELA}px;
           }
 
-          .linhaInstalacao {
-            margin: 10px 0 6px;
-            border: 2px solid #111;
-            background: #f2f2f2;
-            font-weight: 900;
+          .resumoProdutosTbl td {
+            height: ${ALTURA_LINHA_RESUMO}px;
+          }
+
+          .gridTbl tbody tr {
+            height: ${ALTURA_LINHA_PROCESSO}px;
+          }
+
+          .descCell {
+            white-space: normal;
+            word-break: break-word;
+          }
+
+          .cQtd {
             text-align: center;
-            letter-spacing: 1px;
-            padding: 10px 0;
+            font-weight: 700;
           }
 
-          .instGrid {
+          .cItemEtapa,
+          .cData,
+          .cResp {
+            font-size: ${FONT_SIZE_TABELA}px;
+          }
+
+          .cItemEtapa,
+          .cData {
+            text-align: center;
+          }
+
+          .procGridFull {
+            margin-top: ${MARGEM_TOPO_TABELAS}px;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 10px;
+            gap: ${GAP_GRID_PROCESSO}px;
+          }
+
+          .rodape-fixo {
+            position: fixed;
+            left: 10mm;
+            right: 10mm;
+            bottom: 0mm;
+            height: 10mm;
+            padding-top: 2px;
+            border-top: 2px solid #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            background: #fff;
+            z-index: 9999;
+          }
+
+          .rodape-fixo .docNome {
+            font-weight: 900;
+            font-size: 12px;
+            letter-spacing: .5px;
+          }
+
+          .rodape-fixo .bigMeta {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            font-weight: 900;
+          }
+
+          .rodape-fixo .bigMeta .lbl {
+            font-size: 11px;
+            font-weight: 700;
+            color: #333;
+            margin-right: 4px;
+          }
+
+          .rodape-fixo .bigMeta .val {
+            font-size: 18px;
+            font-weight: 900;
+          }
+
+          .rodape-fixo .sep {
+            width: 2px;
+            height: 18px;
+            background: #111;
+            opacity: .35;
           }
 
           @media print {
-            body { padding: 14px; }
-
-            thead {
-              display: table-header-group;
+            body {
+              padding: 12px;
+              padding-bottom: 12mm;
             }
 
-            tfoot {
-              display: table-footer-group;
-            }
+            table { page-break-inside: avoid; break-inside: avoid; }
+            tr, td, th { page-break-inside: avoid; break-inside: avoid; }
 
-            table {
-              page-break-inside: auto;
-              break-inside: auto;
-            }
-
-            tr {
+            .fullBox,
+            .procBox,
+            .procGridFull {
               page-break-inside: avoid;
               break-inside: avoid;
             }
 
-            td, th {
-              page-break-inside: avoid;
-              break-inside: avoid;
+            .rodape-fixo {
+              position: fixed;
             }
+              .resumoProdutosTbl td,
+.resumoProdutosTbl th {
+  vertical-align: middle;
+}
 
-            .gridBox,
-            .instCol,
-            .fullBox {
-              page-break-inside: auto;
-              break-inside: auto;
-            }
+.resumoProdutosTbl .descCell,
+.resumoProdutosTbl .cQtd {
+  vertical-align: middle;
+}
           }
         </style>
       </head>
       <body>
+
+        <div class="rodape-fixo">
+          <div class="docNome">ETAPAS DO PROCESSO</div>
+          <div class="sep"></div>
+          <div class="bigMeta">
+            <div><span class="lbl">Nº do Pedido</span> <span class="val">${escapeHtml(numeroPedido)}</span></div>
+            <div class="sep"></div>
+            <div><span class="lbl">Data</span> <span class="val">${escapeHtml(data)}</span></div>
+          </div>
+        </div>
+
         ${pagina1HTML}
         ${pagina2HTML}
-        ${pagina3HTML}
 
         <script>
           window.onload = function () {
@@ -2460,6 +2473,10 @@ function gerarFolha4RelatorioEntrega() {
   printWindow.document.write(htmlCompleto);
   printWindow.document.close();
 }
+
+
+
+
 function gerarHistoricoDeProducaoParaImpressao() {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
