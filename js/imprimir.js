@@ -1795,7 +1795,6 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   printWindow.document.close();
 }
 
-
 function gerarFolha4RelatorioEntrega() {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
@@ -1850,7 +1849,7 @@ function gerarFolha4RelatorioEntrega() {
   const FONT_SIZE_TITULO_DOC = 14;
   const FONT_SIZE_NUMERO_PEDIDO = 80;
 
-  const ALTURA_LINHA_RESUMO = 39; // metade do valor anterior
+  const ALTURA_LINHA_RESUMO = 39;
   const ALTURA_LINHA_PROCESSO = 26;
   const QTD_LINHAS_PROCESSO = 4;
 
@@ -2065,9 +2064,9 @@ function gerarFolha4RelatorioEntrega() {
             produtosResumo.length
               ? produtosResumo
                   .map(
-                    (item) => `
+                    (item, index) => `
                   <tr>
-                    <td class="cItem">&nbsp;</td>
+                    <td class="cItem">${index + 1}</td>
                     <td>${escapeHtml(item.titulo)}</td>
                     <td class="cQtd">${escapeHtml(item.quantidade)}</td>
                     <td class="descCell">${multilineToBR(item.descricao)}</td>
@@ -2077,7 +2076,7 @@ function gerarFolha4RelatorioEntrega() {
                   .join("")
               : `
                 <tr>
-                  <td class="cItem">&nbsp;</td>
+                  <td class="cItem">1</td>
                   <td>-</td>
                   <td class="cQtd">-</td>
                   <td class="descCell">-</td>
@@ -2517,6 +2516,7 @@ function gerarFolha4RelatorioEntrega() {
   printWindow.document.write(htmlCompleto);
   printWindow.document.close();
 }
+
 
 
 
