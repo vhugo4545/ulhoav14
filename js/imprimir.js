@@ -2565,6 +2565,8 @@ function gerarHistoricoDeProducaoParaImpressao() {
   };
 
   // ================== DADOS DO CABEÇALHO ==================
+  const TITULO_DOCUMENTO = "RELATÓRIO DE ENTREGA / INSTALAÇÃO";
+
   const numeroPedido = getValue("numeroOrcamento");
   const dataOrc = getValue("dataOrcamento");
   const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
@@ -2605,14 +2607,15 @@ function gerarHistoricoDeProducaoParaImpressao() {
   const cpfCnpj = principal.cpfCnpj || "-";
 
   const contatosHTML = clientes.length
-    ? clientes.map((c, idx) => {
-        const label = idx === 0 ? "Contato (Responsável)" : `Contato ${idx + 1}`;
-        const nome = padVisual(c.nomeContato || c.nomeCliente || "-", 22);
-        const funcao = padVisual(c.funcao || "-", 18);
-        const tel = padVisual(c.telefone || "-", 16);
-        const email = padVisual(c.email || "-", 22);
+    ? clientes
+        .map((c, idx) => {
+          const label = idx === 0 ? "Contato (Responsável)" : `Contato ${idx + 1}`;
+          const nome = padVisual(c.nomeContato || c.nomeCliente || "-", 22);
+          const funcao = padVisual(c.funcao || "-", 18);
+          const tel = padVisual(c.telefone || "-", 16);
+          const email = padVisual(c.email || "-", 22);
 
-        return `
+          return `
           <tr>
             <td class="k">${label}:</td>
             <td class="v">${nome}</td>
@@ -2626,7 +2629,8 @@ function gerarHistoricoDeProducaoParaImpressao() {
             <td class="v">${email}</td>
           </tr>
         `;
-      }).join("")
+        })
+        .join("")
     : `
       <tr>
         <td class="k">Contato:</td><td class="v">${padVisual("-", 22)}</td>
@@ -2679,8 +2683,8 @@ function gerarHistoricoDeProducaoParaImpressao() {
   });
 
   // ================== CONFIGURAÇÃO DE LINHAS POR PÁGINA ==================
-  const LINHAS_PAGINA_1 = 7;            // ajuste aqui
-  const LINHAS_PAGINAS_RESTANTES = 13;  // ajuste aqui
+  const LINHAS_PAGINA_1 = 7;
+  const LINHAS_PAGINAS_RESTANTES = 13;
 
   // ================== CABEÇALHOS ==================
   const cabecalhoCompletoHTML = (titulo, paginaAtual, totalPaginas) => `
@@ -2762,14 +2766,18 @@ function gerarHistoricoDeProducaoParaImpressao() {
         <tbody>
           ${
             produtosResumo.length
-              ? produtosResumo.map((item) => `
+              ? produtosResumo
+                  .map(
+                    (item) => `
                   <tr>
                     <td class="cItem">${item.sequencia}</td>
                     <td>${escapeHtml(item.titulo)}</td>
                     <td class="cQtd">${escapeHtml(item.quantidade)}</td>
                     <td class="descCell">${multilineToBR(item.descricao)}</td>
                   </tr>
-                `).join("")
+                `
+                  )
+                  .join("")
               : `
                 <tr>
                   <td class="cItem">1</td>
@@ -2784,7 +2792,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
     </div>
   `;
 
-  // ================== HISTÓRICO CONTÍNUO (agora relatório de entrega/instalação) ==================
+  // ================== HISTÓRICO ==================
   const criarLinhasVazias = (quantidade) => {
     return Array.from({ length: quantidade }).map(() => ({
       data: "",
@@ -2792,7 +2800,6 @@ function gerarHistoricoDeProducaoParaImpressao() {
     }));
   };
 
-  // quantidade total de linhas do histórico
   const linhasMinimas = Math.max(
     LINHAS_PAGINA_1 + LINHAS_PAGINAS_RESTANTES,
     produtosResumo.length * 6
@@ -2800,17 +2807,12 @@ function gerarHistoricoDeProducaoParaImpressao() {
 
   const linhasHistorico = criarLinhasVazias(linhasMinimas);
 
-  // quebra manual em páginas
   const paginasDeLinhas = [];
   let cursor = 0;
 
-  // primeira página
-  paginasDeLinhas.push(
-    linhasHistorico.slice(cursor, cursor + LINHAS_PAGINA_1)
-  );
+  paginasDeLinhas.push(linhasHistorico.slice(cursor, cursor + LINHAS_PAGINA_1));
   cursor += LINHAS_PAGINA_1;
 
-  // páginas seguintes
   while (cursor < linhasHistorico.length) {
     paginasDeLinhas.push(
       linhasHistorico.slice(cursor, cursor + LINHAS_PAGINAS_RESTANTES)
@@ -2822,65 +2824,78 @@ function gerarHistoricoDeProducaoParaImpressao() {
 
   const tabelaHistoricoHTML = (linhasPagina) => `
     <div class="historicoBox">
-      <div class="gridTitle">Histórico</div>
+      <div class="gridTitle">HISTÓRICO</div>
       <table class="historicoTbl">
         <thead>
           <tr>
             <th style="width:120px;">Data</th>
-            <th>Histórico</th>
+            <th>RELATÓRIO DE ENTREGA / INSTALAÇÃO</th>
           </tr>
         </thead>
         <tbody>
-          ${linhasPagina.map((linha) => `
+          ${linhasPagina
+            .map(
+              (linha) => `
             <tr>
               <td class="cData">${escapeHtml(linha.data)}</td>
               <td>${escapeHtml(linha.relatorio)}</td>
             </tr>
-          `).join("")}
+          `
+            )
+            .join("")}
         </tbody>
       </table>
     </div>
   `;
 
   // ================== MONTAGEM DAS PÁGINAS ==================
-  const paginasHTML = paginasDeLinhas.map((linhasPagina, idx) => {
-    const paginaAtual = idx + 1;
-    const ehPrimeira = idx === 0;
+  const paginasHTML = paginasDeLinhas
+    .map((linhasPagina, idx) => {
+      const paginaAtual = idx + 1;
+      const ehPrimeira = idx === 0;
 
-    const cabecalho = ehPrimeira
-      ? cabecalhoCompletoHTML("Histórico", paginaAtual, totalPaginas)
-      : cabecalhoBasicoHTML("Histórico", paginaAtual, totalPaginas);
+      const cabecalho = ehPrimeira
+        ? cabecalhoCompletoHTML(TITULO_DOCUMENTO, paginaAtual, totalPaginas)
+        : cabecalhoBasicoHTML(TITULO_DOCUMENTO, paginaAtual, totalPaginas);
 
-    const resumo = ehPrimeira ? tabelaProdutosResumoHTML : "";
+      const resumo = ehPrimeira ? tabelaProdutosResumoHTML : "";
 
-    return `
-      ${!ehPrimeira ? `<div class="page-break"></div>` : ""}
-      <div class="page">
-        ${cabecalho}
-        ${resumo}
-        ${tabelaHistoricoHTML(linhasPagina)}
-      </div>
-    `;
-  }).join("");
+      return `
+        ${!ehPrimeira ? `<div class="page-break"></div>` : ""}
+        <div class="page">
+          ${cabecalho}
+          ${resumo}
+          ${tabelaHistoricoHTML(linhasPagina)}
+        </div>
+      `;
+    })
+    .join("");
 
   // ================== HTML FINAL ==================
   const htmlCompleto = `
     <html>
       <head>
         <meta charset="utf-8" />
-        <title>Histórico</title>
+        <title>${TITULO_DOCUMENTO}</title>
         <style>
-          @page { size: A4; margin: 10mm; }
+          @page {
+            size: A4;
+            margin: 10mm;
+            margin-bottom: 22mm;
+          }
 
           body {
             margin: 0;
             padding: 14px;
+            padding-bottom: 28mm;
             font-family: Arial, sans-serif;
             font-size: 12px;
             color: #111;
           }
 
-          .page { min-height: auto; }
+          .page {
+            min-height: auto;
+          }
 
           .page-break {
             page-break-before: always;
@@ -2904,7 +2919,9 @@ function gerarHistoricoDeProducaoParaImpressao() {
             min-height: 64px;
           }
 
-          .logoBox img { max-height: 52px; }
+          .logoBox img {
+            max-height: 52px;
+          }
 
           .opBox {
             width: 520px;
@@ -2981,8 +2998,13 @@ function gerarHistoricoDeProducaoParaImpressao() {
             white-space: nowrap;
           }
 
-          .v { min-width: 220px; }
-          .vSmall { min-width: 160px; }
+          .v {
+            min-width: 220px;
+          }
+
+          .vSmall {
+            min-width: 160px;
+          }
 
           .line2col {
             display: grid;
@@ -3041,7 +3063,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
           }
 
           .historicoTbl td {
-            height: 95px; /* altura das linhas do histórico */
+            height: 95px;
           }
 
           .bigTbl thead th,
@@ -3055,22 +3077,108 @@ function gerarHistoricoDeProducaoParaImpressao() {
             word-break: break-word;
           }
 
-          .cItem { text-align: center; visibility: hidden; }
-          .cQtd { text-align: center; }
-          .cData { text-align: center; white-space: nowrap; }
+          .cItem {
+            text-align: center;
+            font-weight: 700;
+          }
+
+          .cQtd {
+            text-align: center;
+          }
+
+          .cData {
+            text-align: center;
+            white-space: nowrap;
+          }
+
+          .rodape-fixo {
+            position: fixed;
+            left: 10mm;
+            right: 10mm;
+            bottom: 8mm;
+            height: 14mm;
+            border-top: 2px solid #111;
+            padding-top: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            background: #fff;
+            z-index: 9999;
+          }
+
+          .rodape-fixo .docNome {
+            font-weight: 900;
+            font-size: 12px;
+            letter-spacing: .5px;
+          }
+
+          .rodape-fixo .bigMeta {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            font-weight: 900;
+          }
+
+          .rodape-fixo .bigMeta .lbl {
+            font-size: 11px;
+            font-weight: 700;
+            color: #333;
+            margin-right: 4px;
+          }
+
+          .rodape-fixo .bigMeta .val {
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: .4px;
+          }
+
+          .rodape-fixo .sep {
+            width: 2px;
+            height: 18px;
+            background: #111;
+            opacity: .35;
+          }
 
           @media print {
-            body { padding: 14px; }
-            thead { display: table-header-group; }
-            tfoot { display: table-footer-group; }
-            tr, td, th {
+            body {
+              padding: 14px;
+              padding-bottom: 28mm;
+            }
+
+            thead {
+              display: table-header-group;
+            }
+
+            tfoot {
+              display: table-footer-group;
+            }
+
+            tr,
+            td,
+            th {
               page-break-inside: avoid;
               break-inside: avoid;
+            }
+
+            .rodape-fixo {
+              position: fixed;
             }
           }
         </style>
       </head>
       <body>
+
+        <div class="rodape-fixo">
+          <div class="docNome">${TITULO_DOCUMENTO}</div>
+          <div class="sep"></div>
+          <div class="bigMeta">
+            <div><span class="lbl">Nº do Pedido</span> <span class="val">${escapeHtml(numeroPedido)}</span></div>
+            <div class="sep"></div>
+            <div><span class="lbl">Data</span> <span class="val">${escapeHtml(data)}</span></div>
+          </div>
+        </div>
+
         ${paginasHTML}
 
         <script>
