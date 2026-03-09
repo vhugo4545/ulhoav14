@@ -2582,7 +2582,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
   const PADDING_HISTORICO_Y = 10;
   const PADDING_HISTORICO_X = 8;
 
-  const LINHAS_PAGINAS_HISTORICO = 7;
+  const LINHAS_PAGINAS_HISTORICO = 8; // ajuste solicitado
 
   // ================== DADOS DO CABEÇALHO ==================
   const numeroPedido = getValue("numeroOrcamento");
@@ -2705,20 +2705,8 @@ function gerarHistoricoDeProducaoParaImpressao() {
     }));
   };
 
-  const linhasMinimas = Math.max(LINHAS_PAGINAS_HISTORICO, produtosResumo.length * 6);
-  const linhasHistorico = criarLinhasVazias(linhasMinimas);
-
-  const paginasDeHistorico = [];
-  let cursor = 0;
-
-  while (cursor < linhasHistorico.length) {
-    paginasDeHistorico.push(
-      linhasHistorico.slice(cursor, cursor + LINHAS_PAGINAS_HISTORICO)
-    );
-    cursor += LINHAS_PAGINAS_HISTORICO;
-  }
-
-  const totalPaginas = 1 + paginasDeHistorico.length;
+  const linhasHistorico = criarLinhasVazias(LINHAS_PAGINAS_HISTORICO);
+  const totalPaginas = 2;
 
   // ================== CABEÇALHOS ==================
   const cabecalhoCompletoHTML = (titulo, paginaAtual, totalPaginas) => `
@@ -2850,7 +2838,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
     </div>
   `;
 
-  // ================== PÁGINA 1 (SEM HISTÓRICO) ==================
+  // ================== PÁGINA 1 ==================
   const pagina1HTML = `
     <div class="page">
       ${cabecalhoCompletoHTML(TITULO_DOCUMENTO, 1, totalPaginas)}
@@ -2858,19 +2846,14 @@ function gerarHistoricoDeProducaoParaImpressao() {
     </div>
   `;
 
-  // ================== PÁGINAS DO HISTÓRICO (A PARTIR DA 2) ==================
-  const paginasHistoricoHTML = paginasDeHistorico
-    .map((linhasPagina, idx) => {
-      const paginaAtual = idx + 2;
-      return `
-        <div class="page-break"></div>
-        <div class="page">
-          ${cabecalhoBasicoHTML(TITULO_DOCUMENTO, paginaAtual, totalPaginas)}
-          ${tabelaHistoricoHTML(linhasPagina)}
-        </div>
-      `;
-    })
-    .join("");
+  // ================== PÁGINA 2 ==================
+  const pagina2HTML = `
+    <div class="page-break"></div>
+    <div class="page">
+      ${cabecalhoBasicoHTML(TITULO_DOCUMENTO, 2, totalPaginas)}
+      ${tabelaHistoricoHTML(linhasHistorico)}
+    </div>
+  `;
 
   // ================== HTML FINAL ==================
   const htmlCompleto = `
@@ -3199,7 +3182,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
         </div>
 
         ${pagina1HTML}
-        ${paginasHistoricoHTML}
+        ${pagina2HTML}
 
         <script>
           window.onload = function () {
@@ -3220,6 +3203,15 @@ function gerarHistoricoDeProducaoParaImpressao() {
   printWindow.document.write(htmlCompleto);
   printWindow.document.close();
 }
+
+
+
+
+
+
+
+
+
 
 function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
