@@ -3070,6 +3070,14 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
     return (t || "-") + "&nbsp;".repeat(faltam);
   };
 
+  const escapeHtml = (txt) =>
+    String(txt || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
   // ================== DADOS CABEÇALHO ==================
   const numeroPedido = getValue("numeroOrcamento");
   const dataOrc = getValue("dataOrcamento");
@@ -3157,8 +3165,14 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   );
 
   const LINHAS_FATURAMENTO_DIRETO = 6;
-  const LINHAS_SERVICOS_TERCEIROS = Math.max(3, qtdLinhas);
+  const LINHAS_SERVICOS_TERCEIROS = 3;
   const TOTAL_PAGINAS = 2;
+
+  // ================== ALTURA DAS LINHAS ==================
+  const ALTURA_LINHA_ITENS = 45;
+  const ALTURA_LINHA_FATURAMENTO = 50;
+  const ALTURA_LINHA_SERVICOS = 50;
+  const ALTURA_LINHA_ETAPAS = 35;
 
   // ================== COLETA ITENS ==================
   const gruposDados = [];
@@ -3225,8 +3239,6 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   let contadorGrupo = 1;
   const itensHTML_ComQtd = gruposDados
     .map((g) => {
-      let contadorInsumo = 1;
-
       const linhasHTML = g.itens?.length
         ? g.itens.map((it) => `
             <tr>
@@ -3347,7 +3359,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const faturamentoDiretoHTML = `
     <div class="fullBox fullBox-tight">
       <div class="gridTitle">Faturamento Direto</div>
-      <table class="bigTbl">
+      <table class="bigTbl faturamentoTbl">
         <thead>
           <tr>
             <th style="width:44px;">Item</th>
@@ -3360,7 +3372,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           </tr>
         </thead>
         <tbody>
-          ${Array.from({ length: LINHAS_FATURAMENTO_DIRETO }).map((_, i) => `
+          ${Array.from({ length: LINHAS_FATURAMENTO_DIRETO }).map(() => `
             <tr>
               <td class="cItem"></td>
               <td class="cData"></td>
@@ -3379,7 +3391,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const servicosTerceirosHTML = `
     <div class="fullBox fullBox-tight">
       <div class="gridTitle">Serviço(s) de Terceiros</div>
-      <table class="bigTbl">
+      <table class="bigTbl servicosTbl">
         <thead>
           <tr>
             <th style="width:44px;">Item</th>
@@ -3395,7 +3407,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           </tr>
         </thead>
         <tbody>
-          ${Array.from({ length: LINHAS_SERVICOS_TERCEIROS }).map((_, i) => `
+          ${Array.from({ length: LINHAS_SERVICOS_TERCEIROS }).map(() => `
             <tr>
               <td class="cItem"></td>
               <td></td>
@@ -3451,17 +3463,17 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
                 <td class="etapas-cell">Assinado</td>
               </tr>
               <tr>
-                <td class="etapas-cell w-item center">1</td>
+                <td class="etapas-cell w-item center">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
               </tr>
               <tr>
-                <td class="etapas-cell w-item center">2</td>
+                <td class="etapas-cell w-item center">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
               </tr>
               <tr>
-                <td class="etapas-cell w-item center">3</td>
+                <td class="etapas-cell w-item center">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
               </tr>
@@ -3478,19 +3490,19 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
                 <td class="etapas-cell">Medidor</td>
               </tr>
               <tr>
-                <td class="etapas-cell w-item center">1</td>
+                <td class="etapas-cell w-item center">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
               </tr>
               <tr>
-                <td class="etapas-cell w-item center">2</td>
+                <td class="etapas-cell w-item center">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
               </tr>
               <tr>
-                <td class="etapas-cell w-item center">3</td>
+                <td class="etapas-cell w-item center">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
                 <td class="etapas-cell blank">&nbsp;</td>
@@ -3530,11 +3542,16 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
         <meta charset="utf-8" />
         <title>Folha 1 - Ordem de Serviço</title>
         <style>
-          @page { size: A4; margin: 10mm; }
+          @page {
+            size: A4;
+            margin: 10mm;
+            margin-bottom: 22mm;
+          }
 
           body {
             margin: 0;
             padding: 18px;
+            padding-bottom: 28mm;
             font-family: Arial, sans-serif;
             font-size: 12px;
             color: #111;
@@ -3718,6 +3735,10 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             padding: 5px 7px;
           }
 
+          .tbl tbody tr {
+            height: ${ALTURA_LINHA_ITENS}px;
+          }
+
           .tbl thead th {
             background: #f2f2f2;
             font-weight: 900;
@@ -3772,6 +3793,14 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             padding: 7px 5px;
             line-height: 1.35;
             vertical-align: top;
+          }
+
+          .faturamentoTbl tbody tr {
+            height: ${ALTURA_LINHA_FATURAMENTO}px;
+          }
+
+          .servicosTbl tbody tr {
+            height: ${ALTURA_LINHA_SERVICOS}px;
           }
 
           .bigTbl thead th {
@@ -3851,7 +3880,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             vertical-align: middle;
           }
 
-          .etapas-cell.blank { height: 22px; }
+          .etapas-cell.blank { height: ${ALTURA_LINHA_ETAPAS}px; }
           .etapas-cell.w-item { width: 52px; }
 
           .etapas-obs {
@@ -3865,9 +3894,59 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             border-top: 1px solid #000;
           }
 
+          .rodape-fixo {
+            position: fixed;
+            left: 10mm;
+            right: 10mm;
+            bottom: 8mm;
+            height: 14mm;
+            border-top: 2px solid #111;
+            padding-top: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            background: #fff;
+            z-index: 9999;
+          }
+
+          .rodape-fixo .docNome {
+            font-weight: 900;
+            font-size: 12px;
+            letter-spacing: .5px;
+          }
+
+          .rodape-fixo .bigMeta {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            font-weight: 900;
+          }
+
+          .rodape-fixo .bigMeta .lbl {
+            font-size: 11px;
+            font-weight: 700;
+            color: #333;
+            margin-right: 4px;
+          }
+
+          .rodape-fixo .bigMeta .val {
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: .4px;
+          }
+
+          .rodape-fixo .sep {
+            width: 2px;
+            height: 18px;
+            background: #111;
+            opacity: .35;
+          }
+
           @media print {
             body {
               padding: 18px;
+              padding-bottom: 28mm;
             }
 
             .pagina,
@@ -3877,10 +3956,25 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
               page-break-inside: avoid;
               break-inside: avoid;
             }
+
+            .rodape-fixo {
+              position: fixed;
+            }
           }
         </style>
       </head>
       <body>
+
+        <div class="rodape-fixo">
+          <div class="docNome">ORDEM DE SERVIÇO / PRODUÇÃO</div>
+          <div class="sep"></div>
+          <div class="bigMeta">
+            <div><span class="lbl">Nº do Pedido</span> <span class="val">${escapeHtml(numeroPedido)}</span></div>
+            <div class="sep"></div>
+            <div><span class="lbl">Data</span> <span class="val">${escapeHtml(data)}</span></div>
+          </div>
+        </div>
+
         ${pagina1HTML}
         ${pagina2HTML}
 
