@@ -3033,7 +3033,6 @@ function gerarHistoricoDeProducaoParaImpressao() {
   printWindow.document.close();
 }
 
-
 function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
@@ -3159,11 +3158,6 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const prazosHTML = prazosRaw !== "-" ? multilineToBR(prazosRaw) : "-";
 
   // ================== CONFIG ==================
-  const qtdLinhas = Math.max(
-    1,
-    document.querySelectorAll("table[id^='tabela-bloco-']").length
-  );
-
   const LINHAS_FATURAMENTO_DIRETO = 6;
   const LINHAS_SERVICOS_TERCEIROS = 3;
   const TOTAL_PAGINAS = 2;
@@ -3240,17 +3234,21 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const itensHTML_ComQtd = gruposDados
     .map((g) => {
       const linhasHTML = g.itens?.length
-        ? g.itens.map((it) => `
+        ? g.itens
+            .map(
+              (it) => `
             <tr>
               <td class="num"></td>
               <td>${it.utilizacao || "-"}</td>
               <td>${it.descricao}</td>
               <td class="qtd">${it.qtd}</td>
             </tr>
-          `).join("")
+          `
+            )
+            .join("")
         : `
           <tr>
-            <td class="num">1</td>
+            <td class="num"></td>
             <td>-</td>
             <td>-</td>
             <td class="qtd">-</td>
@@ -3258,7 +3256,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
         `;
 
       const resumoHTML = g.resumoGrupo
-        ? `<div class="obs"><strong>Observações:</strong><br>${g.resumoGrupo}</div>`
+        ? `<div class="obs"><strong>Descrição de Produtos:</strong><br>${g.resumoGrupo}</div>`
         : "";
 
       return `
@@ -3355,77 +3353,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
     <div class="pageIndicator pageIndicator-basico">ORDEM DE SERVIÇO ${paginaAtual}/${totalPaginas}</div>
   `;
 
-  // ================== BLOCOS DA PÁGINA 2 ==================
-  const faturamentoDiretoHTML = `
-    <div class="fullBox fullBox-tight">
-      <div class="gridTitle">Faturamento Direto</div>
-      <table class="bigTbl faturamentoTbl">
-        <thead>
-          <tr>
-            <th style="width:44px;">Item</th>
-            <th style="width:110px;">Data Compra</th>
-            <th>Fornecedor</th>
-            <th style="width:110px;">Previsto</th>
-            <th style="width:110px;">Tipo</th>
-            <th style="width:90px;">Quant.</th>
-            <th style="width:120px;">Na Empresa</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${Array.from({ length: LINHAS_FATURAMENTO_DIRETO }).map(() => `
-            <tr>
-              <td class="cItem"></td>
-              <td class="cData"></td>
-              <td></td>
-              <td class="cData"></td>
-              <td></td>
-              <td class="cQtd"></td>
-              <td></td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-
-  const servicosTerceirosHTML = `
-    <div class="fullBox fullBox-tight">
-      <div class="gridTitle">Serviço(s) de Terceiros</div>
-      <table class="bigTbl servicosTbl">
-        <thead>
-          <tr>
-            <th style="width:44px;">Item</th>
-            <th>Fornecedor</th>
-            <th>Nome do Contato</th>
-            <th style="width:120px;">Telefone do Contato</th>
-            <th style="width:100px;">Data Saída</th>
-            <th style="width:100px;">Previsão</th>
-            <th style="width:110px;">Data Retorno</th>
-            <th style="width:140px;">Retorno Conferido por</th>
-            <th style="width:120px;">Assinatura Interno</th>
-            <th style="width:120px;">Assinatura Terceiro</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${Array.from({ length: LINHAS_SERVICOS_TERCEIROS }).map(() => `
-            <tr>
-              <td class="cItem"></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td class="cData"></td>
-              <td class="cData"></td>
-              <td class="cData"></td>
-              <td class="cResp">&nbsp;</td>
-              <td></td>
-              <td></td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-
+  // ================== ETAPAS DO PROCESSO ==================
   const etapasDoProcessoHTML = `
     <div class="etapas-box vv-etapas">
       <div class="etapas-title">Etapas do Processo</div>
@@ -3517,10 +3445,90 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
     </div>
   `;
 
+  // ================== BLOCOS DA PÁGINA 2 ==================
+  const faturamentoDiretoHTML = `
+    <div class="fullBox fullBox-tight">
+      <div class="gridTitle">Faturamento Direto</div>
+      <table class="bigTbl faturamentoTbl">
+        <thead>
+          <tr>
+            <th style="width:44px;">Item</th>
+            <th style="width:110px;">Data Compra</th>
+            <th>Fornecedor</th>
+            <th style="width:110px;">Previsto</th>
+            <th style="width:110px;">Tipo</th>
+            <th style="width:90px;">Quant.</th>
+            <th style="width:120px;">Na Empresa</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array.from({ length: LINHAS_FATURAMENTO_DIRETO })
+            .map(
+              () => `
+            <tr>
+              <td class="cItem"></td>
+              <td class="cData"></td>
+              <td></td>
+              <td class="cData"></td>
+              <td></td>
+              <td class="cQtd"></td>
+              <td></td>
+            </tr>
+          `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const servicosTerceirosHTML = `
+    <div class="fullBox fullBox-tight">
+      <div class="gridTitle">Serviço(s) de Terceiros</div>
+      <table class="bigTbl servicosTbl">
+        <thead>
+          <tr>
+            <th style="width:44px;">Item</th>
+            <th>Fornecedor</th>
+            <th>Nome do Contato</th>
+            <th style="width:120px;">Telefone do Contato</th>
+            <th style="width:100px;">Data Saída</th>
+            <th style="width:100px;">Previsão</th>
+            <th style="width:110px;">Data Retorno</th>
+            <th style="width:140px;">Retorno Conferido por</th>
+            <th style="width:120px;">Assinatura Interno</th>
+            <th style="width:120px;">Assinatura Terceiro</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array.from({ length: LINHAS_SERVICOS_TERCEIROS })
+            .map(
+              () => `
+            <tr>
+              <td class="cItem"></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td class="cData"></td>
+              <td class="cData"></td>
+              <td class="cData"></td>
+              <td class="cResp">&nbsp;</td>
+              <td></td>
+              <td></td>
+            </tr>
+          `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+
   // ================== PÁGINAS ==================
   const pagina1HTML = `
     <div class="pagina">
       ${cabecalhoCompletoHTML("ORDEM DE SERVIÇO / PRODUÇÃO", 1, TOTAL_PAGINAS)}
+      ${etapasDoProcessoHTML}
       ${itensHTML_ComQtd || `<div class="item" style="padding:10px;"><strong>Nenhum item encontrado para impressão.</strong></div>`}
     </div>
   `;
@@ -3531,7 +3539,6 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
       ${cabecalhoBasicoHTML("ORDEM DE SERVIÇO / PRODUÇÃO", 2, TOTAL_PAGINAS)}
       ${faturamentoDiretoHTML}
       ${servicosTerceirosHTML}
-      ${etapasDoProcessoHTML}
     </div>
   `;
 
@@ -3587,7 +3594,9 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             min-height: 56px;
           }
 
-          .logoBox img { max-height: 46px; }
+          .logoBox img {
+            max-height: 46px;
+          }
 
           .opBox {
             width: 520px;
@@ -3668,8 +3677,13 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             white-space: nowrap;
           }
 
-          .v { min-width: 220px; }
-          .vSmall { min-width: 160px; }
+          .v {
+            min-width: 220px;
+          }
+
+          .vSmall {
+            min-width: 160px;
+          }
 
           .line2col {
             display: grid;
@@ -3826,7 +3840,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           }
 
           .vv-etapas {
-            margin-top: 6px;
+            margin-top: 10px;
             page-break-inside: avoid;
             break-inside: avoid;
           }
@@ -3880,8 +3894,17 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             vertical-align: middle;
           }
 
-          .etapas-cell.blank { height: ${ALTURA_LINHA_ETAPAS}px; }
-          .etapas-cell.w-item { width: 52px; }
+          .etapas-cell.blank {
+            height: ${ALTURA_LINHA_ETAPAS}px;
+          }
+
+          .etapas-cell.w-item {
+            width: 52px;
+          }
+
+          .center {
+            text-align: center;
+          }
 
           .etapas-obs {
             border-top: 1px solid #000;
@@ -3913,7 +3936,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           .rodape-fixo .docNome {
             font-weight: 900;
             font-size: 12px;
-            letter-spacing: .5px;
+            letter-spacing: 0.5px;
           }
 
           .rodape-fixo .bigMeta {
@@ -3933,14 +3956,14 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           .rodape-fixo .bigMeta .val {
             font-size: 20px;
             font-weight: 900;
-            letter-spacing: .4px;
+            letter-spacing: 0.4px;
           }
 
           .rodape-fixo .sep {
             width: 2px;
             height: 18px;
             background: #111;
-            opacity: .35;
+            opacity: 0.35;
           }
 
           @media print {
