@@ -2519,7 +2519,6 @@ function gerarFolha4RelatorioEntrega() {
 
 
 
-
 function gerarHistoricoDeProducaoParaImpressao() {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
@@ -2564,9 +2563,28 @@ function gerarHistoricoDeProducaoParaImpressao() {
     return escapeHtml(t).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
   };
 
-  // ================== DADOS DO CABEÇALHO ==================
+  // ================== CONFIG VISUAL ==================
   const TITULO_DOCUMENTO = "RELATÓRIO DE ENTREGA / INSTALAÇÃO";
 
+  const FONT_SIZE_BASE = 12;
+  const FONT_SIZE_TABELA = 10.5;
+  const FONT_SIZE_HEADER = 10.5;
+  const FONT_SIZE_TITULO = 14;
+  const FONT_SIZE_RODAPE_LABEL = 11;
+  const FONT_SIZE_RODAPE_VALOR = 20;
+  const FONT_SIZE_NUMERO_PEDIDO = 80;
+
+  const ALTURA_LINHA_RESUMO = 45;
+  const ALTURA_LINHA_HISTORICO = 95;
+
+  const PADDING_TABELA_Y = 5;
+  const PADDING_TABELA_X = 7;
+  const PADDING_HISTORICO_Y = 10;
+  const PADDING_HISTORICO_X = 8;
+
+  const LINHAS_PAGINAS_HISTORICO = 7;
+
+  // ================== DADOS DO CABEÇALHO ==================
   const numeroPedido = getValue("numeroOrcamento");
   const dataOrc = getValue("dataOrcamento");
   const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
@@ -2602,9 +2620,6 @@ function gerarHistoricoDeProducaoParaImpressao() {
       email: getTextOrValue(row.querySelector(".emailCliente")),
     }))
     .filter((c) => c.nomeCliente || c.nomeContato || c.telefone || c.cpfCnpj || c.email || c.funcao);
-
-  const principal = clientes[0] || {};
-  const cpfCnpj = principal.cpfCnpj || "-";
 
   const contatosHTML = clientes.length
     ? clientes
@@ -2682,9 +2697,28 @@ function gerarHistoricoDeProducaoParaImpressao() {
     };
   });
 
-  // ================== CONFIGURAÇÃO DE LINHAS POR PÁGINA ==================
-  const LINHAS_PAGINA_1 = 7;
-  const LINHAS_PAGINAS_RESTANTES = 13;
+  // ================== HISTÓRICO ==================
+  const criarLinhasVazias = (quantidade) => {
+    return Array.from({ length: quantidade }).map(() => ({
+      data: "",
+      relatorio: ""
+    }));
+  };
+
+  const linhasMinimas = Math.max(LINHAS_PAGINAS_HISTORICO, produtosResumo.length * 6);
+  const linhasHistorico = criarLinhasVazias(linhasMinimas);
+
+  const paginasDeHistorico = [];
+  let cursor = 0;
+
+  while (cursor < linhasHistorico.length) {
+    paginasDeHistorico.push(
+      linhasHistorico.slice(cursor, cursor + LINHAS_PAGINAS_HISTORICO)
+    );
+    cursor += LINHAS_PAGINAS_HISTORICO;
+  }
+
+  const totalPaginas = 1 + paginasDeHistorico.length;
 
   // ================== CABEÇALHOS ==================
   const cabecalhoCompletoHTML = (titulo, paginaAtual, totalPaginas) => `
@@ -2711,14 +2745,12 @@ function gerarHistoricoDeProducaoParaImpressao() {
       <tr>
         <td class="k">Nome / Razão social:</td>
         <td class="v">${padVisual(nomeClienteResponsavel, 30)}</td>
-        <td class="k">CPF / CNPJ:</td>
-        <td class="vSmall">${padVisual(cpfCnpj, 18)}</td>
         <td class="k">Origem:</td>
         <td class="vSmall">${padVisual(origem, 18)}</td>
       </tr>
       <tr>
         <td class="k">Endereço da obra:</td>
-        <td colspan="5">${enderecoObra}</td>
+        <td colspan="3">${enderecoObra}</td>
       </tr>
       ${contatosHTML}
     </table>
@@ -2752,7 +2784,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
 
   // ================== RESUMO PRODUTOS (SÓ PÁGINA 1) ==================
   const tabelaProdutosResumoHTML = `
-    <div class="fullBox" style="margin-top: 12px;">
+    <div class="fullBox" style="margin-top: 10px;">
       <div class="gridTitle">Resumo dos Produtos</div>
       <table class="bigTbl resumoProdutosTbl">
         <thead>
@@ -2792,36 +2824,6 @@ function gerarHistoricoDeProducaoParaImpressao() {
     </div>
   `;
 
-  // ================== HISTÓRICO ==================
-  const criarLinhasVazias = (quantidade) => {
-    return Array.from({ length: quantidade }).map(() => ({
-      data: "",
-      relatorio: ""
-    }));
-  };
-
-  const linhasMinimas = Math.max(
-    LINHAS_PAGINA_1 + LINHAS_PAGINAS_RESTANTES,
-    produtosResumo.length * 6
-  );
-
-  const linhasHistorico = criarLinhasVazias(linhasMinimas);
-
-  const paginasDeLinhas = [];
-  let cursor = 0;
-
-  paginasDeLinhas.push(linhasHistorico.slice(cursor, cursor + LINHAS_PAGINA_1));
-  cursor += LINHAS_PAGINA_1;
-
-  while (cursor < linhasHistorico.length) {
-    paginasDeLinhas.push(
-      linhasHistorico.slice(cursor, cursor + LINHAS_PAGINAS_RESTANTES)
-    );
-    cursor += LINHAS_PAGINAS_RESTANTES;
-  }
-
-  const totalPaginas = paginasDeLinhas.length;
-
   const tabelaHistoricoHTML = (linhasPagina) => `
     <div class="historicoBox">
       <div class="gridTitle">HISTÓRICO</div>
@@ -2848,23 +2850,22 @@ function gerarHistoricoDeProducaoParaImpressao() {
     </div>
   `;
 
-  // ================== MONTAGEM DAS PÁGINAS ==================
-  const paginasHTML = paginasDeLinhas
+  // ================== PÁGINA 1 (SEM HISTÓRICO) ==================
+  const pagina1HTML = `
+    <div class="page">
+      ${cabecalhoCompletoHTML(TITULO_DOCUMENTO, 1, totalPaginas)}
+      ${tabelaProdutosResumoHTML}
+    </div>
+  `;
+
+  // ================== PÁGINAS DO HISTÓRICO (A PARTIR DA 2) ==================
+  const paginasHistoricoHTML = paginasDeHistorico
     .map((linhasPagina, idx) => {
-      const paginaAtual = idx + 1;
-      const ehPrimeira = idx === 0;
-
-      const cabecalho = ehPrimeira
-        ? cabecalhoCompletoHTML(TITULO_DOCUMENTO, paginaAtual, totalPaginas)
-        : cabecalhoBasicoHTML(TITULO_DOCUMENTO, paginaAtual, totalPaginas);
-
-      const resumo = ehPrimeira ? tabelaProdutosResumoHTML : "";
-
+      const paginaAtual = idx + 2;
       return `
-        ${!ehPrimeira ? `<div class="page-break"></div>` : ""}
+        <div class="page-break"></div>
         <div class="page">
-          ${cabecalho}
-          ${resumo}
+          ${cabecalhoBasicoHTML(TITULO_DOCUMENTO, paginaAtual, totalPaginas)}
           ${tabelaHistoricoHTML(linhasPagina)}
         </div>
       `;
@@ -2886,10 +2887,10 @@ function gerarHistoricoDeProducaoParaImpressao() {
 
           body {
             margin: 0;
-            padding: 14px;
+            padding: 18px;
             padding-bottom: 28mm;
             font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-size: ${FONT_SIZE_BASE}px;
             color: #111;
           }
 
@@ -2906,21 +2907,21 @@ function gerarHistoricoDeProducaoParaImpressao() {
             display: flex;
             align-items: stretch;
             gap: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
           }
 
           .logoBox {
             flex: 1;
             border: 2px solid #111;
-            padding: 10px;
+            padding: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 64px;
+            min-height: 56px;
           }
 
           .logoBox img {
-            max-height: 52px;
+            max-height: 46px;
           }
 
           .opBox {
@@ -2931,9 +2932,9 @@ function gerarHistoricoDeProducaoParaImpressao() {
 
           .opTitle {
             font-weight: 900;
-            font-size: 14px;
+            font-size: ${FONT_SIZE_TITULO}px;
             text-align: center;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
           }
 
           .opRow {
@@ -2946,14 +2947,14 @@ function gerarHistoricoDeProducaoParaImpressao() {
 
           .metaRight {
             text-align: right;
-            line-height: 1.25;
+            line-height: 1.2;
           }
 
           .numeroPedidoGigante {
-            font-size: 40px;
+            font-size: ${FONT_SIZE_NUMERO_PEDIDO}px;
             font-weight: 900;
-            margin: 4px 0 0;
-            line-height: 1;
+            margin: 2px 0 0;
+            line-height: 0.95;
             letter-spacing: 1px;
           }
 
@@ -2972,8 +2973,8 @@ function gerarHistoricoDeProducaoParaImpressao() {
           }
 
           .pageIndicator {
-            margin: 6px 0 10px;
-            padding: 6px 8px;
+            margin: 4px 0 8px;
+            padding: 5px 8px;
             border: 1px solid #111;
             font-weight: 700;
             text-align: center;
@@ -2983,12 +2984,12 @@ function gerarHistoricoDeProducaoParaImpressao() {
           .tblInfo {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
           }
 
           .tblInfo td {
             border: 1px solid #111;
-            padding: 6px 8px;
+            padding: ${PADDING_TABELA_Y}px ${PADDING_TABELA_X}px;
             vertical-align: top;
           }
 
@@ -3009,13 +3010,13 @@ function gerarHistoricoDeProducaoParaImpressao() {
           .line2col {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin: 8px 0 12px;
+            gap: 6px;
+            margin: 6px 0;
           }
 
           .miniBox {
             border: 1px solid #111;
-            padding: 8px;
+            padding: 6px 8px;
             font-weight: 700;
           }
 
@@ -3028,7 +3029,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
           .gridTitle {
             font-weight: 900;
             text-align: center;
-            padding: 6px;
+            padding: 5px;
             border-bottom: 1px solid #111;
             background: #f2f2f2;
           }
@@ -3041,11 +3042,11 @@ function gerarHistoricoDeProducaoParaImpressao() {
           }
 
           .bigTbl {
-            font-size: 10.5px;
+            font-size: ${FONT_SIZE_TABELA}px;
           }
 
           .historicoTbl {
-            font-size: 11px;
+            font-size: ${FONT_SIZE_TABELA}px;
           }
 
           .bigTbl th,
@@ -3053,37 +3054,55 @@ function gerarHistoricoDeProducaoParaImpressao() {
           .historicoTbl th,
           .historicoTbl td {
             border: 1px solid #111;
-            padding: 10px 8px;
-            vertical-align: top;
             box-sizing: border-box;
           }
 
+          .bigTbl th,
           .bigTbl td {
-            height: 90px;
+            padding: ${PADDING_TABELA_Y}px ${PADDING_TABELA_X}px;
+          }
+
+          .historicoTbl th,
+          .historicoTbl td {
+            padding: ${PADDING_HISTORICO_Y}px ${PADDING_HISTORICO_X}px;
+          }
+
+          .bigTbl tbody tr {
+            height: ${ALTURA_LINHA_RESUMO}px;
+          }
+
+          .bigTbl td {
+            height: ${ALTURA_LINHA_RESUMO}px;
+            vertical-align: middle;
           }
 
           .historicoTbl td {
-            height: 95px;
+            height: ${ALTURA_LINHA_HISTORICO}px;
+            vertical-align: top;
           }
 
           .bigTbl thead th,
           .historicoTbl thead th {
             background: #fafafa;
             font-weight: 900;
+            font-size: ${FONT_SIZE_HEADER}px;
           }
 
           .resumoProdutosTbl .descCell {
             white-space: normal;
             word-break: break-word;
+            vertical-align: middle;
           }
 
           .cItem {
             text-align: center;
+            vertical-align: middle !important;
             font-weight: 700;
           }
 
           .cQtd {
             text-align: center;
+            vertical-align: middle !important;
           }
 
           .cData {
@@ -3121,14 +3140,14 @@ function gerarHistoricoDeProducaoParaImpressao() {
           }
 
           .rodape-fixo .bigMeta .lbl {
-            font-size: 11px;
+            font-size: ${FONT_SIZE_RODAPE_LABEL}px;
             font-weight: 700;
             color: #333;
             margin-right: 4px;
           }
 
           .rodape-fixo .bigMeta .val {
-            font-size: 20px;
+            font-size: ${FONT_SIZE_RODAPE_VALOR}px;
             font-weight: 900;
             letter-spacing: .4px;
           }
@@ -3142,7 +3161,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
 
           @media print {
             body {
-              padding: 14px;
+              padding: 18px;
               padding-bottom: 28mm;
             }
 
@@ -3179,7 +3198,8 @@ function gerarHistoricoDeProducaoParaImpressao() {
           </div>
         </div>
 
-        ${paginasHTML}
+        ${pagina1HTML}
+        ${paginasHistoricoHTML}
 
         <script>
           window.onload = function () {
@@ -3200,7 +3220,6 @@ function gerarHistoricoDeProducaoParaImpressao() {
   printWindow.document.write(htmlCompleto);
   printWindow.document.close();
 }
-
 
 function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
