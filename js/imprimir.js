@@ -1850,11 +1850,11 @@ function gerarFolha4RelatorioEntrega() {
   const FONT_SIZE_TITULO_DOC = 14;
   const FONT_SIZE_NUMERO_PEDIDO = 80;
 
-  const ALTURA_LINHA_RESUMO = 78;
-  const ALTURA_LINHA_PROCESSO = 26; // linha tipo "caderno"
-  const QTD_LINHAS_PROCESSO = 5;
+  const ALTURA_LINHA_RESUMO = 39; // metade do valor anterior
+  const ALTURA_LINHA_PROCESSO = 26;
+  const QTD_LINHAS_PROCESSO = 4;
 
-  const PADDING_CELULA_RESUMO_Y = 8;
+  const PADDING_CELULA_RESUMO_Y = 4;
   const PADDING_CELULA_RESUMO_X = 8;
 
   const PADDING_CELULA_PROCESSO_Y = 4;
@@ -1866,6 +1866,9 @@ function gerarFolha4RelatorioEntrega() {
 
   const LARGURA_COL_ITEM = 42;
   const LARGURA_COL_DATA = 82;
+  const LARGURA_COL_ITEM_RESUMO = 70;
+  const LARGURA_COL_PRODUTO = 220;
+  const LARGURA_COL_QTD = 90;
 
   // ================== DADOS DO CABEÇALHO ==================
   const numeroPedido = getValue("numeroOrcamento");
@@ -2051,8 +2054,9 @@ function gerarFolha4RelatorioEntrega() {
       <table class="bigTbl resumoProdutosTbl">
         <thead>
           <tr>
-            <th style="width:220px;">Produto</th>
-            <th style="width:90px;">Quantidade</th>
+            <th style="width:${LARGURA_COL_ITEM_RESUMO}px;">Item</th>
+            <th style="width:${LARGURA_COL_PRODUTO}px;">Produto</th>
+            <th style="width:${LARGURA_COL_QTD}px;">Quantidade</th>
             <th>Descrição</th>
           </tr>
         </thead>
@@ -2063,6 +2067,7 @@ function gerarFolha4RelatorioEntrega() {
                   .map(
                     (item) => `
                   <tr>
+                    <td class="cItem">&nbsp;</td>
                     <td>${escapeHtml(item.titulo)}</td>
                     <td class="cQtd">${escapeHtml(item.quantidade)}</td>
                     <td class="descCell">${multilineToBR(item.descricao)}</td>
@@ -2072,9 +2077,10 @@ function gerarFolha4RelatorioEntrega() {
                   .join("")
               : `
                 <tr>
+                  <td class="cItem">&nbsp;</td>
                   <td>-</td>
                   <td class="cQtd">-</td>
-                  <td>-</td>
+                  <td class="descCell">-</td>
                 </tr>
               `
           }
@@ -2166,8 +2172,14 @@ function gerarFolha4RelatorioEntrega() {
             color: #111;
           }
 
-          .page { min-height: auto; }
-          .page-break { page-break-before: always; break-before: page; }
+          .page {
+            min-height: auto;
+          }
+
+          .page-break {
+            page-break-before: always;
+            break-before: page;
+          }
 
           .topbar {
             display: flex;
@@ -2186,7 +2198,9 @@ function gerarFolha4RelatorioEntrega() {
             min-height: 56px;
           }
 
-          .logoBox img { max-height: 46px; }
+          .logoBox img {
+            max-height: 46px;
+          }
 
           .opBox {
             width: 520px;
@@ -2222,10 +2236,19 @@ function gerarFolha4RelatorioEntrega() {
             letter-spacing: 1px;
           }
 
-          .numeroPedidoGigante span { font-weight: 900; }
+          .numeroPedidoGigante span {
+            font-weight: 900;
+          }
 
-          .muted { color: #111; font-weight: 900; }
-          .muted-meta { color: #333; font-weight: 400; }
+          .muted {
+            color: #111;
+            font-weight: 900;
+          }
+
+          .muted-meta {
+            color: #333;
+            font-weight: 400;
+          }
 
           .pageIndicator {
             margin: 2px 0 8px;
@@ -2249,9 +2272,19 @@ function gerarFolha4RelatorioEntrega() {
             font-size: ${FONT_SIZE_BASE}px;
           }
 
-          .k { width: 160px; font-weight: 700; white-space: nowrap; }
-          .v { min-width: 220px; }
-          .vSmall { min-width: 160px; }
+          .k {
+            width: 160px;
+            font-weight: 700;
+            white-space: nowrap;
+          }
+
+          .v {
+            min-width: 220px;
+          }
+
+          .vSmall {
+            min-width: 160px;
+          }
 
           .line2col {
             display: grid;
@@ -2303,8 +2336,7 @@ function gerarFolha4RelatorioEntrega() {
           .bigTbl td {
             border: 1px solid #111;
             padding: ${PADDING_CELULA_RESUMO_Y}px ${PADDING_CELULA_RESUMO_X}px;
-            line-height: 1.25;
-            vertical-align: top;
+            line-height: 1.15;
             box-sizing: border-box;
           }
 
@@ -2324,22 +2356,34 @@ function gerarFolha4RelatorioEntrega() {
             font-size: ${FONT_SIZE_HEADER_TABELA}px;
           }
 
+          .resumoProdutosTbl th,
+          .resumoProdutosTbl td {
+            vertical-align: middle;
+          }
+
+          .resumoProdutosTbl tbody tr {
+            height: ${ALTURA_LINHA_RESUMO}px;
+          }
+
           .resumoProdutosTbl td {
             height: ${ALTURA_LINHA_RESUMO}px;
           }
 
-          .gridTbl tbody tr {
-            height: ${ALTURA_LINHA_PROCESSO}px;
+          .resumoProdutosTbl .cItem,
+          .resumoProdutosTbl .cQtd {
+            text-align: center;
+            vertical-align: middle;
+            font-weight: 700;
           }
 
-          .descCell {
+          .resumoProdutosTbl .descCell {
+            vertical-align: middle;
             white-space: normal;
             word-break: break-word;
           }
 
-          .cQtd {
-            text-align: center;
-            font-weight: 700;
+          .gridTbl tbody tr {
+            height: ${ALTURA_LINHA_PROCESSO}px;
           }
 
           .cItemEtapa,
@@ -2414,8 +2458,17 @@ function gerarFolha4RelatorioEntrega() {
               padding-bottom: 12mm;
             }
 
-            table { page-break-inside: avoid; break-inside: avoid; }
-            tr, td, th { page-break-inside: avoid; break-inside: avoid; }
+            table {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+
+            tr,
+            td,
+            th {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
 
             .fullBox,
             .procBox,
@@ -2427,15 +2480,6 @@ function gerarFolha4RelatorioEntrega() {
             .rodape-fixo {
               position: fixed;
             }
-              .resumoProdutosTbl td,
-.resumoProdutosTbl th {
-  vertical-align: middle;
-}
-
-.resumoProdutosTbl .descCell,
-.resumoProdutosTbl .cQtd {
-  vertical-align: middle;
-}
           }
         </style>
       </head>
@@ -2473,7 +2517,6 @@ function gerarFolha4RelatorioEntrega() {
   printWindow.document.write(htmlCompleto);
   printWindow.document.close();
 }
-
 
 
 
@@ -3050,6 +3093,7 @@ function gerarHistoricoDeProducaoParaImpressao() {
   printWindow.document.close();
 }
 
+
 function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
@@ -3175,6 +3219,11 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const prazosHTML = prazosRaw !== "-" ? multilineToBR(prazosRaw) : "-";
 
   // ================== CONFIG ==================
+  const qtdLinhas = Math.max(
+    1,
+    document.querySelectorAll("table[id^='tabela-bloco-']").length
+  );
+
   const LINHAS_FATURAMENTO_DIRETO = 6;
   const LINHAS_SERVICOS_TERCEIROS = 3;
   const TOTAL_PAGINAS = 2;
@@ -3251,21 +3300,17 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const itensHTML_ComQtd = gruposDados
     .map((g) => {
       const linhasHTML = g.itens?.length
-        ? g.itens
-            .map(
-              (it) => `
+        ? g.itens.map((it) => `
             <tr>
               <td class="num"></td>
               <td>${it.utilizacao || "-"}</td>
               <td>${it.descricao}</td>
               <td class="qtd">${it.qtd}</td>
             </tr>
-          `
-            )
-            .join("")
+          `).join("")
         : `
           <tr>
-            <td class="num"></td>
+            <td class="num">1</td>
             <td>-</td>
             <td>-</td>
             <td class="qtd">-</td>
@@ -3273,7 +3318,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
         `;
 
       const resumoHTML = g.resumoGrupo
-        ? `<div class="obs"><strong>Descrição de Produtos:</strong><br>${g.resumoGrupo}</div>`
+        ? `<div class="obs"><strong>Observações:</strong><br>${g.resumoGrupo}</div>`
         : "";
 
       return `
@@ -3370,7 +3415,77 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
     <div class="pageIndicator pageIndicator-basico">ORDEM DE SERVIÇO ${paginaAtual}/${totalPaginas}</div>
   `;
 
-  // ================== ETAPAS DO PROCESSO ==================
+  // ================== BLOCOS DA PÁGINA 2 ==================
+  const faturamentoDiretoHTML = `
+    <div class="fullBox fullBox-tight">
+      <div class="gridTitle">Faturamento Direto</div>
+      <table class="bigTbl faturamentoTbl">
+        <thead>
+          <tr>
+            <th style="width:44px;">Item</th>
+            <th style="width:110px;">Data Compra</th>
+            <th>Fornecedor</th>
+            <th style="width:110px;">Previsto</th>
+            <th style="width:110px;">Tipo</th>
+            <th style="width:90px;">Quant.</th>
+            <th style="width:120px;">Na Empresa</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array.from({ length: LINHAS_FATURAMENTO_DIRETO }).map(() => `
+            <tr>
+              <td class="cItem"></td>
+              <td class="cData"></td>
+              <td></td>
+              <td class="cData"></td>
+              <td></td>
+              <td class="cQtd"></td>
+              <td></td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const servicosTerceirosHTML = `
+    <div class="fullBox fullBox-tight">
+      <div class="gridTitle">Serviço(s) de Terceiros</div>
+      <table class="bigTbl servicosTbl">
+        <thead>
+          <tr>
+            <th style="width:44px;">Item</th>
+            <th>Fornecedor</th>
+            <th>Nome do Contato</th>
+            <th style="width:120px;">Telefone do Contato</th>
+            <th style="width:100px;">Data Saída</th>
+            <th style="width:100px;">Previsão</th>
+            <th style="width:110px;">Data Retorno</th>
+            <th style="width:140px;">Retorno Conferido por</th>
+            <th style="width:120px;">Assinatura Interno</th>
+            <th style="width:120px;">Assinatura Terceiro</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array.from({ length: LINHAS_SERVICOS_TERCEIROS }).map(() => `
+            <tr>
+              <td class="cItem"></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td class="cData"></td>
+              <td class="cData"></td>
+              <td class="cData"></td>
+              <td class="cResp">&nbsp;</td>
+              <td></td>
+              <td></td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+
   const etapasDoProcessoHTML = `
     <div class="etapas-box vv-etapas">
       <div class="etapas-title">Etapas do Processo</div>
@@ -3462,90 +3577,10 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
     </div>
   `;
 
-  // ================== BLOCOS DA PÁGINA 2 ==================
-  const faturamentoDiretoHTML = `
-    <div class="fullBox fullBox-tight">
-      <div class="gridTitle">Faturamento Direto</div>
-      <table class="bigTbl faturamentoTbl">
-        <thead>
-          <tr>
-            <th style="width:44px;">Item</th>
-            <th style="width:110px;">Data Compra</th>
-            <th>Fornecedor</th>
-            <th style="width:110px;">Previsto</th>
-            <th style="width:110px;">Tipo</th>
-            <th style="width:90px;">Quant.</th>
-            <th style="width:120px;">Na Empresa</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${Array.from({ length: LINHAS_FATURAMENTO_DIRETO })
-            .map(
-              () => `
-            <tr>
-              <td class="cItem"></td>
-              <td class="cData"></td>
-              <td></td>
-              <td class="cData"></td>
-              <td></td>
-              <td class="cQtd"></td>
-              <td></td>
-            </tr>
-          `
-            )
-            .join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-
-  const servicosTerceirosHTML = `
-    <div class="fullBox fullBox-tight">
-      <div class="gridTitle">Serviço(s) de Terceiros</div>
-      <table class="bigTbl servicosTbl">
-        <thead>
-          <tr>
-            <th style="width:44px;">Item</th>
-            <th>Fornecedor</th>
-            <th>Nome do Contato</th>
-            <th style="width:120px;">Telefone do Contato</th>
-            <th style="width:100px;">Data Saída</th>
-            <th style="width:100px;">Previsão</th>
-            <th style="width:110px;">Data Retorno</th>
-            <th style="width:140px;">Retorno Conferido por</th>
-            <th style="width:120px;">Assinatura Interno</th>
-            <th style="width:120px;">Assinatura Terceiro</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${Array.from({ length: LINHAS_SERVICOS_TERCEIROS })
-            .map(
-              () => `
-            <tr>
-              <td class="cItem"></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td class="cData"></td>
-              <td class="cData"></td>
-              <td class="cData"></td>
-              <td class="cResp">&nbsp;</td>
-              <td></td>
-              <td></td>
-            </tr>
-          `
-            )
-            .join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-
   // ================== PÁGINAS ==================
   const pagina1HTML = `
     <div class="pagina">
       ${cabecalhoCompletoHTML("ORDEM DE SERVIÇO / PRODUÇÃO", 1, TOTAL_PAGINAS)}
-      ${etapasDoProcessoHTML}
       ${itensHTML_ComQtd || `<div class="item" style="padding:10px;"><strong>Nenhum item encontrado para impressão.</strong></div>`}
     </div>
   `;
@@ -3556,6 +3591,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
       ${cabecalhoBasicoHTML("ORDEM DE SERVIÇO / PRODUÇÃO", 2, TOTAL_PAGINAS)}
       ${faturamentoDiretoHTML}
       ${servicosTerceirosHTML}
+      ${etapasDoProcessoHTML}
     </div>
   `;
 
@@ -3611,9 +3647,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             min-height: 56px;
           }
 
-          .logoBox img {
-            max-height: 46px;
-          }
+          .logoBox img { max-height: 46px; }
 
           .opBox {
             width: 520px;
@@ -3694,13 +3728,8 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             white-space: nowrap;
           }
 
-          .v {
-            min-width: 220px;
-          }
-
-          .vSmall {
-            min-width: 160px;
-          }
+          .v { min-width: 220px; }
+          .vSmall { min-width: 160px; }
 
           .line2col {
             display: grid;
@@ -3857,7 +3886,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           }
 
           .vv-etapas {
-            margin-top: 10px;
+            margin-top: 6px;
             page-break-inside: avoid;
             break-inside: avoid;
           }
@@ -3911,17 +3940,8 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             vertical-align: middle;
           }
 
-          .etapas-cell.blank {
-            height: ${ALTURA_LINHA_ETAPAS}px;
-          }
-
-          .etapas-cell.w-item {
-            width: 52px;
-          }
-
-          .center {
-            text-align: center;
-          }
+          .etapas-cell.blank { height: ${ALTURA_LINHA_ETAPAS}px; }
+          .etapas-cell.w-item { width: 52px; }
 
           .etapas-obs {
             border-top: 1px solid #000;
@@ -3953,7 +3973,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           .rodape-fixo .docNome {
             font-weight: 900;
             font-size: 12px;
-            letter-spacing: 0.5px;
+            letter-spacing: .5px;
           }
 
           .rodape-fixo .bigMeta {
@@ -3973,14 +3993,14 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           .rodape-fixo .bigMeta .val {
             font-size: 20px;
             font-weight: 900;
-            letter-spacing: 0.4px;
+            letter-spacing: .4px;
           }
 
           .rodape-fixo .sep {
             width: 2px;
             height: 18px;
             background: #111;
-            opacity: 0.35;
+            opacity: .35;
           }
 
           @media print {
