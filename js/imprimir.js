@@ -3205,7 +3205,6 @@ function gerarHistoricoDeProducaoParaImpressao() {
 }
 
 
-
 function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
@@ -3701,8 +3700,8 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const pagina1HTML = `
     <div class="pagina">
       ${cabecalhoCompletoHTML("ORDEM DE SERVIÇO / PRODUÇÃO", 1, TOTAL_PAGINAS)}
-      ${itensHTML_ComQtd || `<div class="item" style="padding:10px;"><strong>Nenhum item encontrado para impressão.</strong></div>`}
       ${etapasDoProcessoHTML}
+      ${itensHTML_ComQtd || `<div class="item" style="padding:10px;"><strong>Nenhum item encontrado para impressão.</strong></div>`}
     </div>
   `;
 
@@ -3767,9 +3766,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             min-height: 56px;
           }
 
-          .logoBox img {
-            max-height: 46px;
-          }
+          .logoBox img { max-height: 46px; }
 
           .opBox {
             width: 520px;
@@ -3850,13 +3847,8 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             white-space: nowrap;
           }
 
-          .v {
-            min-width: 220px;
-          }
-
-          .vSmall {
-            min-width: 160px;
-          }
+          .v { min-width: 220px; }
+          .vSmall { min-width: 160px; }
 
           .line2col {
             display: grid;
@@ -4067,13 +4059,8 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             vertical-align: middle;
           }
 
-          .etapas-cell.blank {
-            height: ${ALTURA_LINHA_ETAPAS}px;
-          }
-
-          .etapas-cell.w-item {
-            width: 52px;
-          }
+          .etapas-cell.blank { height: ${ALTURA_LINHA_ETAPAS}px; }
+          .etapas-cell.w-item { width: 52px; }
 
           .center {
             text-align: center;
@@ -4193,3 +4180,4 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   printWindow.document.write(htmlCompleto);
   printWindow.document.close();
 }
+
