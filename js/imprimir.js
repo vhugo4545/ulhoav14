@@ -3206,8 +3206,6 @@ function gerarHistoricoDeProducaoParaImpressao() {
 
 
 
-
-
 function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
