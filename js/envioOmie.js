@@ -158,14 +158,14 @@ function gerarNumeroPedidoUnico() {
 
   // Ambientes marcados (fallback)
   window.lerAmbientesMarcados ||= function(){
-    return Array.from(document.querySelectorAll(".resumo-totalizador .ambiente-toggle:checked"))
-      .map(cb => {
-        const label = cb.closest(".form-check")?.querySelector("label")?.textContent || "";
-        const m = label.match(/"([^"]+)"/);
-        return m ? m[1].trim() : null;
-      })
-      .filter(Boolean);
-  };
+  return Array.from(document.querySelectorAll(".ambiente-toggle:checked"))
+    .map(cb => {
+      const label = cb.closest(".form-check")?.querySelector("label")?.textContent || "";
+      const m = label.match(/"([^"]+)"/);
+      return m ? m[1].trim() : null;
+    })
+    .filter(Boolean);
+};
 })();
 
 /* =======================================
@@ -221,13 +221,26 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
   const itens = [];
   const blocos = document.querySelectorAll("[id^='bloco-']");
 
+  const ambientesMarcadosNormalizados = Array.isArray(ambientesMarcados)
+    ? ambientesMarcados.map(a => normalizarAmbienteOmie(a)).filter(Boolean)
+    : [];
+
+  console.log("✅ Ambientes marcados (originais):", ambientesMarcados);
+  console.log("✅ Ambientes marcados (normalizados):", ambientesMarcadosNormalizados);
+
   blocos.forEach((bloco) => {
     const grupoId = bloco.id || "(sem-id)";
     const inputAmb = bloco.querySelector("input[placeholder='Ambiente'][data-id-grupo]");
     const nomeAmbiente = (inputAmb?.value || inputAmb?.getAttribute("value") || "").trim() || "Ambiente não identificado";
+    const nomeAmbienteNormalizado = normalizarAmbienteOmie(nomeAmbiente);
 
-    if (Array.isArray(ambientesMarcados) && ambientesMarcados.length > 0) {
-      if (!ambientesMarcados.includes(nomeAmbiente)) return;
+    console.log("➡️ Bloco:", grupoId, "| Ambiente bruto:", nomeAmbiente, "| Ambiente normalizado:", nomeAmbienteNormalizado);
+
+    if (ambientesMarcadosNormalizados.length > 0) {
+      if (!ambientesMarcadosNormalizados.includes(nomeAmbienteNormalizado)) {
+        console.log("⛔ Bloco ignorado por ambiente não marcado:", grupoId, nomeAmbiente);
+        return;
+      }
     }
 
     const tabela =
@@ -235,14 +248,20 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
       bloco.querySelector(".tabela-grupo table") ||
       bloco.querySelector(".table");
 
-    if (!tabela) return;
+    if (!tabela) {
+      console.log("⛔ Bloco sem tabela:", grupoId);
+      return;
+    }
 
     const linhas = tabela.querySelectorAll("tbody tr");
-    if (!linhas || !linhas.length) return;
+    if (!linhas || !linhas.length) {
+      console.log("⛔ Bloco sem linhas:", grupoId);
+      return;
+    }
 
-    // total do grupo
     let valorTotalGrupo = 0;
     const totalGrupoEl = tabela.querySelector("tfoot tr td:last-child strong");
+
     if (totalGrupoEl && totalGrupoEl.textContent) {
       valorTotalGrupo = vv_parseBRL(totalGrupoEl.textContent);
     } else {
@@ -252,7 +271,6 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
       valorTotalGrupo = vv_parseBRL(textoTotal);
     }
 
-    // primeiro produto
     const primeiraLinha = linhas[0];
     const td2 = primeiraLinha.querySelector("td:nth-child(2)");
     const td5 = primeiraLinha.querySelector("td:nth-child(5)");
@@ -277,8 +295,17 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
       descricao,
       valorTotalGrupo: Number(valorTotalGrupo) || 0,
     });
+
+    console.log("✅ Item elegível adicionado:", {
+      grupoId,
+      ambiente: nomeAmbiente,
+      codigo,
+      descricao,
+      valorTotalGrupo
+    });
   });
 
+  console.log("📦 Itens coletados para Omie:", itens);
   return itens;
 }
 
@@ -1928,6 +1955,16 @@ function vv_getPrimeiraDataParcelaISO() {
 /* =======================================
    5) GERAR PAYLOAD (estrutura antiga)
    ======================================= */
+
+   function normalizarAmbienteOmie(texto) {
+  return String(texto || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 async function gerarPayloadOmie() {
   const pendencias = [];
 
@@ -2212,14 +2249,44 @@ async function gerarPayloadOmie() {
    6) ENVIAR PARA OMIE (botão/onclick)
    ======================================= */
 async function atualizarNaOmie() {
-  try{
+  try {
     mostrarCarregando();
 
-    const botao = document.getElementById("btn-gerar-pedido") 
+    const botao = document.getElementById("btn-gerar-pedido")
                || document.getElementById("btnEnviarOmie");
     const spinner = document.getElementById("spinnerOmie");
     if (spinner) spinner.style.display = "inline-block";
     if (botao) botao.disabled = true;
+
+    // helper: alerta bonitinho com JSON
+    const alertServer = (titulo, status, dataOrText) => {
+      let corpo = "";
+      try {
+        if (typeof dataOrText === "string") {
+          corpo = dataOrText;
+        } else {
+          corpo = JSON.stringify(dataOrText, null, 2);
+        }
+      } catch {
+        corpo = String(dataOrText || "");
+      }
+
+      alert(
+        `${titulo}\n` +
+        `HTTP: ${status}\n\n` +
+        `${corpo}`
+      );
+    };
+
+    // helper: tenta ler JSON, senão texto
+    const readJsonOrText = async (res) => {
+      const raw = await res.text();
+      try {
+        return { parsed: JSON.parse(raw), raw };
+      } catch {
+        return { parsed: null, raw };
+      }
+    };
 
     setTimeout(async () => {
       const payload = await gerarPayloadOmie();
@@ -2234,6 +2301,10 @@ async function atualizarNaOmie() {
       console.log("📦 Payload gerado (produtos):", payload);
 
       let sucessoProdutos = false;
+
+      // =========================
+      // PRODUTOS
+      // =========================
       try {
         const resposta = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/omie/pedidos", {
           method: "POST",
@@ -2244,25 +2315,33 @@ async function atualizarNaOmie() {
           body: JSON.stringify(payload)
         });
 
-        const data = await resposta.json();
+        const { parsed, raw } = await readJsonOrText(resposta);
 
         if (resposta.ok) {
           sucessoProdutos = true;
+
+          // ✅ ALERTA COM RESPOSTA DO SERVER
+          alertServer("✅ PRODUTOS enviados com sucesso", resposta.status, parsed ?? raw);
+
           if (typeof mostrarPopupCustomizado === "function") {
             mostrarPopupCustomizado("✅ Sucesso!", "Pedido de PRODUTOS enviado com sucesso à Omie.", "success");
           }
-          console.log("📤 Enviado à Omie (produtos):", data);
+          console.log("📤 Enviado à Omie (produtos):", parsed ?? raw);
         } else {
+          // ✅ ALERTA COM ERRO DO SERVER
+          alertServer("❌ ERRO ao enviar PRODUTOS", resposta.status, parsed ?? raw);
+
           if (typeof mostrarPopupCustomizado === "function") {
             mostrarPopupCustomizado(
               "❌ Erro ao enviar produtos",
-              data?.erro || "Erro desconhecido ao enviar.",
+              parsed?.erro || parsed?.error || raw || "Erro desconhecido ao enviar.",
               "error"
             );
           }
-          console.error("❌ Erro (produtos):", data);
+          console.error("❌ Erro (produtos):", parsed ?? raw);
         }
       } catch (erro) {
+        alert(`❌ Erro na conexão ao enviar PRODUTOS\n\n${erro?.message || erro}`);
         if (typeof mostrarPopupCustomizado === "function") {
           mostrarPopupCustomizado(
             "❌ Erro na conexão",
@@ -2273,14 +2352,24 @@ async function atualizarNaOmie() {
         console.error("❌ Erro de envio (produtos):", erro);
       }
 
-      // 🔸 AGORA: sempre tenta enviar OS de Serviços, independente de sucessoProdutos
+      // =========================
+      // SERVIÇOS (OS)
+      // =========================
       try {
         const selecao = window.__vvUltimaSelecaoOmie || null;
-        const valorServicos = selecao?.totais?.valorServicos || 0; // 🛠️ Total (Serviço) do popup
+        const valorServicos = selecao?.totais?.valorServicos || 0;
 
         if (valorServicos > 0 && typeof enviarOSServico === "function") {
           console.log("🛠️ Enviando OS de Serviços. Valor:", valorServicos);
+
           const osResp = await enviarOSServico({ valorServicos });
+
+          // ✅ ALERTA COM RESPOSTA DO SERVER (SERVIÇOS)
+          alertServer(
+            osResp?.ok ? "✅ SERVIÇOS enviados com sucesso" : "⚠️ SERVIÇOS não enviados",
+            osResp?.status || "sem status",
+            osResp
+          );
 
           if (osResp?.ok) {
             if (typeof mostrarPopupCustomizado === "function") {
@@ -2303,6 +2392,7 @@ async function atualizarNaOmie() {
           console.log("ℹ️ Sem serviços para enviar (valor 0) ou função enviarOSServico indisponível.");
         }
       } catch (err) {
+        alert(`⚠️ Erro ao enviar SERVIÇOS\n\n${err?.message || err}`);
         console.error("❌ Falha ao enviar OS de Serviços:", err);
         if (typeof mostrarPopupCustomizado === "function") {
           mostrarPopupCustomizado(
@@ -2317,11 +2407,14 @@ async function atualizarNaOmie() {
       if (botao) botao.disabled = false;
       ocultarCarregando();
     }, 300);
-  } catch(e){
+
+  } catch (e) {
     console.error(e);
+    alert(`❌ Erro inesperado\n\n${e?.message || e}`);
     ocultarCarregando();
   }
 }
+
 
 
 
