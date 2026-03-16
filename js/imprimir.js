@@ -4,27 +4,58 @@ let contadorGlobal = 1;
 
 
 function gerarOrcamentoParaImpressaoCompleta() {
-  function converterMoedaBRParaNumero(valor) {
-    if (!valor) return 0;
+  function moedaBRParaNumero(valor) {
+    if (valor == null || valor === "") return 0;
+
+    // Se já for número, retorna direto
+    if (typeof valor === "number") return valor;
+
+    const texto = String(valor).trim();
+
+    // Se vier no formato BR: 162.782,72
+    if (texto.includes(",")) {
+      return parseFloat(
+        texto
+          .replace(/[^\d,.-]/g, "")
+          .replace(/\./g, "")
+          .replace(",", ".")
+      ) || 0;
+    }
+
+    // Se vier no formato JS: 162782.72
     return parseFloat(
-      String(valor)
-        .replace(/[^\d.,-]/g, "")
-        .replace(/\./g, "")
-        .replace(",", ".")
+      texto.replace(/[^\d.-]/g, "")
     ) || 0;
   }
 
+  function numeroParaMoedaBR(valor) {
+    const numero = typeof valor === "number" ? valor : moedaBRParaNumero(valor);
+
+    return numero.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    });
+  }
+
   const idsObrigatorios = [
-    "numeroOrcamento", "dataOrcamento", "origemCliente",
-    "nomeOrigem", "telefoneOrigem", "emailOrigem",
-    "operadorInterno", "vendedorResponsavel"
+    "numeroOrcamento",
+    "dataOrcamento",
+    "origemCliente",
+    "nomeOrigem",
+    "telefoneOrigem",
+    "emailOrigem",
+    "operadorInterno",
+    "vendedorResponsavel"
   ];
 
   const pendentes = [];
+
   idsObrigatorios.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
+
     const valor = (el.value || el.textContent || "").trim();
+
     if (!valor) {
       pendentes.push(el);
       el.classList.add("campo-pendente");
@@ -40,24 +71,29 @@ function gerarOrcamentoParaImpressaoCompleta() {
     if (!continuar) return;
   }
 
-  // Captura lista de grupos/blocos para montar popup
   const grupos = [];
+
   document.querySelectorAll("table[id^='tabela-bloco-']").forEach(tabela => {
     const grupoId = tabela.id.replace("tabela-", "").trim();
-    const inputAmbiente = document.querySelector(`input[data-id-grupo='${grupoId}'][placeholder='Ambiente']`);
+
+    const inputAmbiente = document.querySelector(
+      `input[data-id-grupo='${grupoId}'][placeholder='Ambiente']`
+    );
+
     const nomeAmbiente = inputAmbiente?.value.trim() || "Sem Ambiente";
 
     const linhaProduto = tabela.querySelector("tbody tr");
     let nomeProduto = "";
+
     if (linhaProduto) {
       const colunas = linhaProduto.querySelectorAll("td");
       nomeProduto = (colunas[1]?.textContent || colunas[0]?.textContent || "").trim();
     }
 
     const totalGrupoTexto =
-      tabela.querySelector("tfoot td[colspan='6'] strong")?.textContent || "0";
+      tabela.querySelector("tfoot td[colspan='6'] strong")?.textContent || "R$ 0,00";
 
-    const totalGrupo = converterMoedaBRParaNumero(totalGrupoTexto);
+    const totalGrupo = moedaBRParaNumero(totalGrupoTexto);
 
     grupos.push({
       grupoId,
@@ -67,18 +103,47 @@ function gerarOrcamentoParaImpressaoCompleta() {
     });
   });
 
-  // Valor final com desconto
-  const valorFinalComDescontoStr =
-    document.getElementById("valorFinalTotal")?.textContent || "R$ 0,00";
+  const totalBrutoTexto =
+    document.getElementById("valorTotalSemDesconto")?.textContent ||
+    document.getElementById("valorBrutoTotal")?.textContent ||
+    "R$ 0,00";
 
-  const valorFinalComDesconto = converterMoedaBRParaNumero(valorFinalComDescontoStr);
+  const totalFinalTexto =
+    document.getElementById("valorFinalTotal")?.textContent ||
+    document.getElementById("totalComDesconto")?.textContent ||
+    document.getElementById("valorTotalFinal")?.textContent ||
+    "R$ 0,00";
 
-  // Exibe popup e chama impressão quando confirmar
-  mostrarPopupSelecaoGruposEstetico(grupos, valorFinalComDesconto, function(gruposOcultarProduto) {
-    gerarHTMLParaImpressao(gruposOcultarProduto);
+  const totalBruto = moedaBRParaNumero(totalBrutoTexto);
+  const totalComDesconto = moedaBRParaNumero(totalFinalTexto);
+  const desconto = totalBruto - totalComDesconto;
+
+  console.log("DEBUG VALORES IMPRESSÃO:", {
+    totalBrutoTexto,
+    totalFinalTexto,
+    totalBruto,
+    totalComDesconto,
+    desconto,
+    totalBrutoFormatado: numeroParaMoedaBR(totalBruto),
+    totalComDescontoFormatado: numeroParaMoedaBR(totalComDesconto),
+    descontoFormatado: numeroParaMoedaBR(desconto)
   });
-}
 
+  mostrarPopupSelecaoGruposEstetico(
+    grupos,
+    totalComDesconto,
+    function(gruposOcultarProduto) {
+      gerarHTMLParaImpressao(gruposOcultarProduto, {
+        totalBruto,
+        desconto,
+        totalComDesconto,
+        totalBrutoFormatado: numeroParaMoedaBR(totalBruto),
+        descontoFormatado: numeroParaMoedaBR(desconto),
+        totalComDescontoFormatado: numeroParaMoedaBR(totalComDesconto)
+      });
+    }
+  );
+}
 // 2. Função de popup estético para ocultar produtos
 function mostrarPopupSelecaoGruposEstetico(grupos, valorFinal, onConfirmar) {
   // CSS do popup (apenas uma vez)
@@ -198,7 +263,6 @@ function formatarReal(valor) {
 function gerarHTMLParaImpressao(gruposOcultarProduto) {
   const getValue = id => document.getElementById(id)?.value || "-";
 
-  // Helper seguro
   const getTextOrValue = (el) => {
     if (!el) return "";
     if (typeof el.value === "string" && el.value.trim()) return el.value.trim();
@@ -206,59 +270,74 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     return "";
   };
 
-  // Helpers BRL
-  const parseBRL = (s) => {
-    if (window.vv_parseBRL) return vv_parseBRL(s || "0");
-    const str = String(s || "0").replace(/\u00A0/g, ' ');
-    const limpo = str.replace(/[^\d,.-]/g, '').replace(/\./g,'').replace(',', '.');
+  // ==========================
+  // HELPERS MONETÁRIOS AJUSTADOS
+  // ==========================
+  const parseBRL = (valor) => {
+    if (valor == null || valor === "") return 0;
+
+    if (typeof valor === "number") return valor;
+
+    const str = String(valor).replace(/\u00A0/g, " ").trim();
+
+    // formato BR: 162.782,72
+    if (str.includes(",")) {
+      const limpo = str
+        .replace(/[^\d,.-]/g, "")
+        .replace(/\./g, "")
+        .replace(",", ".");
+      const n = Number(limpo);
+      return isNaN(n) ? 0 : n;
+    }
+
+    // formato numérico JS: 162782.72
+    const limpo = str.replace(/[^\d.-]/g, "");
     const n = Number(limpo);
     return isNaN(n) ? 0 : n;
   };
 
   const fmtBRL = (n) => {
-    if (window.vv_fmtBRL) return vv_fmtBRL(Number(n) || 0);
-    return `R$ ${(Number(n) || 0).toFixed(2)}`;
+    const numero = typeof n === "number" ? n : parseBRL(n);
+    return numero.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    });
   };
 
   const formatarDataBR = (iso) => {
     if (!iso) return "-";
-    const [y,m,d] = String(iso).split("-");
+    const [y, m, d] = String(iso).split("-");
     if (!y || !m || !d) return "-";
-    return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;
+    return `${d.padStart(2, "0")}/${m.padStart(2, "0")}/${y}`;
   };
 
-  // ✅ NORMALIZA CONDIÇÃO (vazia ou "Selecione..." => "")
   const normalizarCondicao = (txt) => {
     const t = String(txt || "").trim();
     if (!t) return "";
-    if (/^selecione/i.test(t)) return ""; // "Selecione", "Selecione...", etc.
+    if (/^selecione/i.test(t)) return "";
     return t;
   };
 
-  // ✅ Helper: converte quebras de linha em <br>
   const multilineToBR = (txt) => {
     const t = String(txt || "").trim();
     if (!t) return "";
     return t.replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
   };
 
-  // ✅ Helper fallback caso você tenha usado formatarReal em outro arquivo
   const formatarReal = (n) => {
-    // tenta usar helpers globais, se existirem
-    if (window.formatarReal) return window.formatarReal(n);
-    if (window.vv_fmtBRL) return vv_fmtBRL(Number(n) || 0);
-    // fallback simples
     try {
-      return (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      return fmtBRL(n);
     } catch {
-      return fmtBRL(Number(n) || 0);
+      return `R$ ${(Number(n) || 0).toFixed(2)}`;
     }
   };
 
-  // 1) Dados gerais do orçamento
+  // ==========================
+  // DADOS GERAIS
+  // ==========================
   const dados = {
     numero: getValue("numeroOrcamento"),
-    data: new Date(getValue("dataOrcamento")).toLocaleDateString('pt-BR'),
+    data: new Date(getValue("dataOrcamento")).toLocaleDateString("pt-BR"),
     origem: getValue("origemCliente"),
     nomeOrigem: getValue("nomeOrigem"),
     codigoOrigem: getValue("codigoOrigem"),
@@ -273,36 +352,40 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     vendedor: document.getElementById("vendedorResponsavel")?.selectedOptions[0]?.textContent || "-"
   };
 
-  // ✅ AQUI: PRAZOS COM QUEBRAS DE LINHA (igual condições gerais)
   dados.prazos = (dados.prazos && dados.prazos !== "-") ? multilineToBR(dados.prazos) : "-";
 
-  // 2) Coleta múltiplos clientes/contatos
-  const clientes = Array.from(document.querySelectorAll('#clientesWrapper .cliente-item'))
+  // ==========================
+  // CLIENTES / CONTATOS
+  // ==========================
+  const clientes = Array.from(document.querySelectorAll("#clientesWrapper .cliente-item"))
     .map(row => ({
-      nomeCliente:  getTextOrValue(row.querySelector('.nomeContato')),
-      cpfCnpj:      getTextOrValue(row.querySelector('.cpfCnpj')),
-      codigo:       getTextOrValue(row.querySelector('.codigoCliente')),
-      nomeContato:  getTextOrValue(row.querySelector('.nomeContato')),
-      funcao:       getTextOrValue(row.querySelector('.funcaoCliente')),
-      telefone:     getTextOrValue(row.querySelector('.telefoneCliente')),
+      nomeCliente: getTextOrValue(row.querySelector(".nomeContato")),
+      cpfCnpj: getTextOrValue(row.querySelector(".cpfCnpj")),
+      codigo: getTextOrValue(row.querySelector(".codigoCliente")),
+      nomeContato: getTextOrValue(row.querySelector(".nomeContato")),
+      funcao: getTextOrValue(row.querySelector(".funcaoCliente")),
+      telefone: getTextOrValue(row.querySelector(".telefoneCliente")),
     }))
     .filter(c => c.nomeCliente || c.nomeContato || c.telefone || c.cpfCnpj);
 
   const principal = clientes[0] || {};
-  dados.nomeCliente      = principal.nomeCliente || "-";
-  dados.cpfCnpj          = principal.cpfCnpj || "-";
-  dados.telefoneCliente  = principal.telefone || "-";
+  dados.nomeCliente = principal.nomeCliente || "-";
+  dados.cpfCnpj = principal.cpfCnpj || "-";
+  dados.telefoneCliente = principal.telefone || "-";
 
   dados.contatos = clientes.map((c, idx) => ({
-    cliente:  idx === 0 ? `${c.nomeCliente || "-"} (Responsável)` : (c.nomeCliente || "-"),
-    cpfCnpj:  c.cpfCnpj || "-",
-    contato:  c.nomeContato || "-",
-    funcao:   c.funcao || "-",
+    cliente: idx === 0 ? `${c.nomeCliente || "-"} (Responsável)` : (c.nomeCliente || "-"),
+    cpfCnpj: c.cpfCnpj || "-",
+    contato: c.nomeContato || "-",
+    funcao: c.funcao || "-",
     telefone: c.telefone || "-",
   }));
 
-  // 3) Monta lista de grupos
+  // ==========================
+  // GRUPOS
+  // ==========================
   let gruposDados = [];
+
   document.querySelectorAll("table[id^='tabela-bloco-']").forEach(tabela => {
     const grupoId = tabela.id.replace("tabela-", "").trim();
     const inputAmbiente = document.querySelector(`input[data-id-grupo='${grupoId}'][placeholder='Ambiente']`);
@@ -312,11 +395,10 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     let resumoGrupo = document.getElementById(`resumo-${grupoId}`)?.value?.trim() || "";
     resumoGrupo = resumoGrupo.replace(/\n/g, "<br>");
 
-    const totalGrupo = parseFloat(
-      tabela.querySelector("tfoot td[colspan='6'] strong")?.textContent
-        .replace(/[^\d,\.]/g, '')
-        .replace(',', '.') || "0"
-    );
+    const totalGrupoTexto =
+      tabela.querySelector("tfoot td[colspan='6'] strong")?.textContent || "R$ 0,00";
+
+    const totalGrupo = parseBRL(totalGrupoTexto);
 
     let colunas = linhaProduto?.querySelectorAll("td");
     let descricao = colunas?.[1]?.textContent.trim() || "-";
@@ -324,10 +406,20 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
 
     const ocultar = !!(gruposOcultarProduto && gruposOcultarProduto[grupoId]);
 
-    gruposDados.push({ grupoId, nomeAmbiente, totalGrupo, descricao, qtd, resumoGrupo, ocultar });
+    gruposDados.push({
+      grupoId,
+      nomeAmbiente,
+      totalGrupo,
+      descricao,
+      qtd,
+      resumoGrupo,
+      ocultar
+    });
   });
 
-  // 4) Agrupa por ambiente
+  // ==========================
+  // AGRUPA POR AMBIENTE
+  // ==========================
   let ambientes = {};
   gruposDados.forEach(g => {
     if (!ambientes[g.nomeAmbiente]) ambientes[g.nomeAmbiente] = [];
@@ -343,6 +435,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     totalGeral += valorTotalAmbiente;
 
     const gruposVisiveis = grupos.filter(g => !g.ocultar);
+
     gruposVisiveis.forEach(g => {
       corpoHTML += `
         <div class="mt-4 border">
@@ -377,19 +470,20 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     `;
   });
 
-  // 4.5) ✅ PARCELAS (depois dos produtos)
-  const parcelas = Array.from(document.querySelectorAll('#listaParcelas .row'))
+  // ==========================
+  // PARCELAS
+  // ==========================
+  const parcelas = Array.from(document.querySelectorAll("#listaParcelas .row"))
     .map((row, idx) => {
-      const selTipo = row.querySelector('select.tipo-monetario');
+      const selTipo = row.querySelector("select.tipo-monetario");
       const tipo = selTipo?.selectedOptions?.[0]?.textContent?.trim()
                 || selTipo?.value?.trim()
                 || "-";
 
-      const wrapCond = row.querySelector('.condicao-wrapper');
-      const selCond = wrapCond?.querySelector('select.condicao-pagto');
-      const inputCond = wrapCond?.querySelector('input, textarea');
+      const wrapCond = row.querySelector(".condicao-wrapper");
+      const selCond = wrapCond?.querySelector("select.condicao-pagto");
+      const inputCond = wrapCond?.querySelector("input, textarea");
 
-      // ✅ pega texto e normaliza (vazio/"Selecione..." => "")
       let condicaoRaw = "";
       if (inputCond && getTextOrValue(inputCond)) {
         condicaoRaw = getTextOrValue(inputCond);
@@ -398,21 +492,20 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
                   || selCond?.value?.trim()
                   || "";
       }
+
       const condicao = normalizarCondicao(condicaoRaw);
 
-      const valorRaw = (row.querySelector('input.valor-parcela')?.value || "").trim();
+      const valorRaw = (row.querySelector("input.valor-parcela")?.value || "").trim();
       let valorExib = valorRaw || "-";
 
-      // se for número puro tipo "1000" mostra em BRL; se for "30%" mantém
-      if (valorRaw && !valorRaw.includes('%')) {
+      if (valorRaw && !valorRaw.includes("%")) {
         const num = parseBRL(valorRaw);
         valorExib = fmtBRL(num);
       }
 
-      const vencISO = (row.querySelector('input.data-parcela')?.value || "").trim();
+      const vencISO = (row.querySelector("input.data-parcela")?.value || "").trim();
       const venc = vencISO ? formatarDataBR(vencISO) : "-";
 
-      // ✅ ignora linha 100% vazia (condição vazia conta como vazia mesmo)
       const temAlgo = (tipo !== "-" || condicao !== "" || valorExib !== "-" || venc !== "-");
       if (!temAlgo) return null;
 
@@ -420,9 +513,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     })
     .filter(Boolean);
 
-  const totalParcelasTxt = document.getElementById('totalParcelas')?.textContent?.trim() || "";
-
-  const parcelasHTML = (parcelas.length)
+  const parcelasHTML = parcelas.length
     ? `
       <div class="mt-4">
         <h6 class="text-center fw-bold">Parcelas</h6>
@@ -445,36 +536,47 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
                 <td>${p.valorExib}</td>
                 <td>${p.venc}</td>
               </tr>
-            `).join('')}
+            `).join("")}
           </tbody>
         </table>
-
-     
       </div>
     `
-    : ``;
+    : "";
 
-  // 5) Totais gerais
-  const valorFinalComDescontoStr = document.getElementById("valorFinalTotal")?.textContent || "R$ 0,00";
-  const valorFinalComDesconto = parseFloat(
-    valorFinalComDescontoStr.replace(/[^\d,\.]/g, "").replace(",", ".")
-  );
+  // ==========================
+  // TOTAIS GERAIS
+  // ==========================
+  const valorFinalComDescontoStr =
+    document.getElementById("valorFinalTotal")?.textContent || "R$ 0,00";
+
+  const valorFinalComDesconto = parseBRL(valorFinalComDescontoStr);
 
   const campoDesconto = document.getElementById("campoDescontoFinal")?.value?.trim();
-  const temDescontoValido = campoDesconto && valorFinalComDesconto > 0 && valorFinalComDesconto < totalGeral;
-  const descontoAplicado = temDescontoValido ? totalGeral - valorFinalComDesconto : 0;
 
-  let totalizadoresHTML = temDescontoValido ? `
-    <div class="border p-2 text-end mt-4 bg-light">
-      <div><strong>Total Bruto:</strong> ${formatarReal(totalGeral)}</div>
-      <div><strong>Desconto Aplicado:</strong> ${formatarReal(descontoAplicado)}</div>
-      <div class="fw-bold fs-5 text-success"><strong>Total com Desconto:</strong> ${formatarReal(valorFinalComDesconto)}</div>
-    </div>` : `
-    <div class="border p-2 text-end mt-4 bg-light">
-      <div class="fw-bold">Total Geral: ${formatarReal(totalGeral)}</div>
-    </div>`;
+  const temDescontoValido =
+    campoDesconto &&
+    valorFinalComDesconto > 0 &&
+    valorFinalComDesconto < totalGeral;
 
-  // 6) Tabela de contatos
+  const descontoAplicado = temDescontoValido
+    ? (totalGeral - valorFinalComDesconto)
+    : 0;
+
+  let totalizadoresHTML = temDescontoValido
+    ? `
+      <div class="border p-2 text-end mt-4 bg-light">
+        <div><strong>Total Bruto:</strong> ${formatarReal(totalGeral)}</div>
+        <div><strong>Desconto Aplicado:</strong> ${formatarReal(descontoAplicado)}</div>
+        <div class="fw-bold fs-5 text-success"><strong>Total com Desconto:</strong> ${formatarReal(valorFinalComDesconto)}</div>
+      </div>`
+    : `
+      <div class="border p-2 text-end mt-4 bg-light">
+        <div class="fw-bold">Total Geral: ${formatarReal(totalGeral)}</div>
+      </div>`;
+
+  // ==========================
+  // TABELA DE CONTATOS
+  // ==========================
   const tabelaContatosHTML = (dados.contatos && dados.contatos.length)
     ? `
       <h6 class="mt-3 text-center fw-bold">Clientes & Contatos</h6>
@@ -493,12 +595,15 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
               <td>${c.funcao}</td>
               <td>${c.telefone}</td>
             </tr>
-          `).join('')}
+          `).join("")}
         </tbody>
       </table>
-    ` : '';
+    `
+    : "";
 
-  // 7) HTML completo
+  // ==========================
+  // HTML COMPLETO
+  // ==========================
   const condicoesGeraisFormatada = multilineToBR(dados.condicoesGerais || "");
 
   const htmlCompleto = `
@@ -544,7 +649,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
 
         ${corpoHTML}
 
-        <!-- ✅ PARCELAS AQUI (depois dos produtos) -->
         ${parcelasHTML}
 
         ${totalizadoresHTML}
@@ -568,11 +672,12 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
           <br><br>
           _______________________________________________________________
         </center>
-
       </body>
     </html>`;
 
-  // 8) Impressão
+  // ==========================
+  // IMPRESSÃO
+  // ==========================
   async function abrirJanelaParaImpressao(htmlCompleto) {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
