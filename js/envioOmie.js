@@ -2037,63 +2037,92 @@ async function gerarPayloadOmie() {
     return document.getElementById(selectId) || null;
   }
 
-  async function pegarVendedorSelecionadoComCodigo(selectId = "vendedorResponsavel") {
-    const select = await esperarSelectCarregar(selectId, { minOptions: 2, timeoutMs: 15000 });
-    if (!select) return null;
+const VENDEDORES_FIXOS_FALLBACK = {
+  pagina: 1,
+  total_de_paginas: 1,
+  registros: 12,
+  total_de_registros: 12,
+  cadastro: [
+    { codInt: "", codigo: 2452905334, comissao: 1, email: "joaomartins@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "JOAO CLEBER MARTINS", visualiza_pedido: "N" },
+    { codInt: "", codigo: 2452905376, comissao: 0, email: "", fatura_pedido: "N", inativo: "S", nome: "Paulo Sergio Machado da Silva", visualiza_pedido: "N" },
+    { codInt: "", codigo: 2452905381, comissao: 0, email: "marilena.ulhoa@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "MARILENA DE ALMEIDA ULHOA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 2452905445, comissao: 1, email: "rafael.angelo@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "RAFAEL ANGELO ARAUJO DA SILVA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 2452905491, comissao: 0, email: "", fatura_pedido: "N", inativo: "S", nome: "DOUGLAS VITOR DA SILVA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 2452905509, comissao: 0, email: "", fatura_pedido: "N", inativo: "S", nome: "GABRIEL JUNIOR DO COUTO NEPOMUCENO", visualiza_pedido: "N" },
+    { codInt: "", codigo: 2452905682, comissao: 0, email: "felipe.ulhoa@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "FELIPE ULHOA FERREIRA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 2452911859, comissao: 0, email: "", fatura_pedido: "N", inativo: "S", nome: "MAURO LUCIO", visualiza_pedido: "N" },
+    { codInt: "", codigo: 2452927579, comissao: 0, email: "projetos@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "S", nome: "ANA FLAVIA RODRIGUES PRATES", visualiza_pedido: "N" },
+    { codInt: "", codigo: 2618640819, comissao: 0, email: "lais.rabelo@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "S", nome: "LAIS MAGALHÃES RABELO", visualiza_pedido: "N" },
+    { codInt: "", codigo: 2698639092, comissao: 0, email: "servidor@ferreiraulhoa.com.br", fatura_pedido: "S", inativo: "S", nome: "VANESSA ULHOA", visualiza_pedido: "N" }
+  ]
+};
 
-    const opt = select.options?.[select.selectedIndex];
-    const nomeSelecionado = (select.value || opt?.text || "").trim();
+async function pegarVendedorSelecionadoComCodigo(selectId = "vendedorResponsavel") {
+  const select = await esperarSelectCarregar(selectId, { minOptions: 2, timeoutMs: 15000 });
+  if (!select) return null;
 
-    if (!nomeSelecionado || nomeSelecionado.toUpperCase() === "SELECIONE") return null;
+  const opt = select.options?.[select.selectedIndex];
+  const nomeSelecionado = (select.value || opt?.text || "").trim();
 
-    const normalizar = (s) =>
-      (s ?? "")
-        .toString()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .trim()
-        .toUpperCase();
+  if (!nomeSelecionado || nomeSelecionado.toUpperCase() === "SELECIONE") return null;
 
-    const nomeNorm = normalizar(nomeSelecionado);
+  const normalizar = (s) =>
+    (s ?? "")
+      .toString()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toUpperCase();
 
+  const nomeNorm = normalizar(nomeSelecionado);
+
+  let lista = [];
+
+  try {
     const res = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/omie/vendedores");
     const json = await res.json();
-    const lista = Array.isArray(json?.cadastro) ? json.cadastro : [];
+    lista = Array.isArray(json?.cadastro) ? json.cadastro : [];
+  } catch (erro) {
+    console.warn("⚠️ Erro ao buscar vendedores da API. Usando lista fixa.", erro);
+  }
 
-    // 1) match exato (normalizado)
-    let match = lista.find(v => normalizar(v.nome) === nomeNorm);
+  // ✅ fallback para lista fixa
+  if (!Array.isArray(lista) || lista.length === 0) {
+    lista = Array.isArray(VENDEDORES_FIXOS_FALLBACK?.cadastro)
+      ? VENDEDORES_FIXOS_FALLBACK.cadastro
+      : [];
+  }
 
-    // 2) fallback: match parcial (caso select esteja abreviado)
-    if (!match) {
-      const candidatos = lista.filter(v => {
-        const api = normalizar(v.nome);
-        return api.includes(nomeNorm) || nomeNorm.includes(api);
-      });
+  // 1) match exato (normalizado)
+  let match = lista.find(v => normalizar(v.nome) === nomeNorm);
 
-      if (candidatos.length === 1) match = candidatos[0];
-      else if (candidatos.length > 1) {
-        match = candidatos.find(v => String(v.inativo).toUpperCase() === "N") || candidatos[0];
-      }
+  // 2) fallback: match parcial (caso select esteja abreviado)
+  if (!match) {
+    const candidatos = lista.filter(v => {
+      const api = normalizar(v.nome);
+      return api.includes(nomeNorm) || nomeNorm.includes(api);
+    });
+
+    if (candidatos.length === 1) {
+      match = candidatos[0];
+    } else if (candidatos.length > 1) {
+      match = candidatos.find(v => String(v.inativo).toUpperCase() === "N") || candidatos[0];
     }
-
-    if (!match) return null;
-
-    return {
-      nomeSelect: nomeSelecionado,
-      nomeApi: match.nome,
-      codigo: Number(match.codigo)
-    };
   }
 
-  // =========================================================
-  // ✅ Recupera codVend (espera select carregar + bate com API)
-  // =========================================================
-  const vendedorInfo = await pegarVendedorSelecionadoComCodigo("vendedorResponsavel");
+  if (!match) return null;
 
-  if (!vendedorInfo?.codigo) {
-    alert("Selecione um Vendedor Responsável válido (não foi possível recuperar o código).");
-    return null;
-  }
+  return {
+    nomeSelect: nomeSelecionado,
+    nomeApi: match.nome,
+    codigo: Number(match.codigo)
+  };
+}
+
+// =========================================================
+// ✅ Recupera codVend (espera select carregar + bate com API)
+// =========================================================
+const vendedorInfo = await pegarVendedorSelecionadoComCodigo("vendedorResponsavel");
 
   // 1) ambientes
   const ambientesMarcados = (typeof lerAmbientesMarcados === "function")
@@ -2130,6 +2159,11 @@ async function gerarPayloadOmie() {
     }
   } catch (e) {
     console.warn("produtosFaturadosParaOCliente falhou:", e);
+  }
+
+    if (!vendedorInfo?.codigo) {
+    alert("Selecione um Vendedor Responsável válido (não foi possível recuperar o código).");
+    return null;
   }
 
   // 5) payload base (produtos)
@@ -2249,172 +2283,250 @@ async function gerarPayloadOmie() {
    6) ENVIAR PARA OMIE (botão/onclick)
    ======================================= */
 async function atualizarNaOmie() {
-  try {
-    mostrarCarregando();
+  const botao =
+    document.getElementById("btn-gerar-pedido") ||
+    document.getElementById("btnEnviarOmie");
 
-    const botao = document.getElementById("btn-gerar-pedido")
-               || document.getElementById("btnEnviarOmie");
-    const spinner = document.getElementById("spinnerOmie");
+  const spinner = document.getElementById("spinnerOmie");
+
+  const abrirStatus = (titulo, mensagem, tipo = "info") => {
+    if (typeof mostrarPopupCustomizado === "function") {
+      mostrarPopupCustomizado(titulo, mensagem, tipo);
+    } else {
+      console.log(`[${tipo}] ${titulo}: ${mensagem}`);
+    }
+  };
+
+  const alertServer = (titulo, status, dataOrText) => {
+    let corpo = "";
+    try {
+      if (typeof dataOrText === "string") {
+        corpo = dataOrText;
+      } else {
+        corpo = JSON.stringify(dataOrText, null, 2);
+      }
+    } catch {
+      corpo = String(dataOrText || "");
+    }
+
+    alert(
+      `${titulo}\n` +
+      `HTTP: ${status}\n\n` +
+      `${corpo}`
+    );
+  };
+
+  const readJsonOrText = async (res) => {
+    const raw = await res.text();
+    try {
+      return { parsed: JSON.parse(raw), raw };
+    } catch {
+      return { parsed: null, raw };
+    }
+  };
+
+  try {
+    // =========================================================
+    // INÍCIO DO PROCESSO
+    // =========================================================
+    if (typeof mostrarCarregando === "function") {
+      mostrarCarregando();
+    }
+
     if (spinner) spinner.style.display = "inline-block";
     if (botao) botao.disabled = true;
 
-    // helper: alerta bonitinho com JSON
-    const alertServer = (titulo, status, dataOrText) => {
-      let corpo = "";
-      try {
-        if (typeof dataOrText === "string") {
-          corpo = dataOrText;
-        } else {
-          corpo = JSON.stringify(dataOrText, null, 2);
-        }
-      } catch {
-        corpo = String(dataOrText || "");
-      }
+    abrirStatus(
+      "⏳ Processando",
+      "Estamos gerando e enviando o pedido. Aguarde até a finalização.",
+      "info"
+    );
 
-      alert(
-        `${titulo}\n` +
-        `HTTP: ${status}\n\n` +
-        `${corpo}`
+    const payload = await gerarPayloadOmie();
+
+    if (!payload) {
+      throw new Error("Não foi possível gerar o payload para envio.");
+    }
+
+    console.log("📦 Payload gerado (produtos):", payload);
+
+    abrirStatus(
+      "📦 Enviando produtos",
+      "Os produtos estão sendo enviados para a Omie. Aguarde um instante.",
+      "info"
+    );
+
+    // =========================================================
+    // 1. ENVIA PRODUTOS
+    // =========================================================
+    const resposta = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/omie/pedidos", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("accessToken") || ""}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const { parsed, raw } = await readJsonOrText(resposta);
+
+    if (!resposta.ok) {
+      alertServer("❌ ERRO ao enviar PRODUTOS", resposta.status, parsed ?? raw);
+
+      abrirStatus(
+        "❌ Erro ao enviar produtos",
+        parsed?.erro || parsed?.error || raw || "Erro desconhecido ao enviar os produtos.",
+        "error"
       );
-    };
 
-    // helper: tenta ler JSON, senão texto
-    const readJsonOrText = async (res) => {
-      const raw = await res.text();
-      try {
-        return { parsed: JSON.parse(raw), raw };
-      } catch {
-        return { parsed: null, raw };
+      throw new Error(parsed?.erro || parsed?.error || raw || "Erro ao enviar produtos para a Omie.");
+    }
+
+    alertServer("✅ PRODUTOS enviados com sucesso", resposta.status, parsed ?? raw);
+    console.log("📤 Enviado à Omie (produtos):", parsed ?? raw);
+
+    abrirStatus(
+      "✅ Produtos enviados",
+      "Os produtos foram enviados com sucesso. Agora estamos buscando o número do pedido.",
+      "success"
+    );
+
+    // =========================================================
+    // 2. PEGA O ID DA PROPOSTA
+    // =========================================================
+    const params = new URLSearchParams(window.location.search);
+    const propostaId = params.get("id");
+
+    if (!propostaId) {
+      throw new Error("ID da proposta não encontrado na URL.");
+    }
+
+    // =========================================================
+    // 3. BUSCA O NÚMERO DO PEDIDO
+    // =========================================================
+    abrirStatus(
+      "🔎 Buscando número do pedido",
+      "Os produtos já foram enviados. Agora estamos buscando o número gerado do pedido.",
+      "info"
+    );
+
+    const respostaPedido = await fetch("https://contator-ulhoa-3d28d89efa68.herokuapp.com/pedido");
+    const dadosPedido = await respostaPedido.json();
+
+    if (!respostaPedido.ok) {
+      throw new Error(dadosPedido?.error || "Erro ao buscar número do pedido.");
+    }
+
+    const numeroPedido = dadosPedido?.numero;
+
+    if (numeroPedido === undefined || numeroPedido === null || numeroPedido === "") {
+      throw new Error("O número do pedido não foi retornado pela rota /pedido.");
+    }
+
+    console.log("🔢 Número do pedido obtido:", numeroPedido);
+
+    abrirStatus(
+      "📝 Salvando na proposta",
+      `Pedido localizado com o número ${numeroPedido}. Agora estamos vinculando esse número à proposta.`,
+      "info"
+    );
+
+    // =========================================================
+    // 4. ATUALIZA A PROPOSTA NO LOCALHOST
+    //    (para evitar o erro de CORS no PUT remoto)
+    // =========================================================
+    const respostaUpdate = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${propostaId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ numeroPedido })
+    });
+
+    const dadosAtualizados = await readJsonOrText(respostaUpdate);
+
+    if (!respostaUpdate.ok) {
+      throw new Error(
+        dadosAtualizados?.parsed?.error ||
+        dadosAtualizados?.raw ||
+        "Erro ao incluir número do pedido na proposta."
+      );
+    }
+
+    console.log("✅ Proposta atualizada com numeroPedido:", numeroPedido);
+    console.log("📄 Resposta da atualização:", dadosAtualizados);
+
+    // =========================================================
+    // 5. ATUALIZA CAMPO NA TELA, SE EXISTIR
+    // =========================================================
+    const inputNumeroPedido = document.getElementById("numeroPedido");
+    if (inputNumeroPedido) {
+      inputNumeroPedido.value = numeroPedido;
+    }
+
+    // =========================================================
+    // 6. ENVIO DE SERVIÇOS, SE EXISTIR
+    // =========================================================
+    const selecao = window.__vvUltimaSelecaoOmie || null;
+    const valorServicos = selecao?.totais?.valorServicos || 0;
+
+    if (valorServicos > 0 && typeof enviarOSServico === "function") {
+      abrirStatus(
+        "🛠️ Enviando serviços",
+        "Os produtos já foram enviados e o pedido foi vinculado. Agora estamos enviando os serviços.",
+        "info"
+      );
+
+      const osResp = await enviarOSServico({ valorServicos });
+
+      alertServer(
+        osResp?.ok ? "✅ SERVIÇOS enviados com sucesso" : "⚠️ SERVIÇOS não enviados",
+        osResp?.status || "sem status",
+        osResp
+      );
+
+      if (osResp?.ok) {
+        abrirStatus(
+          "✅ Pedido concluído",
+          `O pedido foi feito com o número ${numeroPedido}.<br>Os serviços também foram enviados com sucesso.`,
+          "success"
+        );
+      } else {
+        abrirStatus(
+          "⚠️ Pedido concluído parcialmente",
+          `O pedido foi feito com o número ${numeroPedido}, mas os serviços não puderam ser enviados agora.`,
+          "warning"
+        );
       }
-    };
+    } else {
+      console.log("ℹ️ Sem serviços para enviar (valor 0) ou função enviarOSServico indisponível.");
 
-    setTimeout(async () => {
-      const payload = await gerarPayloadOmie();
+      abrirStatus(
+        "✅ Pedido concluído",
+        `O pedido foi feito com o número ${numeroPedido}.`,
+        "success"
+      );
+    }
 
-      if (!payload) {
-        if (spinner) spinner.style.display = "none";
-        if (botao) botao.disabled = false;
-        ocultarCarregando();
-        return;
-      }
+  } catch (erro) {
+    console.error("❌ Erro em atualizarNaOmie:", erro);
 
-      console.log("📦 Payload gerado (produtos):", payload);
+    abrirStatus(
+      "❌ Erro no processo",
+      erro?.message || "Ocorreu um erro durante o envio do pedido.",
+      "error"
+    );
 
-      let sucessoProdutos = false;
+    alert(`❌ Erro no processo\n\n${erro?.message || erro}`);
+  } finally {
+    if (spinner) spinner.style.display = "none";
+    if (botao) botao.disabled = false;
 
-      // =========================
-      // PRODUTOS
-      // =========================
-      try {
-        const resposta = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/omie/pedidos", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem("accessToken") || ""}`
-          },
-          body: JSON.stringify(payload)
-        });
-
-        const { parsed, raw } = await readJsonOrText(resposta);
-
-        if (resposta.ok) {
-          sucessoProdutos = true;
-
-          // ✅ ALERTA COM RESPOSTA DO SERVER
-          alertServer("✅ PRODUTOS enviados com sucesso", resposta.status, parsed ?? raw);
-
-          if (typeof mostrarPopupCustomizado === "function") {
-            mostrarPopupCustomizado("✅ Sucesso!", "Pedido de PRODUTOS enviado com sucesso à Omie.", "success");
-          }
-          console.log("📤 Enviado à Omie (produtos):", parsed ?? raw);
-        } else {
-          // ✅ ALERTA COM ERRO DO SERVER
-          alertServer("❌ ERRO ao enviar PRODUTOS", resposta.status, parsed ?? raw);
-
-          if (typeof mostrarPopupCustomizado === "function") {
-            mostrarPopupCustomizado(
-              "❌ Erro ao enviar produtos",
-              parsed?.erro || parsed?.error || raw || "Erro desconhecido ao enviar.",
-              "error"
-            );
-          }
-          console.error("❌ Erro (produtos):", parsed ?? raw);
-        }
-      } catch (erro) {
-        alert(`❌ Erro na conexão ao enviar PRODUTOS\n\n${erro?.message || erro}`);
-        if (typeof mostrarPopupCustomizado === "function") {
-          mostrarPopupCustomizado(
-            "❌ Erro na conexão",
-            "Falha ao enviar PRODUTOS. Verifique o servidor.",
-            "error"
-          );
-        }
-        console.error("❌ Erro de envio (produtos):", erro);
-      }
-
-      // =========================
-      // SERVIÇOS (OS)
-      // =========================
-      try {
-        const selecao = window.__vvUltimaSelecaoOmie || null;
-        const valorServicos = selecao?.totais?.valorServicos || 0;
-
-        if (valorServicos > 0 && typeof enviarOSServico === "function") {
-          console.log("🛠️ Enviando OS de Serviços. Valor:", valorServicos);
-
-          const osResp = await enviarOSServico({ valorServicos });
-
-          // ✅ ALERTA COM RESPOSTA DO SERVER (SERVIÇOS)
-          alertServer(
-            osResp?.ok ? "✅ SERVIÇOS enviados com sucesso" : "⚠️ SERVIÇOS não enviados",
-            osResp?.status || "sem status",
-            osResp
-          );
-
-          if (osResp?.ok) {
-            if (typeof mostrarPopupCustomizado === "function") {
-              mostrarPopupCustomizado(
-                "✅ Serviços enviados",
-                `OS de Serviços criada com sucesso.<br>Valor: ${vv_fmtBRL(valorServicos)}.`,
-                "success"
-              );
-            }
-          } else {
-            if (typeof mostrarPopupCustomizado === "function") {
-              mostrarPopupCustomizado(
-                "⚠️ Serviços não enviados",
-                `Não foi possível criar a OS de Serviços agora.<br>Motivo: ${osResp?.error || "desconhecido"}`,
-                "warning"
-              );
-            }
-          }
-        } else {
-          console.log("ℹ️ Sem serviços para enviar (valor 0) ou função enviarOSServico indisponível.");
-        }
-      } catch (err) {
-        alert(`⚠️ Erro ao enviar SERVIÇOS\n\n${err?.message || err}`);
-        console.error("❌ Falha ao enviar OS de Serviços:", err);
-        if (typeof mostrarPopupCustomizado === "function") {
-          mostrarPopupCustomizado(
-            "⚠️ Serviços não enviados",
-            "Ocorreu um erro ao criar a OS de Serviços.",
-            "warning"
-          );
-        }
-      }
-
-      if (spinner) spinner.style.display = "none";
-      if (botao) botao.disabled = false;
+    if (typeof ocultarCarregando === "function") {
       ocultarCarregando();
-    }, 300);
-
-  } catch (e) {
-    console.error(e);
-    alert(`❌ Erro inesperado\n\n${e?.message || e}`);
-    ocultarCarregando();
+    }
   }
 }
-
 
 
 
