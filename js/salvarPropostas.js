@@ -309,15 +309,14 @@ async function atualizarPropostaEditavel() {
     const select = document.getElementById("vendedorResponsavel");
     const textoSelecionado = select?.options[select.selectedIndex]?.text?.trim() || "";
 
- const clientes = Array.from(document.querySelectorAll(".cliente-item")).map(el => ({
-  nome_razao_social: el.querySelector(".razaoSocial")?.value || "",
-  nome: el.querySelector(".nomeContato")?.value || "", // ✅ AQUI
-  codigoOmie: el.querySelector(".codigoCliente")?.value || "",
-  cpfCnpj: el.querySelector(".cpfCnpj")?.value || "",
-  funcao: el.querySelector(".funcaoCliente")?.value || "",
-  telefone: el.querySelector(".telefoneCliente")?.value || ""
-}));
-
+    const clientes = Array.from(document.querySelectorAll(".cliente-item")).map(el => ({
+      nome_razao_social: el.querySelector(".razaoSocial")?.value || "",
+      nome: el.querySelector(".nomeContato")?.value || "",
+      codigoOmie: el.querySelector(".codigoCliente")?.value || "",
+      cpfCnpj: el.querySelector(".cpfCnpj")?.value || "",
+      funcao: el.querySelector(".funcaoCliente")?.value || "",
+      telefone: el.querySelector(".telefoneCliente")?.value || ""
+    }));
 
     const condicaoPagamento = document.getElementById("condicaoPagamento")?.value?.trim() || "";
     const linhas = document.querySelectorAll("#listaParcelas .row");
@@ -333,6 +332,7 @@ async function atualizarPropostaEditavel() {
 
     const camposFormulario = {
       numeroOrcamento: document.getElementById("numeroOrcamento")?.value || "",
+      numeroPedido: document.getElementById("numeroPedido")?.value || "",
       dataOrcamento: document.getElementById("dataOrcamento")?.value || "",
       origemCliente: document.getElementById("origemCliente")?.value || "",
       clientes,
@@ -349,9 +349,9 @@ async function atualizarPropostaEditavel() {
       condicaoPagamento,
       condicoesGerais: document.getElementById("condicoesGerais")?.value || "",
       desconto,
-      parcelas, 
+      parcelas,
 
-        // ✅ NOVOS CAMPOS (Aba nova de acompanhamento)
+      // ✅ NOVOS CAMPOS (Aba nova de acompanhamento)
       prazoEntrega: document.getElementById("prazoEntrega")?.value || "",
       dataPedidoEnviadoCliente: document.getElementById("dataPedidoEnviadoCliente")?.value || "",
       meioEnvioPedido: document.getElementById("meioEnvioPedido")?.value || "",
@@ -410,7 +410,7 @@ async function atualizarPropostaEditavel() {
           quantidade,
           quantidade_desejada,
           formula_quantidade,
-          formula_custo,   // <<=== Salvo o resumo aqui!
+          formula_custo,
           formula_preco
         });
       });
@@ -451,9 +451,12 @@ async function atualizarPropostaEditavel() {
     }
 
     const numeroProposta = camposFormulario.numeroOrcamento || Date.now().toString();
+    const numeroPedido = camposFormulario.numeroPedido || "";
+
     const propostaAtualizada = {
       tipoProposta: "editavel",
       numeroProposta,
+      numeroPedido,
       camposFormulario,
       grupos
     };
@@ -479,7 +482,6 @@ async function atualizarPropostaEditavel() {
     return { erro: erro.message };
   }
 }
-
 
 
 
