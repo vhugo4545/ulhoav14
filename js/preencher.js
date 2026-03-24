@@ -129,6 +129,7 @@ async function carregarPropostaEditavel(proposta) {
 
     // 🧾 Campos do formulário
     setIfExists("numeroOrcamento", dados.numeroOrcamento || proposta.numeroProposta);
+    setIfExists("numeroPedido", proposta.numeroPedido || dados.numeroPedido);
     setIfExists("dataOrcamento", dados.dataOrcamento);
     setIfExists("origemCliente", dados.origemCliente);
     setIfExists("cep", dados.cep);
