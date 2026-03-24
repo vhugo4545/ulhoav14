@@ -604,11 +604,17 @@ async function openOsPopup({ endpoint = "https://ulhoa-servico-ec4e1aa95355.hero
             <div id="collapseInfoOrcamento" class="accordion-collapse collapse show">
               <div class="accordion-body">
                 <div class="row g-3">
-                  <div class="col-md-4">
-                    <label class="form-label">Número do Orçamento</label>
-                    <input type="text" class="form-control" id="numeroOrcamento" readonly tabindex="-1"
-                      style="background-color: #e6e6e6; color: #000;">
-                  </div>
+<div class="col-md-2">
+  <label class="form-label">Número do Orçamento</label>
+  <input type="text" class="form-control" id="numeroOrcamento" readonly tabindex="-1"
+    style="background-color: #e6e6e6; color: #000;">
+</div>
+
+<div class="col-md-2">
+  <label class="form-label">Número do Pedido</label>
+  <input type="text" class="form-control" id="numeroPedido" readonly tabindex="-1"
+    style="background-color: #e6e6e6; color: #000;">
+</div>
 
                   <div class="col-md-4">
                     <label class="form-label">Data do Orçamento</label>
