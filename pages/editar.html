@@ -1,4 +1,1096 @@
-async function salvarPropostaEditavel() {
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Proposta com Inputs e Tabela</title>
+
+  <!-- CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/listagem.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+</head>
+
+
+
+<body>
+  
+<script>
+  // Overlay simples de carregamento (4s)
+  function mostrarOverlayCarregando(duracaoMs = 4000) {
+    // evita duplicar
+    if (document.getElementById("vv-loading-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = "vv-loading-overlay";
+    overlay.setAttribute("role", "status");
+    overlay.setAttribute("aria-live", "polite");
+    overlay.innerHTML = `
+      <div style="
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        gap:10px; text-align:center;
+      ">
+        <div style="
+          width:42px; height:42px; border:4px solid rgba(255,255,255,.35);
+          border-top-color:#fff; border-radius:50%;
+          animation: vvSpin 0.85s linear infinite;
+        "></div>
+        <div style="font: 600 14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#fff;">
+          Carregando...
+        </div>
+      </div>
+    `;
+
+    // estilo do overlay (inline pra ser direto)
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(3px);
+    `;
+
+    // keyframes do spinner
+    const style = document.createElement("style");
+    style.id = "vv-loading-overlay-style";
+    style.textContent = `
+      @keyframes vvSpin { to { transform: rotate(360deg); } }
+    `;
+
+    document.head.appendChild(style);
+    document.body.appendChild(overlay);
+
+    setTimeout(() => {
+      overlay.remove();
+      const s = document.getElementById("vv-loading-overlay-style");
+      if (s) s.remove();
+    }, duracaoMs);
+  }
+
+  // Exemplo de uso:
+  // mostrarOverlayCarregando(); // 4s
+  mostrarOverlayCarregando(); 
+</script>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <ul>
+    
+      <li><a href="../pages/listagem.html"><span class="material-icons-outlined">list</span> Início</a></li>
+     
+    </ul>
+<div class="sidebar-footer">
+ 
+
+  <button id="btn-criar" class="sidebar-button" onclick="salvarPropostaEditavel() " style="display: block;">
+      <span class="material-icons-outlined">add_circle_outline</span> Criar Propostaa
+    </button>
+    
+ <div class="sidebar-footer">
+  <button id="btn-destravar" class="sidebar-button" onclick="destravarCampos()">
+    <span class="material-icons-outlined">lock_open</span><br> Destravar Campos
+  </button>
+</div>
+
+
+<script>
+function destravarCampos() {
+    document.querySelectorAll('input[readonly]').forEach(campo => {
+        campo.removeAttribute('readonly'); // Remove o readonly
+        campo.style.background = ''; // Restaura a cor padrão
+    });
+}
+</script>
+
+
+<button id="btn-planilha-custos" class="sidebar-button" onclick="gerarPlanilhaCustos()">
+  <span class="material-icons-outlined">table_chart</span><br><P></P>Planilha de Custos
+</button>
+<!-- Teste git -->
+
+ <button id="btn-editar" class="sidebar-button" onclick="atualizarPropostaEditavel() ">
+    <span class="material-icons-outlined">edit</span> Editar Proposta ( Atualizar )
+  </button>
+  
+  <button id="btn-solicitar" class="sidebar-button" onclick="marcarPendenteAprovacao()">
+    <span class="material-icons-outlined">assignment_turned_in</span><br> Solicitar Aprovação
+  </button>
+
+  <button id="btn-autorizar" class="sidebar-button" onclick="marcarAprovadoPeloGestor()">
+    <span class="material-icons-outlined">verified_user</span><br>  Autorizar Proposta
+  </button>
+
+ <button id="btn-visualizar-proposta" class="sidebar-button" onclick="gerarOrcamentoParaImpressaoCompleta()">
+  <span class="material-icons-outlined">visibility</span><br><P></P>  Visualizar Proposta
+</button>
+
+<button id="btn-visualizar-proposta" class="sidebar-button" onclick="abrirPopupVisualizarOP()">
+  <span class="material-icons-outlined">visibility</span><br><p></p> Folhas de impressão
+</button>
+
+<script>
+  function abrirPopupVisualizarOP() {
+    // evita duplicar popup
+    if (document.getElementById("popup-visualizar-op-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = "popup-visualizar-op-overlay";
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      padding: 16px;
+    `;
+
+    const modal = document.createElement("div");
+    modal.style.cssText = `
+      width: 100%;
+      max-width: 420px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      padding: 20px;
+      font-family: Inter, Arial, sans-serif;
+    `;
+
+    modal.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:18px; font-weight:700; color:#111827;">
+          Folhas de impressão
+        </h3>
+        <button type="button" id="fechar-popup-visualizar-op"
+          style="
+            border:none;
+            background:#e5e7eb;
+            color:#111827;
+            width:36px;
+            height:36px;
+            border-radius:10px;
+            cursor:pointer;
+            font-size:18px;
+            font-weight:700;
+          ">
+          ×
+        </button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button type="button" id="btn-folha-ordem-servico"
+          style="
+            width:100%;
+            border:none;
+            background:#7c3aed;
+            color:#fff;
+            padding:14px 16px;
+            border-radius:12px;
+            cursor:pointer;
+            font-size:14px;
+            font-weight:600;
+          ">
+          Visualizar ORDEM DE SERVIÇO
+        </button>
+
+        <button type="button" id="btn-etapas-processo"
+          style="
+            width:100%;
+            border:none;
+            background:#2563eb;
+            color:#fff;
+            padding:14px 16px;
+            border-radius:12px;
+            cursor:pointer;
+            font-size:14px;
+            font-weight:600;
+          ">
+          Visualizar ETAPAS DO PROCESSO
+        </button>
+
+        <button type="button" id="btn-historico-producao"
+          style="
+            width:100%;
+            border:none;
+            background:#0f766e;
+            color:#fff;
+            padding:14px 16px;
+            border-radius:12px;
+            cursor:pointer;
+            font-size:14px;
+            font-weight:600;
+          ">
+          Visualizar RELATORIO DE ENTREGA / INSTALAÇÃO
+        </button>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const fechar = () => {
+      const el = document.getElementById("popup-visualizar-op-overlay");
+      if (el) el.remove();
+    };
+
+    document
+      .getElementById("fechar-popup-visualizar-op")
+      .addEventListener("click", fechar);
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) fechar();
+    });
+
+    document.getElementById("btn-folha-ordem-servico").addEventListener("click", () => {
+      fechar();
+      gerarFolha1OrdemDeServico();
+    });
+
+    document.getElementById("btn-etapas-processo").addEventListener("click", () => {
+      fechar();
+      gerarFolha4RelatorioEntrega();
+    });
+
+    document.getElementById("btn-historico-producao").addEventListener("click", () => {
+      fechar();
+      gerarHistoricoDeProducaoParaImpressao();
+    });
+  }
+</script>
+
+  <button id="btn-enviar-cliente" class="sidebar-button" onclick="marcarEnviadoParaCliente()">
+    <span class="material-icons-outlined">send</span><br> Enviar Proposta
+  </button>
+
+  <button id="btn-aprovado-cliente" class="sidebar-button" onclick="marcarAprovadoPeloCliente()">
+    <span class="material-icons-outlined">check_circle</span><br>  Aprovado pelo Cliente
+  </button>
+
+  <button id="btn-gerar-pedido" class="sidebar-button" onclick="atualizarNaOmie()">
+    <span class="material-icons-outlined">receipt_long</span><br> Gerar Pedido de Venda
+  </button>
+
+  <button id="btn-atualizar-precos" class="sidebar-button" onclick="atualizarPrecosOmieNaDOM()">
+    <span class="material-icons-outlined">sync</span><br>  Atualizar Preços da Omie
+  </button>
+
+
+  <button id="btn-enviar-cliente" class="sidebar-button" 
+        onclick="openOsPopup({ endpoint: 'https://ulhoa-servico-ec4e1aa95355.herokuapp.com/os' })">
+  <span class="material-icons-outlined">send</span><br> Modulo de Serviços
+</button>
+
+<style>
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#f6f7fb; margin:0; padding:24px; }
+  .btn { padding:10px 16px; border:none; border-radius:10px; cursor:pointer; font-weight:600; }
+  .btn-primary { background:#2563eb; color:#fff; }
+  .btn-secondary { background:#e5e7eb; }
+  pre { background:#0b1020; color:#d1e7ff; padding:12px; border-radius:12px; overflow:auto; }
+
+  /* Popup */
+  .os-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+  .os-modal{width:100%;max-width:720px;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:18px;max-height:95vh;overflow:auto}
+  .os-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .os-input{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font:14px system-ui}
+  .os-label{font:600 13px system-ui;color:#111;margin-bottom:6px;display:block}
+  .os-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+  .os-btn{padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font:600 14px system-ui}
+  .os-btn-primary{background:#2563eb;color:#fff}
+  .os-btn-secondary{background:#e5e7eb}
+  .os-card{border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:12px}
+  .os-title{font:600 16px system-ui;margin:0 0 8px}
+  .os-muted{font:12px system-ui;color:#6b7280}
+</style>
+
+<script>
+let CLIENTES_CACHE = [];
+
+// pré-carregar clientes assim que a página abrir
+async function carregarClientesNaAbertura() {
+  try {
+    const resp = await fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes");
+    const data = await resp.json();
+    if (data && Array.isArray(data.clientes)) {
+      CLIENTES_CACHE = data.clientes;
+      console.log("✅ Clientes pré-carregados:", CLIENTES_CACHE.length);
+    } else {
+      console.warn("⚠️ Resposta inesperada da rota /clientes:", data);
+    }
+  } catch (err) {
+    console.error("❌ Erro ao carregar clientes:", err);
+  }
+}
+window.addEventListener("DOMContentLoaded", carregarClientesNaAbertura);
+
+// função para buscar código Omie pela razão social no cache
+function getCodigoClientePorRazao(razaoSocial) {
+  if (!CLIENTES_CACHE.length) {
+    console.warn("⚠️ Clientes ainda não carregados, retornando fallback.");
+    return "cliente não compartilhado entre bases";
+  }
+  const encontrado = CLIENTES_CACHE.find(c =>
+    String(c.nome_fantasia || "").toLowerCase().includes(razaoSocial.toLowerCase())
+  );
+  return encontrado ? encontrado.codigo_cliente_omie : "cliente não compartilhado entre bases";
+}
+
+async function openOsPopup({ endpoint = "https://ulhoa-servico-ec4e1aa95355.herokuapp.com/os" } = {}) {
+  const ENDPOINT = endpoint;
+  const $ = (sel, root=document) => root.querySelector(sel);
+
+  // helpers
+  function brlToNumber(v){ if(typeof v!=="string") return Number(v)||0; return Number(v.replace(/\./g,"").replace(",", "."))||0; }
+  function numberToBRL(n){ return (new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(n||0))).replace("R$","").trim(); }
+  function parseMoneyLoose(txt){
+    if(!txt) return 0;
+    let s=String(txt).replace(/[^\d.,-]/g,"");
+    const last=Math.max(s.lastIndexOf(","), s.lastIndexOf("."));
+    let i=s,f=""; if(last>=0){ i=s.slice(0,last); f=s.slice(last+1); }
+    i=i.replace(/[^\d-]/g,""); f=f.replace(/[^\d]/g,"");
+    const num=Number(i+(f? "."+f:"")); return isNaN(num)?0:num;
+  }
+
+  // pega valores da página
+  const orcEl = document.getElementById("numeroOrcamento");
+  const cCodIntOSValue =
+    (orcEl?.value && String(orcEl.value).trim()) ||
+    (orcEl?.dataset?.valorOriginal && String(orcEl.dataset.valorOriginal).trim()) || "";
+
+  // pega razão social e busca código Omie no cache
+  const razaoEl = document.querySelector("input.form-control.razaoSocial");
+  const razaoSocialValue =
+    (razaoEl?.value && String(razaoEl.value).trim()) ||
+    (razaoEl?.dataset?.valorOriginal && String(razaoEl.dataset.valorOriginal).trim()) || "";
+
+  let nCodCliValue = "cliente não compartilhado entre bases";
+  if (razaoSocialValue) {
+    nCodCliValue = getCodigoClientePorRazao(razaoSocialValue);
+  }
+
+  const valorFinalTxt = $("#valorFinalTotal")?.textContent?.trim() || "R$ 0,00";
+  const valorTotalNum = parseMoneyLoose(valorFinalTxt);
+  const prefillValor  = numberToBRL(valorTotalNum);
+
+  // monta popup
+  const backdrop = document.createElement("div");
+  backdrop.className = "os-backdrop";
+  Object.assign(backdrop.style, {
+    position:"fixed", inset:"0", background:"rgba(0,0,0,.45)",
+    display:"flex", alignItems:"center", justifyContent:"center",
+    zIndex:"9999", padding:"16px"
+  });
+  backdrop.setAttribute("aria-hidden","true");
+
+  backdrop.innerHTML = `
+    <div class="os-modal" role="dialog" aria-modal="true" aria-labelledby="os-title"
+         style="width:100%;max-width:720px;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:18px;max-height:95vh;overflow:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 class="os-title" id="os-title" style="font:600 16px system-ui">Módulo de Serviços</h3>
+        <button class="os-btn os-btn-secondary" id="os-close" type="button"
+                style="padding:10px 14px;border-radius:10px;border:none;background:#e5e7eb;cursor:pointer;font:600 14px system-ui">Fechar</button>
+      </div>
+
+      <!-- Cabeçalho -->
+      <div class="os-row">
+        <div>
+          <label class="os-label">Número do orçamento (cCodIntOS)</label>
+          <input class="os-input" id="os-cCodIntOS" value="${cCodIntOSValue}">
+        </div>
+        <div>
+          <label class="os-label">Código do cliente (nCodCli)</label>
+          <input class="os-input" id="os-nCodCli" value="${nCodCliValue}">
+        </div>
+      </div>
+
+      <div class="os-row" style="margin-top:12px">
+        <div>
+          <label class="os-label">Quantidade de parcelas (nQtdeParc)</label>
+          <input class="os-input" id="os-nQtdeParc" type="number" min="1" step="1" value="1">
+        </div>
+        <div>
+          <label class="os-label">Data de previsão (DD/MM/AAAA) (dDtPrevisao)</label>
+          <input class="os-input" id="os-dDtPrevisao" value="14/09/2025">
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <label class="os-label">Observações da NF (cDadosAdicNF)</label>
+        <input class="os-input" id="os-cDadosAdicNF" value="OS incluída via API • Orçamento ${cCodIntOSValue}">
+      </div>
+
+      <!-- Serviço -->
+      <div class="os-card">
+        <div class="os-title">Serviço (valor final com desconto)</div>
+        <div class="os-muted">Será enviado 1 item em <code>ServicosPrestados</code> com <b>nQtde = 1</b> e <b>nValUnit = Valor final</b>.</div>
+
+        <div class="os-row" style="margin-top:10px">
+          <div>
+            <label class="os-label">Valor total (R$)</label>
+            <input class="os-input" id="os-valorTotal" inputmode="decimal" value="${prefillValor}">
+          </div>
+          <div>
+            <label class="os-label">Desconto (%)</label>
+            <input class="os-input" id="os-percent" type="number" step="0.01" value="0">
+          </div>
+        </div>
+
+        <div class="os-row" style="margin-top:10px">
+          <div>
+            <label class="os-label">Valor final (R$)</label>
+            <input class="os-input" id="os-resultado" readonly>
+          </div>
+          <div>
+            <label class="os-label">Quantidade do serviço (nQtde)</label>
+            <input class="os-input" id="os-s2nQtde" type="number" min="1" value="1" readonly>
+          </div>
+        </div>
+      </div>
+
+      <div class="os-actions">
+        <button class="os-btn os-btn-secondary" id="os-cancel" type="button">Cancelar</button>
+        <button class="os-btn os-btn-primary" id="os-submit" type="button">Enviar OS</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+
+  // acessibilidade/controle
+  function show(){ backdrop.style.display="flex"; backdrop.setAttribute("aria-hidden","false"); }
+  function hide(){ backdrop.style.display="none"; backdrop.setAttribute("aria-hidden","true"); }
+  function cleanup(){ try{backdrop.remove()}catch{} }
+  show();
+
+  // refs
+  const btnClose   = $("#os-close", backdrop);
+  const btnCancel  = $("#os-cancel", backdrop);
+  const btnSubmit  = $("#os-submit", backdrop);
+
+  const inpCodInt  = $("#os-cCodIntOS", backdrop);
+  const inpCli     = $("#os-nCodCli", backdrop);
+  const inpParc    = $("#os-nQtdeParc", backdrop);
+  const inpData    = $("#os-dDtPrevisao", backdrop);
+  const inpAdicNF  = $("#os-cDadosAdicNF", backdrop);
+
+  const inpTotal   = $("#os-valorTotal", backdrop);
+  const inpPercent = $("#os-percent", backdrop);
+  const inpRes     = $("#os-resultado", backdrop);
+  const inpS2Qtde  = $("#os-s2nQtde", backdrop);
+
+  // cálculo: valor final = total - desconto(%)
+  function calc(){
+    const base = brlToNumber(inpTotal.value);
+    const p = Number(inpPercent.value)||0;
+    const final = base * (1 - p/100);
+    inpRes.value = numberToBRL(final);
+  }
+  inpTotal.addEventListener("input", calc);
+  inpPercent.addEventListener("input", calc);
+  calc();
+
+  // fechar
+  const closeAll = () => { hide(); cleanup(); };
+  btnClose.onclick = closeAll;
+  btnCancel.onclick = closeAll;
+  backdrop.addEventListener("keydown", e => { if(e.key==="Escape") closeAll(); });
+
+  // enviar
+  btnSubmit.onclick = async () => {
+    const missing = [];
+    if (!inpCodInt.value)            missing.push("Número do orçamento (cCodIntOS)");
+    if (!inpData.value)              missing.push("Data de previsão (dDtPrevisao)");
+    if (!inpCli.value || inpCli.value === "cliente não compartilhado entre bases") missing.push("Código do cliente (nCodCli)");
+    if (!(Number(inpParc.value) > 0))missing.push("Quantidade de parcelas (nQtdeParc)");
+
+    const nValUnitFinal = brlToNumber(inpRes.value || "0");
+    if (!(nValUnitFinal > 0)) missing.push("Valor final (R$)");
+
+    if (missing.length) {
+      alert("Preencha: " + missing.join(", "));
+      return;
+    }
+
+    const payload = {
+      Cabecalho: {
+        cCodIntOS: String(inpCodInt.value).trim(),
+        cCodParc: "999",
+        cEtapa: "20",
+        dDtPrevisao: String(inpData.value).trim(),
+        nCodCli: Number(inpCli.value),
+        nQtdeParc: Number(inpParc.value)
+      },
+      Departamentos: [],
+      Email: { cEnvBoleto:"N", cEnvLink:"N", cEnviarPara:"" },
+      InformacoesAdicionais: {
+        cCodCateg: "1.02.02",
+        cDadosAdicNF: String(inpAdicNF.value).trim(),
+        nCodCC: 10937506623
+      },
+      ServicosPrestados: [
+        {
+          cCodServLC116: "7.01",
+          cCodServMun:   "0701-0/01-88",
+          cRetemISS:     "N",
+          cTribServ:     "01",
+          impostos: { cRetemIRRF:"N", cRetemPIS:"N", nAliqIRRF:0, nAliqISS:0, nAliqPIS:0 },
+          nQtde: 1,
+          nValUnit: nValUnitFinal
+        }
+      ]
+    };
+
+    try {
+      const resp = await fetch(ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+      const out = document.getElementById("saida");
+      if (out) out.textContent = JSON.stringify(data, null, 2);
+      alert(data.ok ? "OS enviada com sucesso!" : ("Falha: " + (data.error || "Erro")));
+      closeAll();
+    } catch (err) {
+      const out = document.getElementById("saida");
+      if (out) out.textContent = "Erro de conexão: " + (err?.message || err);
+      alert("Erro de conexão com o servidor.");
+      closeAll();
+    }
+  };
+}
+</script>
+
+
+
+
+
+
+</div>
+
+
+
+<script>
+  function redirecionarParaEdicao() {
+    const id = new URLSearchParams(location.search).get("id");
+    window.location.href = "editar.html?id=" + "68746e305b9691a7ed3b3f97";
+  }
+</script>
+
+
+  </aside>
+
+
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="content">
+    <div class="main-container">
+      <form id="novoOrcamentoForm">
+        <div class="accordion mb-3" id="accordionOrcamento">
+
+          <!-- Aba: Informações do Orçamento -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseInfoOrcamento">
+                Informações do Orçamento
+              </button>
+            </h2>
+            <div id="collapseInfoOrcamento" class="accordion-collapse collapse show">
+              <div class="accordion-body">
+                <div class="row g-3">
+<div class="col-md-2">
+  <label class="form-label">Número do Orçamento</label>
+  <input type="text" class="form-control" id="numeroOrcamento" readonly tabindex="-1"
+    style="background-color: #e6e6e6; color: #000;">
+</div>
+
+<div class="col-md-2">
+  <label class="form-label">Número do Pedido</label>
+  <input type="text" class="form-control" id="numeroPedido" readonly tabindex="-1"
+    style="background-color: #e6e6e6; color: #000;">
+</div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Data do Orçamento</label>
+                    <input type="date" class="form-control" id="dataOrcamento" required>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Origem do Cliente</label>
+                    <select class="form-select" id="origemCliente" required>
+                      <option value="">Selecione</option>
+                      <option>Arquiteto(a)</option>
+                      <option>Construtora</option>
+                      <option>Engenheiro(a)</option>
+                      <option>Google</option>
+                      <option>Instagram</option>
+                      <option>Indicação</option>
+                      <option>Já é cliente</option>
+                      <option>Licitação</option>
+                      <option>Outros</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba: Dados do Cliente -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseCliente">
+                Dados do Cliente
+              </button>
+            </h2>
+            <div id="collapseCliente" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <div id="clientesWrapper">
+                  <div class="row g-3 cliente-item">
+                    <div class="col-md-6 position-relative d-flex align-items-end gap-2">
+                      <div class="flex-grow-1">
+                        <label class="form-label">Nome / Razão Social</label>
+                        <input type="text" class="form-control razaoSocial" placeholder="Digite para buscar..."
+                          autocomplete="off">
+                        <ul class="sugestoesCliente list-group position-absolute w-100 shadow bg-white"
+                          style="z-index: 10; max-height: 200px; overflow-y: auto; display: none;"></ul>
+                      </div>
+                      <button type="button" class="btn btn-outline-success rounded-circle" title="Incluir Cliente"
+                        onclick="abrirPopupIncluirCliente()"
+                        style="height: 38px; width: 38px; display: flex; align-items: center; justify-content: center;">
+                        <strong>+</strong>
+                      </button>
+                    </div>
+
+                    <div class="col-md-6">
+                      <label class="form-label">Código Omie</label>
+                      <input type="text" class="form-control codigoCliente" readonly
+                        style="background-color: #dfdfe0; color: #000;">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">CPF / CNPJ</label>
+                      <input type="text" class="form-control cpfCnpj" required>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Nome do Contato</label>
+                      <input type="text" class="form-control nomeContato">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Função</label>
+                      <input type="text" class="form-control funcaoCliente">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Telefone</label>
+                      <input type="text" class="form-control telefoneCliente">
+                    </div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-outline-primary mt-2"
+                  onclick="adicionarClienteRelacionado()">Adicionar Cliente Relacionado</button>
+                  <button type="button" class="btn btn-outline-danger btn-sm" onclick="abrirPopupExcluirClienteRelacionado()">
+  Excluir cliente relacionado
+</button>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba: Endereço da Obra -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseEndereco">
+                Endereço da Obra
+              </button>
+            </h2>
+            <div id="collapseEndereco" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <div class="row g-3">
+                  <div class="col-md-3"><label class="form-label">CEP</label><input type="text" class="form-control"
+                      id="cep"></div>
+                  <div class="col-md-6"><label class="form-label">Rua / Avenida</label><input type="text"
+                      class="form-control" id="rua"></div>
+                  <div class="col-md-3"><label class="form-label">Número</label><input type="text" class="form-control"
+                      id="numero"></div>
+                  <div class="col-md-4"><label class="form-label">Complemento</label><input type="text"
+                      class="form-control" id="complemento"></div>
+                  <div class="col-md-4"><label class="form-label">Bairro</label><input type="text" class="form-control"
+                      id="bairro"></div>
+                  <div class="col-md-2"><label class="form-label">Cidade</label><input type="text" class="form-control"
+                      id="cidade"></div>
+                  <div class="col-md-2"><label class="form-label">Estado</label><input type="text" class="form-control"
+                      id="estado"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba: Equipe Interna -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseEquipe">
+                Equipe Interna
+              </button>
+            </h2>
+            <div id="collapseEquipe" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Vendedor Responsável</label>
+                    <select class="form-select" id="vendedorResponsavel" required>
+                      <option value="">Carregando...</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Operador (Usuário Interno)</label>
+                    <input type="text" class="form-control" id="operadorInterno">
+                  </div>
+                </div>
+                 <!-- Botão Histórico -->
+      <div class="mt-3">
+        <button id="btn-historico-mudancas" type="button" class="btn btn-warning w-100" onclick="toggleTabelaHistorico()">
+          📋 Ver Histórico de Alterações
+        </button>
+      </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba: Produtos, Condições e Prazos -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseProdutos">
+                Produtos, Prazos e Condições
+              </button>
+            </h2>
+            <div id="collapseProdutos" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <div class="mb-3">
+                  <label class="form-label">Prazos por Área</label>
+                  <textarea class="form-control" id="prazosArea" rows="5"
+                    placeholder="Área ___: ___ dias úteis após aprovação..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Condição de Pagamento</label>
+                  <select class="form-select" id="condicaoPagamento">
+                    <option value="">Selecione</option>
+                    <option value="debito">40% de entrada, 40% após 30 dias e 20% após 60 dias.</option>
+                    <option value="debito">40% de entrada, 30% após 30 dias e 30% após 60 dias.</option>
+                    <option value="debito">60% de entrada, 40% após 30 dias.</option>
+                    <option value="parcelado">Personalizado</option>
+                  </select>
+                </div>
+
+                <div id="parcelamentoContainer" style="display: none;">
+                  <label class="form-label">Parcelas</label>
+                  <div id="listaParcelas"></div>
+                  <strong>Total das parcelas: <span id="totalParcelas">R$ 0,00</span></strong>
+                  <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="adicionarParcela()">+ Adicionar
+                    Parcela</button>
+                </div>
+
+                <div class="mb-3 mt-3">
+                  <label class="form-label">Condições Gerais</label>
+                  <div class="d-flex flex-wrap gap-2 mb-2">
+                    <button type="button" class="btn btn-outline-primary"
+                      onclick="preencherCondicoesComInstalacao()">Com medição e instalação</button>
+                    <button type="button" class="btn btn-outline-secondary"
+                      onclick="preencherCondicoesSemInstalacao()">Sem medição e instalação</button>
+                    <button type="button" class="btn btn-outline-warning" onclick="preencherCondicoesSemTampo()">Sem
+                      tampo</button>
+                      <button type="button" class="btn btn-outline-dark"
+  onclick="preencherCondicoesGeraisComDiagramacao()">Descritivo contratual</button>
+
+                  </div>
+                  <textarea class="form-control" id="condicoesGerais" rows="10"
+                    placeholder="Escolha uma opção ou edite manualmente..."></textarea>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+<!-- Aba NOVA: Acompanhamento (Pedido/Obra/Projeto) -->
+<div class="accordion-item">
+  <h2 class="accordion-header" id="headingAbaObraPedido">
+    <button class="accordion-button collapsed" type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#collapseAbaObraPedido"
+      aria-expanded="false"
+      aria-controls="collapseAbaObraPedido">
+      Acompanhamento do Pedido, Obra e Projeto
+    </button>
+  </h2>
+
+  <div id="collapseAbaObraPedido"
+    class="accordion-collapse collapse"
+    aria-labelledby="headingAbaObraPedido"
+    data-bs-parent="#accordionProposta">
+    <div class="accordion-body">
+
+      <div class="mb-3">
+        <label class="form-label">Prazo de entrega</label>
+        <input type="text" class="form-control" id="prazoEntrega" placeholder="Ex.: 20 dias úteis após aprovação">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Data que o pedido foi enviado para o cliente</label>
+        <input type="date" class="form-control" id="dataPedidoEnviadoCliente">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Por onde foi enviado</label>
+        <input type="text" class="form-control" id="meioEnvioPedido" placeholder="Ex.: WhatsApp, e-mail, presencial...">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Data que o pedido foi assinado</label>
+        <input type="date" class="form-control" id="dataPedidoAssinado">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Obra está liberada?</label>
+        <select class="form-select" id="obraLiberada">
+          <option value="">Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+          <option value="parcial">Parcial</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Quais itens / observações sobre a liberação</label>
+        <textarea class="form-control" id="itensLiberacaoObra" rows="4"
+          placeholder="Descreva quais itens estão liberados, pendências, restrições, etc."></textarea>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Data da liberação da obra</label>
+        <input type="date" class="form-control" id="dataLiberacaoObra">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Data do projeto enviado</label>
+        <input type="date" class="form-control" id="dataProjetoEnviado">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Data do projeto assinado</label>
+        <input type="date" class="form-control" id="dataProjetoAssinado">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Data da medição realizada</label>
+        <input type="date" class="form-control" id="dataMedicaoRealizada">
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+        </div>
+      </form>
+      <div class="d-flex justify-content-center my-4 position-relative">
+        <div class="d-flex flex-column align-items-center w-100" style="max-width: 600px;">
+          <div class="input-group input-group-lg shadow w-100">
+            <input id="buscaProduto" type="text" class="form-control text-center" placeholder="Pesquisar produto, cliente ou proposta..." autocomplete="off">
+            <button class="btn btn-primary d-flex align-items-center gap-2 px-4" type="button">
+              <span class="material-icons-outlined">search</span>
+              <span>Buscar</span>
+            </button>
+          </div>
+
+          <button id="fecharSanfonasBtn" class="btn btn-outline-secondary btn-sm w-100 mt-2" onclick="fecharTodasSanfonas()">
+            🔽 Fechar todos os blocos
+          </button>
+
+          <button id="abrirSanfonasBtn" class="btn btn-outline-primary btn-sm w-100 mt-2" onclick="abrirTodasSanfonas()">
+            🔼 Abrir todos os blocos
+          </button>
+
+
+
+          <ul id="sugestoesProdutos" class="list-group position-absolute w-100 shadow bg-white mt-2" style="z-index: 10; top: 100%; display: block; max-height: 200px; overflow-y: auto;"><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Proteção</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Montante H</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Calha Infinity</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Botão</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Garra</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Calha Ferreira Ulhoa</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Canaleta</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Spider</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Fechamento Frontal</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Pergolado</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Porta / Portão / Portinhola</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Corrimão</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Perfil U</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Revestimento</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Espera</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Instalação</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Vidro</li></ul>
+        </div>
+      </div>
+<br>
+<br>
+<br>
+
+      <div class="col-lg-12" id="blocosProdutosContainer">
+        <!-- Blocos dinâmicos de produtos serão adicionados aqui -->
+      </div>
+    </div>
+    
+    <br>
+    <br>
+    <br>
+    <br>
+    <div id="loader-overlay"
+      style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background-color:rgba(255,255,255,0.7); justify-content:center; align-items:center;">
+      <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div>
+    </div>
+
+
+  </main>
+
+<div class="modal fade" id="popupClienteModal" tabindex="-1" aria-labelledby="popupClienteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="popupClienteLabel">Incluir Cliente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <form id="popupCliente_form">
+          <div class="mb-3 d-none">
+            <label class="form-label">Código de Integração</label>
+            <input type="text" class="form-control" id="popupCliente_codigo" readonly>
+          </div>
+
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Razão Social</label>
+              <input type="text" class="form-control" id="popupCliente_razao" required>
+            </div>
+
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Nome Fantasia</label>
+              <input type="text" class="form-control" id="popupCliente_fantasia" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">E-mail</label>
+              <input type="email" class="form-control" id="popupCliente_email" required>
+            </div>
+
+            <div class="mb-3 col-md-6">
+              <label class="form-label">CNPJ ou CPF</label>
+              <input type="text" class="form-control" id="popupCliente_cnpjcpf" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Endereço</label>
+            <input type="text" class="form-control" id="popupCliente_endereco" required>
+          </div>
+
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Bairro</label>
+              <input type="text" class="form-control" id="popupCliente_bairro" required>
+            </div>
+
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Cidade</label>
+              <input type="text" class="form-control" id="popupCliente_cidade" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Estado (UF)</label>
+              <input type="text" class="form-control" id="popupCliente_estado" maxlength="2" required>
+            </div>
+
+            <div class="mb-3 col-md-6">
+              <label class="form-label">CEP</label>
+              <input type="text" class="form-control" id="popupCliente_cep" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Contato</label>
+              <input type="text" class="form-control" id="popupCliente_contato">
+            </div>
+
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Inscrição Municipal</label>
+              <input type="text" class="form-control" id="popupCliente_inscricao_municipal">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Inscrição Estadual</label>
+            <input type="text" class="form-control" id="popupCliente_inscricao_estadual">
+          </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="enviarClienteParaAPI()">Salvar Cliente</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+  <div id="overlayPopup"
+    style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background-color:rgba(0,0,0,0.5); z-index:9998;">
+  </div>
+
+  <!-- Popup centralizado -->
+  <div id="popupPendencias"
+    style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; padding:20px; border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.3); z-index:9999; max-width:400px;">
+    <h5 class="mb-3">⚠️ Pendências Encontradas</h5>
+    <ul id="listaPendencias" class="mb-3" style="padding-left: 18px;"></ul>
+    <button onclick="fecharPopupPendencias()" class="btn btn-secondary w-100">Fechar</button>
+  </div>
+  <script src="../js/salvarPropostas.js" defer></script>
+   <script src="../js/cadastroClientes.js" defer></script>
+  <script src="../js/validarToken.js" defer></script>
+  <script src="../js/sair.js" defer></script>
+  <!-- SCRIPTS -->
+  <script src="../js/validarToken.js" defer></script>
+  <script src="../js/auth.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script src="../js/preencher.js" defer></script>
+
+  <script src="../js/formularioOrcamento.js" defer></script>
+  <script src="../js/tabelas.js" defer></script>
+  <script src="../js/produtos.js" defer></script>
+  <!-- Scripts principais (em ordem lógica e sem duplicatas) -->
+  <script src="../js/clienteAutocomplete.js" defer></script>
+  <script src="../js/consultaCEP.js" defer></script>
+
+  <script src="../js/BarraPesquisa.js" defer></script>
+
+
+  <script src="../js/equipeInterna.js" defer></script>
+  <script src="../js/prazosCondicoes.js" defer></script>
+
+  <script src="../js/formulas.js" defer></script>
+
+  <script src="../js/imprimir.js" defer></script>
+  <script src="../js/enviarPropostas.js" defer></script>
+  <script src="../js/carregamento.js" defer></script>
+  <script src="../js/formularioOrcamento.js" defer></script>
+  <script src="../js/formulaValores.js" defer></script>
+  <script src="../js/salvarPropostas.js" defer></script>
+  <script src="../js/carregamento.js" defer></script>
+ 
+  <script src="../js/envioOmie.js" defer></script>
+  <script src="../js/totais.js" defer></script>
+  <script src="../js/conferencia.js" defer></script>
+  <script>
+
+    async function salvarPropostaEditavel() {
   try {
     console.log("editaveis")
    
@@ -35,32 +1127,21 @@ async function salvarPropostaEditavel() {
     const textoSelecionado = select?.options[select.selectedIndex]?.text || "";
 
     // --- Exemplo de uso: chamar antes de criar o objeto camposFormulario ---
-    // --- Exemplo de uso: chamar antes de criar o objeto camposFormulario ---
-async function preencherNumeroOrcamento() {
-  try {
-    const res = await fetch('https://contator-ulhoa-3d28d89efa68.herokuapp.com/orcamento');
-
-    if (!res.ok) {
-      throw new Error(`Erro HTTP: ${res.status}`);
+    async function preencherNumeroOrcamento() {
+      try {
+        const res = await fetch('https://ulhoa-0a02024d350a.herokuapp.com/contador/somar/orcamentos', { method: 'POST' });
+        const data = await res.json();
+        const numFormatado = String(data.novoValor).padStart(5, '0');
+        document.getElementById('numeroOrcamento').value = numFormatado;
+        return numFormatado;
+      } catch (err) {
+        alert('Erro ao buscar número do orçamento!');
+        document.getElementById('numeroOrcamento').value = 'ERRO';
+        return '';
+      }
     }
+    const numeroOrcamento = await preencherNumeroOrcamento();
 
-    const data = await res.json();
-
-    const numFormatado = String(data.numero).padStart(5, '0');
-    document.getElementById('numeroOrcamento').value = numFormatado;
-
-    return numFormatado;
-  } catch (err) {
-    console.error('Erro ao buscar número do orçamento:', err);
-    alert('Erro ao buscar número do orçamento!');
-    document.getElementById('numeroOrcamento').value = 'ERRO';
-    return '';
-  }
-}
-
-const numeroOrcamento = await preencherNumeroOrcamento();
-
-    
     const camposFormulario = {
       numeroOrcamento: numeroOrcamento, // já vem preenchido do backend
       dataOrcamento: document.getElementById("dataOrcamento")?.value || "",
@@ -987,3 +2068,638 @@ async function marcarPrecosDivergentesOmie() {
   }
 }
 
+
+    function fecharTodasSanfonas() {
+      document.querySelectorAll(".accordion-button").forEach(botao => {
+        if (!botao.classList.contains("collapsed")) {
+          botao.click();
+        }
+      });
+    }
+    function abrirTodasSanfonas() {
+      document.querySelectorAll(".accordion-button").forEach(botao => {
+        if (botao.classList.contains("collapsed")) {
+          botao.click();
+        }
+      });
+    }
+
+
+
+  </script>
+
+<script>
+
+  
+  function abrirTodasSanfonas() {
+    document.querySelectorAll(".accordion-button").forEach(botao => {
+      if (botao.classList.contains("collapsed")) {
+        botao.click();
+      }
+    });
+  }
+
+
+
+
+
+
+
+
+  
+  // Aplica proteção de clique duplo em todos os botões com a classe .sidebar-button
+// Aplica proteção de clique duplo em todos os botões com a classe .sidebar-button
+document.querySelectorAll('.sidebar-button').forEach(btn => {
+  btn.addEventListener('click', function(evt) {
+    if (btn.disabled) {
+      console.warn('Clique duplo detectado e bloqueado em:', btn); // Aviso no console
+      evt.stopImmediatePropagation();
+      evt.preventDefault();
+      return false;
+    }
+    console.log('Clique aceito, bloqueando botão por 2 segundos:', btn); // Log para clique normal
+    btn.disabled = true;
+    setTimeout(() => btn.disabled = false, 2000); // 2 segundos
+  }, true); // true = captura antes do onclick
+});
+
+
+</script>
+
+
+<script>
+  // ==========================
+// Configurações
+// ==========================
+// Pega o nome do usuário salvo no localStorage (ou "Usuário Desconhecido" se não existir)
+window.usuarioNome = localStorage.getItem("usuarioNome") || "Usuário Desconhecido";
+
+const historicoMudancas = [];
+const LIMITE_HISTORICO = 50;
+
+// ==========================
+// Registrar alterações
+// ==========================
+function registrarAlteracao(campo, origem = "usuario/js") {
+  const usuario = window.usuarioNome || "Usuário Desconhecido";
+
+  // ====== Ignorar campos específicos ======
+  if (campo.id === "buscaProduto") return; // <<< ignora campo de busca
+
+  const nomeCampo =
+    campo.name ||
+    campo.id ||
+    campo.getAttribute("placeholder") ||
+    campo.getAttribute("aria-label") ||
+    campo.closest("td")?.innerText?.trim() ||
+    "Campo sem identificação";
+
+  const valorOriginal = campo.dataset?.valorOriginal ?? "";
+  const valorAtual = campo.value ?? campo.textContent ?? "";
+
+  // ====== Regras para ignorar ======
+  if (
+    (!valorOriginal && !valorAtual) ||              // vazio → vazio
+    (valorOriginal === "-" && valorAtual === "-") || // traço → traço
+    (nomeCampo === "Campo sem identificação") ||     // campo não identificado
+    (origem === "inclusao-tabela")                   // inclusão de tabela (já tem log próprio)
+  ) {
+    return;
+  }
+
+  // Só registra se houve mudança real
+  if (valorOriginal !== valorAtual) {
+    const registro = {
+      usuario,
+      acao: "Alteração de campo",
+      campo: nomeCampo,
+      valorOriginal: valorOriginal || "(vazio)",
+      valorAjustado: valorAtual || "(vazio)",
+      origem,
+      dataHora: new Date().toLocaleString()
+    };
+
+    historicoMudancas.push(registro);
+    if (historicoMudancas.length > LIMITE_HISTORICO) historicoMudancas.shift();
+
+    console.log(
+      `✏️ ${registro.usuario} | Campo: ${registro.campo} | ${registro.valorOriginal} ➝ ${registro.valorAjustado}`
+    );
+  }
+}
+
+
+
+function registrarInclusaoTabela(idTabela) {
+  const usuario = window.usuarioNome || "Usuário Desconhecido";
+
+  const registro = {
+    usuario,
+    acao: "Inclusão de tabela",
+    tabela: idTabela,
+    dataHora: new Date().toLocaleString()
+  };
+
+  historicoMudancas.push(registro);
+  if (historicoMudancas.length > LIMITE_HISTORICO) historicoMudancas.shift();
+
+  console.log(`📑 ${usuario} | Tabela incluída: ${idTabela}`);
+}
+
+// ==========================
+// Eventos globais
+// ==========================
+document.addEventListener("focusin", e => {
+  const campo = e.target.closest("input, select, textarea, [contenteditable='true']");
+  if (campo) campo.dataset.valorOriginal = campo.value ?? campo.textContent;
+});
+
+document.addEventListener(
+  "blur",
+  e => {
+    const campo = e.target.closest("input, select, textarea, [contenteditable='true']");
+    if (campo) registrarAlteracao(campo, "usuario");
+  },
+  true
+);
+
+// Detecta inclusão de tabelas dinamicamente
+const observer = new MutationObserver(mutations => {
+  for (const m of mutations) {
+    m.addedNodes.forEach(node => {
+      if (node.nodeType === 1 && node.matches("table[id^='tabela-bloco-']")) {
+        registrarInclusaoTabela(node.id);
+      }
+      if (node.nodeType === 1) {
+        const tabelas = node.querySelectorAll("table[id^='tabela-bloco-']");
+        tabelas.forEach(tbl => registrarInclusaoTabela(tbl.id));
+      }
+    });
+  }
+});
+observer.observe(document.body, { childList: true, subtree: true });
+
+// ==========================
+// UI - Botão e Tabela Histórico
+// ==========================
+function toggleTabelaHistorico() {
+  let tabelaDiv = document.getElementById("historico-mudancas-div");
+  const btn = document.getElementById("btn-historico-mudancas");
+
+  // Se ainda não existe a tabela → cria
+  if (!tabelaDiv) {
+    tabelaDiv = document.createElement("div");
+    tabelaDiv.id = "historico-mudancas-div";
+    tabelaDiv.className = "mt-3";
+    btn.parentNode.appendChild(tabelaDiv);
+    btn.textContent = "🔄 Atualizar Histórico"; // muda o texto do botão
+  }
+
+  // Atualiza o conteúdo SEM remover a div
+  let html = `
+    <div class="card shadow-sm">
+      <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+        Histórico de Alterações (máx. ${LIMITE_HISTORICO})
+      
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Usuário</th>
+                <th>Ação</th>
+                <th>Campo/Tabela</th>
+                <th>Original</th>
+                <th>Ajustado</th>
+                <th>Data/Hora</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${
+                historicoMudancas.length === 0
+                  ? `<tr><td colspan="6" class="text-center text-muted">Nenhuma alteração registrada</td></tr>`
+                  : historicoMudancas
+                      .map(r => `
+                        <tr>
+                          <td>${r.usuario}</td>
+                          <td>${r.acao}</td>
+                          <td>${r.campo || r.tabela || "-"}</td>
+                          <td>${r.valorOriginal || "-"}</td>
+                          <td>${r.valorAjustado || "-"}</td>
+                          <td>${r.dataHora}</td>
+                        </tr>
+                      `)
+                      .join("")
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  tabelaDiv.innerHTML = html;
+}
+
+// ==========================
+// Funções utilitárias
+// ==========================
+function verHistoricoMudancas() {
+  if (historicoMudancas.length === 0) {
+    console.warn("Nenhuma alteração registrada ainda.");
+  } else {
+    console.table(historicoMudancas);
+  }
+}
+
+function limparHistoricoMudancas() {
+  historicoMudancas.length = 0;
+  console.info("Histórico de mudanças limpo.");
+  const div = document.getElementById("historico-mudancas-div");
+  if (div) toggleTabelaHistorico(); // atualiza
+}
+
+
+
+
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const BTN_ID = "botao-olho-resumo-compacto-v3";
+  const STYLE_ID = "estilo-olho-resumo-compacto-v3";
+  const POS_X_KEY = "olhoResumoCompactoPosX";
+  const POS_Y_KEY = "olhoResumoCompactoPosY";
+
+  if (document.getElementById(BTN_ID)) return;
+
+  function getHeaderBoxByInput(input) {
+    return input.closest(".d-flex.align-items-center.gap-2.ms-4");
+  }
+
+  function getMainContainerByInput(input) {
+    return input.closest(".main-container");
+  }
+
+  function getResumoByInput(input) {
+    const main = getMainContainerByInput(input);
+    if (!main) return null;
+    return main.querySelector(".resumo-totalizador-interno");
+  }
+
+  function coletarDadosResumo(resumo) {
+    if (!resumo) return [];
+
+    const permitidos = [
+      "Margem de Negociação",
+      "Custo Total de Material",
+      "Valor Mínimo",
+      "Valor Sugerido",
+      "Margem de Lucro"
+    ];
+
+    return Array.from(resumo.querySelectorAll(".row > .col"))
+      .map(function (col) {
+        const titulo = (col.querySelector(".text-muted")?.textContent || "")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        const valor = col.querySelector(".fw-bold")?.innerHTML || "";
+        const percentual = (col.querySelector(".text-secondary")?.textContent || "")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        return { titulo, valor, percentual };
+      })
+      .filter(function (item) {
+        return permitidos.includes(item.titulo);
+      });
+  }
+
+  function aplicarModoCompacto() {
+    const inputs = document.querySelectorAll('input[placeholder="Ambiente"]');
+
+    inputs.forEach(function (input) {
+      if (input.dataset.resumoCompactoAtivo === "true") return;
+
+      const headerBox = getHeaderBoxByInput(input);
+      const resumo = getResumoByInput(input);
+
+      if (!headerBox || !resumo) return;
+
+      const dados = coletarDadosResumo(resumo);
+      if (!dados.length) return;
+
+      const existente = headerBox.querySelector('[data-resumo-inline-wrap="true"]');
+      if (existente) existente.remove();
+
+      input.style.display = "none";
+      input.dataset.resumoCompactoAtivo = "true";
+
+      resumo.classList.add("resumo-compacto-oculto");
+
+      const wrap = document.createElement("div");
+      wrap.className = "ambiente-resumo-wrap";
+      wrap.setAttribute("data-resumo-inline-wrap", "true");
+
+      const linha = document.createElement("div");
+      linha.className = "resumo-inline-ambiente";
+
+      linha.innerHTML = dados.map(function (item) {
+        return `
+          <div class="resumo-inline-card">
+            <div class="resumo-inline-titulo">${item.titulo}</div>
+            <div class="resumo-inline-valor">${item.valor}</div>
+            <div class="resumo-inline-percentual">${item.percentual}</div>
+          </div>
+        `;
+      }).join("");
+
+      wrap.appendChild(linha);
+      headerBox.insertBefore(wrap, input.nextSibling);
+    });
+  }
+
+  function removerModoCompacto() {
+    const inputs = document.querySelectorAll('input[placeholder="Ambiente"]');
+
+    inputs.forEach(function (input) {
+      const headerBox = getHeaderBoxByInput(input);
+      const resumo = getResumoByInput(input);
+
+      if (headerBox) {
+        const wrap = headerBox.querySelector('[data-resumo-inline-wrap="true"]');
+        if (wrap) wrap.remove();
+      }
+
+      input.style.display = "";
+      input.dataset.resumoCompactoAtivo = "false";
+
+      if (resumo) {
+        resumo.classList.remove("resumo-compacto-oculto");
+      }
+    });
+  }
+
+  function recolherTodasSanfonas() {
+    document.querySelectorAll(".accordion-collapse.show").forEach(function (el) {
+      el.classList.remove("show");
+    });
+
+    document.querySelectorAll(".accordion-button").forEach(function (btn) {
+      btn.classList.add("collapsed");
+      btn.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function iconeOlhoAberto() {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+      </svg>
+    `;
+  }
+
+  function iconeOlhoFechado() {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.77 21.77 0 0 1 5.06-5.94"></path>
+        <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.79 21.79 0 0 1-2.16 3.19"></path>
+        <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+        <path d="M1 1l22 22"></path>
+      </svg>
+    `;
+  }
+
+  if (!document.getElementById(STYLE_ID)) {
+    const style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = `
+      .resumo-compacto-oculto {
+        display: none !important;
+      }
+
+      .ambiente-resumo-wrap {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+      }
+
+      .resumo-inline-ambiente {
+        display: flex;
+        align-items: stretch;
+        gap: 4px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        padding: 0;
+        margin: 0;
+      }
+
+      .resumo-inline-ambiente::-webkit-scrollbar {
+        height: 6px;
+      }
+
+      .resumo-inline-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-width: 92px;
+        max-width: 92px;
+        padding: 3px 4px;
+        border: 1px solid #dcdcdc;
+        border-radius: 6px;
+        background: #fff;
+        line-height: 1;
+        flex: 0 0 auto;
+      }
+
+      .resumo-inline-titulo {
+        font-size: 9px;
+        color: #6c757d;
+        text-align: center;
+        line-height: 1.05;
+        margin-bottom: 2px;
+        white-space: normal;
+      }
+
+      .resumo-inline-valor {
+        font-size: 11px;
+        font-weight: 700;
+        color: #212529;
+        line-height: 1.05;
+        text-align: center;
+      }
+
+      .resumo-inline-percentual {
+        font-size: 9px;
+        color: #6c757d;
+        line-height: 1.05;
+        margin-top: 1px;
+        text-align: center;
+      }
+
+      #${BTN_ID} {
+        position: fixed;
+        bottom: 28px;
+        right: 28px;
+        width: 54px;
+        height: 54px;
+        border: none;
+        border-radius: 50%;
+        background: #ffffff;
+        box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+        z-index: 999999;
+        cursor: grab;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        user-select: none;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      #${BTN_ID}:hover {
+        transform: scale(1.05);
+        box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+      }
+
+      #${BTN_ID}.dragging {
+        cursor: grabbing;
+        transform: scale(1.08);
+      }
+
+      #${BTN_ID} svg {
+        width: 24px;
+        height: 24px;
+        stroke: #1f2937;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const btn = document.createElement("button");
+  btn.id = BTN_ID;
+  btn.type = "button";
+  btn.setAttribute("aria-label", "Alternar resumo compacto");
+
+  let ativo = false;
+  let dragging = false;
+  let moved = false;
+  let startX = 0;
+  let startY = 0;
+  let startLeft = 0;
+  let startTop = 0;
+
+  function atualizarBotao() {
+    btn.innerHTML = ativo ? iconeOlhoFechado() : iconeOlhoAberto();
+    btn.title = ativo ? "Voltar ao normal" : "Ativar resumo compacto";
+  }
+
+  function ativar() {
+    aplicarModoCompacto();
+    recolherTodasSanfonas();
+    ativo = true;
+    atualizarBotao();
+  }
+
+  function desativar() {
+    removerModoCompacto();
+    ativo = false;
+    atualizarBotao();
+  }
+
+  function alternar() {
+    if (ativo) {
+      desativar();
+    } else {
+      ativar();
+    }
+  }
+
+  atualizarBotao();
+  document.body.appendChild(btn);
+
+  const savedX = localStorage.getItem(POS_X_KEY);
+  const savedY = localStorage.getItem(POS_Y_KEY);
+
+  if (savedX !== null && savedY !== null) {
+    btn.style.left = savedX + "px";
+    btn.style.top = savedY + "px";
+    btn.style.right = "auto";
+    btn.style.bottom = "auto";
+  }
+
+  btn.addEventListener("mousedown", function (e) {
+    dragging = true;
+    moved = false;
+    btn.classList.add("dragging");
+
+    const rect = btn.getBoundingClientRect();
+    startX = e.clientX;
+    startY = e.clientY;
+    startLeft = rect.left;
+    startTop = rect.top;
+
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", function (e) {
+    if (!dragging) return;
+
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      moved = true;
+    }
+
+    let left = startLeft + dx;
+    let top = startTop + dy;
+
+    const maxLeft = window.innerWidth - btn.offsetWidth - 10;
+    const maxTop = window.innerHeight - btn.offsetHeight - 10;
+
+    left = Math.max(10, Math.min(left, maxLeft));
+    top = Math.max(10, Math.min(top, maxTop));
+
+    btn.style.left = left + "px";
+    btn.style.top = top + "px";
+    btn.style.right = "auto";
+    btn.style.bottom = "auto";
+  });
+
+  document.addEventListener("mouseup", function () {
+    if (!dragging) return;
+
+    dragging = false;
+    btn.classList.remove("dragging");
+
+    const left = parseInt(btn.style.left || "0", 10);
+    const top = parseInt(btn.style.top || "0", 10);
+
+    localStorage.setItem(POS_X_KEY, left);
+    localStorage.setItem(POS_Y_KEY, top);
+  });
+
+  btn.addEventListener("click", function (e) {
+    if (moved) {
+      e.preventDefault();
+      e.stopPropagation();
+      moved = false;
+      return;
+    }
+
+    alternar();
+  });
+});
+</script>
+</body>
+
+</html>
