@@ -19,7 +19,7 @@ const VENDEDORES_FIXOS_FALLBACK = {
   ]
 };
 
-const API_BASE = "https://ulhoa-0a02024d350a.herokuapp.com/api/auth/login";
+const API_BASE = "https://ulhoa-0a02024d350a.herokuapp.com";
 
 function toggleForms() {
   const login = document.getElementById("loginForm");
