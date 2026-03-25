@@ -1,8 +1,6 @@
 document.addEventListener("DOMContentLoaded", async () => {
   mostrarCarregando();
 
-  
-
   const tableBody       = document.querySelector("#data-table tbody");
   const prevPageBtn     = document.getElementById("prev-page");
   const nextPageBtn     = document.getElementById("next-page");
@@ -90,11 +88,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           tipoProposta,
           evento: nomeEvento,
           date: dataCriacao,
+          createdAt,
           value: `R$ ${total.toFixed(2)}`,
+          totalNumerico: total,
           validade: validade.toLocaleDateString("pt-BR"),
           vencida: isVencida
         };
-      });
+      })
+      .sort((a, b) => b.createdAt - a.createdAt); // mais recentes primeiro
 
     data.forEach((item, index) => item.id = index + 1);
 
@@ -207,7 +208,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // ✅ filtro agora aceita resetPage (true só quando muda busca/filtros)
   function filterTable(resetPage = false) {
     filteredDataGlobal = data.filter(item => {
       if (selectedSeller && item.vendedor !== selectedSeller) return false;
@@ -215,26 +215,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!searchText) return true;
 
       return (
-        (item.numeroProposta && item.numeroProposta.toLowerCase().includes(searchText)) ||
-        (item.cliente && item.cliente.toLowerCase().includes(searchText)) ||
-        (item.cnpjCpf && item.cnpjCpf.toLowerCase().includes(searchText)) ||
-        (item.evento && item.evento.toLowerCase().includes(searchText)) ||
-        (item.vendedor && item.vendedor.toLowerCase().includes(searchText)) ||
-        (item.tipoProposta && item.tipoProposta.toLowerCase().includes(searchText)) ||
-        (item.status && item.status.toLowerCase().includes(searchText))
+        String(item.numeroProposta || "").toLowerCase().includes(searchText) ||
+        String(item.cliente || "").toLowerCase().includes(searchText) ||
+        String(item.cnpjCpf || "").toLowerCase().includes(searchText) ||
+        String(item.evento || "").toLowerCase().includes(searchText) ||
+        String(item.vendedor || "").toLowerCase().includes(searchText) ||
+        String(item.tipoProposta || "").toLowerCase().includes(searchText) ||
+        String(item.status || "").toLowerCase().includes(searchText) ||
+        String(item.value || "").toLowerCase().includes(searchText)
       );
     });
 
     if (resetPage) currentPage = 1;
 
-    // garante que currentPage não fica inválida se o filtro reduzir muito
     const totalPages = Math.max(1, Math.ceil(filteredDataGlobal.length / rowsPerPage));
     if (currentPage > totalPages) currentPage = totalPages;
 
     renderTable(filteredDataGlobal);
   }
 
-  // filtros (resetam página)
   searchInput.addEventListener("input", e => {
     searchText = e.target.value.trim().toLowerCase();
     filterTable(true);
@@ -250,7 +249,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     filterTable(true);
   });
 
-  // paginação (NÃO reseta página)
   prevPageBtn.addEventListener("click", () => {
     if (currentPage > 1) {
       currentPage--;
