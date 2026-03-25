@@ -732,7 +732,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   };
 
   // ================== 1) DADOS CABEÇALHO (DINÂMICO) ==================
-  const numeroPedido = getValue("numeroOrcamento"); // no seu layout atual é o "pedido"
+  const numeroPedido = getValue("numeroPedido"); // no seu layout atual é o "pedido"
   const dataOrc = getValue("dataOrcamento");
   const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
 
@@ -1898,13 +1898,11 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   };
 
   // ================== 1) DADOS CABEÇALHO (DINÂMICO) ==================
-  const numeroPedido = getValue("numeroOrcamento"); // no seu layout atual é o "pedido"
-  const dataOrc = getValue("dataOrcamento");
-  const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
+ const numeroOrcamento = getValue("numeroOrcamento");
+const numeroPedido = getValue("numeroPedido");
 
-  // ✅ se você tiver um campo real de orçamento separado, use aqui
-  const numeroOrcamento = getValue("numeroOrcamento2") !== "-" ? getValue("numeroOrcamento2") : numeroPedido;
-
+const dataOrc = getValue("dataOrcamento");
+const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
   const vendedorEl = document.getElementById("vendedorResponsavel");
   const vendedor =
     vendedorEl?.selectedOptions?.[0]?.textContent?.trim() ||
@@ -3159,11 +3157,12 @@ function gerarFolha4RelatorioEntrega() {
   const LARGURA_COL_QTD = 90;
 
   // ================== DADOS DO CABEÇALHO ==================
-  const numeroPedido = getValue("numeroOrcamento");
+
+  
+  const numeroPedido = getValue("numeroPedido");
   const dataOrc = getValue("dataOrcamento");
   const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
-  const numeroOrcamento =
-    getValue("numeroOrcamento2") !== "-" ? getValue("numeroOrcamento2") : numeroPedido;
+  const numeroOrcamento = getValue("numeroOrcamento");
 
   const vendedorEl = document.getElementById("vendedorResponsavel");
   const vendedor =
@@ -3874,11 +3873,10 @@ function gerarHistoricoDeProducaoParaImpressao() {
   const LINHAS_PAGINAS_HISTORICO = 8; // ajuste solicitado
 
   // ================== DADOS DO CABEÇALHO ==================
-  const numeroPedido = getValue("numeroOrcamento");
+  const numeroPedido = getValue("numeroPedido");
   const dataOrc = getValue("dataOrcamento");
   const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
-  const numeroOrcamento =
-    getValue("numeroOrcamento2") !== "-" ? getValue("numeroOrcamento2") : numeroPedido;
+  const numeroOrcamento = getValue("numeroOrcamento");
 
   const vendedorEl = document.getElementById("vendedorResponsavel");
   const vendedor =
@@ -4539,11 +4537,10 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
       .replace(/'/g, "&#39;");
 
   // ================== DADOS CABEÇALHO ==================
-  const numeroPedido = getValue("numeroOrcamento");
+  const numeroPedido = getValue("numeroPedido");
   const dataOrc = getValue("dataOrcamento");
   const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
-  const numeroOrcamento =
-    getValue("numeroOrcamento2") !== "-" ? getValue("numeroOrcamento2") : numeroPedido;
+  const numeroOrcamento = getValue("numeroOrcamento");
 
   const vendedorEl = document.getElementById("vendedorResponsavel");
   const vendedor =
