@@ -35,21 +35,45 @@ async function salvarPropostaEditavel() {
     const textoSelecionado = select?.options[select.selectedIndex]?.text || "";
 
     // --- Exemplo de uso: chamar antes de criar o objeto camposFormulario ---
-    async function preencherNumeroOrcamento() {
-      try {
-        const res = await fetch('https://ulhoa-0a02024d350a.herokuapp.com/contador/somar/orcamentos', { method: 'POST' });
-        const data = await res.json();
-        const numFormatado = String(data.novoValor).padStart(5, '0');
-        document.getElementById('numeroOrcamento').value = numFormatado;
-        return numFormatado;
-      } catch (err) {
-        alert('Erro ao buscar número do orçamento!');
-        document.getElementById('numeroOrcamento').value = 'ERRO';
-        return '';
-      }
-    }
-    const numeroOrcamento = await preencherNumeroOrcamento();
+    // --- Exemplo de uso: chamar antes de criar o objeto camposFormulario ---
+   // --- Exemplo de uso: chamar antes de criar o objeto camposFormulario ---
+   async function preencherNumeroOrcamento() {
+  try {
+    const res = await fetch('https://contator-ulhoa-3d28d89efa68.herokuapp.com/orcamento');
 
+    if (!res.ok) {
+      throw new Error(`Erro HTTP: ${res.status}`);
+    }
+
+    const data = await res.json();
+    const numFormatado = String(data.numero).padStart(5, '0');
+
+    const campoNumero = document.getElementById('numeroOrcamento');
+
+    if (!campoNumero) {
+      console.error('Campo #numeroOrcamento não encontrado no HTML.');
+      return numFormatado;
+    }
+
+    campoNumero.value = numFormatado;
+    return numFormatado;
+
+  } catch (err) {
+    console.error('Erro ao buscar número do orçamento:', err);
+
+    const campoNumero = document.getElementById('numeroOrcamento');
+    if (campoNumero) {
+      campoNumero.value = 'ERRO';
+    }
+
+    alert('Erro ao buscar número do orçamento!');
+    return '';
+  }
+}
+
+const numeroOrcamento = await preencherNumeroOrcamento();
+
+    
     const camposFormulario = {
       numeroOrcamento: numeroOrcamento, // já vem preenchido do backend
       dataOrcamento: document.getElementById("dataOrcamento")?.value || "",
