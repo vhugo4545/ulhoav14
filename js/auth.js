@@ -92,35 +92,39 @@ async function carregarVendedores({ incluirInativos = true } = {}) {
       }
     }
 
-    async function login() {
-      const email = document.getElementById('loginEmail').value;
-      const senha = document.getElementById('loginSenha').value;
+  async function login() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginSenha').value;
 
-      const res = await fetch('https://ulhoa-0a02024d350a.herokuapp.com/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha })
-      });
+  const res = await fetch('https://ulhoa-0a02024d350a.herokuapp.com/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: email,
+      password: senha
+    })
+  });
 
-      const data = await res.json();
+  const data = await res.json();
 
-      if (res.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('usuarioId', data.usuario.id);
-        localStorage.setItem('usuarioNome', data.usuario.nome);
-        localStorage.setItem('usuarioTipo', data.usuario.tipo);
+  if (res.ok) {
+    localStorage.setItem('token', data.accessToken);
+    localStorage.setItem('refreshToken', data.refreshToken || '');
+    localStorage.setItem('usuarioNome', data.nome || '');
+    localStorage.setItem('usuarioEmail', data.email || '');
+    localStorage.setItem('usuarioTipo', data.tipo || '');
 
-        console.log("✅ Login realizado:");
-        console.log("🆔 ID:", data.usuario.id);
-        console.log("👤 Nome:", data.usuario.nome);
-        console.log("🔐 Tipo:", data.usuario.tipo);
-        console.log("🪪 Token:", data.token);
+    console.log("✅ Login realizado:");
+    console.log("👤 Nome:", data.nome);
+    console.log("📧 Email:", data.email);
+    console.log("🔐 Tipo:", data.tipo);
+    console.log("🪪 Access Token:", data.accessToken);
 
-        window.location.href = 'pages/listagem.html';
-      } else {
-        alert(data.erro || 'Erro no login');
-      }
-    }
+    window.location.href = 'pages/listagem.html';
+  } else {
+    alert(data.msg || data.erro || 'Erro no login');
+  }
+}
     // ✅ 100% local (sem fetch) usando seus vendedores fixos
 function carregarVendedoresCadastro({ incluirInativos = true } = {}) {
   const select = document.getElementById("cadastroNome");
