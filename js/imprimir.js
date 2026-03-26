@@ -337,6 +337,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
   // ==========================
   const dados = {
     numero: getValue("numeroOrcamento"),
+    numeroPedido: getValue("numeroPedido"),
     data: new Date(getValue("dataOrcamento")).toLocaleDateString("pt-BR"),
     origem: getValue("origemCliente"),
     nomeOrigem: getValue("nomeOrigem"),
@@ -627,6 +628,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
               <td style="width:40%;">
                 <table class="table table-sm w-100">
                   <tr><td><strong>Orçamento:</strong></td><td>${dados.numero}</td></tr>
+                    <tr><td><strong>Pedido:</strong></td><td>${dados.numeroPedido}</td></tr>
                   <tr><td><strong>Data:</strong></td><td>${dados.data}</td></tr>
                   <tr><td colspan="2"><strong>Proposta válida por 7 dias úteis</strong></td></tr>
                 </table>
