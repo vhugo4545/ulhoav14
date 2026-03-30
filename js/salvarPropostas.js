@@ -316,7 +316,6 @@ document.body.appendChild(btn);
   }
 }
 
-
 window.atualizarPropostaEditavel = async function () {
   try {
     //abrirTodasSanfonas();
@@ -381,6 +380,12 @@ window.atualizarPropostaEditavel = async function () {
       dataPedidoEnviadoCliente: document.getElementById("dataPedidoEnviadoCliente")?.value || "",
       meioEnvioPedido: document.getElementById("meioEnvioPedido")?.value || "",
       dataPedidoAssinado: document.getElementById("dataPedidoAssinado")?.value || "",
+
+      dataEntregaProjeto: document.getElementById("dataEntregaProjeto")?.value || "",
+      dataInicioProjeto: document.getElementById("dataInicioProjeto")?.value || "",
+      dataLiberacaoConferencia: document.getElementById("dataLiberacaoConferencia")?.value || "",
+      dataConferencia: document.getElementById("dataConferencia")?.value || "",
+
       obraLiberada: document.getElementById("obraLiberada")?.value || "",
       itensLiberacaoObra: document.getElementById("itensLiberacaoObra")?.value || "",
       dataLiberacaoObra: document.getElementById("dataLiberacaoObra")?.value || "",
@@ -504,8 +509,6 @@ window.atualizarPropostaEditavel = async function () {
     return { erro: erro.message };
   }
 };
-
-
 
 async function atualizarPropostaModelo() {
   try {
