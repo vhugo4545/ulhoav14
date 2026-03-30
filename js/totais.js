@@ -445,7 +445,7 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
   });
 
   calcularTotalFinal();
-
+  enumerarGruposVisualmente();
   const form = document.querySelector("#novoOrcamentoForm");
   (form || document.body).appendChild(containerResumo);
 }
@@ -499,11 +499,76 @@ function atualizarValoresDasParcelas() {
   }, 500);
 }
 
+function enumerarGruposVisualmente() {
+  setTimeout(() => {
+    const container = document.getElementById("blocosProdutosContainer");
+    if (!container) {
+      console.warn("⚠️ Container #blocosProdutosContainer não encontrado.");
+      return;
+    }
 
+    const blocos = container.querySelectorAll(".main-container");
+
+    if (!blocos.length) {
+      console.warn("⚠️ Nenhum grupo encontrado para enumerar.");
+      return;
+    }
+
+    blocos.forEach((bloco, index) => {
+      const numeroGrupo = index + 1;
+
+      // remove linha visual antiga, se já existir
+      const linhaAntiga = bloco.querySelector(":scope > .numero-visual-grupo");
+      if (linhaAntiga) linhaAntiga.remove();
+
+      // tenta pegar o nome real do grupo apenas para exibição
+      const tituloSpan = bloco.querySelector('span[id^="titulo-accordion-"]');
+      const tituloInput = bloco.querySelector(".input-editar-nome-grupo");
+
+      let nomeGrupo = "";
+
+      if (tituloInput && tituloInput.value) {
+        nomeGrupo = tituloInput.value.trim();
+      } else if (tituloSpan && tituloSpan.textContent) {
+        nomeGrupo = tituloSpan.textContent.trim();
+      }
+
+      // remove numeração antiga caso já exista no texto visual
+      nomeGrupo = nomeGrupo
+        .replace(/^\d+\s*[-.–]\s*/, "")
+        .replace(/^Grupo\s+\d+\s*[-.–]\s*/i, "")
+        .trim();
+
+      // cria linha visual separada
+      const linhaNumero = document.createElement("div");
+      linhaNumero.className = "numero-visual-grupo";
+      linhaNumero.setAttribute("data-grupo-index", numeroGrupo);
+
+      linhaNumero.style.marginBottom = "8px";
+      linhaNumero.style.padding = "8px 12px";
+      linhaNumero.style.background = "#f8f9fa";
+      linhaNumero.style.border = "1px solid #dee2e6";
+      linhaNumero.style.borderRadius = "8px";
+      linhaNumero.style.fontSize = "14px";
+      linhaNumero.style.fontWeight = "700";
+      linhaNumero.style.color = "#212529";
+
+      linhaNumero.textContent = nomeGrupo
+        ? `Produto: ${numeroGrupo} - ${nomeGrupo}`
+        : `Produto ${numeroGrupo}`;
+
+      // insere acima de todo o bloco, sem alterar nada do grupo salvo
+      bloco.insertBefore(linhaNumero, bloco.firstChild);
+    });
+
+    console.log(`✅ ${blocos.length} grupo(s) enumerado(s) visualmente com sucesso.`);
+  }, 2000);
+}
 // =========================
 // INICIALIZAÇÃO
 // =========================
 document.addEventListener("DOMContentLoaded", () => {
   adicionarTotalizadoresPorAmbienteComAgrupamento();
   monitorarMudancasAmbientes();
+ 
 });
