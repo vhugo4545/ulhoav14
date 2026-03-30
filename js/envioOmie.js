@@ -2507,6 +2507,7 @@ async function atualizarNaOmie() {
         "success"
       );
     }
+    atualizarPropostaEditavel()
 
   } catch (erro) {
     console.error("❌ Erro em atualizarNaOmie:", erro);
@@ -3045,6 +3046,155 @@ const CETAPA_DEFAULT     = "20";
 const CCODCATEG_DEFAULT  = "1.01.99";
 const NCODCC_DEFAULT     = 10937506623;
 
+/* Código e nome do vendedor de serviços selecionado */
+let NCODVEND_SERVICO_DEFAULT = "";
+let NOME_VENDEDOR_SERVICO_DEFAULT = "";
+
+/* =========================================================
+   Base de vendedores de serviços
+   ========================================================= */
+const VENDEDORES_SERVICOS_FERREIRA_ULHOA = {
+  pagina: 1,
+  total_de_paginas: 1,
+  registros: 32,
+  total_de_registros: 32,
+  cadastro: [
+    { codInt: "", codigo: 10922409030, comissao: 0, email: "", fatura_pedido: "N", inativo: "S", nome: "Paulo Sergio Machado da Silva", visualiza_pedido: "N" },
+    { codInt: "", codigo: 10922409032, comissao: 0, email: "", fatura_pedido: "N", inativo: "S", nome: "DOUGLAS VITOR DA SILVA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 10922409035, comissao: 0, email: "", fatura_pedido: "N", inativo: "S", nome: "GABRIEL JUNIOR DO COUTO NEPOMUCENO", visualiza_pedido: "N" },
+    { codInt: "", codigo: 10922409037, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "MAURO FERREIRA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 10922409049, comissao: 0, email: "felipe.ulhoa@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "FELIPE ULHOA FERREIRA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 10922409051, comissao: 1, email: "joaomartins@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "JOAO CLEBER MARTINS", visualiza_pedido: "N" },
+    { codInt: "", codigo: 10922409053, comissao: 0, email: "marilena.ulhoa@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "MARILENA DE ALMEIDA ULHOA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 10922409055, comissao: 0, email: "projetos@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "ANA FLAVIA RODRIGUES PRATES", visualiza_pedido: "N" },
+    { codInt: "", codigo: 10922409059, comissao: 1, email: "rafael.angelo@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "RAFAEL ANGELO ARAUJO DA SILVA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 10985073333, comissao: 0, email: "lais.rabelo@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "S", nome: "LAIS MAGALHÃES RABELO", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11059840338, comissao: 0, email: "servidor@ferreiraulhoa.com.br", fatura_pedido: "S", inativo: "S", nome: "VANESSA ULHOA", visualiza_pedido: "N" },
+    { codInt: "Enviado via API", codigo: 11060014882, comissao: 0, email: "", fatura_pedido: "N", inativo: "S", nome: "Enviado via API", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158319843, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "MAURO FERREIRA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376229, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "DAVIDSON JUNIO PEREIRA MACIEL", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376259, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "FERNANDO PEREIRA DE SOUZA JUNIOR", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376263, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "LEONARDO SOUSA OLIVEIRA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376268, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "MATHEUS HENRIQUE SOUZA BRAGA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376278, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "EDNALDO GOMES FILHO", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376285, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "DIONATA ALAN SILVA COSTA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376293, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "JOSE CARLOS SOARES DA CRUZ", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376335, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "JOSE GILMAR PINHEIRO", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376357, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "ERIVALDO AMARO DE ALMEIDA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376364, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "LUIZ FERNANDO LIMA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376367, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "OSVALDO PAURA OLIVEIRA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376374, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "JOSE CARLOS SOARES DA CRUZ", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376382, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "RENE GOMES DE OLIVEIRA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376392, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "ROBERTO MARTINS DO NASCIMENTO", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376703, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "RONAN GOMES DE SOUZA LIMA", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376707, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "SERGIO RICARDO PIO", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376710, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "RODRIGO NOBRE DOS SANTOS", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376713, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "RODRIGO BRITO CARDOSO", visualiza_pedido: "N" },
+    { codInt: "", codigo: 11158376723, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "SEBASTIAO DOS REIS DE MATOS", visualiza_pedido: "N" }
+  ]
+};
+
+/* =========================================================
+   Normalização para comparar nomes
+   ========================================================= */
+function normalizarTextoServico(valor) {
+  return String(valor || "")
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+/* =========================================================
+   Aliases de vendedores de serviços
+   ========================================================= */
+const ALIASES_VENDEDORES_SERVICOS_FERREIRA_ULHOA = {
+  "PAULO SERGIO MACHADO DA SILVA": "PAULO SERGIO MACHADO DA SILVA",
+  "DOUGLAS VITOR DA SILVA": "DOUGLAS VITOR DA SILVA",
+  "GABRIEL JUNIOR DO COUTO NEPOMUCENO": "GABRIEL JUNIOR DO COUTO NEPOMUCENO",
+  "FELIPE ULHOA FERREIRA": "FELIPE ULHOA FERREIRA",
+  "JOAO CLEBER MARTINS": "JOAO CLEBER MARTINS",
+  "MARILENA DE ALMEIDA ULHOA": "MARILENA DE ALMEIDA ULHOA",
+  "ANA FLAVIA RODRIGUES PRATES": "ANA FLAVIA RODRIGUES PRATES",
+  "RAFAEL ANGELO ARAUJO DA SILVA": "RAFAEL ANGELO ARAUJO DA SILVA",
+  "LAIS MAGALHAES RABELO": "LAIS MAGALHÃES RABELO",
+  "LAÍS MAGALHÃES RABELO": "LAIS MAGALHÃES RABELO",
+  "VANESSA ULHOA": "VANESSA ULHOA",
+  "MAURO LUCIO": "MAURO FERREIRA"
+};
+
+/* =========================================================
+   Define código do vendedor de serviços selecionado
+   ========================================================= */
+function definirCodigoVendedorServicoSelecionado() {
+  const selectVendedor = document.getElementById("vendedorResponsavel");
+
+  if (!selectVendedor) {
+    console.warn("⚠️ Select #vendedorResponsavel não encontrado.");
+    NCODVEND_SERVICO_DEFAULT = "";
+    NOME_VENDEDOR_SERVICO_DEFAULT = "";
+    return;
+  }
+
+  const nomeSelecionado =
+    selectVendedor.value?.trim() ||
+    selectVendedor.options[selectVendedor.selectedIndex]?.text?.trim() ||
+    selectVendedor.getAttribute("data-valor-original")?.trim() ||
+    "";
+
+  NOME_VENDEDOR_SERVICO_DEFAULT = nomeSelecionado;
+
+  if (!nomeSelecionado) {
+    console.warn("⚠️ Nenhum vendedor de serviço selecionado.");
+    NCODVEND_SERVICO_DEFAULT = "";
+    return;
+  }
+
+  const nomeNormalizado = normalizarTextoServico(nomeSelecionado);
+  const nomeParaBusca =
+    ALIASES_VENDEDORES_SERVICOS_FERREIRA_ULHOA[nomeNormalizado] || nomeSelecionado;
+
+  const vendedoresServico = VENDEDORES_SERVICOS_FERREIRA_ULHOA.cadastro || [];
+
+  const encontrados = vendedoresServico.filter(v =>
+    normalizarTextoServico(v.nome) === normalizarTextoServico(nomeParaBusca)
+  );
+
+  if (!encontrados.length) {
+    console.warn("⚠️ Vendedor de serviço não encontrado na base Ferreira Ulhoa Serviços:", {
+      nomeSelecionado,
+      nomeParaBusca
+    });
+    NCODVEND_SERVICO_DEFAULT = "";
+    return;
+  }
+
+  if (encontrados.length > 1) {
+    console.warn("⚠️ Mais de um vendedor de serviço encontrado com o mesmo nome. Usando o primeiro.", encontrados);
+  }
+
+  const vendedorServicoEncontrado = encontrados[0];
+
+  NCODVEND_SERVICO_DEFAULT = Number(vendedorServicoEncontrado.codigo) || 0;
+
+  console.log("✅ Vendedor de serviço localizado com sucesso:", {
+    nomeSelecionado,
+    nomeEncontrado: vendedorServicoEncontrado.nome,
+    codigo: NCODVEND_SERVICO_DEFAULT
+  });
+}
+
+/* =========================================================
+   Atualiza ao carregar e ao trocar o vendedor
+   ========================================================= */
+document.addEventListener("DOMContentLoaded", () => {
+  definirCodigoVendedorServicoSelecionado();
+
+  const selectVendedor = document.getElementById("vendedorResponsavel");
+  if (selectVendedor) {
+    selectVendedor.addEventListener("change", definirCodigoVendedorServicoSelecionado);
+  }
+});
 /* ================== UTILS ================== */
 function toBR(iso) {
   if (!iso) return "";
@@ -3252,14 +3402,15 @@ function montarPayloadOS({
   } = ctxFormOS();
 
   // Cabeçalho
-  const Cabecalho = {
-    cCodIntOS: String(cCodIntOS_form || cCodIntOS || ""),
-    cCodParc:  CCODPARC_DEFAULT,
-    cEtapa:    CETAPA_DEFAULT,
-    dDtPrevisao: String(
-      dDtPrevisao_form || dDtPrevisaoBR || dDtPrevisaoISO || ""
-    ).trim()
-  };
+const Cabecalho = {
+  cCodIntOS: String(cCodIntOS_form || cCodIntOS || ""),
+  cCodParc: CCODPARC_DEFAULT,
+  cEtapa: CETAPA_DEFAULT,
+  nCodVend: Number(NCODVEND_SERVICO_DEFAULT) || 0,
+  dDtPrevisao: String(
+    dDtPrevisao_form || dDtPrevisaoBR || dDtPrevisaoISO || ""
+  ).trim()
+};
 
   // nCodCli é aceito como vazio pelo seu server; inclua se tiver (form tem prioridade)
   const resolvedCodCli = (typeof nCodCli_form === "number" && nCodCli_form > 0)
