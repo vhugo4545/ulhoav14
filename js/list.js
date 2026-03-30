@@ -57,14 +57,15 @@ document.addEventListener("DOMContentLoaded", async () => {
           ), 0)
         ), 0);
 
-        const clienteObj   = (campos.clientes && campos.clientes[0]) || {};
-        const nomeCliente  = clienteObj.nome_razao_social || "Cliente sem nome";
-        const cnpjCpf      = clienteObj.cpfCnpj || "--";
-        const vendedor     = campos.vendedorResponsavel || "Indefinido";
-        const status       = p.statusOrcamento || "Sem status";
-        const tipoProposta = p.tipoProposta || "--";
-        const nomeEvento   = campos.nomeEvento || "--";
+        const clienteObj     = (campos.clientes && campos.clientes[0]) || {};
+        const nomeCliente    = clienteObj.nome_razao_social || "Cliente sem nome";
+        const cnpjCpf        = clienteObj.cpfCnpj || "--";
+        const vendedor       = campos.vendedorResponsavel || "Indefinido";
+        const status         = p.statusOrcamento || "Sem status";
+        const tipoProposta   = p.tipoProposta || "--";
+        const nomeEvento     = campos.nomeEvento || "--";
         const numeroProposta = p.numeroProposta || "--";
+        const numeroPedido   = p.numeroPedido || campos.numeroPedido || "--";
 
         const createdAt = new Date(p.criado_em || p.createdAt);
         const dataCriacao = createdAt.toLocaleDateString("pt-BR");
@@ -81,6 +82,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return {
           _id: p._id,
           numeroProposta,
+          numeroPedido,
           cliente: nomeCliente,
           cnpjCpf,
           vendedor,
@@ -143,6 +145,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <tr>
           <td>${start + index + 1}</td>
           <td>${item.numeroProposta}</td>
+          <td>${item.numeroPedido}</td>
           <td>${item.date}</td>
           <td>${item.vendedor}</td>
           <td>${item.cliente}</td>
@@ -216,6 +219,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       return (
         String(item.numeroProposta || "").toLowerCase().includes(searchText) ||
+        String(item.numeroPedido || "").toLowerCase().includes(searchText) ||
         String(item.cliente || "").toLowerCase().includes(searchText) ||
         String(item.cnpjCpf || "").toLowerCase().includes(searchText) ||
         String(item.evento || "").toLowerCase().includes(searchText) ||
