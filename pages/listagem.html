@@ -5,38 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Listagem de Propostas</title>
   <link rel="stylesheet" href="../css/listagem.css" />
- 
 
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
-
 </head>
 <body>
    
   <!-- Menu lateral -->
   <aside class="sidebar">
-    <ul>
-      </ul>
+    <ul></ul>
+
     <div class="sidebar-footer">
       <button id="save-proposal" class="sidebar-button" onclick="irParaPagina('criar.html')">
         <span class="material-icons-outlined">save</span> Criar Proposta
       </button>
       
-  <button id="btn-editar-modelo" class="sidebar-button" onclick="redirecionarParaEdicao()">
-    <span class="material-icons-outlined">edit_note</span>Editar Modelo
-  </button>
+      <button id="btn-editar-modelo" class="sidebar-button" onclick="redirecionarParaEdicao()">
+        <span class="material-icons-outlined">edit_note</span>Editar Modelo
+      </button>
 
- <a id="btn-editar-formulas" href="modelo.html" class="sidebar-button" style="text-decoration: none; flex-direction: column;">
-  <span class="material-icons-outlined">functions</span>
-  Editar Fórmulas
-</a>
+      <a id="btn-editar-formulas" href="modelo.html" class="sidebar-button" style="text-decoration: none; flex-direction: column;">
+        <span class="material-icons-outlined">functions</span>
+        Editar Fórmulas
+      </a>
 
-<a id="btn-editar-formulas" href="ajustes.html" class="sidebar-button" style="text-decoration: none; flex-direction: column;">
-  <span class="material-icons-outlined">functions</span>
-Ajustes
-</a>
-
-
+      <a id="btn-editar-ajustes" href="ajustes.html" class="sidebar-button" style="text-decoration: none; flex-direction: column;">
+        <span class="material-icons-outlined">functions</span>
+        Ajustes
+      </a>
     </div>
   </aside>
 
@@ -45,7 +41,7 @@ Ajustes
     <!-- Barra superior -->
     <header class="topbar">
       <div class="title-search">
-        <h2>Listagem de Propostas V 25/03/2026 - 13:15</h2> 
+        <h2>Listagem de Propostas V 16/03/2026 - 17:18</h2> 
         <input type="text" id="search" placeholder="Pesquisar..." />
 
         <!-- Seleção de Vendedor -->
@@ -61,6 +57,7 @@ Ajustes
           <option value="Cancelado">Cancelado</option>
         </select>
       </div>
+
       <img src="logo-redonda.png" alt="Logo" class="logo-round" />
     </header>
 
@@ -68,81 +65,81 @@ Ajustes
     <div id="loading" style="text-align:center; padding: 20px;">🔄 Carregando propostas...</div>
 
     <!-- Tabela com rolagem -->
-<div class="table-wrapper">
-  <div class="table-container">
-    <table id="data-table" style="display: table;">
-      <thead>
-       <thead>
-  <tr>
-    <th>#</th>
-    <th>Nº Proposta</th>
-    <th>Data</th>
-    <th>Vendedor</th>
-    <th>Cliente</th>
-    <th>CNPJ/CPF</th>
+    <div class="table-wrapper">
+      <div class="table-container">
+        <table id="data-table" style="display: table;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nº Proposta</th>
+              <th>Nº Pedido</th>
+              <th>Data</th>
+              <th>Vendedor</th>
+              <th>Cliente</th>
+              <th>CNPJ/CPF</th>
+              <th>Status</th>
+              <th>Validade</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>PROP-001</td>
+              <td>PED-001</td>
+              <td>07/04/2025</td>
+              <td>Indefinido</td>
+              <td>Cliente sem nome</td>
+              <td>--</td>
+              <td>Orçamento Iniciado</td>
+              <td style="color: red; font-weight: bold;">
+                14/04/2025<br>
+                <span style="color: red;">VENCIDA</span>
+              </td>
+              <td>
+                <button title="Editar"><i class="material-icons">edit</i></button>
+                <button title="Duplicar"><i class="material-icons">content_copy</i></button>
+                <button title="Excluir"><i class="material-icons">delete</i></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-    <th>Status</th>
-    <th>Validade</th>
-    <th>Ações</th>
-  </tr>
-</thead>
+      <!-- Paginação -->
+      <div class="pagination">
+        <button id="prev-page" disabled>❮ Anterior</button>
+        <span id="page-info">Página 1</span>
+        <button id="next-page">Próxima ❯</button>
+      </div>
+    </div>
 
-      </thead>
-      <tbody>
-        <tr>
-          <td>1</td>
-          <td>07/04/2025</td>
-          <td>R$ 14.041,76</td>
-          <td>Indefinido</td>
-          <td>Cliente sem nome</td>
-          <td>Orçamento Iniciado</td>
-          <td>--</td>
-          <td style="color: red; font-weight: bold;">14/04/2025<br><span style="color: red;">VENCIDA</span></td>
-          <td>
-            <button title="Editar"><i class="material-icons">edit</i></button>
-            <button title="Duplicar"><i class="material-icons">content_copy</i></button>
-            <button title="Excluir"><i class="material-icons">delete</i></button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+    <script>
+      function redirecionarParaEdicao() {
+        const id = new URLSearchParams(location.search).get("id");
+        window.location.href = "editar.html?id=" + "68746e305b9691a7ed3b3f97";
+      }
 
-  <!-- Paginação -->
-  <div class="pagination">
-    <button id="prev-page" disabled>❮ Anterior</button>
-    <span id="page-info">Página 1</span>
-    <button id="next-page">Próxima ❯</button>
-  </div>
-</div>
+      document.querySelectorAll('.sidebar-button').forEach(btn => {
+        btn.addEventListener('click', function(evt) {
+          if (btn.disabled) {
+            console.warn('Clique duplo detectado e bloqueado em:', btn);
+            evt.stopImmediatePropagation();
+            evt.preventDefault();
+            return false;
+          }
 
-  <script>
-  function redirecionarParaEdicao() {
-    const id = new URLSearchParams(location.search).get("id");
-    window.location.href = "editar.html?id=" + "68746e305b9691a7ed3b3f97";
-  }
-  // Aplica proteção de clique duplo em todos os botões com a classe .sidebar-button
-// Aplica proteção de clique duplo em todos os botões com a classe .sidebar-button
-document.querySelectorAll('.sidebar-button').forEach(btn => {
-  btn.addEventListener('click', function(evt) {
-    if (btn.disabled) {
-      console.warn('Clique duplo detectado e bloqueado em:', btn); // Aviso no console
-      evt.stopImmediatePropagation();
-      evt.preventDefault();
-      return false;
-    }
-    console.log('Clique aceito, bloqueando botão por 2 segundos:', btn); // Log para clique normal
-    btn.disabled = true;
-    setTimeout(() => btn.disabled = false, 2000); // 2 segundos
-  }, true); // true = captura antes do onclick
-});
-
-
-</script>
+          console.log('Clique aceito, bloqueando botão por 2 segundos:', btn);
+          btn.disabled = true;
+          setTimeout(() => btn.disabled = false, 2000);
+        }, true);
+      });
+    </script>
   </main>
-    <script src="../js/validarToken.js" defer></script>
-   <script src="../js/carregamento.js" defer></script>
-   <script src="../js/list.js" defer></script>
+
+  <script src="../js/validarToken.js" defer></script>
+  <script src="../js/carregamento.js" defer></script>
+  <script src="../js/list.js" defer></script>
   <script src="../js/auth.js" defer></script>
 </body>
 </html>
