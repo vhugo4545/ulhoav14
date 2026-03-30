@@ -130,6 +130,7 @@ async function carregarPropostaEditavel(proposta) {
     // 🧾 Campos do formulário
     setIfExists("numeroOrcamento", dados.numeroOrcamento || proposta.numeroProposta);
     setIfExists("numeroPedido", proposta.numeroPedido || dados.numeroPedido);
+    console.log(proposta.numeroPedido, dados.numeroPedido )
     setIfExists("dataOrcamento", dados.dataOrcamento);
     setIfExists("origemCliente", dados.origemCliente);
     setIfExists("cep", dados.cep);
@@ -140,11 +141,18 @@ async function carregarPropostaEditavel(proposta) {
     setIfExists("cidade", dados.cidade);
     setIfExists("estado", dados.estado);
 
-        // ✅ NOVOS CAMPOS (Acompanhamento do Pedido/Obra/Projeto)
+    // ✅ NOVOS CAMPOS (Acompanhamento do Pedido/Obra/Projeto)
     setIfExists("prazoEntrega",             dados.prazoEntrega);
     setIfExists("dataPedidoEnviadoCliente", dados.dataPedidoEnviadoCliente);
     setIfExists("meioEnvioPedido",          dados.meioEnvioPedido);
     setIfExists("dataPedidoAssinado",       dados.dataPedidoAssinado);
+
+    // ✅ NOVOS CAMPOS ADICIONADOS
+    setIfExists("dataEntregaProjeto",       dados.dataEntregaProjeto);
+    setIfExists("dataInicioProjeto",        dados.dataInicioProjeto);
+    setIfExists("dataLiberacaoConferencia", dados.dataLiberacaoConferencia);
+    setIfExists("dataConferencia",          dados.dataConferencia);
+
     setIfExists("obraLiberada",             dados.obraLiberada);
     setIfExists("itensLiberacaoObra",       dados.itensLiberacaoObra);
     setIfExists("dataLiberacaoObra",        dados.dataLiberacaoObra);
@@ -668,7 +676,7 @@ ${item.descricao_utilizacao|| "Utilização Preencher"}
     alert("Erro ao carregar proposta. Veja o console.");
   }
   
- 
+  
 }
 
 function aguardarTabelasEExecutar(callback, delay = 2000) {
