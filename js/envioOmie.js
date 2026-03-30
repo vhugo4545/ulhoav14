@@ -3431,8 +3431,8 @@ const Cabecalho = {
   const Departamentos = []; // sem uso por enquanto
 
   const Email = {
-    cEnvBoleto: "N",
-    cEnvLink:   "N",
+    cEnvBoleto: "S",
+    cEnvLink:   "S",
     cEnviarPara:""
   };
 
