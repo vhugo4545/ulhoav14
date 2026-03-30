@@ -133,8 +133,124 @@ function destravarCampos() {
 <button id="btn-visualizar-proposta" class="sidebar-button" onclick="abrirPopupVisualizarOP()">
   <span class="material-icons-outlined">visibility</span><br><p></p> Folhas de impressão
 </button>
+<button id="btn-pedido-finalizado" class="sidebar-button" onclick="marcarPedidoFinalizado()">
+  <span class="material-icons-outlined">lock</span><br><p></p> Pedido Finalizado
+</button>
+
 
 <script>
+
+  async function marcarPedidoFinalizado() {
+  try {
+    mostrarCarregando();
+    await atualizarStatus("Pedido Finalizado");
+    await verificarSePedidoFoiFinalizado();
+    ocultarCarregando();
+  } catch (erro) {
+    console.error("❌ Erro ao marcar pedido como finalizado:", erro);
+    ocultarCarregando();
+  }
+}
+
+async function verificarSePedidoFoiFinalizado() {
+  try {
+    const idProposta = new URLSearchParams(window.location.search).get("id");
+
+    if (!idProposta) {
+      console.warn("⚠️ ID da proposta não encontrado na URL.");
+      return false;
+    }
+
+    const resposta = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/propostas", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("accessToken") || ""}`
+      },
+      cache: "no-store"
+    });
+
+    if (!resposta.ok) {
+      throw new Error(`Erro ao buscar propostas. Status: ${resposta.status}`);
+    }
+
+    const propostas = await resposta.json();
+
+    if (!Array.isArray(propostas)) {
+      console.warn("⚠️ A API não retornou uma lista válida.");
+      return false;
+    }
+
+    const propostaAtual = propostas.find(p => String(p._id) === String(idProposta));
+
+    if (!propostaAtual) {
+      console.warn("⚠️ Proposta não encontrada.");
+      return false;
+    }
+
+    const statusAtual = String(propostaAtual.statusOrcamento || "").trim();
+
+    if (statusAtual !== "Pedido Finalizado") {
+      return false;
+    }
+
+    console.log("🔒 Pedido finalizado detectado. Bloqueando edição.");
+
+    document.querySelectorAll("input, select, textarea, button").forEach(el => {
+      if (el.id === "btn-pedido-finalizado") return;
+      el.disabled = true;
+      el.setAttribute("readonly", "readonly");
+      el.style.pointerEvents = "none";
+      el.style.opacity = "0.85";
+      el.style.cursor = "not-allowed";
+    });
+
+    document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+      el.setAttribute("contenteditable", "false");
+      el.style.pointerEvents = "none";
+      el.style.opacity = "0.85";
+    });
+
+    document.querySelectorAll("[onclick]").forEach(el => {
+      if (el.id === "btn-pedido-finalizado") return;
+      el.dataset.onclickOriginal = el.getAttribute("onclick") || "";
+      el.removeAttribute("onclick");
+    });
+
+    if (!document.getElementById("aviso-pedido-finalizado")) {
+      const aviso = document.createElement("div");
+      aviso.id = "aviso-pedido-finalizado";
+      aviso.innerHTML = `
+        <div style="
+          background: #fff3cd;
+          color: #856404;
+          border: 1px solid #ffeeba;
+          padding: 14px 18px;
+          border-radius: 10px;
+          margin-bottom: 16px;
+          font-weight: 700;
+          font-size: 14px;
+        ">
+          ⛔ Este pedido está finalizado. Alterações estão bloqueadas no front.
+        </div>
+      `;
+
+      const main = document.querySelector("main") || document.body;
+      main.insertBefore(aviso, main.firstChild);
+    }
+
+    return true;
+
+  } catch (erro) {
+    console.error("❌ Erro ao verificar se o pedido foi finalizado:", erro);
+    return false;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await verificarSePedidoFoiFinalizado();
+});
+
   function abrirPopupVisualizarOP() {
     // evita duplicar popup
     if (document.getElementById("popup-visualizar-op-overlay")) return;
