@@ -500,9 +500,10 @@ window.atualizarPropostaEditavel = async function () {
     ocultarCarregando();
     mostrarPopupCustomizado("✅ Sucesso", "Proposta atualizada com sucesso!", "success");
     ocultarCarregando();
-    setTimeout(() => {
-  location.reload();
+  setTimeout(() => {
+  criarBotaoUltimaAtualizacao(new Date());
 }, 2000);
+
     return resultado;
 
   } catch (erro) {
