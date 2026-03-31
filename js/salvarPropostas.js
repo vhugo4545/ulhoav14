@@ -316,6 +316,7 @@ document.body.appendChild(btn);
   }
 }
 
+
 window.atualizarPropostaEditavel = async function () {
   try {
     //abrirTodasSanfonas();
@@ -488,17 +489,20 @@ window.atualizarPropostaEditavel = async function () {
       grupos
     };
 
-    const resposta = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${idProposta}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(propostaAtualizada)
-    });
+  const resposta = await fetch(`http://localhost:3000/api/propostas/${idProposta}`, {
+  method: "PUT",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(propostaAtualizada)
+});
 
     const resultado = await resposta.json();
     console.log("✅ Proposta atualizada com sucesso:", resultado);
     ocultarCarregando();
     mostrarPopupCustomizado("✅ Sucesso", "Proposta atualizada com sucesso!", "success");
     ocultarCarregando();
+    setTimeout(() => {
+  location.reload();
+}, 2000);
     return resultado;
 
   } catch (erro) {
@@ -509,6 +513,8 @@ window.atualizarPropostaEditavel = async function () {
     return { erro: erro.message };
   }
 };
+
+
 
 async function atualizarPropostaModelo() {
   try {
@@ -673,8 +679,9 @@ console.log("🔍 Desconto informado:", propostaAtualizada.camposFormulario.desc
     console.log("✅ Proposta atualizada com sucesso:", resultado);
     mostrarPopupCustomizado("✅ Sucesso", "Proposta atualizada com sucesso!", "success");
     marcarPendenteAprovacao();
+    
     return resultado;
-
+  
   } catch (erro) {
     console.error("❌ Erro ao atualizar proposta:", erro);
     alert("Erro ao atualizar proposta. Verifique o console.");
@@ -682,7 +689,12 @@ console.log("🔍 Desconto informado:", propostaAtualizada.camposFormulario.desc
   }
 }
 
-
+// 3️⃣ Pedido Finalizado
+async function marcarPedidoFinalizado() {
+  mostrarCarregando();
+  await atualizarStatus("Pedido Finalizado");
+  ocultarCarregando();
+}
 
 
 
