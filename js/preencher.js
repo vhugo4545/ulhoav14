@@ -109,7 +109,6 @@ function arredondarCimaSeguro(valor, context = {}) {
     return 1;
   }
 }
-
 function criarBotaoUltimaAtualizacao(data) {
   let b = document.getElementById("btn-ultima-atualizacao");
 
@@ -138,8 +137,12 @@ function criarBotaoUltimaAtualizacao(data) {
   b.textContent =
     d && !isNaN(d)
       ? `Última atualização nesta sessão: ${d.toLocaleString("pt-BR")}`
-      : "Sem atualização após abertura";
+      : "Não houve atualizações nesta sessão";
 }
+
+
+
+
 
 async function carregarPropostaEditavel(proposta) {
   criarBotaoUltimaAtualizacao(proposta?.atualizado_em);
