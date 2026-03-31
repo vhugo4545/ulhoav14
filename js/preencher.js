@@ -50,9 +50,8 @@ async function localizarECarregarPropostaPorId() {
 
   try {
    
-
-    const url = `https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${idDesejado}`;
-    console.log("🔍 Buscando proposta por ID:", url);
+const url = `https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${idDesejado}`;
+console.log("🔍 Buscando proposta por ID:", url);
 
     const resposta = await fetch(url);
     if (!resposta.ok) {
@@ -111,11 +110,25 @@ function arredondarCimaSeguro(valor, context = {}) {
   }
 }
 
-
+function criarBotaoUltimaAtualizacao(data) {
+  let b = document.getElementById("btn-ultima-atualizacao");
+  if (!b) {
+    b = document.createElement("button");
+    b.id = "btn-ultima-atualizacao";
+    b.type = "button";
+    b.style.cssText = "position:fixed;right:14px;bottom:14px;z-index:9999;padding:8px 12px;border:0;border-radius:999px;background:#111827;color:#fff;font:600 12px Inter,Arial;box-shadow:0 8px 20px rgba(0,0,0,.18)";
+    document.body.appendChild(b);
+  }
+  const d = data ? new Date(data) : null;
+  b.textContent = d && !isNaN(d)
+    ? `Última atualização: ${d.toLocaleString("pt-BR")}`
+    : "Última atualização: não informada";
+}
 async function carregarPropostaEditavel(proposta) {
+  criarBotaoUltimaAtualizacao(proposta?.atualizado_em);
 
-  console.log(proposta)
-  console.log(proposta.grupos[0].itens[0].formula_custo)
+  console.log(proposta);
+  console.log(proposta.grupos[0].itens[0].formula_custo);
   console.log("🔍 Desconto informado:", proposta.camposFormulario.desconto);
 
   try {
@@ -126,6 +139,10 @@ async function carregarPropostaEditavel(proposta) {
       if (el) el.value = val ?? "";
       else console.warn(`⚠️ Campo com ID '${id}' não encontrado no DOM.`);
     };
+
+    console.log("criado_em:", proposta?.criado_em);
+    console.log("atualizado_em:", proposta?.atualizado_em);
+
 
     // 🧾 Campos do formulário
     setIfExists("numeroOrcamento", dados.numeroOrcamento || proposta.numeroProposta);
