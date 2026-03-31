@@ -112,18 +112,35 @@ function arredondarCimaSeguro(valor, context = {}) {
 
 function criarBotaoUltimaAtualizacao(data) {
   let b = document.getElementById("btn-ultima-atualizacao");
+
   if (!b) {
     b = document.createElement("button");
     b.id = "btn-ultima-atualizacao";
     b.type = "button";
-    b.style.cssText = "position:fixed;right:14px;bottom:14px;z-index:9999;padding:8px 12px;border:0;border-radius:999px;background:#111827;color:#fff;font:600 12px Inter,Arial;box-shadow:0 8px 20px rgba(0,0,0,.18)";
+    b.style.cssText = `
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 9999;
+      padding: 8px 12px;
+      border: 0;
+      border-radius: 999px;
+      background: #111827;
+      color: #fff;
+      font: 600 12px Inter, Arial;
+      box-shadow: 0 8px 20px rgba(0,0,0,.18);
+    `;
     document.body.appendChild(b);
   }
+
   const d = data ? new Date(data) : null;
-  b.textContent = d && !isNaN(d)
-    ? `Última atualização: ${d.toLocaleString("pt-BR")}`
-    : "Última atualização: não informada";
+
+  b.textContent =
+    d && !isNaN(d)
+      ? `Última atualização nesta sessão: ${d.toLocaleString("pt-BR")}`
+      : "Sem atualização após abertura";
 }
+
 async function carregarPropostaEditavel(proposta) {
   criarBotaoUltimaAtualizacao(proposta?.atualizado_em);
 
