@@ -3433,7 +3433,7 @@ const Cabecalho = {
   const Email = {
     cEnvBoleto: "S",
     cEnvLink:   "S",
-    cEnviarPara:""
+    cEnviarPara:"S"
   };
 
   const InformacoesAdicionais = {
