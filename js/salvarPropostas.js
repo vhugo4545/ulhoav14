@@ -489,7 +489,7 @@ window.atualizarPropostaEditavel = async function () {
       grupos
     };
 
-  const resposta = await fetch(`http://localhost:3000/api/propostas/${idProposta}`, {
+  const resposta = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${idProposta}`, {
   method: "PUT",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(propostaAtualizada)
