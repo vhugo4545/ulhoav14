@@ -2359,7 +2359,7 @@ async function atualizarNaOmie() {
     // =========================================================
     // 1. ENVIA PRODUTOS
     // =========================================================
-    const resposta = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/pedidos", {
+    const resposta = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/omie/pedidos", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
