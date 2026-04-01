@@ -1,9 +1,38 @@
 async function salvarPropostaEditavel() {
   try {
-    console.log("editaveis")
-   
-    mostrarCarregando()
+    console.log("editaveis");
+
+    mostrarCarregando();
     await new Promise(resolve => setTimeout(resolve, 2000));
+
+    function extrairNumeroMoeda(texto) {
+      if (!texto) return 0;
+
+      return parseFloat(
+        String(texto)
+          .replace(/\u00A0/g, " ")
+          .replace(/\s/g, "")
+          .replace("R$", "")
+          .replace(/\./g, "")
+          .replace(",", ".")
+          .trim()
+      ) || 0;
+    }
+
+    function obterValorSugeridoDoBloco(bloco) {
+      const cards = bloco.querySelectorAll(".resumo-totalizador-interno .col");
+
+      for (const col of cards) {
+        const titulo = col.querySelector(".text-muted")?.textContent?.replace(/\s+/g, " ")?.trim() || "";
+        const valorTexto = col.querySelector(".fw-bold")?.textContent?.trim() || "";
+
+        if (titulo.toLowerCase().includes("valor sugerido")) {
+          return extrairNumeroMoeda(valorTexto);
+        }
+      }
+
+      return 0;
+    }
 
     // 👥 Clientes
     const clientes = Array.from(document.querySelectorAll(".cliente-item")).map(el => ({
@@ -31,51 +60,47 @@ async function salvarPropostaEditavel() {
         return { data, valor, tipo, condicao };
       });
     }
+
     const select = document.getElementById("vendedorResponsavel");
     const textoSelecionado = select?.options[select.selectedIndex]?.text || "";
 
-    // --- Exemplo de uso: chamar antes de criar o objeto camposFormulario ---
-    // --- Exemplo de uso: chamar antes de criar o objeto camposFormulario ---
-   // --- Exemplo de uso: chamar antes de criar o objeto camposFormulario ---
-   async function preencherNumeroOrcamento() {
-  try {
-    const res = await fetch('https://contator-ulhoa-3d28d89efa68.herokuapp.com/orcamento');
+    async function preencherNumeroOrcamento() {
+      try {
+        const res = await fetch("https://contator-ulhoa-3d28d89efa68.herokuapp.com/orcamento");
 
-    if (!res.ok) {
-      throw new Error(`Erro HTTP: ${res.status}`);
+        if (!res.ok) {
+          throw new Error(`Erro HTTP: ${res.status}`);
+        }
+
+        const data = await res.json();
+        const numFormatado = String(data.numero).padStart(5, "0");
+
+        const campoNumero = document.getElementById("numeroOrcamento");
+
+        if (!campoNumero) {
+          console.error("Campo #numeroOrcamento não encontrado no HTML.");
+          return numFormatado;
+        }
+
+        campoNumero.value = numFormatado;
+        return numFormatado;
+      } catch (err) {
+        console.error("Erro ao buscar número do orçamento:", err);
+
+        const campoNumero = document.getElementById("numeroOrcamento");
+        if (campoNumero) {
+          campoNumero.value = "ERRO";
+        }
+
+        alert("Erro ao buscar número do orçamento!");
+        return "";
+      }
     }
 
-    const data = await res.json();
-    const numFormatado = String(data.numero).padStart(5, '0');
+    const numeroOrcamento = await preencherNumeroOrcamento();
 
-    const campoNumero = document.getElementById('numeroOrcamento');
-
-    if (!campoNumero) {
-      console.error('Campo #numeroOrcamento não encontrado no HTML.');
-      return numFormatado;
-    }
-
-    campoNumero.value = numFormatado;
-    return numFormatado;
-
-  } catch (err) {
-    console.error('Erro ao buscar número do orçamento:', err);
-
-    const campoNumero = document.getElementById('numeroOrcamento');
-    if (campoNumero) {
-      campoNumero.value = 'ERRO';
-    }
-
-    alert('Erro ao buscar número do orçamento!');
-    return '';
-  }
-}
-
-const numeroOrcamento = await preencherNumeroOrcamento();
-
-    
     const camposFormulario = {
-      numeroOrcamento: numeroOrcamento, // já vem preenchido do backend
+      numeroOrcamento: numeroOrcamento,
       dataOrcamento: document.getElementById("dataOrcamento")?.value || "",
       origemCliente: document.getElementById("origemCliente")?.value || "",
       clientes,
@@ -91,9 +116,8 @@ const numeroOrcamento = await preencherNumeroOrcamento();
       prazosArea: document.getElementById("prazosArea")?.value || "",
       condicaoPagamento,
       condicoesGerais: document.getElementById("condicoesGerais")?.value || "",
-      parcelas, 
+      parcelas,
 
-        // ✅ NOVOS CAMPOS (Aba nova de acompanhamento)
       prazoEntrega: document.getElementById("prazoEntrega")?.value || "",
       dataPedidoEnviadoCliente: document.getElementById("dataPedidoEnviadoCliente")?.value || "",
       meioEnvioPedido: document.getElementById("meioEnvioPedido")?.value || "",
@@ -104,8 +128,6 @@ const numeroOrcamento = await preencherNumeroOrcamento();
       dataProjetoEnviado: document.getElementById("dataProjetoEnviado")?.value || "",
       dataProjetoAssinado: document.getElementById("dataProjetoAssinado")?.value || "",
       dataMedicaoRealizada: document.getElementById("dataMedicaoRealizada")?.value || ""
-
-      
     };
 
     // 🔄 Grupos e produtos
@@ -121,13 +143,12 @@ const numeroOrcamento = await preencherNumeroOrcamento();
         return;
       }
 
-      // NOVO: pega o resumo deste grupo
       const resumoTextarea = document.getElementById(`resumo-${blocoId}`);
       const resumoGrupo = resumoTextarea?.value?.trim() || "";
+      const valorSugeridoGrupo = obterValorSugeridoDoBloco(bloco);
 
       const itens = [];
       tabela.querySelectorAll("tbody tr:not(.extra-summary-row)").forEach(tr => {
-        // Captura correta do campo "Utilização" como descricao_utilizacao
         const utilizacaoEl = tr.querySelector("td:nth-child(1) input, td:nth-child(1) textarea");
         const descricao_utilizacao = utilizacaoEl?.value?.trim() || "";
 
@@ -146,9 +167,7 @@ const numeroOrcamento = await preencherNumeroOrcamento();
         const quantidade_desejada = parseFloat(inputQtdDesejada?.value || "0");
         const formula_quantidade = inputQtdDesejada?.dataset.formula || "";
 
-        // ⬇️ AJUSTE: salva o resumo do grupo no campo formula_custo
         const formula_custo = resumoGrupo;
-
         const formula_preco = tr.querySelector("td:nth-child(4)")?.dataset.formula || "";
 
         itens.push({
@@ -160,12 +179,13 @@ const numeroOrcamento = await preencherNumeroOrcamento();
           quantidade,
           quantidade_desejada,
           formula_quantidade,
-          formula_custo,   // <- AGORA VAI O RESUMO!
-          formula_preco
+          formula_custo,
+          formula_preco,
+          valor_total_produto: valorSugeridoGrupo
         });
       });
 
-      // 📐 Parâmetros dos popups (miudezas, margem, etc.)
+      // 📐 Parâmetros dos popups
       const parametros = {};
       bloco.querySelectorAll(".tab-pane input[name]").forEach(input => {
         const nome = input.name;
@@ -174,7 +194,7 @@ const numeroOrcamento = await preencherNumeroOrcamento();
         parametros[nome] = isNaN(valor) ? valor : parseFloat(valor);
       });
 
-      // 🔁 Campos calculados do popup (como #custoTotalMaterial, #precoMinimo)
+      // 🔁 Campos calculados do popup
       const camposPopupExtras = {};
       bloco.querySelectorAll(".tab-pane .campo-resultado").forEach(el => {
         const nome = el.id?.replace("campo-", "") || "";
@@ -198,80 +218,67 @@ const numeroOrcamento = await preencherNumeroOrcamento();
       }
     });
 
+    const errosObrigatorios = [];
 
-// ✅ Validação de campos obrigatórios + validação de produtos (texto puro, sem HTML)
-// ✅ Validação de campos obrigatórios + validação de produtos (texto puro, sem HTML)
-const errosObrigatorios = [];
+    if (!camposFormulario.origemCliente || !camposFormulario.origemCliente.trim()) {
+      errosObrigatorios.push("O campo Origem do Cliente é obrigatório.");
+    }
 
-// Origem do Cliente
-if (!camposFormulario.origemCliente || !camposFormulario.origemCliente.trim()) {
-  errosObrigatorios.push("O campo Origem do Cliente é obrigatório.");
-}
+    const selectVendedor = document.getElementById("vendedorResponsavel");
+    const valorSelecionado = selectVendedor?.value?.trim() || "";
 
-// ✅ Vendedor Responsável (usa sua variável textoSelecionado + checa value do select)
-const selectVendedor = document.getElementById("vendedorResponsavel");
-const valorSelecionado = selectVendedor?.value?.trim() || "";
+    if (
+      !textoSelecionado ||
+      !textoSelecionado.trim() ||
+      textoSelecionado.trim().toLowerCase() === "selecione" ||
+      !valorSelecionado
+    ) {
+      errosObrigatorios.push("O campo Vendedor Responsável é obrigatório.");
+    }
 
-// não pode estar vazio, nem "Selecione", nem value vazio
-if (
-  !textoSelecionado ||
-  !textoSelecionado.trim() ||
-  textoSelecionado.trim().toLowerCase() === "selecione" ||
-  !valorSelecionado
-) {
-  errosObrigatorios.push("O campo Vendedor Responsável é obrigatório.");
-}
-
-// Clientes: Nome / Razão Social e Função
-if (!clientes.length) {
-  errosObrigatorios.push(
-    "É obrigatório informar pelo menos um Cliente (Nome / Razão Social e Função)."
-  );
-} else {
-  clientes.forEach((c, idx) => {
-    const linha = idx + 1;
-
-    if (!c.nome_razao_social || !c.nome_razao_social.trim()) {
+    if (!clientes.length) {
       errosObrigatorios.push(
-        `O campo Nome / Razão Social do cliente ${linha} é obrigatório.`
+        "É obrigatório informar pelo menos um Cliente (Nome / Razão Social e Função)."
       );
+    } else {
+      clientes.forEach((c, idx) => {
+        const linha = idx + 1;
+
+        if (!c.nome_razao_social || !c.nome_razao_social.trim()) {
+          errosObrigatorios.push(
+            `O campo Nome / Razão Social do cliente ${linha} é obrigatório.`
+          );
+        }
+
+        if (!c.funcao || !c.funcao.trim()) {
+          errosObrigatorios.push(`O campo Função do cliente ${linha} é obrigatório.`);
+        }
+      });
     }
 
-    if (!c.funcao || !c.funcao.trim()) {
-      errosObrigatorios.push(`O campo Função do cliente ${linha} é obrigatório.`);
+    const containerProdutos = document.getElementById("blocosProdutosContainer");
+    const linhasProdutos = containerProdutos
+      ? containerProdutos.querySelectorAll("table tbody tr:not(.extra-summary-row)").length
+      : 0;
+
+    if (!containerProdutos || linhasProdutos === 0) {
+      errosObrigatorios.push("Inclua pelo menos 1 produto na proposta antes de salvar.");
     }
-  });
-}
 
-// ✅ Validação: precisa ter pelo menos 1 produto em #blocosProdutosContainer
-const containerProdutos = document.getElementById("blocosProdutosContainer");
-const linhasProdutos = containerProdutos
-  ? containerProdutos.querySelectorAll("table tbody tr:not(.extra-summary-row)").length
-  : 0;
+    if (errosObrigatorios.length) {
+      const mensagem =
+        "Preencha os seguintes campos obrigatórios:\n\n" +
+        errosObrigatorios.map(msg => `• ${msg}`).join("\n");
 
-if (!containerProdutos || linhasProdutos === 0) {
-  errosObrigatorios.push("Inclua pelo menos 1 produto na proposta antes de salvar.");
-}
+      ocultarCarregando();
+      mostrarPopupCustomizado("⚠️ Campos obrigatórios", mensagem, "warning");
 
-// Se tiver erro, interrompe o fluxo e não envia
-if (errosObrigatorios.length) {
-  const mensagem =
-    "Preencha os seguintes campos obrigatórios:\n\n" +
-    errosObrigatorios.map(msg => `• ${msg}`).join("\n");
+      return {
+        erro: "Campos obrigatórios não preenchidos",
+        detalhes: errosObrigatorios
+      };
+    }
 
-  ocultarCarregando();
-  mostrarPopupCustomizado("⚠️ Campos obrigatórios", mensagem, "warning");
-
-  return {
-    erro: "Campos obrigatórios não preenchidos",
-    detalhes: errosObrigatorios
-  };
-}
-
-
-
-
-    // 🧾 Proposta final
     const numeroProposta = camposFormulario.numeroOrcamento || Date.now().toString();
     const proposta = {
       tipoProposta: "editavel",
@@ -280,42 +287,53 @@ if (errosObrigatorios.length) {
       grupos
     };
 
-    // 🚀 Envia para o servidor
     const resposta = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/propostas", {
       method: "POST",
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(proposta)
     });
 
     const resultado = await resposta.json();
     console.log("📦 Proposta salva com sucesso:", resultado);
-    ocultarCarregando()
+    ocultarCarregando();
     mostrarPopupCustomizado("✅ Sucesso", "Proposta atualizada com sucesso!", "success");
-    console.log(resultado._id)
-// Supondo que você já tem o objeto resultado com o campo _id
-if (resultado && resultado._id) {
-  window.location.href = `editar.html?id=${resultado._id}`;
-}
+    console.log(resultado._id);
 
-const btn = document.createElement('button');
-btn.textContent = 'Editar';
-btn.onclick = () => {
-  if (resultado && resultado._id) {
-    window.location.href = `editar.html?id=${resultado._id}`;
-  }
-};
-document.body.appendChild(btn);
+    if (resultado && resultado._id) {
+      window.location.href = `editar.html?id=${resultado._id}`;
+    }
+
+    const btn = document.createElement("button");
+    btn.textContent = "Editar";
+    btn.onclick = () => {
+      if (resultado && resultado._id) {
+        window.location.href = `editar.html?id=${resultado._id}`;
+      }
+    };
+    document.body.appendChild(btn);
 
     return resultado;
 
   } catch (erro) {
     console.error("❌ Erro ao salvar proposta:", erro);
-    ocultarCarregando()
+    ocultarCarregando();
     mostrarPopupCustomizado("❌ Erro", "Erro ao atualizar proposta. Verifique o console.", "error");
     return { erro: "Erro inesperado ao salvar proposta." };
   }
 }
+function extrairNumeroMoeda(texto) {
+  if (!texto) return 0;
 
+  return parseFloat(
+    texto
+      .replace(/\u00A0/g, " ")
+      .replace(/\s/g, "")
+      .replace("R$", "")
+      .replace(/\./g, "")
+      .replace(",", ".")
+      .trim()
+  ) || 0;
+}
 
 window.atualizarPropostaEditavel = async function () {
   try {
@@ -327,6 +345,35 @@ window.atualizarPropostaEditavel = async function () {
     if (!idProposta) {
       alert("❌ ID da proposta não encontrado na URL.");
       return { erro: "ID da proposta não encontrado." };
+    }
+
+    function extrairNumeroMoeda(texto) {
+      if (!texto) return 0;
+
+      return parseFloat(
+        String(texto)
+          .replace(/\u00A0/g, " ")
+          .replace(/\s/g, "")
+          .replace("R$", "")
+          .replace(/\./g, "")
+          .replace(",", ".")
+          .trim()
+      ) || 0;
+    }
+
+    function obterValorSugeridoDoBloco(bloco) {
+      const cards = bloco.querySelectorAll(".resumo-totalizador-interno .col");
+
+      for (const col of cards) {
+        const titulo = col.querySelector(".text-muted")?.textContent?.replace(/\s+/g, " ")?.trim() || "";
+        const valorTexto = col.querySelector(".fw-bold")?.textContent?.trim() || "";
+
+        if (titulo.toLowerCase().includes("valor sugerido")) {
+          return extrairNumeroMoeda(valorTexto);
+        }
+      }
+
+      return 0;
     }
 
     const select = document.getElementById("vendedorResponsavel");
@@ -357,8 +404,16 @@ window.atualizarPropostaEditavel = async function () {
     const numeroPedidoEl = document.getElementById("numeroPedido");
 
     const camposFormulario = {
-      numeroOrcamento: numeroOrcamentoEl?.value?.trim() || numeroOrcamentoEl?.getAttribute("data-valor-original")?.trim() || "",
-      numeroPedido: numeroPedidoEl?.value?.trim() || numeroPedidoEl?.getAttribute("data-valor-original")?.trim() || "",
+      numeroOrcamento:
+        numeroOrcamentoEl?.value?.trim() ||
+        numeroOrcamentoEl?.getAttribute("data-valor-original")?.trim() ||
+        "",
+
+      numeroPedido:
+        numeroPedidoEl?.value?.trim() ||
+        numeroPedidoEl?.getAttribute("data-valor-original")?.trim() ||
+        "",
+
       dataOrcamento: document.getElementById("dataOrcamento")?.value || "",
       origemCliente: document.getElementById("origemCliente")?.value || "",
       clientes,
@@ -376,17 +431,14 @@ window.atualizarPropostaEditavel = async function () {
       condicoesGerais: document.getElementById("condicoesGerais")?.value || "",
       desconto,
       parcelas,
-
       prazoEntrega: document.getElementById("prazoEntrega")?.value || "",
       dataPedidoEnviadoCliente: document.getElementById("dataPedidoEnviadoCliente")?.value || "",
       meioEnvioPedido: document.getElementById("meioEnvioPedido")?.value || "",
       dataPedidoAssinado: document.getElementById("dataPedidoAssinado")?.value || "",
-
       dataEntregaProjeto: document.getElementById("dataEntregaProjeto")?.value || "",
       dataInicioProjeto: document.getElementById("dataInicioProjeto")?.value || "",
       dataLiberacaoConferencia: document.getElementById("dataLiberacaoConferencia")?.value || "",
       dataConferencia: document.getElementById("dataConferencia")?.value || "",
-
       obraLiberada: document.getElementById("obraLiberada")?.value || "",
       itensLiberacaoObra: document.getElementById("itensLiberacaoObra")?.value || "",
       dataLiberacaoObra: document.getElementById("dataLiberacaoObra")?.value || "",
@@ -409,6 +461,7 @@ window.atualizarPropostaEditavel = async function () {
 
       const resumoEl = bloco.querySelector(`#resumo-${blocoId}`);
       const resumoGrupo = resumoEl?.value?.trim() || "";
+      const valorSugeridoGrupo = obterValorSugeridoDoBloco(bloco);
 
       const itens = [];
       tabela.querySelectorAll("tbody tr:not(.extra-summary-row)").forEach(tr => {
@@ -439,7 +492,8 @@ window.atualizarPropostaEditavel = async function () {
           quantidade_desejada,
           formula_quantidade,
           formula_custo,
-          formula_preco
+          formula_preco,
+          valor_total_produto: valorSugeridoGrupo
         });
       });
 
@@ -489,28 +543,27 @@ window.atualizarPropostaEditavel = async function () {
       grupos
     };
 
-  const resposta = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${idProposta}`, {
-  method: "PUT",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(propostaAtualizada)
-});
+    const resposta = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${idProposta}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(propostaAtualizada)
+    });
 
     const resultado = await resposta.json();
     console.log("✅ Proposta atualizada com sucesso:", resultado);
+
     ocultarCarregando();
     mostrarPopupCustomizado("✅ Sucesso", "Proposta atualizada com sucesso!", "success");
-    ocultarCarregando();
-  setTimeout(() => {
-  criarBotaoUltimaAtualizacao(new Date());
-}, 2000);
+
+    setTimeout(() => {
+      criarBotaoUltimaAtualizacao(new Date());
+    }, 2000);
 
     return resultado;
-
   } catch (erro) {
     console.error("❌ Erro ao atualizar proposta:", erro);
     ocultarCarregando();
     mostrarPopupCustomizado("❌ Erro", "Erro ao atualizar proposta. Verifique o console.", "error");
-    ocultarCarregando();
     return { erro: erro.message };
   }
 };
