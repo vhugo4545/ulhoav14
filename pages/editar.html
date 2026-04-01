@@ -231,7 +231,7 @@ async function verificarSePedidoFoiFinalizado() {
           font-weight: 700;
           font-size: 14px;
         ">
-          ⛔ Este pedido está finalizado. Alterações estão bloqueadas.
+          ⛔ Este pedido está finalizado. Alterações estão bloqueadas no front.
         </div>
       `;
 
@@ -804,6 +804,10 @@ async function openOsPopup({ endpoint = "https://ulhoa-servico-ec4e1aa95355.hero
                       <label class="form-label">Telefone</label>
                       <input type="text" class="form-control telefoneCliente">
                     </div>
+                  <div class="col-md-6">
+  <label class="form-label">E-mail</label>
+  <input type="email" class="form-control emailCliente">
+</div>
                   </div>
                 </div>
                 <button type="button" class="btn btn-outline-primary mt-2"
