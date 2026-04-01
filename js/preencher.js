@@ -539,10 +539,12 @@ if (clienteBase) {
     const telEl = ref.querySelector(".telefoneCliente");
     if (telEl) telEl.value = cliente.telefone || "";
 
+    const emailEl = ref.querySelector(".emailCliente");
+    if (emailEl) emailEl.value = cliente.email || "";
+
     if (i > 0) containerClientes.appendChild(ref);
   });
 }
-
 
     // 💳 Parcelas
     const containerParcelas = document.getElementById("listaParcelas");
