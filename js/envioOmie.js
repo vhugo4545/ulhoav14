@@ -1968,16 +1968,15 @@ function vv_getPrimeiraDataParcelaISO() {
 async function gerarPayloadOmie() {
   const pendencias = [];
 
-  // ✅ garante vendedor válido (não pode ser "Selecione")
   const vendedorSelectEl = document.getElementById("vendedorResponsavel");
   const textoSelecionado =
     vendedorSelectEl?.options?.[vendedorSelectEl.selectedIndex]?.text?.trim() ||
     vendedorSelectEl?.value?.trim() ||
     "";
 
-  // validações
   const clientes = document.querySelectorAll("#clientesWrapper .cliente-item");
   const codigoCliente = clientes[0]?.querySelector(".codigoCliente")?.value?.trim();
+
   if (!codigoCliente) pendencias.push("Código do cliente não preenchido.");
 
   if (!textoSelecionado || textoSelecionado.toUpperCase() === "SELECIONE") {
@@ -1997,7 +1996,6 @@ async function gerarPayloadOmie() {
   const linhasParcelas = document.querySelectorAll("#listaParcelas .row");
   if (!linhasParcelas.length) pendencias.push("Nenhuma parcela informada.");
 
-  // ✅ garantir que tem produtos listados
   const blocosContainer = document.getElementById("blocosProdutosContainer");
   const temProdutosNaTela =
     !!blocosContainer &&
@@ -2019,11 +2017,8 @@ async function gerarPayloadOmie() {
     return null;
   }
 
-  // =========================================================
-  // ✅ Funções auxiliares (dentro do trecho completo, pra copiar e colar)
-  // =========================================================
   async function esperarSelectCarregar(selectId, {
-    minOptions = 2,      // 1 = só "Selecione", 2+ = lista carregada
+    minOptions = 2,
     timeoutMs = 15000,
     intervalMs = 200
   } = {}) {
@@ -2034,125 +2029,166 @@ async function gerarPayloadOmie() {
       if (sel && sel.options && sel.options.length >= minOptions) return sel;
       await new Promise(r => setTimeout(r, intervalMs));
     }
+
     return document.getElementById(selectId) || null;
   }
 
-const VENDEDORES_FIXOS_FALLBACK = {
-  pagina: 1,
-  total_de_paginas: 1,
-  registros: 12,
-  total_de_registros: 12,
-  cadastro: [
-    { codInt: "", codigo: 2452905334, comissao: 1, email: "joaomartins@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "JOAO CLEBER MARTINS", visualiza_pedido: "N" },
-    { codInt: "", codigo: 2452905376, comissao: 0, email: "", fatura_pedido: "N", inativo: "S", nome: "Paulo Sergio Machado da Silva", visualiza_pedido: "N" },
-    { codInt: "", codigo: 2452905381, comissao: 0, email: "marilena.ulhoa@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "MARILENA DE ALMEIDA ULHOA", visualiza_pedido: "N" },
-    { codInt: "", codigo: 2452905445, comissao: 1, email: "rafael.angelo@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "RAFAEL ANGELO ARAUJO DA SILVA", visualiza_pedido: "N" },
-    { codInt: "", codigo: 2452905491, comissao: 0, email: "", fatura_pedido: "N", inativo: "S", nome: "DOUGLAS VITOR DA SILVA", visualiza_pedido: "N" },
-    { codInt: "", codigo: 2452905509, comissao: 0, email: "", fatura_pedido: "N", inativo: "S", nome: "GABRIEL JUNIOR DO COUTO NEPOMUCENO", visualiza_pedido: "N" },
-    { codInt: "", codigo: 2452905682, comissao: 0, email: "felipe.ulhoa@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "FELIPE ULHOA FERREIRA", visualiza_pedido: "N" },
-    { codInt: "", codigo: 2452911859, comissao: 0, email: "", fatura_pedido: "N", inativo: "S", nome: "MAURO LUCIO", visualiza_pedido: "N" },
-    { codInt: "", codigo: 2452927579, comissao: 0, email: "projetos@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "S", nome: "ANA FLAVIA RODRIGUES PRATES", visualiza_pedido: "N" },
-    { codInt: "", codigo: 2618640819, comissao: 0, email: "lais.rabelo@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "S", nome: "LAIS MAGALHÃES RABELO", visualiza_pedido: "N" },
-    { codInt: "", codigo: 2698639092, comissao: 0, email: "servidor@ferreiraulhoa.com.br", fatura_pedido: "S", inativo: "S", nome: "VANESSA ULHOA", visualiza_pedido: "N" }
-  ]
-};
-
-async function pegarVendedorSelecionadoComCodigo(selectId = "vendedorResponsavel") {
-  const select = await esperarSelectCarregar(selectId, { minOptions: 2, timeoutMs: 15000 });
-  if (!select) return null;
-
-  const opt = select.options?.[select.selectedIndex];
-  const nomeSelecionado = (select.value || opt?.text || "").trim();
-
-  if (!nomeSelecionado || nomeSelecionado.toUpperCase() === "SELECIONE") return null;
-
-  const normalizar = (s) =>
-    (s ?? "")
-      .toString()
+  function normalizarTexto(s) {
+    return String(s || "")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ")
       .trim()
-      .toUpperCase();
-
-  const nomeNorm = normalizar(nomeSelecionado);
-
-  let lista = [];
-
-  try {
-    const res = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/omie/vendedores");
-    const json = await res.json();
-    lista = Array.isArray(json?.cadastro) ? json.cadastro : [];
-  } catch (erro) {
-    console.warn("⚠️ Erro ao buscar vendedores da API. Usando lista fixa.", erro);
+      .toLowerCase();
   }
 
-  // ✅ fallback para lista fixa
-  if (!Array.isArray(lista) || lista.length === 0) {
-    lista = Array.isArray(VENDEDORES_FIXOS_FALLBACK?.cadastro)
+  function classificarTipoItem(item) {
+    const desc = normalizarTexto(item?.descricao || "");
+    if (/^vidros?\b/.test(desc)) return "vidro";
+    if (desc.includes("mao de obra de instalacao") && desc.includes("(por hora)")) return "servico";
+    return "produto";
+  }
+
+  function parseValorParcela(elValor) {
+    const rawValor =
+      (elValor?.value ??
+        elValor?.textContent ??
+        elValor?.innerText ??
+        "")
+        .toString()
+        .trim();
+
+    if (typeof vv_parseBRL === "function") {
+      return vv_parseBRL(rawValor);
+    }
+
+    return Number(
+      rawValor
+        .replace(/[^\d,.-]/g, "")
+        .replace(/\./g, "")
+        .replace(",", ".")
+    ) || 0;
+  }
+
+  function obterDataParcelaFormatada(linha) {
+    const elData = linha.querySelector(".data-parcela") || linha.querySelector("input[type='date']");
+    const dataISO = elData?.value || "";
+
+    if (!dataISO) return "";
+
+    return typeof formatarDataBR === "function"
+      ? formatarDataBR(dataISO)
+      : dataISO;
+  }
+
+  async function pegarVendedorSelecionadoComCodigo(selectId = "vendedorResponsavel") {
+    const select = await esperarSelectCarregar(selectId, { minOptions: 2, timeoutMs: 15000 });
+    if (!select) return null;
+
+    const opt = select.options?.[select.selectedIndex];
+    const nomeSelecionado = (
+      opt?.text ||
+      select.value ||
+      select.getAttribute("data-valor-original") ||
+      ""
+    ).trim();
+
+    if (!nomeSelecionado || nomeSelecionado.toUpperCase() === "SELECIONE") {
+      return null;
+    }
+
+    const normalizar = (s) =>
+      (s ?? "")
+        .toString()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toUpperCase();
+
+    const nomeNorm = normalizar(nomeSelecionado);
+
+    const lista = Array.isArray(VENDEDORES_FIXOS_FALLBACK?.cadastro)
       ? VENDEDORES_FIXOS_FALLBACK.cadastro
       : [];
-  }
 
-  // 1) match exato (normalizado)
-  let match = lista.find(v => normalizar(v.nome) === nomeNorm);
-
-  // 2) fallback: match parcial (caso select esteja abreviado)
-  if (!match) {
-    const candidatos = lista.filter(v => {
-      const api = normalizar(v.nome);
-      return api.includes(nomeNorm) || nomeNorm.includes(api);
-    });
-
-    if (candidatos.length === 1) {
-      match = candidatos[0];
-    } else if (candidatos.length > 1) {
-      match = candidatos.find(v => String(v.inativo).toUpperCase() === "N") || candidatos[0];
+    if (!lista.length) {
+      console.warn("⚠️ VENDEDORES_FIXOS_FALLBACK.cadastro está vazio ou inexistente.");
+      return null;
     }
+
+    let match = lista.find(v => normalizar(v?.nome) === nomeNorm);
+
+    if (!match) {
+      const candidatos = lista.filter(v => {
+        const nomeApi = normalizar(v?.nome);
+        return nomeApi.includes(nomeNorm) || nomeNorm.includes(nomeApi);
+      });
+
+      if (candidatos.length === 1) {
+        match = candidatos[0];
+      } else if (candidatos.length > 1) {
+        match = candidatos.find(v => String(v?.inativo || "").toUpperCase() === "N") || candidatos[0];
+      }
+    }
+
+    if (!match) {
+      const codigoDigitado = (document.getElementById("codigoVendedor")?.value || "").trim();
+      if (codigoDigitado) {
+        match = lista.find(v => String(v?.codigo || "").trim() === codigoDigitado);
+      }
+    }
+
+    if (!match) {
+      console.warn("⚠️ Não foi possível localizar vendedor na variável fixa.", {
+        nomeSelecionado,
+        nomeNorm,
+        lista
+      });
+      return null;
+    }
+
+    return {
+      nomeSelect: nomeSelecionado,
+      nomeApi: match.nome,
+      codigo: Number(match.codigo)
+    };
   }
 
-  if (!match) return null;
+  const vendedorInfo = await pegarVendedorSelecionadoComCodigo("vendedorResponsavel");
 
-  return {
-    nomeSelect: nomeSelecionado,
-    nomeApi: match.nome,
-    codigo: Number(match.codigo)
-  };
-}
+  if (!vendedorInfo?.codigo) {
+    alert("Selecione um Vendedor Responsável válido (não foi possível recuperar o código).");
+    return null;
+  }
 
-// =========================================================
-// ✅ Recupera codVend (espera select carregar + bate com API)
-// =========================================================
-const vendedorInfo = await pegarVendedorSelecionadoComCodigo("vendedorResponsavel");
-
-  // 1) ambientes
   const ambientesMarcados = (typeof lerAmbientesMarcados === "function")
     ? lerAmbientesMarcados()
     : [];
 
-  // 2) candidatos
   const candidatos = coletarItensPorGrupoParaOmie(ambientesMarcados);
+
   if (!candidatos.length) {
     alert("Nenhum item elegível encontrado nos ambientes marcados.");
     return null;
   }
 
-  // 3) popup seleção
   const selecao = await abrirPopupSelecaoItensOmie(candidatos);
+
   if (!selecao) {
     console.log("🚫 Seleção cancelada pelo usuário.");
     return null;
   }
 
-  const { aprovadosParaOmie, ignorados } = selecao;
+  const { aprovadosParaOmie, ignorados, totais } = selecao;
+
   if (!aprovadosParaOmie.length) {
     alert("Selecione ao menos um item para enviar à Omie.");
     return null;
   }
 
-  // 🔸 guarda última seleção
   window.__vvUltimaSelecaoOmie = selecao;
 
-  // 4) ignorados → produtos faturados direto (opcional)
   try {
     if (typeof produtosFaturadosParaOCliente === "function") {
       produtosFaturadosParaOCliente(ignorados);
@@ -2161,12 +2197,6 @@ const vendedorInfo = await pegarVendedorSelecionadoComCodigo("vendedorResponsave
     console.warn("produtosFaturadosParaOCliente falhou:", e);
   }
 
-    if (!vendedorInfo?.codigo) {
-    alert("Selecione um Vendedor Responsável válido (não foi possível recuperar o código).");
-    return null;
-  }
-
-  // 5) payload base (produtos)
   const numeroPedido = (typeof gerarNumeroPedidoUnico === "function")
     ? gerarNumeroPedidoUnico()
     : ("PED-" + Date.now());
@@ -2175,7 +2205,7 @@ const vendedorInfo = await pegarVendedorSelecionadoComCodigo("vendedorResponsave
     cabecalho: {
       codigo_cliente: codigoCliente,
       codigo_pedido_integracao: numeroPedido,
-      data_previsao: primeiraDataParcela, // DD/MM/AAAA
+      data_previsao: primeiraDataParcela,
       etapa: "10",
       numero_pedido: numeroPedido,
       codigo_parcela: "999",
@@ -2188,8 +2218,8 @@ const vendedorInfo = await pegarVendedorSelecionadoComCodigo("vendedorResponsave
       codigo_categoria: "1.01.01",
       codigo_conta_corrente: 2523861035,
       consumidor_final: "S",
-      enviar_email:"S",
-      codVend: vendedorInfo.codigo // ✅ AQUI (código do vendedor recuperado)
+      enviar_email: "S",
+      codVend: vendedorInfo.codigo
     },
     agropecuario: {
       cNumReceita: "",
@@ -2201,82 +2231,111 @@ const vendedorInfo = await pegarVendedorSelecionadoComCodigo("vendedorResponsave
     }
   };
 
-  // 6) detalhes (somente aprovados) com valor AJUSTADO
-  aprovadosParaOmie.forEach(item => {
-    const valorFinal = vv_round2(Number(item.valorAjustadoParaOmie) || 0);
-    const codigo_produto = item.codigo || "SEM-CODIGO";
-    const descricao = item.descricao || "Item sem descrição";
+  // somente produtos/vidros entram no pedido
+  const aprovadosSomenteProdutos = aprovadosParaOmie.filter(item => {
+    const tipo = classificarTipoItem(item);
+    return tipo === "produto" || tipo === "vidro";
+  });
+
+  aprovadosSomenteProdutos.forEach((item, index) => {
+    const codigo_produto = String(item.codigo || "").trim();
+
+    if (!codigo_produto) {
+      console.warn("⛔ Produto sem código Omie:", item);
+      return;
+    }
+
+    const descricao = String(item.descricao || "Item sem descrição").trim();
+
+    let quantidade = Number(item.quantidade || 1);
+    if (!quantidade || quantidade <= 0) quantidade = 1;
+
+    let valor_unitario = Number(item.valorUnitarioItem || 0);
+
+    if ((!valor_unitario || valor_unitario <= 0) && Number(item.valorTotalItem || 0) > 0) {
+      valor_unitario = quantidade > 0
+        ? Number((Number(item.valorTotalItem) / quantidade).toFixed(2))
+        : Number(Number(item.valorTotalItem).toFixed(2));
+    }
+
+    // fallback final: usar o valor ajustado do item
+    if ((!valor_unitario || valor_unitario <= 0) && Number(item.valorAjustadoParaOmie || 0) > 0) {
+      valor_unitario = Number(item.valorAjustadoParaOmie || 0);
+      quantidade = 1;
+    }
+
+    valor_unitario = typeof vv_round2 === "function"
+      ? vv_round2(valor_unitario)
+      : Math.round((Number(valor_unitario) || 0) * 100) / 100;
+
+    if (!valor_unitario || valor_unitario <= 0) {
+      console.warn("⛔ Produto sem valor_unitario válido:", item);
+      return;
+    }
 
     payload.det.push({
-      ide: { codigo_item_integracao: numeroPedido },
-      inf_adic: { peso_bruto: 1, peso_liquido: 1 },
+      ide: {
+        codigo_item_integracao: `${numeroPedido}-${index + 1}`
+      },
+      inf_adic: {
+        peso_bruto: 1,
+        peso_liquido: 1
+      },
       produto: {
         cfop: "5.102",
         codigo_produto,
         descricao,
         ncm: "9403.30.00",
-        quantidade: 1,
+        quantidade,
         tipo_desconto: "V",
         unidade: "UN",
         valor_desconto: 0,
-        valor_unitario: valorFinal
+        valor_unitario
       }
     });
 
     payload.cabecalho.quantidade_itens++;
   });
 
-  // 7) parcelas
+  if (!payload.det.length) {
+    alert("Nenhum item válido foi montado para envio à Omie. Verifique código Omie e valor dos produtos.");
+    return null;
+  }
+
   const parcelasPayload = [];
   const valores = [];
 
   linhasParcelas.forEach((linha, i) => {
     const elValor = linha.querySelector(".valor-parcela");
-    const rawValor =
-      (elValor?.value && elValor.value.trim()) ||
-      (elValor?.dataset?.valorOriginal && elValor.dataset.valorOriginal.trim()) ||
-      "";
+    const valor = parseValorParcela(elValor);
+    const data_vencimento = obterDataParcelaFormatada(linha);
 
-    const valor = vv_round2(vv_parseBRL(rawValor));
-
-    const dataISO = linha.querySelector(".data-parcela")?.value || "";
-    const data_vencimento = (typeof formatarDataBR === "function")
-      ? formatarDataBR(dataISO)
-      : "";
-
-    parcelasPayload.push({
-      data_vencimento,
-      numero_parcela: i + 1,
-      percentual: "0.00",
-      valor
-    });
-
-    valores.push(valor);
+    if (valor > 0 && data_vencimento) {
+      parcelasPayload.push({
+        numero_parcela: i + 1,
+        percentual: 0,
+        data_vencimento,
+        valor
+      });
+      valores.push(valor);
+    }
   });
 
-  const somaParcelas = vv_round2(valores.reduce((acc, v) => acc + v, 0));
-  let somaPerc = 0;
+  const totalParcelas = valores.reduce((acc, n) => acc + n, 0);
 
-  parcelasPayload.forEach((p, idx) => {
-    let pct = somaParcelas > 0 ? (p.valor / somaParcelas) * 100 : 0;
-    pct = vv_round2(pct);
-    parcelasPayload[idx].percentual = pct.toFixed(2);
-    somaPerc = vv_round2(somaPerc + pct);
-  });
+  payload.lista_parcelas.parcela = parcelasPayload.map(p => ({
+    ...p,
+    percentual: totalParcelas > 0
+      ? Number(((p.valor / totalParcelas) * 100).toFixed(2))
+      : 0
+  }));
 
-  if (parcelasPayload.length) {
-    const diff = vv_round2(100 - somaPerc);
-    const last = parcelasPayload[parcelasPayload.length - 1];
-    last.percentual = vv_round2(parseFloat(last.percentual) + diff).toFixed(2);
-  }
-
-  payload.lista_parcelas.parcela = parcelasPayload;
-
-  console.log("✅ Vendedor resolvido:", vendedorInfo);
-  console.log("📦 Payload final (estrutura antiga; valores ajustados):", payload);
+  console.log("✅ Payload de produtos gerado:", payload);
+  console.log("🛠️ Valor de serviços separado para OS:", totais?.valorServicos || 0);
 
   return payload;
 }
+
 
 
 /* =======================================
@@ -2285,9 +2344,12 @@ const vendedorInfo = await pegarVendedorSelecionadoComCodigo("vendedorResponsave
 async function atualizarNaOmie() {
   const botao =
     document.getElementById("btn-gerar-pedido") ||
-    document.getElementById("btnEnviarOmie");
+    document.getElementById("btnEnviarOmie") ||
+    document.getElementById("btn-editar");
 
-  const spinner = document.getElementById("spinnerOmie");
+  const spinner =
+    document.getElementById("spinnerOmie") ||
+    document.getElementById("loadingSpinner");
 
   const abrirStatus = (titulo, mensagem, tipo = "info") => {
     if (typeof mostrarPopupCustomizado === "function") {
@@ -2300,20 +2362,14 @@ async function atualizarNaOmie() {
   const alertServer = (titulo, status, dataOrText) => {
     let corpo = "";
     try {
-      if (typeof dataOrText === "string") {
-        corpo = dataOrText;
-      } else {
-        corpo = JSON.stringify(dataOrText, null, 2);
-      }
+      corpo = typeof dataOrText === "string"
+        ? dataOrText
+        : JSON.stringify(dataOrText, null, 2);
     } catch {
       corpo = String(dataOrText || "");
     }
 
-    alert(
-      `${titulo}\n` +
-      `HTTP: ${status}\n\n` +
-      `${corpo}`
-    );
+    alert(`${titulo}\nHTTP: ${status}\n\n${corpo}`);
   };
 
   const readJsonOrText = async (res) => {
@@ -2326,9 +2382,6 @@ async function atualizarNaOmie() {
   };
 
   try {
-    // =========================================================
-    // INÍCIO DO PROCESSO
-    // =========================================================
     if (typeof mostrarCarregando === "function") {
       mostrarCarregando();
     }
@@ -2338,7 +2391,7 @@ async function atualizarNaOmie() {
 
     abrirStatus(
       "⏳ Processando",
-      "Estamos gerando e enviando o pedido. Aguarde até a finalização.",
+      "Estamos gerando e enviando o pedido de produtos.",
       "info"
     );
 
@@ -2352,13 +2405,10 @@ async function atualizarNaOmie() {
 
     abrirStatus(
       "📦 Enviando produtos",
-      "Os produtos estão sendo enviados para a Omie. Aguarde um instante.",
+      "Os produtos estão sendo enviados para a Omie.",
       "info"
     );
 
-    // =========================================================
-    // 1. ENVIA PRODUTOS
-    // =========================================================
     const resposta = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/omie/pedidos", {
       method: "POST",
       headers: {
@@ -2369,6 +2419,8 @@ async function atualizarNaOmie() {
     });
 
     const { parsed, raw } = await readJsonOrText(resposta);
+
+    console.log("📥 Resposta /pedidos:", resposta.status, parsed ?? raw);
 
     if (!resposta.ok) {
       alertServer("❌ ERRO ao enviar PRODUTOS", resposta.status, parsed ?? raw);
@@ -2382,18 +2434,12 @@ async function atualizarNaOmie() {
       throw new Error(parsed?.erro || parsed?.error || raw || "Erro ao enviar produtos para a Omie.");
     }
 
-    alertServer("✅ PRODUTOS enviados com sucesso", resposta.status, parsed ?? raw);
-    console.log("📤 Enviado à Omie (produtos):", parsed ?? raw);
-
     abrirStatus(
       "✅ Produtos enviados",
       "Os produtos foram enviados com sucesso. Agora estamos buscando o número do pedido.",
       "success"
     );
 
-    // =========================================================
-    // 2. PEGA O ID DA PROPOSTA
-    // =========================================================
     const params = new URLSearchParams(window.location.search);
     const propostaId = params.get("id");
 
@@ -2401,9 +2447,6 @@ async function atualizarNaOmie() {
       throw new Error("ID da proposta não encontrado na URL.");
     }
 
-    // =========================================================
-    // 3. BUSCA O NÚMERO DO PEDIDO
-    // =========================================================
     abrirStatus(
       "🔎 Buscando número do pedido",
       "Os produtos já foram enviados. Agora estamos buscando o número gerado do pedido.",
@@ -2431,10 +2474,6 @@ async function atualizarNaOmie() {
       "info"
     );
 
-    // =========================================================
-    // 4. ATUALIZA A PROPOSTA NO LOCALHOST
-    //    (para evitar o erro de CORS no PUT remoto)
-    // =========================================================
     const respostaUpdate = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${propostaId}`, {
       method: "PUT",
       headers: {
@@ -2456,17 +2495,12 @@ async function atualizarNaOmie() {
     console.log("✅ Proposta atualizada com numeroPedido:", numeroPedido);
     console.log("📄 Resposta da atualização:", dadosAtualizados);
 
-    // =========================================================
-    // 5. ATUALIZA CAMPO NA TELA, SE EXISTIR
-    // =========================================================
     const inputNumeroPedido = document.getElementById("numeroPedido");
     if (inputNumeroPedido) {
       inputNumeroPedido.value = numeroPedido;
     }
 
-    // =========================================================
-    // 6. ENVIO DE SERVIÇOS, SE EXISTIR
-    // =========================================================
+    // serviços seguem separados na OS
     const selecao = window.__vvUltimaSelecaoOmie || null;
     const valorServicos = selecao?.totais?.valorServicos || 0;
 
@@ -2507,7 +2541,10 @@ async function atualizarNaOmie() {
         "success"
       );
     }
-    atualizarPropostaEditavel()
+
+    if (typeof atualizarPropostaEditavel === "function") {
+      atualizarPropostaEditavel();
+    }
 
   } catch (erro) {
     console.error("❌ Erro em atualizarNaOmie:", erro);
@@ -2528,9 +2565,6 @@ async function atualizarNaOmie() {
     }
   }
 }
-
-
-
 
 
 const API_BASE_PRODUTOS = 'https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com'; 
@@ -3431,9 +3465,9 @@ const Cabecalho = {
   const Departamentos = []; // sem uso por enquanto
 
   const Email = {
-    cEnvBoleto: "S",
-    cEnvLink:   "S",
-    cEnviarPara:"S"
+    cEnvBoleto: "N",
+    cEnvLink:   "N",
+    cEnviarPara:""
   };
 
   const InformacoesAdicionais = {
