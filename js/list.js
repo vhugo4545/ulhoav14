@@ -1,18 +1,18 @@
 document.addEventListener("DOMContentLoaded", async () => {
   mostrarCarregando();
 
-  const tableBody       = document.querySelector("#data-table tbody");
-  const prevPageBtn     = document.getElementById("prev-page");
-  const nextPageBtn     = document.getElementById("next-page");
-  const pageInfo        = document.getElementById("page-info");
-  const searchInput     = document.getElementById("search");
-  const filterSeller    = document.getElementById("filter-seller");
-  const filterStatus    = document.getElementById("filter-status");
-  const loadingDiv      = document.getElementById("loading");
-  const table           = document.getElementById("data-table");
-  const alertaVencimento= document.getElementById("alerta-vencimento");
+  const tableBody        = document.querySelector("#data-table tbody");
+  const prevPageBtn      = document.getElementById("prev-page");
+  const nextPageBtn      = document.getElementById("next-page");
+  const pageInfo         = document.getElementById("page-info");
+  const searchInput      = document.getElementById("search");
+  const filterSeller     = document.getElementById("filter-seller");
+  const filterStatus     = document.getElementById("filter-status");
+  const loadingDiv       = document.getElementById("loading");
+  const table            = document.getElementById("data-table");
+  const alertaVencimento = document.getElementById("alerta-vencimento");
 
-  const API_BASE = "https://ulhoa-0a02024d350a.herokuapp.com";
+ const API_BASE = "https://ulhoa-0a02024d350a.herokuapp.com";
   const TOKEN = localStorage.getItem("accessToken");
 
   let data = [];
@@ -20,20 +20,58 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentPage = 1;
   const rowsPerPage = 50;
 
-  // filtros atuais
   let searchText = "";
   let selectedSeller = "";
   let selectedStatus = "";
-
-  // guarda SEMPRE o resultado filtrado atual (pra paginação funcionar)
   let filteredDataGlobal = [];
+
+  function extrairNumero(valor) {
+    if (valor === null || valor === undefined) return 0;
+    if (typeof valor === "number") return isNaN(valor) ? 0 : valor;
+
+    const texto = String(valor).trim();
+    if (!texto) return 0;
+
+    const limpo = texto
+      .replace(/\u00A0/g, " ")
+      .replace(/\s/g, "")
+      .replace("R$", "")
+      .replace("%", "")
+      .replace(/\./g, "")
+      .replace(",", ".");
+
+    const numero = parseFloat(limpo);
+    return isNaN(numero) ? 0 : numero;
+  }
+
+  function calcularTotalFinalProposta(campos, grupos) {
+    const subtotal = (grupos || []).reduce((somaGrupos, grupo) => {
+      const valorGrupo = extrairNumero(grupo?.itens?.[0]?.valor_total_produto);
+      return somaGrupos + valorGrupo;
+    }, 0);
+
+    const descontoTexto = String(campos?.desconto || "").trim();
+    let totalFinal = subtotal;
+
+    if (descontoTexto) {
+      if (descontoTexto.includes("%")) {
+        const percentual = extrairNumero(descontoTexto);
+        totalFinal = subtotal - (subtotal * percentual / 100);
+      } else {
+        const descontoValor = extrairNumero(descontoTexto);
+        totalFinal = subtotal - descontoValor;
+      }
+    }
+
+    return totalFinal < 0 ? 0 : totalFinal;
+  }
 
   try {
     loadingDiv.style.display = "block";
     table.style.display = "none";
 
     const res = await fetch(`${API_BASE}/api/propostas`, {
-      headers: { "Authorization": `Bearer ${TOKEN}` },
+      headers: { Authorization: `Bearer ${TOKEN}` },
       cache: "no-store"
     });
 
@@ -51,21 +89,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         const campos = p.camposFormulario || {};
         const grupos = p.grupos || [];
 
-        const total = grupos.reduce((soma, grupo) => (
-          soma + (grupo.itens || []).reduce((subtotal, item) => (
-            subtotal + ((parseFloat(item.preco) || 0) * (parseFloat(item.quantidade) || 1))
-          ), 0)
-        ), 0);
-
-        const clienteObj     = (campos.clientes && campos.clientes[0]) || {};
-        const nomeCliente    = clienteObj.nome_razao_social || "Cliente sem nome";
-        const cnpjCpf        = clienteObj.cpfCnpj || "--";
-        const vendedor       = campos.vendedorResponsavel || "Indefinido";
-        const status         = p.statusOrcamento || "Sem status";
-        const tipoProposta   = p.tipoProposta || "--";
-        const nomeEvento     = campos.nomeEvento || "--";
+        const clienteObj = (campos.clientes && campos.clientes[0]) || {};
+        const nomeCliente = clienteObj.nome_razao_social || "Cliente sem nome";
+        const cnpjCpf = clienteObj.cpfCnpj || "--";
+        const vendedor = campos.vendedorResponsavel || "Indefinido";
+        const status = p.statusOrcamento || "Sem status";
+        const tipoProposta = p.tipoProposta || "--";
+        const nomeEvento = campos.nomeEvento || "--";
         const numeroProposta = p.numeroProposta || "--";
-        const numeroPedido   = p.numeroPedido || campos.numeroPedido || "--";
+        const numeroPedido = p.numeroPedido || campos.numeroPedido || "--";
 
         const createdAt = new Date(p.criado_em || p.createdAt);
         const dataCriacao = createdAt.toLocaleDateString("pt-BR");
@@ -91,27 +123,26 @@ document.addEventListener("DOMContentLoaded", async () => {
           evento: nomeEvento,
           date: dataCriacao,
           createdAt,
-          value: `R$ ${total.toFixed(2)}`,
-          totalNumerico: total,
           validade: validade.toLocaleDateString("pt-BR"),
-          vencida: isVencida
+          vencida: isVencida,
+          campos,
+          grupos
         };
       })
-      .sort((a, b) => b.createdAt - a.createdAt); // mais recentes primeiro
+      .sort((a, b) => b.createdAt - a.createdAt);
 
-    data.forEach((item, index) => item.id = index + 1);
+    data.forEach((item, index) => {
+      item.id = index + 1;
+    });
 
-    // opções de vendedores (uma vez)
     sellers = Array.from(sellerSet).sort();
-    const sellerOptions = ['<option value="">Todos</option>'].concat(
-      sellers.map(v => `<option value="${v}">${v}</option>`)
-    ).join("");
+    const sellerOptions = ['<option value="">Todos</option>']
+      .concat(sellers.map(v => `<option value="${v}">${v}</option>`))
+      .join("");
     filterSeller.innerHTML = sellerOptions;
 
-    // inicializa filtragem + tabela + alertas
     filterTable(true);
     renderAlertas(vencidas, prestesAVencer);
-
   } catch (err) {
     console.error("Erro ao buscar propostas:", err);
     loadingDiv.innerHTML = "❌ Erro ao carregar propostas.";
@@ -124,11 +155,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   function calcularValidade(dataInicial, diasUteis) {
     const result = new Date(dataInicial);
     let adicionados = 0;
+
     while (adicionados < diasUteis) {
       result.setDate(result.getDate() + 1);
       const dia = result.getDay();
       if (dia !== 0 && dia !== 6) adicionados++;
     }
+
     return result;
   }
 
@@ -138,9 +171,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     tableBody.innerHTML = "";
     const start = (currentPage - 1) * rowsPerPage;
     const end = start + rowsPerPage;
+    const visibleItems = list.slice(start, end);
 
     let html = "";
-    list.slice(start, end).forEach((item, index) => {
+    visibleItems.forEach((item, index) => {
+      const total = calcularTotalFinalProposta(item.campos, item.grupos);
+      const value = `R$ ${total.toFixed(2)}`;
+
       html += `
         <tr>
           <td>${start + index + 1}</td>
@@ -150,14 +187,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           <td>${item.vendedor}</td>
           <td>${item.cliente}</td>
           <td>${item.cnpjCpf}</td>
-
           <td><span class="status ${String(item.status).toLowerCase().replace(/\s/g, "-")}">${item.status}</span></td>
-
           <td>
             <span title="Validade da proposta">${item.validade}</span>
-            ${item.vencida ? '<br><span style="color:red; font-weight:bold;">VENCIDA</span>' : ''}
+            ${item.vencida ? '<br><span style="color:red; font-weight:bold;">VENCIDA</span>' : ""}
           </td>
-
+          <td>${value}</td>
           <td class="actions">
             <button class="edit-btn" data-id="${item._id}">
               <span class="material-icons-outlined">edit</span>
@@ -205,8 +240,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     tableBody.querySelectorAll(".edit-btn").forEach(button => {
       button.addEventListener("click", event => {
         const itemId = event.currentTarget.getAttribute("data-id");
-        if (itemId) window.location.href = `editar.html?id=${itemId}`;
-        else alert("❌ ID não encontrado.");
+        if (itemId) {
+          window.location.href = `editar.html?id=${itemId}`;
+        } else {
+          alert("❌ ID não encontrado.");
+        }
       });
     });
   }
@@ -225,8 +263,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         String(item.evento || "").toLowerCase().includes(searchText) ||
         String(item.vendedor || "").toLowerCase().includes(searchText) ||
         String(item.tipoProposta || "").toLowerCase().includes(searchText) ||
-        String(item.status || "").toLowerCase().includes(searchText) ||
-        String(item.value || "").toLowerCase().includes(searchText)
+        String(item.status || "").toLowerCase().includes(searchText)
       );
     });
 
