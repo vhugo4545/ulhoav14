@@ -3534,11 +3534,13 @@ const Cabecalho = {
 
   const Departamentos = []; // sem uso por enquanto
 
-  const Email = {
-    cEnvBoleto: "S",
-    cEnvLink:   "S",
-    cEnviarPara:"S"
-  };
+ const emailCliente = container.querySelector(".emailCliente")?.value?.trim() || "";
+
+const Email = {
+  cEnvBoleto: "S",
+  cEnvLink: "S",
+  cEnviarPara: emailCliente
+};
 
   const InformacoesAdicionais = {
     cCodCateg:   CCODCATEG_DEFAULT,
