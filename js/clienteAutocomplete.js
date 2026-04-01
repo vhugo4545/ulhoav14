@@ -36,6 +36,7 @@ async function aplicarAutocompleteCliente(container) {
   const codigoInput = container.querySelector(".codigoCliente");
   const cpfInput = container.querySelector(".cpfCnpj");
   const telefoneInput = container.querySelector(".telefoneCliente");
+  const emailInput = container.querySelector(".emailCliente");
 
   let sugestoes = container.querySelector(".sugestoesCliente");
 
@@ -44,7 +45,6 @@ async function aplicarAutocompleteCliente(container) {
     return;
   }
 
-  // Cria a lista de sugestões se ainda não existir
   if (!sugestoes) {
     sugestoes = document.createElement("ul");
     sugestoes.className = "list-group sugestoesCliente position-absolute w-100 zindex-dropdown";
@@ -54,14 +54,20 @@ async function aplicarAutocompleteCliente(container) {
     input.parentElement.appendChild(sugestoes);
   }
 
-  // Garante que os dados estejam carregados antes de ativar
-  const clientesAtivos = await carregarClientes();
+  const resposta = await carregarClientes();
 
-  // Função para filtrar e mostrar sugestões
+  const clientesAtivos = Array.isArray(resposta?.clientes_cadastro)
+    ? resposta.clientes_cadastro
+    : Array.isArray(resposta)
+      ? resposta
+      : [];
+
   function mostrarSugestoes(termo) {
+    const termoLower = termo.toLowerCase();
+
     const resultados = clientesAtivos.filter(c =>
-      (c.nome_fantasia || "").toLowerCase().includes(termo.toLowerCase()) ||
-      (c.razao_social || "").toLowerCase().includes(termo.toLowerCase())
+      (c.nome_fantasia || "").toLowerCase().includes(termoLower) ||
+      (c.razao_social || "").toLowerCase().includes(termoLower)
     );
 
     sugestoes.innerHTML = "";
@@ -69,19 +75,21 @@ async function aplicarAutocompleteCliente(container) {
     resultados.forEach(cliente => {
       const item = document.createElement("li");
       item.className = "list-group-item list-group-item-action";
-      item.textContent = cliente.nome_fantasia || cliente.razao_social;
-      item.dataset.nome = cliente.nome_fantasia || cliente.razao_social;
+      item.textContent = cliente.nome_fantasia || cliente.razao_social || "";
+      item.dataset.nome = cliente.nome_fantasia || cliente.razao_social || "";
       item.dataset.codigo = cliente.codigo_cliente_omie || "";
       item.dataset.cpfcnpj = cliente.cnpj_cpf || "";
       item.dataset.telefone = cliente.telefone1_numero || "";
+      item.dataset.email = cliente.email || "";
 
       item.addEventListener("click", () => {
         input.value = item.dataset.nome;
         codigoInput.value = item.dataset.codigo;
         if (cpfInput) cpfInput.value = item.dataset.cpfcnpj;
         if (telefoneInput) telefoneInput.value = item.dataset.telefone;
+        if (emailInput) emailInput.value = item.dataset.email;
         sugestoes.style.display = "none";
-        input.dispatchEvent(new Event("input")); // Dispara para permitir novo filtro
+        input.dispatchEvent(new Event("input"));
         console.log(`✅ Cliente selecionado: ${item.dataset.nome}`);
       });
 
@@ -91,10 +99,9 @@ async function aplicarAutocompleteCliente(container) {
     sugestoes.style.display = resultados.length ? "block" : "none";
   }
 
-  // Evento de digitação
   input.addEventListener("input", () => {
     const termo = input.value.trim();
-    if (termo.length === 0) {
+    if (!termo) {
       sugestoes.innerHTML = "";
       sugestoes.style.display = "none";
       return;
@@ -102,13 +109,11 @@ async function aplicarAutocompleteCliente(container) {
     mostrarSugestoes(termo);
   });
 
-  // Reexibe sugestões ao focar, se já houver texto
   input.addEventListener("focus", () => {
     const termo = input.value.trim();
     if (termo.length >= 1) mostrarSugestoes(termo);
   });
 
-  // Oculta sugestões ao clicar fora
   document.addEventListener("click", (e) => {
     if (!container.contains(e.target)) {
       sugestoes.style.display = "none";
