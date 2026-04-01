@@ -3534,12 +3534,18 @@ const Cabecalho = {
 
   const Departamentos = []; // sem uso por enquanto
 
- const emailCliente = container.querySelector(".emailCliente")?.value?.trim() || "";
+const emailsClientes = Array.from(document.querySelectorAll(".emailCliente"))
+  .map(input =>
+    input?.value?.trim() ||
+    input?.dataset?.valorOriginal?.trim() ||
+    ""
+  )
+  .filter(email => email);
 
 const Email = {
   cEnvBoleto: "S",
   cEnvLink: "S",
-  cEnviarPara: emailCliente
+  cEnviarPara: emailsClientes.join(",")
 };
 
   const InformacoesAdicionais = {
