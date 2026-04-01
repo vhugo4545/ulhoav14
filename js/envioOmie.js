@@ -2359,16 +2359,17 @@ async function atualizarNaOmie() {
     }
   };
 
-  const alertServer = (titulo, status, dataOrText) => {
-    let corpo = "";
+  const montarTextoResposta = (dataOrText) => {
     try {
-      corpo = typeof dataOrText === "string"
-        ? dataOrText
-        : JSON.stringify(dataOrText, null, 2);
+      if (typeof dataOrText === "string") return dataOrText;
+      return JSON.stringify(dataOrText, null, 2);
     } catch {
-      corpo = String(dataOrText || "");
+      return String(dataOrText || "");
     }
+  };
 
+  const alertServer = (titulo, status, dataOrText) => {
+    const corpo = montarTextoResposta(dataOrText);
     alert(`${titulo}\nHTTP: ${status}\n\n${corpo}`);
   };
 
@@ -2390,8 +2391,8 @@ async function atualizarNaOmie() {
     if (botao) botao.disabled = true;
 
     abrirStatus(
-      "⏳ Processando",
-      "Estamos gerando e enviando o pedido de produtos.",
+      "⏳ Iniciando envio",
+      "Estamos preparando o pedido de produtos e os serviços.",
       "info"
     );
 
@@ -2403,13 +2404,16 @@ async function atualizarNaOmie() {
 
     console.log("📦 Payload gerado (produtos):", payload);
 
+    // =========================================================
+    // 1) ENVIO DE PRODUTOS
+    // =========================================================
     abrirStatus(
       "📦 Enviando produtos",
       "Os produtos estão sendo enviados para a Omie.",
       "info"
     );
 
-    const resposta = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/omie/pedidos", {
+    const respostaProdutos = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/omie/pedidos", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -2418,26 +2422,54 @@ async function atualizarNaOmie() {
       body: JSON.stringify(payload)
     });
 
-    const { parsed, raw } = await readJsonOrText(resposta);
+    const retornoProdutos = await readJsonOrText(respostaProdutos);
 
-    console.log("📥 Resposta /pedidos:", resposta.status, parsed ?? raw);
+    console.log("📥 Resposta /pedidos:", respostaProdutos.status, retornoProdutos.parsed ?? retornoProdutos.raw);
 
-    if (!resposta.ok) {
-      alertServer("❌ ERRO ao enviar PRODUTOS", resposta.status, parsed ?? raw);
+    if (!respostaProdutos.ok) {
+      alertServer(
+        "❌ ERRO AO ENVIAR PRODUTOS",
+        respostaProdutos.status,
+        retornoProdutos.parsed ?? retornoProdutos.raw
+      );
 
       abrirStatus(
-        "❌ Erro ao enviar produtos",
-        parsed?.erro || parsed?.error || raw || "Erro desconhecido ao enviar os produtos.",
+        "❌ Falha no envio dos produtos",
+        retornoProdutos.parsed?.erro ||
+          retornoProdutos.parsed?.error ||
+          retornoProdutos.raw ||
+          "O envio dos produtos falhou.",
         "error"
       );
 
-      throw new Error(parsed?.erro || parsed?.error || raw || "Erro ao enviar produtos para a Omie.");
+      throw new Error(
+        retornoProdutos.parsed?.erro ||
+        retornoProdutos.parsed?.error ||
+        retornoProdutos.raw ||
+        "Erro ao enviar produtos para a Omie."
+      );
     }
+
+    // ✅ confirmação individual dos produtos
+    alertServer(
+      "✅ PRODUTOS ENVIADOS COM SUCESSO",
+      respostaProdutos.status,
+      retornoProdutos.parsed ?? retornoProdutos.raw
+    );
 
     abrirStatus(
       "✅ Produtos enviados",
-      "Os produtos foram enviados com sucesso. Agora estamos buscando o número do pedido.",
+      "Os produtos foram enviados com sucesso para a Omie.",
       "success"
+    );
+
+    // =========================================================
+    // 2) BUSCAR NÚMERO DO PEDIDO E SALVAR NA PROPOSTA
+    // =========================================================
+    abrirStatus(
+      "🔎 Buscando número do pedido",
+      "Os produtos já foram enviados. Agora estamos buscando o número gerado do pedido.",
+      "info"
     );
 
     const params = new URLSearchParams(window.location.search);
@@ -2446,12 +2478,6 @@ async function atualizarNaOmie() {
     if (!propostaId) {
       throw new Error("ID da proposta não encontrado na URL.");
     }
-
-    abrirStatus(
-      "🔎 Buscando número do pedido",
-      "Os produtos já foram enviados. Agora estamos buscando o número gerado do pedido.",
-      "info"
-    );
 
     const respostaPedido = await fetch("https://contator-ulhoa-3d28d89efa68.herokuapp.com/pedido");
     const dadosPedido = await respostaPedido.json();
@@ -2469,7 +2495,7 @@ async function atualizarNaOmie() {
     console.log("🔢 Número do pedido obtido:", numeroPedido);
 
     abrirStatus(
-      "📝 Salvando na proposta",
+      "📝 Salvando número do pedido",
       `Pedido localizado com o número ${numeroPedido}. Agora estamos vinculando esse número à proposta.`,
       "info"
     );
@@ -2482,63 +2508,107 @@ async function atualizarNaOmie() {
       body: JSON.stringify({ numeroPedido })
     });
 
-    const dadosAtualizados = await readJsonOrText(respostaUpdate);
+    const retornoUpdate = await readJsonOrText(respostaUpdate);
 
     if (!respostaUpdate.ok) {
       throw new Error(
-        dadosAtualizados?.parsed?.error ||
-        dadosAtualizados?.raw ||
+        retornoUpdate?.parsed?.error ||
+        retornoUpdate?.parsed?.erro ||
+        retornoUpdate?.raw ||
         "Erro ao incluir número do pedido na proposta."
       );
     }
 
     console.log("✅ Proposta atualizada com numeroPedido:", numeroPedido);
-    console.log("📄 Resposta da atualização:", dadosAtualizados);
+    console.log("📄 Resposta da atualização:", retornoUpdate.parsed ?? retornoUpdate.raw);
 
     const inputNumeroPedido = document.getElementById("numeroPedido");
     if (inputNumeroPedido) {
       inputNumeroPedido.value = numeroPedido;
     }
 
-    // serviços seguem separados na OS
+    // =========================================================
+    // 3) ENVIO DE SERVIÇOS (SE HOUVER)
+    // =========================================================
     const selecao = window.__vvUltimaSelecaoOmie || null;
     const valorServicos = selecao?.totais?.valorServicos || 0;
 
+    let servicosEnviadosComSucesso = false;
+    let houveTentativaDeServico = false;
+
     if (valorServicos > 0 && typeof enviarOSServico === "function") {
+      houveTentativaDeServico = true;
+
       abrirStatus(
         "🛠️ Enviando serviços",
-        "Os produtos já foram enviados e o pedido foi vinculado. Agora estamos enviando os serviços.",
+        "Os produtos já foram enviados. Agora estamos enviando os serviços na estrutura própria da OS.",
         "info"
       );
 
       const osResp = await enviarOSServico({ valorServicos });
 
-      alertServer(
-        osResp?.ok ? "✅ SERVIÇOS enviados com sucesso" : "⚠️ SERVIÇOS não enviados",
-        osResp?.status || "sem status",
-        osResp
-      );
+      console.log("📥 Resposta /os:", osResp);
 
       if (osResp?.ok) {
+        servicosEnviadosComSucesso = true;
+
+        // ✅ confirmação individual dos serviços
+        alertServer(
+          "✅ SERVIÇOS ENVIADOS COM SUCESSO",
+          osResp?.status || 200,
+          osResp
+        );
+
         abrirStatus(
-          "✅ Pedido concluído",
-          `O pedido foi feito com o número ${numeroPedido}.<br>Os serviços também foram enviados com sucesso.`,
+          "✅ Serviços enviados",
+          "Os serviços foram enviados com sucesso na estrutura própria da OS.",
           "success"
         );
       } else {
+        // ❌ confirmação individual de erro dos serviços
+        alertServer(
+          "❌ ERRO AO ENVIAR SERVIÇOS",
+          osResp?.status || "sem status",
+          osResp
+        );
+
         abrirStatus(
-          "⚠️ Pedido concluído parcialmente",
-          `O pedido foi feito com o número ${numeroPedido}, mas os serviços não puderam ser enviados agora.`,
-          "warning"
+          "❌ Falha no envio dos serviços",
+          osResp?.error ||
+            osResp?.erro ||
+            osResp?.message ||
+            "Os serviços não puderam ser enviados.",
+          "error"
         );
       }
     } else {
-      console.log("ℹ️ Sem serviços para enviar (valor 0) ou função enviarOSServico indisponível.");
-
       abrirStatus(
-        "✅ Pedido concluído",
-        `O pedido foi feito com o número ${numeroPedido}.`,
+        "ℹ️ Sem serviços para enviar",
+        "Nenhum serviço foi selecionado para envio nesta operação.",
+        "info"
+      );
+    }
+
+    // =========================================================
+    // 4) RESUMO FINAL
+    // =========================================================
+    if (!houveTentativaDeServico) {
+      abrirStatus(
+        "✅ Processo concluído",
+        `Produtos enviados com sucesso. Pedido nº ${numeroPedido}.`,
         "success"
+      );
+    } else if (servicosEnviadosComSucesso) {
+      abrirStatus(
+        "✅ Processo concluído",
+        `Produtos e serviços enviados com sucesso. Pedido nº ${numeroPedido}.`,
+        "success"
+      );
+    } else {
+      abrirStatus(
+        "⚠️ Processo concluído parcialmente",
+        `Produtos enviados com sucesso no pedido nº ${numeroPedido}, mas houve falha no envio dos serviços.`,
+        "warning"
       );
     }
 
@@ -2551,7 +2621,7 @@ async function atualizarNaOmie() {
 
     abrirStatus(
       "❌ Erro no processo",
-      erro?.message || "Ocorreu um erro durante o envio do pedido.",
+      erro?.message || "Ocorreu um erro durante o envio.",
       "error"
     );
 
@@ -3465,9 +3535,9 @@ const Cabecalho = {
   const Departamentos = []; // sem uso por enquanto
 
   const Email = {
-    cEnvBoleto: "N",
-    cEnvLink:   "N",
-    cEnviarPara:""
+    cEnvBoleto: "S",
+    cEnvLink:   "S",
+    cEnviarPara:"S"
   };
 
   const InformacoesAdicionais = {
