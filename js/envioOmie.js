@@ -564,6 +564,343 @@ async function verificarClienteEAtualizar() {
   }
 }
 
+function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistentes = []) {
+  return new Promise((resolveParcelas) => {
+    const parseBRL = (s) => {
+      if (typeof vv_parseBRL === "function") return vv_parseBRL(s || "0");
+      return Number(
+        String(s || "0")
+          .replace(/\u00A0/g, " ")
+          .replace(/[^\d,.-]/g, "")
+          .replace(/\./g, "")
+          .replace(",", ".")
+      ) || 0;
+    };
+
+    const fmtBRL = (n) => {
+      if (typeof vv_fmtBRL === "function") return vv_fmtBRL(Number(n || 0));
+      return `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
+    };
+
+    async function salvarParcelasServicoNoServidor(parcelasServico = []) {
+      try {
+        const idProposta = new URLSearchParams(window.location.search).get("id");
+        if (!idProposta) {
+          console.warn("⚠️ ID da proposta não encontrado na URL. Parcelas de serviço não foram salvas no servidor.");
+          return null;
+        }
+
+        const propostaBase = window.propostaEmEdicao || window.propostaAtual;
+        if (!propostaBase || typeof propostaBase !== "object") {
+          console.warn("⚠️ Proposta base não encontrada em memória. Parcelas de serviço não foram salvas no servidor.");
+          return null;
+        }
+
+        const payload = JSON.parse(JSON.stringify(propostaBase));
+        payload.camposFormulario = payload.camposFormulario || {};
+        payload.camposFormulario.parcelasServico = parcelasServico;
+
+        const resposta = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${idProposta}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const resultado = await resposta.json();
+
+        if (!resposta.ok) {
+          throw new Error(resultado?.erro || resultado?.message || "Falha ao salvar parcelas de serviço.");
+        }
+
+        if (window.propostaEmEdicao) {
+          window.propostaEmEdicao.camposFormulario = window.propostaEmEdicao.camposFormulario || {};
+          window.propostaEmEdicao.camposFormulario.parcelasServico = parcelasServico;
+        }
+
+        if (window.propostaAtual) {
+          window.propostaAtual.camposFormulario = window.propostaAtual.camposFormulario || {};
+          window.propostaAtual.camposFormulario.parcelasServico = parcelasServico;
+        }
+
+        console.log("✅ Parcelas de serviço salvas no servidor:", parcelasServico);
+        return resultado;
+      } catch (erro) {
+        console.error("❌ Erro ao salvar parcelas de serviço no servidor:", erro);
+        throw erro;
+      }
+    }
+
+    const parcelasSalvasDaProposta =
+      Array.isArray(window.propostaEmEdicao?.camposFormulario?.parcelasServico)
+        ? window.propostaEmEdicao.camposFormulario.parcelasServico
+        : Array.isArray(window.propostaAtual?.camposFormulario?.parcelasServico)
+          ? window.propostaAtual.camposFormulario.parcelasServico
+          : [];
+
+    const parcelasParaUsar =
+      Array.isArray(parcelasExistentes) && parcelasExistentes.length > 0
+        ? parcelasExistentes
+        : parcelasSalvasDaProposta;
+
+    const bd = document.createElement("div");
+    bd.className = "vv-modal-backdrop";
+
+    const md = document.createElement("div");
+    md.className = "vv-modal";
+    md.style.maxWidth = "1100px";
+    md.style.width = "96vw";
+
+    const hd = document.createElement("header");
+    hd.innerHTML = `
+      <h3>Parcelamento dos Serviços</h3>
+      <div class="vv-help" style="margin-top:4px;">
+        Informe como o valor de serviços será parcelado. Total de serviços: <b>${fmtBRL(valorTotalServicos)}</b>
+      </div>
+    `;
+
+    const by = document.createElement("div");
+    by.className = "vv-body";
+
+    by.innerHTML = `
+      <div style="display:grid; gap:12px;">
+        <div id="vv-resumo-servicos" style="
+          display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px;
+          padding:12px; border:1px solid #e5e7eb; border-radius:12px; background:#f8fafc;
+        ">
+          <div>Total de serviços: <b id="vv-serv-total">${fmtBRL(valorTotalServicos)}</b></div>
+          <div>Total parcelado: <b id="vv-serv-somado">${fmtBRL(0)}</b></div>
+          <div>Diferença: <b id="vv-serv-diferenca">${fmtBRL(valorTotalServicos)}</b></div>
+          <div>Status: <b id="vv-serv-status" style="color:#a61b1b;">Pendente</b></div>
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="vv-btn" id="vv-add-parcela-servico">Adicionar parcela</button>
+          <button type="button" class="vv-btn" id="vv-gerar-1x-servico">Gerar 1 parcela</button>
+          <button type="button" class="vv-btn" id="vv-gerar-2x-servico">Gerar 2 parcelas iguais</button>
+        </div>
+
+        <div id="listaParcelasServicos"></div>
+      </div>
+    `;
+
+    const ft = document.createElement("div");
+    ft.className = "vv-footer";
+    ft.innerHTML = `
+      <div class="vv-help">As parcelas abaixo representam apenas o valor de serviços.</div>
+      <div style="display:flex; gap:8px;">
+        <button class="vv-btn" id="vv-cancelar-parcelas-servico">Cancelar</button>
+        <button class="vv-btn primary" id="vv-confirmar-parcelas-servico">Confirmar parcelamento</button>
+      </div>
+    `;
+
+    md.appendChild(hd);
+    md.appendChild(by);
+    md.appendChild(ft);
+    bd.appendChild(md);
+    document.body.appendChild(bd);
+
+    const lista = by.querySelector("#listaParcelasServicos");
+    const $somado = by.querySelector("#vv-serv-somado");
+    const $diferenca = by.querySelector("#vv-serv-diferenca");
+    const $status = by.querySelector("#vv-serv-status");
+
+    function criarLinhaParcelaServico({
+      tipo_monetario = "",
+      condicao_pagto = "",
+      valor = "",
+      vencimento = ""
+    } = {}) {
+      const row = document.createElement("div");
+      row.className = "row g-2 align-items-end mb-2";
+      row.innerHTML = `
+        <div class="col-3 col-lg-2">
+          <label class="form-label mb-0">Tipo Monetário</label>
+          <select class="form-select tipo-monetario-servico">
+            <option value="" disabled ${!tipo_monetario ? "selected" : ""}>Selecione…</option>
+            <option value="PIX">Pix</option>
+            <option value="DIN">Dinheiro</option>
+            <option value="CRCP">Cartão Parcelado</option>
+            <option value="CRC">Cartão de Crédito</option>
+            <option value="CRD">Cartão de Débito</option>
+            <option value="BOLR">Boleto Recorrente</option>
+            <option value="BOLV">Boleto à Vista</option>
+            <option value="PER">Permuta</option>
+          </select>
+        </div>
+
+        <div class="col-4 col-lg-3">
+          <label class="form-label mb-0">Condição de Pagto</label>
+          <div class="condicao-wrapper">
+            <select class="form-select condicao-pagto-servico">
+              <option value="" disabled ${!condicao_pagto ? "selected" : ""}>Selecione…</option>
+              <option value="avista">3 dias após finalizar instalação completa.</option>
+              <option value="na-retirada">3 dias após finalizar instalação da estrutura.</option>
+              <option value="30-dias">3 dias após finalizar instalação dos vidros.</option>
+              <option value="entrada+30">Na retirada/entrega do produto.</option>
+              <option value="personalizado">Personalizado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="col-3 col-lg-2">
+          <label class="form-label mb-0">Valor</label>
+          <input type="text" class="form-control valor-parcela-servico" placeholder="Ex: 1000,00" value="${valor !== "" ? fmtBRL(valor) : ""}">
+        </div>
+
+        <div class="col-2 col-lg-3">
+          <label class="form-label mb-0">Vencimento</label>
+          <input type="date" class="form-control data-parcela-servico" value="${vencimento || ""}">
+        </div>
+
+        <div class="col-12 col-lg-2">
+          <button type="button" class="btn btn-outline-danger w-100 btn-remover-parcela-servico">
+            Remover
+          </button>
+        </div>
+      `;
+
+      const tipoSelect = row.querySelector(".tipo-monetario-servico");
+      const condicaoSelect = row.querySelector(".condicao-pagto-servico");
+      const valorInput = row.querySelector(".valor-parcela-servico");
+      const removerBtn = row.querySelector(".btn-remover-parcela-servico");
+
+      if (tipo_monetario) tipoSelect.value = tipo_monetario;
+      if (condicao_pagto) condicaoSelect.value = condicao_pagto;
+
+      valorInput.addEventListener("input", atualizarResumoParcelasServicos);
+      valorInput.addEventListener("blur", () => {
+        valorInput.value = fmtBRL(parseBRL(valorInput.value || "0"));
+        atualizarResumoParcelasServicos();
+      });
+
+      row.querySelector(".data-parcela-servico").addEventListener("change", atualizarResumoParcelasServicos);
+      tipoSelect.addEventListener("change", atualizarResumoParcelasServicos);
+      condicaoSelect.addEventListener("change", atualizarResumoParcelasServicos);
+
+      removerBtn.addEventListener("click", () => {
+        row.remove();
+        atualizarResumoParcelasServicos();
+      });
+
+      lista.appendChild(row);
+      atualizarResumoParcelasServicos();
+    }
+
+    function atualizarResumoParcelasServicos() {
+      const linhas = [...lista.querySelectorAll(".row")];
+      const totalParcelado = linhas.reduce((acc, row) => {
+        const v = parseBRL(row.querySelector(".valor-parcela-servico")?.value || "0");
+        return acc + v;
+      }, 0);
+
+      const diferenca = Number((valorTotalServicos - totalParcelado).toFixed(2));
+      const bate = Math.abs(diferenca) < 0.01;
+
+      $somado.textContent = fmtBRL(totalParcelado);
+      $diferenca.textContent = fmtBRL(diferenca);
+
+      if (bate) {
+        $status.textContent = "Fechado";
+        $status.style.color = "#146c2e";
+      } else {
+        $status.textContent = diferenca > 0 ? "Faltando valor" : "Valor excedente";
+        $status.style.color = "#a61b1b";
+      }
+    }
+
+    function limparParcelasServicos() {
+      lista.innerHTML = "";
+      atualizarResumoParcelasServicos();
+    }
+
+    function gerarParcelasIguais(qtd) {
+      limparParcelasServicos();
+      if (!qtd || qtd <= 0) return;
+
+      const base = Number((valorTotalServicos / qtd).toFixed(2));
+      let acumulado = 0;
+
+      for (let i = 0; i < qtd; i++) {
+        let valor = base;
+        if (i === qtd - 1) {
+          valor = Number((valorTotalServicos - acumulado).toFixed(2));
+        }
+        acumulado += valor;
+
+        criarLinhaParcelaServico({
+          valor,
+          vencimento: ""
+        });
+      }
+    }
+
+    by.querySelector("#vv-add-parcela-servico").addEventListener("click", () => {
+      criarLinhaParcelaServico({});
+    });
+
+    by.querySelector("#vv-gerar-1x-servico").addEventListener("click", () => gerarParcelasIguais(1));
+    by.querySelector("#vv-gerar-2x-servico").addEventListener("click", () => gerarParcelasIguais(2));
+
+    ft.querySelector("#vv-cancelar-parcelas-servico").addEventListener("click", () => {
+      document.body.removeChild(bd);
+      resolveParcelas(null);
+    });
+
+    ft.querySelector("#vv-confirmar-parcelas-servico").addEventListener("click", async () => {
+      try {
+        const linhas = [...lista.querySelectorAll(".row")];
+
+        if (!linhas.length) {
+          alert("Adicione pelo menos uma parcela para os serviços.");
+          return;
+        }
+
+        const parcelas = linhas.map((row) => ({
+          tipo_monetario: row.querySelector(".tipo-monetario-servico")?.value || "",
+          condicao_pagto: row.querySelector(".condicao-pagto-servico")?.value || "",
+          valor: parseBRL(row.querySelector(".valor-parcela-servico")?.value || "0"),
+          vencimento: row.querySelector(".data-parcela-servico")?.value || ""
+        }));
+
+        const totalParcelado = parcelas.reduce((acc, p) => acc + Number(p.valor || 0), 0);
+        const diferenca = Math.abs(Number((valorTotalServicos - totalParcelado).toFixed(2)));
+
+        if (diferenca >= 0.01) {
+          alert(`O parcelamento dos serviços não fecha. Total dos serviços: ${fmtBRL(valorTotalServicos)} | Parcelado: ${fmtBRL(totalParcelado)}`);
+          return;
+        }
+
+        await salvarParcelasServicoNoServidor(parcelas);
+
+        document.body.removeChild(bd);
+        resolveParcelas({
+          totalServicos: valorTotalServicos,
+          totalParcelado,
+          parcelas
+        });
+      } catch (erro) {
+        console.error("❌ Erro ao confirmar parcelamento dos serviços:", erro);
+        alert("Erro ao salvar parcelas de serviço no servidor.");
+      }
+    });
+
+    if (Array.isArray(parcelasParaUsar) && parcelasParaUsar.length > 0) {
+      parcelasParaUsar.forEach((parcela) => {
+        criarLinhaParcelaServico({
+          tipo_monetario: parcela?.tipo_monetario || "",
+          condicao_pagto: parcela?.condicao_pagto || "",
+          valor: Number(parcela?.valor || 0),
+          vencimento: parcela?.vencimento || ""
+        });
+      });
+    } else {
+      criarLinhaParcelaServico({
+        valor: valorTotalServicos,
+        vencimento: ""
+      });
+    }
+  });
+}
 
 async function abrirPopupSelecaoItensOmie(itens){
 verificarClienteEAtualizar()
@@ -700,9 +1037,24 @@ verificarClienteEAtualizar()
 function abrirPopupComissao(){
   return new Promise((resolveC)=>{
     const ARQUITETOS = coletarArquitetosCadastrados();
-    const valorComissaoResumo = lerComissaoArquitetoDoResumo();
 
-    // ================== DEFAULTS DE DATAS AO ABRIR POPUP ==================
+    // ================== HELPERS ==================
+    const parseBRL = (s)=> {
+      if (window.vv_parseBRL) return vv_parseBRL(s);
+      return Number(
+        String(s || '')
+          .replace(/\u00A0/g, ' ')
+          .replace(/[^\d,-]/g, '')
+          .replace(/\./g, '')
+          .replace(',', '.')
+      ) || 0;
+    };
+
+    const fmtBRL = (n)=> {
+      if (window.vv_fmtBRL) return vv_fmtBRL(n);
+      return `R$ ${Number(n || 0).toFixed(2).replace('.', ',')}`;
+    };
+
     const toISODate = (d) => {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -726,18 +1078,38 @@ function abrirPopupComissao(){
       return toISODate(d);
     };
 
+    function lerValorProdutoResumo(){
+      const el = document.getElementById('vv-cat-produto');
+      return parseBRL(el?.textContent || '0');
+    }
+
+    function lerComissaoArquitetoResumoVisual(){
+      const cards = [...document.querySelectorAll('.col')];
+      for (const card of cards) {
+        const titulo = card.querySelector('.text-muted.small')?.textContent || '';
+        if (/Comissão\s*Arquiteta/i.test(titulo.replace(/\s+/g, ' '))) {
+          const bold = card.querySelector('.fw-bold')?.textContent || '0';
+          return parseBRL(bold);
+        }
+      }
+      return 0;
+    }
+
+    // ================== DEFAULTS DE DATAS ==================
     const hoje = new Date();
     const defaultArq = proximoDia15(hoje);
     const defaultVend = primeiroDiaUtilProxMes(hoje);
+
+    if (!_comArq) _comArq = {};
+    if (!_comVend) _comVend = {};
 
     if (!_comArq.prev) _comArq.prev = defaultArq;
     if (!_comArq.venc) _comArq.venc = defaultArq;
 
     if (!_comVend.prev) _comVend.prev = defaultVend;
     if (!_comVend.venc) _comVend.venc = defaultVend;
-    // =====================================================================
 
-    // ===== OBS padrão: "Orçamento: XXXX" =====
+    // ================== OBS PADRÃO ==================
     const elOrc = document.getElementById("numeroOrcamento");
     const numeroOrcamento =
       (elOrc?.value || "").trim() ||
@@ -748,32 +1120,39 @@ function abrirPopupComissao(){
     if (!_comArq.obs)  _comArq.obs  = obsPadrao;
     if (!_comVend.obs) _comVend.obs = obsPadrao;
 
-    // ✅ Defaults
-    if (!_comArq) _comArq = {};
-    if (!_comVend) _comVend = {};
+    // ================== DEFAULTS DE COMISSÃO ==================
+    if (!_comArq.modo) _comArq.modo = 'valor';
 
-    if (!_comArq.modo) _comArq.modo = 'percent';
-    if (_comArq.percent == null || isNaN(Number(_comArq.percent))) _comArq.percent = 1;
+    const valorArquitetoResumo = lerComissaoArquitetoResumoVisual();
+    if (_comArq.valorManual == null || isNaN(Number(_comArq.valorManual))) {
+      _comArq.valorManual = valorArquitetoResumo || 0;
+    }
 
-    // vendedor SEMPRE 1% (modo percent travado)
+    if (_comArq.percent == null || isNaN(Number(_comArq.percent))) {
+      _comArq.percent = 0;
+    }
+
+    // vendedor SEMPRE 1% do total produto
     _comVend.modo = 'percent';
     _comVend.percent = 1;
     _comVend.valorManual = 0;
 
     if (!window._comDesc) window._comDesc = { modo:'percent', percent:0, valorManual:0 };
 
-    const bd = document.createElement('div'); bd.className = 'vv-modal-backdrop';
-    const md = document.createElement('div'); md.className = 'vv-modal';
+    const bd = document.createElement('div');
+    bd.className = 'vv-modal-backdrop';
+
+    const md = document.createElement('div');
+    md.className = 'vv-modal';
+
     const hd = document.createElement('header');
     hd.innerHTML = `
       <h3>Comissões</h3>
       <div class="vv-help" style="margin-top:4px;">
-        <b>Arquiteto:</b> base = Total aprovado (Produto + Serviço + Vidro) ·
-        <b>Vendedor:</b> <u>1% fixo do #valorFinalTotal</u> (não depende de ignorados)
+        <b>Arquiteto:</b> valor exibido no resumo “Comissão Arquiteta” ·
+        <b>Vendedor:</b> <u>1% fixo do Total (Produto)</u>
       </div>
     `;
-
-    const by = document.createElement('div'); by.className = 'vv-body';
 
     const optsArq = ARQUITETOS.map(a=>{
       const txt = a.codigo ? `${a.nome} — ${a.codigo}` : a.nome;
@@ -781,18 +1160,20 @@ function abrirPopupComissao(){
       return `<option value="${a.nome.replace(/"/g,'&quot;')}" data-codigo="${(a.codigo||'').replace(/"/g,'&quot;')}" ${sel}>${txt}</option>`;
     }).join('');
 
+    const by = document.createElement('div');
+    by.className = 'vv-body';
     by.innerHTML = `
       <div style="display:grid; gap:16px;">
         <div style="display:grid; gap:8px;">
           <div class="vv-help">
             Base atual (Arquiteto):
-            <b id="vv-com-base">${vv_fmtBRL(_lastTotalBaseMO||0)}</b>
-            <span class="vv-help" style="margin-left:8px;">(auto: Produto + Serviço + Vidro)</span>
+            <b id="vv-com-base-arq">${fmtBRL(valorArquitetoResumo || 0)}</b>
+            <span class="vv-help" style="margin-left:8px;">(vem do resumo “Comissão Arquiteta”)</span>
           </div>
           <div class="vv-help">
             Base fixa (Vendedor = 1%):
-            <b id="vv-com-base-vend">${vv_fmtBRL(lerValorFinalTotal()||0)}</b>
-            <span class="vv-help" style="margin-left:8px;">(vem de #valorFinalTotal)</span>
+            <b id="vv-com-base-vend">${fmtBRL(lerValorProdutoResumo() || 0)}</b>
+            <span class="vv-help" style="margin-left:8px;">(vem de #vv-cat-produto)</span>
           </div>
         </div>
 
@@ -819,14 +1200,14 @@ function abrirPopupComissao(){
             </div>
 
             <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
-              <label><input type="radio" name="comArqModo" value="percent" ${_comArq?.modo!=='valor'?'checked':''}> % do total aprovado</label>
-              <label><input type="radio" name="comArqModo" value="valor" ${_comArq?.modo==='valor'?'checked':''}> Valor fixo (R$)</label>
+              <label><input type="radio" name="comArqModo" value="percent" ${_comArq?.modo==='percent'?'checked':''}> %</label>
+              <label><input type="radio" name="comArqModo" value="valor" ${_comArq?.modo!=='percent'?'checked':''}> Valor fixo (R$)</label>
             </div>
 
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
               <label class="form-label" style="min-width:90px;">Valor</label>
-              <input id="comArqPercent" type="number" min="0" step="0.01" value="${Number(_comArq?.percent||1)}" class="form-control" style="max-width:140px;">
-              <input id="comArqValor"   type="text"   value="${vv_fmtBRL(_comArq?.valorManual ?? valorComissaoResumo ?? 0)}" class="form-control" style="max-width:180px;">
+              <input id="comArqPercent" type="number" min="0" step="0.01" value="${Number(_comArq?.percent||0)}" class="form-control" style="max-width:140px;">
+              <input id="comArqValor" type="text" value="${fmtBRL(_comArq?.valorManual ?? valorArquitetoResumo ?? 0)}" class="form-control" style="max-width:180px;">
             </div>
 
             <div class="row g-2" style="margin-top:8px;">
@@ -839,6 +1220,7 @@ function abrirPopupComissao(){
                 <input type="date" id="arqVenc" class="form-control" value="${_comArq?.venc||''}">
               </div>
             </div>
+
             <div style="margin-top:8px;">
               <label class="form-label">Observação (opcional)</label>
               <textarea id="arqObs" rows="2" class="form-control" placeholder="Ex: Comissão arquiteto">${_comArq?.obs||''}</textarea>
@@ -863,14 +1245,14 @@ function abrirPopupComissao(){
             </div>
 
             <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
-              <label><input type="radio" name="comVendModo" value="percent" checked> % do valor final</label>
+              <label><input type="radio" name="comVendModo" value="percent" checked> % do total produto</label>
               <label><input type="radio" name="comVendModo" value="valor"> Valor fixo (R$)</label>
             </div>
 
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
               <label class="form-label" style="min-width:90px;">Valor</label>
               <input id="comVendPercent" type="number" min="0" step="0.01" value="1" class="form-control" style="max-width:140px;">
-              <input id="comVendValor"   type="text" value="${vv_fmtBRL(0)}" class="form-control" style="max-width:180px;">
+              <input id="comVendValor" type="text" value="${fmtBRL(0)}" class="form-control" style="max-width:180px;">
             </div>
 
             <div class="row g-2" style="margin-top:8px;">
@@ -883,6 +1265,7 @@ function abrirPopupComissao(){
                 <input type="date" id="vendVenc" class="form-control" value="${_comVend?.venc||''}">
               </div>
             </div>
+
             <div style="margin-top:8px;">
               <label class="form-label">Observação (opcional)</label>
               <textarea id="vendObs" rows="2" class="form-control" placeholder="Ex: Comissão consultor">${_comVend?.obs||''}</textarea>
@@ -902,7 +1285,8 @@ function abrirPopupComissao(){
       </div>
     `;
 
-    const ft = document.createElement('div'); ft.className = 'vv-footer';
+    const ft = document.createElement('div');
+    ft.className = 'vv-footer';
     ft.innerHTML = `
       <div class="vv-help">Informativo — não altera valores enviados à Omie.</div>
       <div style="display:flex; gap:8px;">
@@ -911,8 +1295,11 @@ function abrirPopupComissao(){
       </div>
     `;
 
-    md.appendChild(hd); md.appendChild(by); md.appendChild(ft);
-    bd.appendChild(md); document.body.appendChild(bd);
+    md.appendChild(hd);
+    md.appendChild(by);
+    md.appendChild(ft);
+    bd.appendChild(md);
+    document.body.appendChild(bd);
 
     const $selArq        = by.querySelector('#comArqSelect');
     const $comArqNome    = by.querySelector('#comArqNome');
@@ -931,41 +1318,25 @@ function abrirPopupComissao(){
     const $vendVenc       = by.querySelector('#vendVenc');
     const $vendObs        = by.querySelector('#vendObs');
 
-    const $comArqCalc  = by.querySelector('#comArqCalc');
-    const $comVendCalc = by.querySelector('#comVendCalc');
-    const $sumArq      = by.querySelector('#sumArq');
-    const $sumVend     = by.querySelector('#sumVend');
-    const $sumTot      = by.querySelector('#sumTot');
+    const $comArqCalc   = by.querySelector('#comArqCalc');
+    const $comVendCalc  = by.querySelector('#comVendCalc');
+    const $sumArq       = by.querySelector('#sumArq');
+    const $sumVend      = by.querySelector('#sumVend');
+    const $sumTot       = by.querySelector('#sumTot');
+    const $baseArqLabel = by.querySelector('#vv-com-base-arq');
+    const $baseVendLabel= by.querySelector('#vv-com-base-vend');
 
-    const $baseLabel     = by.querySelector('#vv-com-base');
-    const $baseVendLabel = by.querySelector('#vv-com-base-vend');
+    const getModoArq = ()=> by.querySelector('input[name="comArqModo"]:checked')?.value || 'valor';
 
-    const getModoArq  = ()=> by.querySelector('input[name="comArqModo"]:checked')?.value || 'percent';
-
-    const parseBRL = (s)=> (window.vv_parseBRL ? vv_parseBRL(s) : Number(String(s).replace(/&nbsp;/g,' ').replace(/[^\d,-]/g,'').replace(/\./g,'').replace(',','.'))||0);
-    const fmtBRL   = (n)=> (window.vv_fmtBRL   ? vv_fmtBRL(n)   : `R$ ${Number(n||0).toFixed(2)}`);
-
-    function lerBasePorCategorias(){
-      const p = document.getElementById('vv-cat-produto')?.textContent || '';
-      const s = document.getElementById('vv-cat-servico')?.textContent || '';
-      const v = document.getElementById('vv-cat-vidro')?.textContent   || '';
-      const soma = parseBRL(p) + parseBRL(s) + parseBRL(v);
-      return soma > 0 ? soma : (_lastTotalBaseMO || 0);
-    }
-
-    // ✅ trava UI do vendedor JÁ na abertura (não espera salvar)
+    // trava UI do vendedor
     by.querySelectorAll('input[name="comVendModo"]').forEach(r => {
       r.checked = (r.value === 'percent');
       r.disabled = true;
     });
-    if ($comVendPercent){
-      $comVendPercent.value = '1';
-      $comVendPercent.disabled = true;
-    }
-    if ($comVendValor){
-      $comVendValor.value = fmtBRL(0);
-      $comVendValor.disabled = true;
-    }
+    $comVendPercent.value = '1';
+    $comVendPercent.disabled = true;
+    $comVendValor.value = fmtBRL(0);
+    $comVendValor.disabled = true;
 
     if ($selArq){
       $selArq.addEventListener('change', ()=>{
@@ -973,38 +1344,38 @@ function abrirPopupComissao(){
         if (!opt) return;
         $comArqNome.value   = opt.value || '';
         $comArqCodigo.value = opt.getAttribute('data-codigo') || '';
-        $comArqNome.dispatchEvent(new Event('change'));
       });
     }
 
     function recalcComm(){
-      const baseBruta = lerBasePorCategorias();
+      const baseArqResumo = lerComissaoArquitetoResumoVisual();
+      const baseVendProduto = lerValorProdutoResumo();
 
-      // ✅ vendedor SEMPRE por #valorFinalTotal (base fixa)
-      const baseVendedorFixa = lerValorFinalTotal() || 0;
+      const arq = (getModoArq() === 'percent')
+        ? (Number($comArqPercent.value || 0) / 100) * baseArqResumo
+        : parseBRL($comArqValor.value || '0');
 
-      const arq = (getModoArq()==='percent')
-        ? (Number($comArqPercent.value||0)/100) * baseBruta
-        : parseBRL($comArqValor.value||'0');
+      const vend = 0.01 * baseVendProduto;
 
-      const vend = 0.01 * baseVendedorFixa;
-
-      $baseLabel.textContent     = fmtBRL(baseBruta);
-      $baseVendLabel.textContent = fmtBRL(baseVendedorFixa);
+      $baseArqLabel.textContent = fmtBRL(baseArqResumo);
+      $baseVendLabel.textContent = fmtBRL(baseVendProduto);
 
       $comArqCalc.textContent = fmtBRL(arq);
-      $comVendCalc.textContent= fmtBRL(vend);
+      $comVendCalc.textContent = fmtBRL(vend);
 
-      $sumArq.textContent  = fmtBRL(arq);
+      $sumArq.textContent = fmtBRL(arq);
       $sumVend.textContent = fmtBRL(vend);
-      $sumTot.textContent  = fmtBRL(Math.max(0,arq) + Math.max(0,vend));
+      $sumTot.textContent = fmtBRL(Math.max(0, arq) + Math.max(0, vend));
     }
 
-    by.querySelectorAll('input[name="comArqModo"]').forEach(r=> r.addEventListener('change', recalcComm));
-    [$comArqPercent,$comArqValor].forEach(inp=>{
+    by.querySelectorAll('input[name="comArqModo"]').forEach(r => r.addEventListener('change', recalcComm));
+    [$comArqPercent, $comArqValor].forEach(inp => {
       inp.addEventListener('input', recalcComm);
-      if (inp===$comArqValor){
-        inp.addEventListener('blur', ()=>{ inp.value = fmtBRL(parseBRL(inp.value||'0')); });
+      if (inp === $comArqValor) {
+        inp.addEventListener('blur', ()=>{
+          inp.value = fmtBRL(parseBRL(inp.value || '0'));
+          recalcComm();
+        });
       }
     });
 
@@ -1018,39 +1389,36 @@ function abrirPopupComissao(){
     ft.querySelector('#commSave').addEventListener('click', ()=>{
       _comArq = {
         modo: getModoArq(),
-        percent: Number($comArqPercent.value||0),
-        valorManual: parseBRL($comArqValor.value||'0'),
-        nome: $comArqNome.value||'',
-        codigo: $comArqCodigo.value||'',
-        prev: $arqPrev.value||'',
-        venc: $arqVenc.value||'',
-        obs: $arqObs.value||''
+        percent: Number($comArqPercent.value || 0),
+        valorManual: parseBRL($comArqValor.value || '0'),
+        nome: $comArqNome.value || '',
+        codigo: $comArqCodigo.value || '',
+        prev: $arqPrev.value || '',
+        venc: $arqVenc.value || '',
+        obs: $arqObs.value || ''
       };
 
-      // ✅ força vendedor sempre 1% (independente do que tentem mexer)
       _comVend = {
         modo: 'percent',
         percent: 1,
         valorManual: 0,
-        nome: $comVendNome.value||'',
-        codigo: $comVendCodigo.value||'',
-        prev: $vendPrev.value||'',
-        venc: $vendVenc.value||'',
-        obs: $vendObs.value||''
+        nome: $comVendNome.value || '',
+        codigo: $comVendCodigo.value || '',
+        prev: $vendPrev.value || '',
+        venc: $vendVenc.value || '',
+        obs: $vendObs.value || ''
       };
 
-      atualizarComissaoArquitetoNoResumo(
-        _comArq.modo==='percent'
-          ? (lerBasePorCategorias() * (Number(_comArq.percent||0)/100))
-          : _comArq.valorManual
-      );
+      const arqCalc = parseBRL($sumArq.textContent || '0');
+      const venCalc = parseBRL($sumVend.textContent || '0');
 
-      const arqCalc = vv_parseBRL($sumArq.textContent||'0');
-      const venCalc = vv_parseBRL($sumVend.textContent||'0');
+      if (typeof atualizarComissaoArquitetoNoResumo === 'function') {
+        atualizarComissaoArquitetoNoResumo(arqCalc);
+      }
 
       document.body.removeChild(bd);
       resolveC({
-        baseConsiderada: lerBasePorCategorias(),
+        baseConsiderada: lerValorProdutoResumo(),
         arquiteto: { ..._comArq, valorCalculado: arqCalc },
         vendedor:  { ..._comVend, valorCalculado: venCalc },
         total: arqCalc + venCalc
@@ -1395,167 +1763,178 @@ const getModoComissao = () => (controls.querySelector('input[name="comModo"]:che
     btnVidros.addEventListener('click', ()=>aplicarFiltro('vidros'));
     btnServ.addEventListener('click',  ()=>aplicarFiltro('servicos'));
 
+
+    function mostrarAlertaDescontoExcessivo(msg, tipo = "erro") {
+  let alerta = document.getElementById("vv-alerta-desconto-excessivo");
+
+  if (!alerta) {
+    alerta = document.createElement("div");
+    alerta.id = "vv-alerta-desconto-excessivo";
+    alerta.style.margin = "10px 0";
+    alerta.style.padding = "12px 14px";
+    alerta.style.borderRadius = "10px";
+    alerta.style.fontWeight = "600";
+    alerta.style.fontSize = "14px";
+    alerta.style.display = "none";
+    alerta.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+
+    controls.parentNode.insertBefore(alerta, table);
+  }
+
+  if (!msg) {
+    alerta.style.display = "none";
+    alerta.innerHTML = "";
+    return;
+  }
+
+  alerta.style.display = "block";
+
+  if (tipo === "ok") {
+    alerta.style.background = "#e8f7ee";
+    alerta.style.color = "#146c2e";
+    alerta.style.border = "1px solid #b7e4c7";
+    alerta.innerHTML = `✅ ${msg}`;
+  } else {
+    alerta.style.background = "#fdecec";
+    alerta.style.color = "#a61b1b";
+    alerta.style.border = "1px solid #f5b5b5";
+    alerta.innerHTML = `⚠️ ${msg}`;
+  }
+}
     // ===================== RECALC =====================
-    function recalc(){
-      const rows = [...tbody.querySelectorAll('tr')];
-      const isIgnoredKey = (key) => !!chkAll.find(c => c.dataset.key===key)?.checked;
+function recalc(){
+  const rows = [...tbody.querySelectorAll('tr')];
+  const isIgnoredKey = (key) => !!chkAll.find(c => c.dataset.key===key)?.checked;
 
-      const catVidroC_all = rows.reduce((acc, tr) => {
-        if (tr.dataset.kind === "vidro") {
-          const original = Number(tr.dataset.valor || 0) || 0;
-          return acc + toCents(original);
-        }
-        return acc;
-      }, 0);
-
-      const totalTodos = rows.reduce((acc, tr) => acc + (Number(tr.dataset.valor||0) || 0), 0);
-
-      let descontoTotal = 0;
-      if (getModoDesconto()==='percent'){
-        const p = Number($discPercent.value||0);
-        descontoTotal = (p/100) * totalTodos;
-      } else {
-        descontoTotal = vv_parseBRL($discValor.value||'0');
-      }
-      descontoTotal = Math.max(0, Math.min(descontoTotal, totalTodos));
-
-      const aprovadosRows = rows.filter(tr => !isIgnoredKey(tr.dataset.key));
-      const nAprov = aprovadosRows.length;
-
-      if (nAprov === 0){
-        rows.forEach(tr=>{
-          tr.querySelector('[data-col="part"]').textContent = '0%';
-          tr.querySelector('[data-col="ajustado"]').textContent = vv_fmtBRL(Number(tr.dataset.valor||0));
-          tr.querySelector('[data-col="final"]').textContent = vv_fmtBRL(0);
-        });
-        $totAprov.textContent = vv_fmtBRL(0);
-        $totServ.textContent  = vv_fmtBRL(0);
-        $totDesc.textContent  = vv_fmtBRL(descontoTotal);
-        $totCom.textContent   = vv_fmtBRL(0);
-        $totAjust.textContent = vv_fmtBRL(0);
-        $catProduto.textContent = vv_fmtBRL(0);
-        $catServico.textContent = vv_fmtBRL(0);
-        $catVidro.textContent   = vv_fmtBRL(fromCents(catVidroC_all));
-        _lastTotalBaseMO = 0;
-        return;
-      }
-
-      const laborIgnoredTotal = rows.reduce((acc, tr) => {
-        const isLab = tr.dataset.islabor === '1';
-        const isIgn = isIgnoredKey(tr.dataset.key);
-        return acc + (isLab && isIgn ? (Number(tr.dataset.valor||0) || 0) : 0);
-      }, 0);
-      const cotaMO = laborIgnoredTotal > 0 ? (laborIgnoredTotal / nAprov) : 0;
-
-      const baseMOMap = new Map();
-      let totalBaseMO = 0;
-      aprovadosRows.forEach(tr => {
-        const original = Number(tr.dataset.valor||0) || 0;
-        const base = original + cotaMO;
-        baseMOMap.set(tr.dataset.key, base);
-        totalBaseMO += base;
-      });
-
-      let servicosTotal = 0;
-      if (getModoServicos()==='percent'){
-        const p = Number($srvPercent.value||0);
-        servicosTotal = (p/100) * totalBaseMO;
-      } else {
-        servicosTotal = vv_parseBRL($srvValor.value||'0');
-      }
-      servicosTotal = Math.max(0, Math.min(servicosTotal, totalBaseMO));
-
-      const descontoAplicavel = Math.min(descontoTotal, totalBaseMO);
-      const cotaDescontoIgual = nAprov > 0 ? (descontoAplicavel / nAprov) : 0;
-
-      const linhas = [];
-      aprovadosRows.forEach(tr => {
-        const key = tr.dataset.key;
-        const base = baseMOMap.get(key) || 0;
-        const share = totalBaseMO > 0 ? (base / totalBaseMO) : 0;
-        const servAbat = servicosTotal * share;
-        const final = Math.max(0, base - servAbat - cotaDescontoIgual);
-        linhas.push({ key, baseFloat: base, servFloat: servAbat, finalFloat: final });
-      });
-
-      const targetTotalFinal = totalBaseMO - servicosTotal - descontoAplicavel;
-      const targetCents = toCents(targetTotalFinal);
-
-      let finalsCents = linhas.map(l => toCents(l.finalFloat));
-      let somaCents   = sum(finalsCents);
-      let delta = targetCents - somaCents;
-
-      let i = 0;
-      while (delta !== 0 && linhas.length > 0){
-        finalsCents[i % linhas.length] += (delta > 0 ? 1 : -1);
-        delta += (delta > 0 ? -1 : 1);
-        i++;
-      }
-
-      rows.forEach(tr => {
-        const key = tr.dataset.key;
-        const $part = tr.querySelector('[data-col="part"]');
-        const $aj   = tr.querySelector('[data-col="ajustado"]');
-        const $fin  = tr.querySelector('[data-col="final"]');
-
-        const ignorado = !!chkAll.find(c => c.dataset.key===key)?.checked;
-        if (ignorado || !baseMOMap.has(key)){
-          $part.textContent = '0%';
-          $aj.textContent   = vv_fmtBRL(Number(tr.dataset.valor||0));
-          $fin.textContent  = vv_fmtBRL(0);
-          return;
-        }
-
-        const base = baseMOMap.get(key);
-        const share = totalBaseMO>0 ? (base / totalBaseMO) : 0;
-        const idx = linhas.findIndex(l => l.key === key);
-        const finCents = finalsCents[idx] ?? 0;
-
-        $part.textContent = (share*100).toFixed(2) + '%';
-        $aj.textContent   = vv_fmtBRL(fromCents(toCents(base)));
-        $fin.textContent  = vv_fmtBRL(fromCents(finCents));
-      });
-
-      const totAprovCents = toCents(totalBaseMO);
-      const totServCents  = toCents(servicosTotal);
-      const totDescCents  = toCents(descontoTotal);
-      const totFinalCents = targetCents;
-
-      let catProdutoC = 0;
-      const kindByKey = new Map();
-      rows.forEach(tr => { kindByKey.set(tr.dataset.key, tr.dataset.kind); });
-
-      linhas.forEach((l, idx) => {
-        const finC = finalsCents[idx] || 0;
-        const kind = kindByKey.get(l.key) || "produto";
-        if (kind !== "vidro") catProdutoC += finC;
-      });
-
-      const catServicoC = totServCents;
-      const catVidroC   = rows.reduce((acc, tr) => {
-        if (tr.dataset.kind === "vidro") {
-          const original = Number(tr.dataset.valor || 0) || 0;
-          return acc + toCents(original);
-        }
-        return acc;
-      }, 0);
-
-      $totAprov.textContent = vv_fmtBRL(fromCents(totAprovCents));
-      $totServ.textContent  = vv_fmtBRL(fromCents(totServCents));
-      $totDesc.textContent  = vv_fmtBRL(fromCents(totDescCents));
-
-      const comDisplay = getModoComissao()==='percent'
-        ? fromCents( toCents( (Number($comPercent.value||0)/100) * totalBaseMO ) )
-        : fromCents( toCents( vv_parseBRL($comValor.value||'0') ) );
-      $totCom.textContent   = vv_fmtBRL(comDisplay);
-
-      $totAjust.textContent = vv_fmtBRL(fromCents(totFinalCents));
-      $catProduto.textContent = vv_fmtBRL(fromCents(catProdutoC));
-      $catServico.textContent = vv_fmtBRL(fromCents(catServicoC));
-      $catVidro.textContent   = vv_fmtBRL(fromCents(catVidroC));
-
-      _lastTotalBaseMO = totalBaseMO;
+  const catVidroC_all = rows.reduce((acc, tr) => {
+    if (tr.dataset.kind === "vidro") {
+      const original = Number(tr.dataset.valor || 0) || 0;
+      return acc + toCents(original);
     }
+    return acc;
+  }, 0);
+
+  const totalTodos = rows.reduce((acc, tr) => acc + (Number(tr.dataset.valor||0) || 0), 0);
+
+  let descontoTotal = 0;
+  if (getModoDesconto()==='percent'){
+    const p = Number($discPercent.value||0);
+    descontoTotal = (p/100) * totalTodos;
+  } else {
+    descontoTotal = vv_parseBRL($discValor.value||'0');
+  }
+  descontoTotal = Math.max(0, Math.min(descontoTotal, totalTodos));
+
+  const aprovadosRows = rows.filter(tr => !isIgnoredKey(tr.dataset.key));
+  const nAprov = aprovadosRows.length;
+
+  if (nAprov === 0){
+    rows.forEach(tr => {
+      tr.querySelector('[data-col="part"]').textContent = '0%';
+      tr.querySelector('[data-col="ajustado"]').textContent = vv_fmtBRL(Number(tr.dataset.valor||0));
+      tr.querySelector('[data-col="final"]').textContent = vv_fmtBRL(0);
+    });
+
+    $totAprov.textContent = vv_fmtBRL(0);
+    $totServ.textContent  = vv_fmtBRL(0);
+    $totDesc.textContent  = vv_fmtBRL(descontoTotal);
+    $totCom.textContent   = vv_fmtBRL(0);
+    $totAjust.textContent = vv_fmtBRL(0);
+    $catProduto.textContent = vv_fmtBRL(0);
+    $catServico.textContent = vv_fmtBRL(0);
+    $catVidro.textContent   = vv_fmtBRL(fromCents(catVidroC_all));
+    _lastTotalBaseMO = 0;
+    return;
+  }
+
+  const laborIgnoredTotal = rows.reduce((acc, tr) => {
+    const isLab = tr.dataset.islabor === '1';
+    const isIgn = isIgnoredKey(tr.dataset.key);
+    return acc + (isLab && isIgn ? (Number(tr.dataset.valor||0)||0) : 0);
+  }, 0);
+
+  const cotaMO = laborIgnoredTotal > 0 ? (laborIgnoredTotal / nAprov) : 0;
+
+  const baseMOMap = new Map();
+  let totalBaseMO = 0;
+  aprovadosRows.forEach(tr => {
+    const original = Number(tr.dataset.valor||0) || 0;
+    const base = original + cotaMO;
+    baseMOMap.set(tr.dataset.key, base);
+    totalBaseMO += base;
+  });
+
+  const servTotal = getModoServicos()==='percent'
+    ? ((Number($srvPercent.value||0)/100) * totalBaseMO)
+    : vv_parseBRL($srvValor.value||'0');
+
+  const descontoAplicavel = Math.min(descontoTotal, totalBaseMO);
+  const servAplicavel = Math.max(0, servTotal);
+
+  const cotaDescontoIgual = nAprov > 0 ? (descontoAplicavel / nAprov) : 0;
+  const cotaServIgual = nAprov > 0 ? (servAplicavel / nAprov) : 0;
+
+  let totFinalCents = 0;
+  let catProdutoC = 0;
+  let catServicoC = 0;
+  let catVidroC = 0;
+
+  aprovadosRows.forEach(tr => {
+    const key = tr.dataset.key;
+    const kind = tr.dataset.kind;
+    const isLabor = tr.dataset.islabor === '1';
+
+    const original = Number(tr.dataset.valor||0) || 0;
+    const base = baseMOMap.get(key) || original;
+
+    const part = totalBaseMO > 0 ? (base / totalBaseMO) * 100 : 0;
+    tr.querySelector('[data-col="part"]').textContent = `${part.toFixed(2)}%`;
+
+    const ajustado = base + cotaServIgual;
+    tr.querySelector('[data-col="ajustado"]').textContent = vv_fmtBRL(ajustado);
+
+    // REGRA ORIGINAL + TRAVA PARA NÃO NEGATIVAR
+    const finalBruto = base - cotaDescontoIgual;
+    const final = Math.max(0, finalBruto);
+
+    tr.querySelector('[data-col="final"]').textContent = vv_fmtBRL(final);
+
+    const finalC = toCents(final);
+    totFinalCents += finalC;
+
+    if (kind === 'vidro') {
+      catVidroC += finalC;
+    } else if (kind === 'servico' || isLabor) {
+      catServicoC += finalC;
+    } else {
+      catProdutoC += finalC;
+    }
+  });
+
+  rows
+    .filter(tr => isIgnoredKey(tr.dataset.key))
+    .forEach(tr => {
+      tr.querySelector('[data-col="part"]').textContent = '0%';
+      tr.querySelector('[data-col="ajustado"]').textContent = vv_fmtBRL(Number(tr.dataset.valor||0));
+      tr.querySelector('[data-col="final"]').textContent = vv_fmtBRL(0);
+    });
+
+  $totAprov.textContent = vv_fmtBRL(totalBaseMO);
+  $totServ.textContent  = vv_fmtBRL(servAplicavel);
+  $totDesc.textContent  = vv_fmtBRL(descontoAplicavel);
+
+  const comDisplay = getModoComissao()==='percent'
+    ? fromCents( toCents( (Number($comPercent.value||0)/100) * totalBaseMO ) )
+    : fromCents( toCents( vv_parseBRL($comValor.value||'0') ) );
+
+  $totCom.textContent   = vv_fmtBRL(comDisplay);
+  $totAjust.textContent = vv_fmtBRL(fromCents(totFinalCents));
+  $catProduto.textContent = vv_fmtBRL(fromCents(catProdutoC));
+  $catServico.textContent = vv_fmtBRL(fromCents(catServicoC));
+  $catVidro.textContent   = vv_fmtBRL(fromCents(catVidroC));
+
+  _lastTotalBaseMO = totalBaseMO;
+}
 
     controls.querySelectorAll('input[name="srvModo"]').forEach(r=> r.addEventListener('change', recalc));
     controls.querySelectorAll('input[name="discModo"]').forEach(r=> r.addEventListener('change', recalc));
@@ -1587,161 +1966,378 @@ const getModoComissao = () => (controls.querySelector('input[name="comModo"]:che
     });
 
     // ===== helper: envio com confirmação (toast) =====
-    async function tentarEnviarComissoes(payload){
-      try { document.dispatchEvent(new CustomEvent('vv:comissoes:prontas', { detail: payload })); } catch(e){}
-      if (typeof window.enviarComissoes !== 'function'){
-        vvToast('Comissões preparadas, mas função enviarComissoes() não está disponível.', 'info');
-        return { ok:false, resposta:null, erro:'Função enviarComissoes() ausente' };
-      }
-      vvToast('Enviando comissões…', 'info', 2000);
-      try{
-        const r = await Promise.resolve(window.enviarComissoes(payload));
-        const ok = (typeof r?.ok === 'boolean') ? r.ok : true;
-        if (ok){
-          const arqV = payload?.arquiteto?.valorCalculado || 0;
-          const venV = payload?.vendedor?.valorCalculado || 0;
-          const arqPrev = payload?.arquiteto?.previsao || payload?.arquiteto?.prev || '';
-          const arqVenc = payload?.arquiteto?.vencimento || payload?.arquiteto?.venc || '';
-          const venPrev = payload?.vendedor?.previsao || payload?.vendedor?.prev || '';
-          const venVenc = payload?.vendedor?.vencimento || payload?.vendedor?.venc || '';
-          vvToast(
-            `Comissões enviadas com sucesso — Arquiteto: ${vv_fmtBRL(arqV)} (Prev: ${arqPrev || '-'} | Venc: ${arqVenc || '-'} ) · Vendedor: ${vv_fmtBRL(venV)} (Prev: ${venPrev || '-'} | Venc: ${venVenc || '-'})`,
-            'ok',
-            6000
-          );
-          try { document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', { detail: { ok:true, resposta:r, payload } })); } catch(_){}
-          return { ok:true, resposta:r, erro:null };
-        } else {
-          const msg = r?.message || r?.erro || 'Falha ao enviar comissões.';
-          vvToast(msg, 'erro', 6000);
-          try { document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', { detail: { ok:false, resposta:r, erro:msg, payload } })); } catch(_){}
-          return { ok:false, resposta:r, erro:msg };
-        }
-      } catch(e){
-        const msg = e?.message || 'Erro inesperado ao enviar comissões.';
-        vvToast(msg, 'erro', 6000);
-        try { document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', { detail: { ok:false, resposta:null, erro:msg } })); } catch(_){}
-        return { ok:false, resposta:null, erro:msg };
+  // ===== helper: envio com confirmação (toast) =====
+
+
+async function tentarEnviarComissoes(payload){
+  try {
+    document.dispatchEvent(new CustomEvent('vv:comissoes:prontas', { detail: payload }));
+  } catch(e){}
+
+  if (typeof window.enviarComissoes !== 'function'){
+    vvToast('Comissões preparadas, mas função enviarComissoes() não está disponível.', 'info');
+    return { ok:false, resposta:null, erro:'Função enviarComissoes() ausente' };
+  }
+
+  vvToast('Enviando comissões…', 'info', 2000);
+
+  try{
+    const r = await Promise.resolve(window.enviarComissoes(payload));
+
+    console.group("🚀 [COMISSÕES] Resultado final");
+    console.log("Payload enviado:", JSON.parse(JSON.stringify(payload || {})));
+    console.log("Retorno completo:", JSON.parse(JSON.stringify(r || {})));
+    console.groupEnd();
+
+    const ok = !!r?.ok;
+
+    const arqInfo  = r?.resultados?.arquiteto || {};
+    const vendInfo = r?.resultados?.vendedor || {};
+
+    const arqV = Number(payload?.arquiteto?.valorCalculado || payload?.arquiteto?.valorManual || 0);
+    const venV = Number(payload?.vendedor?.valorCalculado || payload?.vendedor?.valorManual || 0);
+
+    const msgs = [];
+
+    if (arqInfo.status === 'enviado') msgs.push(`Arquiteto enviado: ${vv_fmtBRL(arqV)}`);
+    else if (arqInfo.status === 'ignorado') msgs.push(`Arquiteto ignorado`);
+    else if (arqInfo.status === 'invalido') msgs.push(`Arquiteto inválido: ${arqInfo.erro || '-'}`);
+    else if (arqInfo.status === 'erro') msgs.push(`Arquiteto com erro: ${arqInfo.erro || '-'}`);
+
+    if (vendInfo.status === 'enviado') msgs.push(`Vendedor enviado: ${vv_fmtBRL(venV)}`);
+    else if (vendInfo.status === 'ignorado') msgs.push(`Vendedor ignorado`);
+    else if (vendInfo.status === 'invalido') msgs.push(`Vendedor inválido: ${vendInfo.erro || '-'}`);
+    else if (vendInfo.status === 'erro') msgs.push(`Vendedor com erro: ${vendInfo.erro || '-'}`);
+
+    if (ok){
+      vvToast(`Comissões processadas.\n${msgs.join(' | ')}`, 'ok', 7000);
+      try {
+        document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', {
+          detail: { ok:true, resposta:r, payload }
+        }));
+      } catch(_){}
+      return { ok:true, resposta:r, erro:null };
+    } else {
+      const msg = r?.message || r?.erro || 'Nenhuma comissão foi enviada.';
+      vvToast(`${msg}\n${msgs.join(' | ')}`, 'erro', 7000);
+      try {
+        document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', {
+          detail: { ok:false, resposta:r, erro:msg, payload }
+        }));
+      } catch(_){}
+      return { ok:false, resposta:r, erro:msg };
+    }
+  } catch(e){
+    const msg = e?.message || 'Erro inesperado ao enviar comissões.';
+    console.group("💥 [COMISSÕES] Exceção");
+    console.error("Mensagem:", msg);
+    console.error("Erro completo:", e);
+    console.error("Payload:", JSON.parse(JSON.stringify(payload || {})));
+    console.groupEnd();
+
+    vvToast(msg, 'erro', 6000);
+
+    try {
+      document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', {
+        detail: { ok:false, resposta:null, erro:msg, payload }
+      }));
+    } catch(_){}
+
+    return { ok:false, resposta:null, erro:msg };
+  }
+}
+
+function prepararComissoesAutomaticamente() {
+  const parseBRL = (s) => {
+    if (window.vv_parseBRL) return vv_parseBRL(s);
+    return Number(
+      String(s || '')
+        .replace(/\u00A0/g, ' ')
+        .replace(/[^\d,-]/g, '')
+        .replace(/\./g, '')
+        .replace(',', '.')
+    ) || 0;
+  };
+
+  const toISODateLocal = (d) => {
+    if (!d) return '';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return '';
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const proximoDia15 = (base = new Date()) => {
+    const y = base.getFullYear();
+    const m = base.getMonth();
+    const diaHoje = base.getDate();
+    const alvo = (diaHoje <= 15) ? new Date(y, m, 15) : new Date(y, m + 1, 15);
+    return toISODateLocal(alvo);
+  };
+
+  const primeiroDiaUtilProxMes = (base = new Date()) => {
+    const y = base.getFullYear();
+    const m = base.getMonth();
+    let d = new Date(y, m + 1, 1);
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+    return toISODateLocal(d);
+  };
+
+  const lerValorProdutoResumo = () => {
+    const el = document.getElementById('vv-cat-produto');
+    return parseBRL(el?.textContent || '0');
+  };
+
+  const lerComissaoArquitetoResumoVisual = () => {
+    const cards = [...document.querySelectorAll('.col')];
+    for (const card of cards) {
+      const titulo = card.querySelector('.text-muted.small')?.textContent || '';
+      if (/Comissão\s*Arquiteta/i.test(titulo.replace(/\s+/g, ' '))) {
+        const bold = card.querySelector('.fw-bold')?.textContent || '0';
+        return parseBRL(bold);
       }
     }
+    return 0;
+  };
 
-    footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
-      const ignoradosKeys = new Set(
-        [...tbody.querySelectorAll('.vv-ignorar')]
-          .filter(c => c.checked)
-          .map(c => c.dataset.key)
-      );
+  const resolverNomeVendedorTela = () => {
+    return (
+      document.getElementById('comVendNome')?.value?.trim() ||
+      document.getElementById('vendedorResponsavel')?.value?.trim() ||
+      _comVend?.nome ||
+      ''
+    );
+  };
 
-      const aprovados = [];
-      const ignorados = [];
+  const resolverCodigoVendedorTela = () => {
+    const codigoDireto =
+      document.getElementById('comVendCodigo')?.value?.trim() ||
+      document.getElementById('codigoVendedor')?.value?.trim() ||
+      '';
 
-      [...tbody.querySelectorAll('tr')].forEach(tr=>{
-        const key  = tr.dataset.key;
-        const item = itens.find(i=> i.key===key);
-        const isIgn = ignoradosKeys.has(key);
-        if (isIgn){
-          ignorados.push(item);
-        } else {
-          const finText = tr.querySelector('[data-col="final"]').textContent || '0';
-          const finalValor = vv_parseBRL(finText);
-          aprovados.push({
-            ...item,
-            valorOriginal: Number(item.valorTotalGrupo)||0,
-            valorAjustadoParaOmie: finalValor
-          });
-        }
+    if (codigoDireto) return codigoDireto;
+
+    const nome = resolverNomeVendedorTela();
+    if (typeof resolverCodigoVendedor === 'function' && nome) {
+      const cod = resolverCodigoVendedor(nome);
+      if (cod) return cod;
+    }
+
+    return _comVend?.codigo || '';
+  };
+
+  const resolverNomeArquitetoTela = () => {
+    return (
+      document.getElementById('comArqNome')?.value?.trim() ||
+      _comArq?.nome ||
+      ''
+    );
+  };
+
+  const resolverCodigoArquitetoTela = () => {
+    return (
+      document.getElementById('comArqCodigo')?.value?.trim() ||
+      _comArq?.codigo ||
+      ''
+    );
+  };
+
+  const numeroOrcamento =
+    document.getElementById("numeroOrcamento")?.value?.trim() ||
+    document.getElementById("numeroOrcamento")?.dataset?.valorOriginal?.trim() ||
+    '';
+
+  const obsPadrao = numeroOrcamento ? `Orçamento: ${numeroOrcamento}` : '';
+
+  const hoje = new Date();
+  const defaultArq = proximoDia15(hoje);
+  const defaultVend = primeiroDiaUtilProxMes(hoje);
+
+  if (typeof _comArq !== 'object' || !_comArq) _comArq = {};
+  if (typeof _comVend !== 'object' || !_comVend) _comVend = {};
+
+  // arquiteto
+  const valorArquitetoResumo = lerComissaoArquitetoResumoVisual();
+  _comArq.modo = _comArq.modo || 'valor';
+  _comArq.percent = Number(_comArq.percent || 0);
+  _comArq.valorManual = Number(_comArq.valorManual || valorArquitetoResumo || 0);
+  _comArq.nome = resolverNomeArquitetoTela();
+  _comArq.codigo = resolverCodigoArquitetoTela();
+  _comArq.prev = _comArq.prev || defaultArq;
+  _comArq.venc = _comArq.venc || defaultArq;
+  _comArq.obs = _comArq.obs || obsPadrao;
+
+  // vendedor = 1% do produto
+  _comVend.modo = 'percent';
+  _comVend.percent = 1;
+  _comVend.valorManual = 0;
+  _comVend.nome = resolverNomeVendedorTela();
+  _comVend.codigo = resolverCodigoVendedorTela();
+  _comVend.prev = _comVend.prev || defaultVend;
+  _comVend.venc = _comVend.venc || defaultVend;
+  _comVend.obs = _comVend.obs || obsPadrao;
+
+  console.group("🛠️ [COMISSÕES] Estado preparado automaticamente");
+  console.log("_comArq:", JSON.parse(JSON.stringify(_comArq || {})));
+  console.log("_comVend:", JSON.parse(JSON.stringify(_comVend || {})));
+  console.log("Base arquiteto (resumo):", valorArquitetoResumo);
+  console.log("Base vendedor (produto):", lerValorProdutoResumo());
+  console.groupEnd();
+}
+
+footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
+  const ignoradosKeys = new Set(
+    [...tbody.querySelectorAll('.vv-ignorar')]
+      .filter(c => c.checked)
+      .map(c => c.dataset.key)
+  );
+
+  const aprovados = [];
+  const ignorados = [];
+
+  [...tbody.querySelectorAll('tr')].forEach(tr => {
+    const key  = tr.dataset.key;
+    const item = itens.find(i => i.key === key);
+    const isIgn = ignoradosKeys.has(key);
+
+    if (!item) return;
+
+    if (isIgn){
+      ignorados.push(item);
+    } else {
+      const finText = tr.querySelector('[data-col="final"]')?.textContent || '0';
+      const finalValor = vv_parseBRL(finText);
+
+      aprovados.push({
+        ...item,
+        valorOriginal: Number(item.valorTotalGrupo) || 0,
+        valorAjustadoParaOmie: finalValor
       });
+    }
+  });
 
-      const totalAprovadoBaseComMO = vv_parseBRL($totAprov.textContent||'0');
-      const valorServicos          = vv_parseBRL($totServ.textContent||'0');
-      const valorDesconto          = vv_parseBRL($totDesc.textContent||'0');
-      const valorComissaoInfo      = vv_parseBRL($totCom.textContent||'0');
-      const totalFinalProdutos     = vv_parseBRL($totAjust.textContent||'0');
+  const totalAprovadoBaseComMO = vv_parseBRL($totAprov.textContent || '0');
+  const valorServicos          = vv_parseBRL($totServ.textContent || '0');
+  const valorDesconto          = vv_parseBRL($totDesc.textContent || '0');
+  const valorComissaoInfo      = vv_parseBRL($totCom.textContent || '0');
+  const totalFinalProdutos     = vv_parseBRL($totAjust.textContent || '0');
 
-      const calcFromState = (s, base)=> s.modo==='percent'
-        ? (Number(s.percent||0)/100) * base
-        : Number(s.valorManual||0);
+  let parcelamentoServicos = null;
 
-      const arqCalc  = calcFromState(_comArq, _lastTotalBaseMO);
+  if (valorServicos > 0 && typeof abrirPopupParcelamentoServicos === 'function') {
+    const parcelasServicoSalvas =
+      window.propostaEmEdicao?.camposFormulario?.parcelasServico ||
+      window.propostaAtual?.camposFormulario?.parcelasServico ||
+      [];
 
-      // ✅ AJUSTE: vendedor sempre 1% do #valorFinalTotal
-      const baseVendFinalTotal = lerValorFinalTotal();
-      const vendCalc = baseVendFinalTotal * 0.01;
+    parcelamentoServicos = await abrirPopupParcelamentoServicos(
+      valorServicos,
+      parcelasServicoSalvas
+    );
 
-      const comissoesParaEnvio = {
-        // ✅ AJUSTE: baseConsiderada = #valorFinalTotal (base real do vendedor)
-        baseConsiderada: baseVendFinalTotal,
-        arquiteto: {
-          nome: _comArq?.nome||'',
-          codigo: _comArq?.codigo||'',
-          modo: _comArq?.modo||'percent',
-          percent: Number(_comArq?.percent||0),
-          valorManual: Number(_comArq?.valorManual||0),
-          valorCalculado: arqCalc,
-          previsao: _comArq?.prev||'',
-          vencimento: _comArq?.venc||'',
-          observacao: _comArq?.obs||'',
-          codigo_categoria: "2.08.02"
-        },
-        vendedor: {
-          nome: _comVend?.nome||'',
-          codigo: _comVend?.codigo||'',
-          modo: _comVend?.modo||'percent',
-          percent: Number(_comVend?.percent||0),
-          valorManual: Number(_comVend?.valorManual||0),
-          valorCalculado: vendCalc,
-          previsao: _comVend?.prev||'',
-          vencimento: _comVend?.venc||'',
-          observacao: _comVend?.obs||'',
-          codigo_categoria: "2.07.99"
-        }
-      };
+    if (!parcelamentoServicos) {
+      vvToast('Parcelamento dos serviços cancelado.', 'info');
+      return;
+    }
+  }
 
-      // 🔹 Monta objeto de totais completo para uso posterior
-      const totaisPayload = {
-        totalAprovadoBaseComMO,
-        valorServicos,
-        valorDesconto,
-        valorComissaoInfo,
-        totalFinalProdutos,
-        comissoes: {
-          // ✅ AJUSTE: baseConsiderada = #valorFinalTotal
-          baseConsiderada: baseVendFinalTotal,
-          arquiteto: { ...comissoesParaEnvio.arquiteto },
-          vendedor:  { ...comissoesParaEnvio.vendedor },
-          total: Math.max(0, arqCalc) + Math.max(0, vendCalc)
-        },
-        porCategoria: {
-          produto: vv_parseBRL($catProduto.textContent||'0'),
-          servico: vv_parseBRL($catServico.textContent||'0'),
-          vidro:   vv_parseBRL($catVidro.textContent||'0')
-        }
-      };
+  prepararComissoesAutomaticamente();
 
-      // ⭐ Expõe em variáveis globais para o pedido e outras funções usarem depois
-      window.vvUltimosTotaisSelecaoItensOmie = totaisPayload;
-      window.vvUltimoTotalFinalProdutosOmie  = totalFinalProdutos;
-      window.vvTotalAprovadoBaseMO          = totalAprovadoBaseComMO;
-      window.vvTotalServicosAplicado        = valorServicos;
-      window.vvTotalDescontoAplicado        = valorDesconto;
-      window.vvTotalComissaoInfo            = valorComissaoInfo;
-      window.vvTotalProdutoCategoria        = totaisPayload.porCategoria.produto;
-      window.vvTotalServicoCategoria        = totaisPayload.porCategoria.servico;
-      window.vvTotalVidroCategoria          = totaisPayload.porCategoria.vidro;
+  const calcFromState = (s, base) => {
+    const modo = s?.modo || 'percent';
+    if (modo === 'percent') {
+      return (Number(s?.percent || 0) / 100) * Number(base || 0);
+    }
+    return Number(s?.valorManual || 0);
+  };
 
-      console.log('💾 Totais da seleção Omie gravados em window:', totaisPayload);
+  const arqCalc = calcFromState(_comArq, _lastTotalBaseMO);
+  const baseVendFinalTotal = lerValorFinalTotal();
+  const vendCalc = Number((baseVendFinalTotal * 0.01).toFixed(2));
 
-      // envia comissões (com confirmação visual)
-      await tentarEnviarComissoes(comissoesParaEnvio);
+  const comissoesParaEnvio = {
+    baseConsiderada: baseVendFinalTotal,
+    arquiteto: {
+      nome: _comArq?.nome || '',
+      codigo: _comArq?.codigo || '',
+      modo: _comArq?.modo || 'percent',
+      percent: Number(_comArq?.percent || 0),
+      valorManual: Number(_comArq?.valorManual || 0),
+      valorCalculado: Number(arqCalc || 0),
+      previsao: _comArq?.prev || '',
+      vencimento: _comArq?.venc || '',
+      observacao: _comArq?.obs || '',
+      codigo_categoria: "2.08.02"
+    },
+    vendedor: {
+      nome: _comVend?.nome || '',
+      codigo: _comVend?.codigo || '',
+      modo: 'percent',
+      percent: 1,
+      valorManual: 0,
+      valorCalculado: Number(vendCalc || 0),
+      previsao: _comVend?.prev || '',
+      vencimento: _comVend?.venc || '',
+      observacao: _comVend?.obs || '',
+      codigo_categoria: "2.07.99"
+    }
+  };
 
-      // fecha modal e resolve payload principal
-      document.body.removeChild(backdrop);
-      resolve({
-        aprovadosParaOmie: aprovados,
-        ignorados,
-        totais: totaisPayload
-      });
-    });
+  console.group("🧾 [COMISSÕES] Antes do envio");
+  console.log("_comArq:", JSON.parse(JSON.stringify(_comArq || {})));
+  console.log("_comVend:", JSON.parse(JSON.stringify(_comVend || {})));
+  console.log("_lastTotalBaseMO:", _lastTotalBaseMO);
+  console.log("baseVendFinalTotal:", baseVendFinalTotal);
+  console.log("comissoesParaEnvio:", JSON.parse(JSON.stringify(comissoesParaEnvio || {})));
+  console.groupEnd();
+
+  const totaisPayload = {
+    totalAprovadoBaseComMO,
+    valorServicos,
+    valorDesconto,
+    valorComissaoInfo,
+    totalFinalProdutos,
+    parcelamentoServicos,
+    comissoes: {
+      baseConsiderada: baseVendFinalTotal,
+      arquiteto: { ...comissoesParaEnvio.arquiteto },
+      vendedor: { ...comissoesParaEnvio.vendedor },
+      total: Math.max(0, Number(arqCalc || 0)) + Math.max(0, Number(vendCalc || 0))
+    },
+    porCategoria: {
+      produto: vv_parseBRL($catProduto.textContent || '0'),
+      servico: vv_parseBRL($catServico.textContent || '0'),
+      vidro: vv_parseBRL($catVidro.textContent || '0')
+    }
+  };
+
+  window.vvUltimosTotaisSelecaoItensOmie = totaisPayload;
+  window.vvUltimoTotalFinalProdutosOmie  = totalFinalProdutos;
+  window.vvTotalAprovadoBaseMO           = totalAprovadoBaseComMO;
+  window.vvTotalServicosAplicado         = valorServicos;
+  window.vvTotalDescontoAplicado         = valorDesconto;
+  window.vvTotalComissaoInfo             = valorComissaoInfo;
+  window.vvTotalProdutoCategoria         = totaisPayload.porCategoria.produto;
+  window.vvTotalServicoCategoria         = totaisPayload.porCategoria.servico;
+  window.vvTotalVidroCategoria           = totaisPayload.porCategoria.vidro;
+  window.vvParcelamentoServicosOmie      = parcelamentoServicos;
+
+  console.log('💾 Totais da seleção Omie gravados em window:', totaisPayload);
+
+  await tentarEnviarComissoes(comissoesParaEnvio);
+
+  if (backdrop && backdrop.parentNode) {
+    backdrop.parentNode.removeChild(backdrop);
+  }
+
+  resolve({
+    aprovadosParaOmie: aprovados,
+    ignorados,
+    totais: totaisPayload
+  });
+});
 
     recalc();
   });
@@ -1755,8 +2351,7 @@ const getModoComissao = () => (controls.querySelector('input[name="comModo"]:che
    e força codigo_categoria conforme papel)
    ====================================================================== */
 (function () {
-  // evita redefinir
-  if (window.enviarComissoes && window.enviarComissoes.__vvFixCategorias) return;
+  if (window.enviarComissoes && window.enviarComissoes.__vvFixCategoriasIndependenteFinal) return;
 
   const API_URL = "https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/omie/comissao";
 
@@ -1769,35 +2364,12 @@ const getModoComissao = () => (controls.querySelector('input[name="comModo"]:che
     return `${dt.getFullYear()}-${m}-${day}`;
   };
 
-  function toast(msg, ok = true) {
-    try {
-      const id = "vv-comm-toast";
-      let t = document.getElementById(id);
-      if (!t) {
-        t = document.createElement("div");
-        t.id = id;
-        t.style.cssText =
-          "position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:999999;padding:10px 14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);font:500 14px/1.2 Inter,system-ui;max-width:92vw;white-space:pre-line;text-align:center";
-        document.body.appendChild(t);
-      }
-      t.textContent = msg;
-      t.style.background = ok ? "#10b981" : "#ef4444";
-      t.style.color = "#fff";
-      t.style.opacity = "0";
-      t.style.transition = "opacity .2s ease";
-      requestAnimationFrame(() => (t.style.opacity = "1"));
-      setTimeout(() => (t.style.opacity = "0"), 2600);
-    } catch {}
+  function comissaoExiste(fonte) {
+    const codigo = String(fonte?.codigo || '').trim();
+    return !!codigo;
   }
 
-  const norm = (s) =>
-    String(s || "")
-      .trim()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-
-  function montarLancamento(tipo, fonte) {
+  function montarLancamento(tipo, fonte, baseConsiderada) {
     const calc = Number(fonte?.valorCalculado || 0);
     const manual = Number(fonte?.valorManual || 0);
     const valor_documento = Number((calc > 0 ? calc : manual).toFixed(2));
@@ -1805,27 +2377,27 @@ const getModoComissao = () => (controls.querySelector('input[name="comModo"]:che
     const data_previsao = toISODate(fonte?.previsao || "");
     const data_vencimento = toISODate(fonte?.vencimento || "");
 
-    const tipoNorm = norm(tipo);
+    const tipoNorm = String(tipo || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
 
-    // ✅ categoria SEMPRE fixa por tipo
     const codigo_categoria = tipoNorm.includes("arquit")
       ? "2.08.02"
       : "2.07.99";
 
-    // ✅ monte o payload EXPLÍCITO (o back já lê catFromBody / tipo / papel)
     return {
       valor_documento,
       data_previsao,
       data_vencimento,
       codigo_categoria,
-      tipo: tipoNorm,   // ajuda a inferência se precisar
-      papel: tipoNorm,  // idem
-      ...(fonte?.codigo
-        ? { codigo_cliente_fornecedor: String(fonte.codigo).trim() }
-        : {}),
-      ...(fonte?.observacao
-        ? { observacao: String(fonte.observacao).trim() }
-        : {}),
+      tipo: tipoNorm,
+      papel: tipoNorm,
+      ...(fonte?.codigo ? { codigo_cliente_fornecedor: String(fonte.codigo).trim() } : {}),
+      observacao:
+        (fonte?.observacao?.trim()
+          || `Comissão ${tipo} — ${fonte?.nome || ""} (base: ${Number(baseConsiderada || 0).toFixed(2)})`)
     };
   }
 
@@ -1840,76 +2412,124 @@ const getModoComissao = () => (controls.querySelector('input[name="comModo"]:che
   }
 
   async function postarLancamento(lanc, papel) {
-    // ✅ LOG antes do envio (confirma que está indo)
-    console.log("📤 POST /comissao", papel, {
-      codigo_categoria: lanc.codigo_categoria,
-      tipo: lanc.tipo,
-      papel: lanc.papel,
-      valor_documento: lanc.valor_documento,
-      codigo_cliente_fornecedor: lanc.codigo_cliente_fornecedor,
-      observacao: lanc.observacao,
-    });
+    console.group(`📤 [COMISSÕES] POST ${papel}`);
+    console.log("URL:", API_URL);
+    console.log("Body:", JSON.parse(JSON.stringify(lanc || {})));
+    console.groupEnd();
 
-    const r = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(lanc),
-    });
+    try {
+      const r = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lanc)
+      });
 
-    const json = await r.json().catch(() => ({}));
-    if (!r.ok || json?.ok === false) {
-      const msg = json?.error || `HTTP ${r.status}`;
-      return { ok: false, papel, erro: msg, resposta: json, enviado: lanc };
+      const json = await r.json().catch(() => ({}));
+
+      console.group(`📥 [COMISSÕES] RESPOSTA ${papel}`);
+      console.log("HTTP status:", r.status);
+      console.log("HTTP ok:", r.ok);
+      console.log("JSON:", json);
+      console.groupEnd();
+
+      if (!r.ok || json?.ok === false) {
+        const msg = json?.error || json?.message || `HTTP ${r.status}`;
+        return { ok: false, papel, status: 'erro', erro: msg, resposta: json, enviado: lanc };
+      }
+
+      return { ok: true, papel, status: 'enviado', resposta: json, enviado: lanc };
+    } catch (e) {
+      return { ok: false, papel, status: 'erro', erro: e?.message || "Falha de rede", enviado: lanc };
     }
-    return { ok: true, papel, resposta: json, enviado: lanc };
   }
 
   window.enviarComissoes = async function (payload) {
-    const lancArq = montarLancamento("arquiteto", payload?.arquiteto);
-    const lancVend = montarLancamento("vendedor", payload?.vendedor);
+    const fonteArq = payload?.arquiteto || {};
+    const fonteVend = payload?.vendedor || {};
 
-    // ✅ conferência local
-    console.log("🧾 Pré-envio (tem que ser diferente):", {
-      arquiteto: lancArq.codigo_categoria,
-      vendedor: lancVend.codigo_categoria,
-    });
+    const existeArq = comissaoExiste(fonteArq);
+    const existeVend = comissaoExiste(fonteVend);
 
-    const vArq = validarLancamento(lancArq, "arquiteto");
-    const vVend = validarLancamento(lancVend, "vendedor");
+    const lancArq = montarLancamento("arquiteto", fonteArq, payload?.baseConsiderada);
+    const lancVend = montarLancamento("vendedor", fonteVend, payload?.baseConsiderada);
 
-    const resultados = {};
-    const erros = [];
+    console.group("🧾 [COMISSÕES] Pré-envio");
+    console.log("Payload original:", JSON.parse(JSON.stringify(payload || {})));
+    console.log("Existe arquiteto?", existeArq, "Código:", fonteArq?.codigo || "");
+    console.log("Existe vendedor?", existeVend, "Código:", fonteVend?.codigo || "");
+    console.log("Lançamento arquiteto:", JSON.parse(JSON.stringify(lancArq || {})));
+    console.log("Lançamento vendedor:", JSON.parse(JSON.stringify(lancVend || {})));
+    console.groupEnd();
 
-    if (vArq.valido) {
-      resultados.arquiteto = await postarLancamento(lancArq, "arquiteto");
-      if (!resultados.arquiteto.ok) erros.push(`Arquiteto: ${resultados.arquiteto.erro || "erro"}`);
-    } else {
-      erros.push(`Arquiteto: ${vArq.erros.join(", ")}`);
-      resultados.arquiteto = { ok: false, erro: vArq.erros.join(", ") };
+    let resArq = {
+      ok: false,
+      status: 'ignorado',
+      papel: 'arquiteto',
+      erro: 'Comissão não existente (sem código).'
+    };
+
+    let resVend = {
+      ok: false,
+      status: 'ignorado',
+      papel: 'vendedor',
+      erro: 'Comissão não existente (sem código).'
+    };
+
+    if (existeArq) {
+      const vArq = validarLancamento(lancArq, "arquiteto");
+      if (vArq.valido) {
+        resArq = await postarLancamento(lancArq, "arquiteto");
+      } else {
+        resArq = {
+          ok: false,
+          status: 'invalido',
+          papel: 'arquiteto',
+          erro: vArq.erros.join(", "),
+          validacao: vArq
+        };
+      }
     }
 
-    if (vVend.valido) {
-      resultados.vendedor = await postarLancamento(lancVend, "vendedor");
-      if (!resultados.vendedor.ok) erros.push(`Vendedor: ${resultados.vendedor.erro || "erro"}`);
-    } else {
-      erros.push(`Vendedor: ${vVend.erros.join(", ")}`);
-      resultados.vendedor = { ok: false, erro: vVend.erros.join(", ") };
+    if (existeVend) {
+      const vVend = validarLancamento(lancVend, "vendedor");
+      if (vVend.valido) {
+        resVend = await postarLancamento(lancVend, "vendedor");
+      } else {
+        resVend = {
+          ok: false,
+          status: 'invalido',
+          papel: 'vendedor',
+          erro: vVend.erros.join(", "),
+          validacao: vVend
+        };
+      }
     }
 
-    const okGeral = !!(resultados.arquiteto?.ok || resultados.vendedor?.ok);
+    const okGeral = !!(resArq.ok || resVend.ok);
 
-    if (okGeral) toast("Comissões enviadas com sucesso.");
-    else toast("Falha ao enviar comissões:\n" + erros.join("\n"), false);
+    const retorno = {
+      ok: okGeral,
+      resultados: {
+        arquiteto: resArq,
+        vendedor: resVend
+      },
+      resumo: {
+        existeArquiteto: existeArq,
+        existeVendedor: existeVend,
+        enviadoArquiteto: !!resArq.ok,
+        enviadoVendedor: !!resVend.ok
+      }
+    };
 
-    return { ok: okGeral, resultados };
+    console.group("📦 [COMISSÕES] Retorno final");
+    console.log(JSON.parse(JSON.stringify(retorno || {})));
+    console.groupEnd();
+
+    return retorno;
   };
 
-  // marca que é a versão corrigida
-  window.enviarComissoes.__vvFixCategorias = true;
+  window.enviarComissoes.__vvFixCategoriasIndependenteFinal = true;
 })();
-
-
-
 
 
 
@@ -1963,6 +2583,123 @@ function vv_getPrimeiraDataParcelaISO() {
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
+}
+
+async function conferirTotalProdutosOmieComMarcador() {
+  try {
+    const payload = await gerarPayloadOmie();
+
+    if (!payload || !Array.isArray(payload.det)) {
+      alert("Não foi possível gerar o payload da Omie para conferência.");
+      return;
+    }
+
+    const elTotalTela = document.getElementById("vv-cat-produto");
+    if (!elTotalTela) {
+      alert("Elemento #vv-cat-produto não encontrado na tela.");
+      return;
+    }
+
+    function parseMoedaBR(valor) {
+      return Number(
+        String(valor || "0")
+          .replace(/[^\d,.-]/g, "")
+          .replace(/\./g, "")
+          .replace(",", ".")
+      ) || 0;
+    }
+
+    function round2(n) {
+      return Math.round((Number(n) || 0) * 100) / 100;
+    }
+
+    const itensConsiderados = [];
+    let totalOmie = 0;
+
+    payload.det.forEach((item, index) => {
+      const produto = item?.produto || {};
+      const descricao = produto.descricao || `Item ${index + 1}`;
+      const quantidade = Number(produto.quantidade || 0);
+      const valorUnitario = Number(produto.valor_unitario || 0);
+      const totalItem = round2(quantidade * valorUnitario);
+
+      // ignora zerados
+      if (quantidade <= 0 || valorUnitario <= 0 || totalItem <= 0) {
+        return;
+      }
+
+      totalOmie += totalItem;
+
+      itensConsiderados.push({
+        index: index + 1,
+        descricao,
+        quantidade,
+        valorUnitario: round2(valorUnitario),
+        totalItem
+      });
+    });
+
+    totalOmie = round2(totalOmie);
+
+    const totalTela = round2(parseMoedaBR(elTotalTela.textContent));
+    const bate = Math.abs(totalOmie - totalTela) < 0.01;
+
+    let marcador = document.getElementById("vv-marcador-conferencia-omie");
+    if (!marcador) {
+      marcador = document.createElement("div");
+      marcador.id = "vv-marcador-conferencia-omie";
+      marcador.style.marginTop = "8px";
+      marcador.style.padding = "10px 14px";
+      marcador.style.borderRadius = "10px";
+      marcador.style.fontWeight = "700";
+      marcador.style.fontSize = "14px";
+      marcador.style.border = "1px solid transparent";
+      marcador.style.display = "inline-block";
+      marcador.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+      elTotalTela.parentNode.appendChild(marcador);
+    }
+
+    if (bate) {
+      marcador.style.background = "#e8f7ee";
+      marcador.style.color = "#146c2e";
+      marcador.style.borderColor = "#b7e4c7";
+      marcador.innerHTML = `
+        ✅ Total conferido com sucesso<br>
+        Omie: <strong>R$ ${totalOmie.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong><br>
+        Tela: <strong>R$ ${totalTela.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+      `;
+    } else {
+      marcador.style.background = "#fdecec";
+      marcador.style.color = "#a61b1b";
+      marcador.style.borderColor = "#f5b5b5";
+      marcador.innerHTML = `
+        ❌ Divergência encontrada no total<br>
+        Omie: <strong>R$ ${totalOmie.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong><br>
+        Tela: <strong>R$ ${totalTela.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong><br>
+        Diferença: <strong>R$ ${round2(totalOmie - totalTela).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+      `;
+    }
+
+    console.group("🔎 Conferência total produtos Omie");
+    console.log("Payload gerado:", payload);
+    console.table(itensConsiderados);
+    console.log("Total Omie:", totalOmie);
+    console.log("Total Tela (#vv-cat-produto):", totalTela);
+    console.log("Bate?", bate ? "SIM" : "NÃO");
+    console.groupEnd();
+
+    return {
+      bate,
+      totalOmie,
+      totalTela,
+      diferenca: round2(totalOmie - totalTela),
+      itensConsiderados
+    };
+
+  } catch (erro) {
+    console.error("Erro ao conferir total da Omie:", erro);
+    alert("Erro ao conferir total da Omie. Veja o console.");
+  }
 }
 
 async function gerarPayloadOmie() {
@@ -2079,6 +2816,82 @@ async function gerarPayloadOmie() {
     return typeof formatarDataBR === "function"
       ? formatarDataBR(dataISO)
       : dataISO;
+  }
+
+  function round2(valor) {
+    if (typeof vv_round2 === "function") return vv_round2(valor);
+    return Math.round((Number(valor) || 0) * 100) / 100;
+  }
+
+  function parseMoedaBR(texto) {
+    return Number(
+      String(texto || "0")
+        .replace(/[^\d,.-]/g, "")
+        .replace(/\./g, "")
+        .replace(",", ".")
+    ) || 0;
+  }
+
+  function formatarMoedaBR(valor) {
+    return Number(valor || 0).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  function atualizarMarcadorConferencia(totalOmie, totalTela) {
+    const bate = Math.abs(round2(totalOmie) - round2(totalTela)) < 0.01;
+
+    const elTotalTela = document.getElementById("vv-cat-produto");
+    if (!elTotalTela || !elTotalTela.parentNode) {
+      console.warn("⚠️ Elemento #vv-cat-produto não encontrado para marcador visual.");
+      return { bate, totalOmie, totalTela, diferenca: round2(totalOmie - totalTela) };
+    }
+
+    let marcador = document.getElementById("vv-marcador-conferencia-omie");
+
+    if (!marcador) {
+      marcador = document.createElement("div");
+      marcador.id = "vv-marcador-conferencia-omie";
+      marcador.style.marginTop = "8px";
+      marcador.style.padding = "10px 14px";
+      marcador.style.borderRadius = "10px";
+      marcador.style.fontWeight = "700";
+      marcador.style.fontSize = "13px";
+      marcador.style.lineHeight = "1.45";
+      marcador.style.display = "inline-block";
+      marcador.style.border = "1px solid transparent";
+      marcador.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+      elTotalTela.parentNode.appendChild(marcador);
+    }
+
+    if (bate) {
+      marcador.style.background = "#eaf8ee";
+      marcador.style.color = "#166534";
+      marcador.style.borderColor = "#bbf7d0";
+      marcador.innerHTML = `
+        ✅ Total dos produtos confere com a Omie<br>
+        Omie: <strong>R$ ${formatarMoedaBR(totalOmie)}</strong><br>
+        Tela: <strong>R$ ${formatarMoedaBR(totalTela)}</strong>
+      `;
+    } else {
+      marcador.style.background = "#fef0f0";
+      marcador.style.color = "#b42318";
+      marcador.style.borderColor = "#fecdca";
+      marcador.innerHTML = `
+        ❌ Divergência no total dos produtos<br>
+        Omie: <strong>R$ ${formatarMoedaBR(totalOmie)}</strong><br>
+        Tela: <strong>R$ ${formatarMoedaBR(totalTela)}</strong><br>
+        Diferença: <strong>R$ ${formatarMoedaBR(round2(totalOmie - totalTela))}</strong>
+      `;
+    }
+
+    return {
+      bate,
+      totalOmie: round2(totalOmie),
+      totalTela: round2(totalTela),
+      diferenca: round2(totalOmie - totalTela)
+    };
   }
 
   async function pegarVendedorSelecionadoComCodigo(selectId = "vendedorResponsavel") {
@@ -2231,11 +3044,13 @@ async function gerarPayloadOmie() {
     }
   };
 
-  // somente produtos/vidros entram no pedido
   const aprovadosSomenteProdutos = aprovadosParaOmie.filter(item => {
     const tipo = classificarTipoItem(item);
     return tipo === "produto" || tipo === "vidro";
   });
+
+  const itensConsideradosNoTotal = [];
+  let totalProdutosOmie = 0;
 
   aprovadosSomenteProdutos.forEach((item, index) => {
     const codigo_produto = String(item.codigo || "").trim();
@@ -2258,18 +3073,23 @@ async function gerarPayloadOmie() {
         : Number(Number(item.valorTotalItem).toFixed(2));
     }
 
-    // fallback final: usar o valor ajustado do item
     if ((!valor_unitario || valor_unitario <= 0) && Number(item.valorAjustadoParaOmie || 0) > 0) {
       valor_unitario = Number(item.valorAjustadoParaOmie || 0);
       quantidade = 1;
     }
 
-    valor_unitario = typeof vv_round2 === "function"
-      ? vv_round2(valor_unitario)
-      : Math.round((Number(valor_unitario) || 0) * 100) / 100;
+    quantidade = round2(quantidade);
+    valor_unitario = round2(valor_unitario);
 
     if (!valor_unitario || valor_unitario <= 0) {
       console.warn("⛔ Produto sem valor_unitario válido:", item);
+      return;
+    }
+
+    const totalItem = round2(quantidade * valor_unitario);
+
+    if (!totalItem || totalItem <= 0) {
+      console.warn("⛔ Produto com total zerado ignorado:", item);
       return;
     }
 
@@ -2295,7 +3115,20 @@ async function gerarPayloadOmie() {
     });
 
     payload.cabecalho.quantidade_itens++;
+
+    totalProdutosOmie += totalItem;
+
+    itensConsideradosNoTotal.push({
+      index: index + 1,
+      codigo_produto,
+      descricao,
+      quantidade,
+      valor_unitario,
+      totalItem
+    });
   });
+
+  totalProdutosOmie = round2(totalProdutosOmie);
 
   if (!payload.det.length) {
     alert("Nenhum item válido foi montado para envio à Omie. Verifique código Omie e valor dos produtos.");
@@ -2330,8 +3163,29 @@ async function gerarPayloadOmie() {
       : 0
   }));
 
-  console.log("✅ Payload de produtos gerado:", payload);
+  const totalTelaProdutos = round2(
+    parseMoedaBR(document.getElementById("vv-cat-produto")?.textContent || "0")
+  );
+
+  const resumoConferencia = atualizarMarcadorConferencia(totalProdutosOmie, totalTelaProdutos);
+
+  window.__vvResumoPayloadOmie = {
+    numeroPedido,
+    totalProdutosOmie,
+    totalTelaProdutos,
+    diferenca: round2(totalProdutosOmie - totalTelaProdutos),
+    itensConsideradosNoTotal,
+    resumoConferencia
+  };
+
+  console.group("✅ Payload de produtos gerado");
+  console.log("Payload:", payload);
+  console.table(itensConsideradosNoTotal);
+  console.log("Total produtos Omie:", totalProdutosOmie);
+  console.log("Total tela (#vv-cat-produto):", totalTelaProdutos);
+  console.log("Resumo conferência:", resumoConferencia);
   console.log("🛠️ Valor de serviços separado para OS:", totais?.valorServicos || 0);
+  console.groupEnd();
 
   return payload;
 }
@@ -2342,6 +3196,7 @@ async function gerarPayloadOmie() {
    6) ENVIAR PARA OMIE (botão/onclick)
    ======================================= */
 async function atualizarNaOmie() {
+  
   const botao =
     document.getElementById("btn-gerar-pedido") ||
     document.getElementById("btnEnviarOmie") ||
