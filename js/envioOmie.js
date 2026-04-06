@@ -3288,24 +3288,22 @@ async function atualizarNaOmie() {
         retornoProdutos.parsed ?? retornoProdutos.raw
       );
 
-      abrirStatus(
-        "❌ Falha no envio dos produtos",
-        retornoProdutos.parsed?.erro ||
-          retornoProdutos.parsed?.error ||
-          retornoProdutos.raw ||
-          "O envio dos produtos falhou.",
-        "error"
-      );
-
       throw new Error(
-        retornoProdutos.parsed?.erro ||
-        retornoProdutos.parsed?.error ||
-        retornoProdutos.raw ||
-        "Erro ao enviar produtos para a Omie."
+        retornoProdutos?.parsed?.error ||
+        retornoProdutos?.parsed?.erro ||
+        retornoProdutos?.parsed?.message ||
+        retornoProdutos?.raw ||
+        "Erro ao incluir pedido na Omie."
       );
     }
 
-    // ✅ confirmação individual dos produtos
+    const numeroPedido =
+      retornoProdutos?.parsed?.numeroPedido ||
+      retornoProdutos?.parsed?.pedido?.numeroPedido ||
+      retornoProdutos?.parsed?.nCodPed ||
+      document.getElementById("numeroPedido")?.value ||
+      "";
+
     alertServer(
       "✅ PRODUTOS ENVIADOS COM SUCESSO",
       respostaProdutos.status,
@@ -3314,100 +3312,59 @@ async function atualizarNaOmie() {
 
     abrirStatus(
       "✅ Produtos enviados",
-      "Os produtos foram enviados com sucesso para a Omie.",
+      `Produtos enviados com sucesso. Pedido nº ${numeroPedido}.`,
       "success"
     );
 
     // =========================================================
-    // 2) BUSCAR NÚMERO DO PEDIDO E SALVAR NA PROPOSTA
+    // 2) OBTÉM TOTAIS / PARCELAS DE SERVIÇO
     // =========================================================
-    abrirStatus(
-      "🔎 Buscando número do pedido",
-      "Os produtos já foram enviados. Agora estamos buscando o número gerado do pedido.",
-      "info"
+    const totais =
+      window.vvUltimosTotaisSelecaoItensOmie ||
+      payload?.totais ||
+      null;
+
+    const valorServicos = Number(
+      totais?.valorServicos ||
+      window.vvTotalServicosAplicado ||
+      0
     );
 
-    const params = new URLSearchParams(window.location.search);
-    const propostaId = params.get("id");
-
-    if (!propostaId) {
-      throw new Error("ID da proposta não encontrado na URL.");
-    }
-
-    const respostaPedido = await fetch("https://contator-ulhoa-3d28d89efa68.herokuapp.com/pedido");
-    const dadosPedido = await respostaPedido.json();
-
-    if (!respostaPedido.ok) {
-      throw new Error(dadosPedido?.error || "Erro ao buscar número do pedido.");
-    }
-
-    const numeroPedido = dadosPedido?.numero;
-
-    if (numeroPedido === undefined || numeroPedido === null || numeroPedido === "") {
-      throw new Error("O número do pedido não foi retornado pela rota /pedido.");
-    }
-
-    console.log("🔢 Número do pedido obtido:", numeroPedido);
-
-    abrirStatus(
-      "📝 Salvando número do pedido",
-      `Pedido localizado com o número ${numeroPedido}. Agora estamos vinculando esse número à proposta.`,
-      "info"
+    const parcelasServicoCorretas = obterParcelasServicoCorretas(
+      totais?.parcelasServico || null
     );
 
-    const respostaUpdate = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${propostaId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ numeroPedido })
-    });
-
-    const retornoUpdate = await readJsonOrText(respostaUpdate);
-
-    if (!respostaUpdate.ok) {
-      throw new Error(
-        retornoUpdate?.parsed?.error ||
-        retornoUpdate?.parsed?.erro ||
-        retornoUpdate?.raw ||
-        "Erro ao incluir número do pedido na proposta."
-      );
-    }
-
-    console.log("✅ Proposta atualizada com numeroPedido:", numeroPedido);
-    console.log("📄 Resposta da atualização:", retornoUpdate.parsed ?? retornoUpdate.raw);
-
-    const inputNumeroPedido = document.getElementById("numeroPedido");
-    if (inputNumeroPedido) {
-      inputNumeroPedido.value = numeroPedido;
-    }
+    console.group("🔎 Dados recuperados para envio de serviços");
+    console.log("totais:", totais);
+    console.log("valorServicos:", valorServicos);
+    console.log("parcelasServicoCorretas:", parcelasServicoCorretas);
+    console.groupEnd();
 
     // =========================================================
-    // 3) ENVIO DE SERVIÇOS (SE HOUVER)
+    // 3) ENVIO DE SERVIÇOS
     // =========================================================
-    const selecao = window.__vvUltimaSelecaoOmie || null;
-    const valorServicos = selecao?.totais?.valorServicos || 0;
-
-    let servicosEnviadosComSucesso = false;
     let houveTentativaDeServico = false;
+    let servicosEnviadosComSucesso = false;
 
-    if (valorServicos > 0 && typeof enviarOSServico === "function") {
+    if (valorServicos > 0) {
       houveTentativaDeServico = true;
 
       abrirStatus(
         "🛠️ Enviando serviços",
-        "Os produtos já foram enviados. Agora estamos enviando os serviços na estrutura própria da OS.",
+        "Agora estamos enviando os serviços na estrutura própria da OS.",
         "info"
       );
 
-      const osResp = await enviarOSServico({ valorServicos });
+      const osResp = await enviarOSServico({
+        valorServicos,
+        parcelasServico: parcelasServicoCorretas
+      });
 
       console.log("📥 Resposta /os:", osResp);
 
       if (osResp?.ok) {
         servicosEnviadosComSucesso = true;
 
-        // ✅ confirmação individual dos serviços
         alertServer(
           "✅ SERVIÇOS ENVIADOS COM SUCESSO",
           osResp?.status || 200,
@@ -3420,7 +3377,6 @@ async function atualizarNaOmie() {
           "success"
         );
       } else {
-        // ❌ confirmação individual de erro dos serviços
         alertServer(
           "❌ ERRO AO ENVIAR SERVIÇOS",
           osResp?.status || "sem status",
@@ -3490,7 +3446,6 @@ async function atualizarNaOmie() {
     }
   }
 }
-
 
 const API_BASE_PRODUTOS = 'https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com'; 
 // TROQUE isso pela URL real quando publicar o server.
@@ -3992,7 +3947,41 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
 };
 
 
+function obterParcelasServicoCorretas(parcelasServico = null) {
+  if (Array.isArray(parcelasServico) && parcelasServico.length > 0) {
+    return parcelasServico;
+  }
 
+  if (
+    Array.isArray(window.vvUltimosTotaisSelecaoItensOmie?.parcelasServico) &&
+    window.vvUltimosTotaisSelecaoItensOmie.parcelasServico.length > 0
+  ) {
+    return window.vvUltimosTotaisSelecaoItensOmie.parcelasServico;
+  }
+
+  if (
+    Array.isArray(window.vvParcelasServicoOmie) &&
+    window.vvParcelasServicoOmie.length > 0
+  ) {
+    return window.vvParcelasServicoOmie;
+  }
+
+  if (
+    Array.isArray(window.propostaEmEdicao?.camposFormulario?.parcelasServico) &&
+    window.propostaEmEdicao.camposFormulario.parcelasServico.length > 0
+  ) {
+    return window.propostaEmEdicao.camposFormulario.parcelasServico;
+  }
+
+  if (
+    Array.isArray(window.propostaAtual?.camposFormulario?.parcelasServico) &&
+    window.propostaAtual.camposFormulario.parcelasServico.length > 0
+  ) {
+    return window.propostaAtual.camposFormulario.parcelasServico;
+  }
+
+  return [];
+}
 /* ================== CONFIG ================== */
 const OS_SERVICOS_ENDPOINT = window.OS_SERVICOS_ENDPOINT
   || "https://ulhoa-servico-ec4e1aa95355.herokuapp.com/os";
@@ -4298,11 +4287,15 @@ function ctxFormOS() {
   };
 }
 
-function ctxParcelasOS() {
-  const linhas = Array.from(document.querySelectorAll("#listaParcelas .row"));
-  const nQtdeParc = linhas.length || 1;
-  const primeiraISO = linhas.map(l => l.querySelector(".data-parcela")?.value?.trim())
-                            .find(Boolean) || "";
+function ctxParcelasOS(parcelasServico = null) {
+  const parcelasCorretas = obterParcelasServicoCorretas(parcelasServico);
+
+  const nQtdeParc = parcelasCorretas.length || 1;
+
+  const primeiraISO = parcelasCorretas
+    .map(p => String(p?.vencimento || "").trim())
+    .find(Boolean) || "";
+
   return {
     nQtdeParc,
     dDtPrevisaoBR: toBR(primeiraISO),
@@ -4437,46 +4430,60 @@ const Email = {
 }
 
 /* ================== ENVIO PARA /os ================== */
-async function enviarOSServico({ valorServicos, endpoint = OS_SERVICOS_ENDPOINT }) {
+async function enviarOSServico({
+  valorServicos,
+  parcelasServico = null,
+  endpoint = OS_SERVICOS_ENDPOINT
+}) {
   try {
     if (!(Number(valorServicos) > 0)) {
       const msg = "Valor de Serviços inválido ou zerado.";
       if (typeof mostrarPopupCustomizado === "function") {
         mostrarPopupCustomizado("❌ Erro ao enviar Serviços", msg, "error");
-      } else { alert(msg); }
+      } else {
+        alert(msg);
+      }
       return { ok:false, error: msg };
     }
+
+    const parcelasServicoCorretas = obterParcelasServicoCorretas(parcelasServico);
 
     // Contextos
     const { cCodIntOS, nCodCli } = ctxHeaderOS();
-    const { dDtPrevisaoBR, dDtPrevisaoISO } = ctxParcelasOS();
+    const { dDtPrevisaoBR, dDtPrevisaoISO } = ctxParcelasOS(parcelasServicoCorretas);
 
-    // Campos mínimos
-    const faltas = [];
-    if (!cCodIntOS && !ctxFormOS().cCodIntOS_form) faltas.push("cCodIntOS");
-    const temData = (ctxFormOS().dDtPrevisao_form || dDtPrevisaoBR || dDtPrevisaoISO);
-    if (!temData) faltas.push("dDtPrevisao");
-    if (faltas.length) {
-      const msg = "Campos obrigatórios ausentes: " + faltas.join(", ");
-      if (typeof mostrarPopupCustomizado === "function") {
-        mostrarPopupCustomizado("❌ Erro ao enviar Serviços", msg, "error");
-      } else { alert(msg); }
-      return { ok:false, error: msg };
-    }
-
-    // Payload final no formato solicitado
     const payload = montarPayloadOS({
-      cCodIntOS, nCodCli, dDtPrevisaoBR, dDtPrevisaoISO, valorServicos
+      cCodIntOS,
+      nCodCli,
+      dDtPrevisaoBR,
+      dDtPrevisaoISO,
+      valorServicos
     });
+
+    console.group("🛠️ ENVIO /os");
+    console.log("valorServicos:", valorServicos);
+    console.log("parcelasServicoCorretas:", JSON.parse(JSON.stringify(parcelasServicoCorretas || [])));
+    console.log("payload final /os:", JSON.parse(JSON.stringify(payload)));
+    console.groupEnd();
 
     const headers = { "Content-Type": "application/json" };
     const token = localStorage.getItem("accessTokenServico") || localStorage.getItem("accessToken");
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    console.log("➡️ POST /os payload:", payload);
-    const resp = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(payload) });
+    const resp = await fetch(endpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload)
+    });
+
     const raw = await resp.text();
-    let data; try { data = JSON.parse(raw); } catch { data = { ok: resp.ok, raw }; }
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = { ok: resp.ok, raw };
+    }
+
     console.log("⬅️ /os status:", resp.status, data);
 
     if (!resp.ok || data?.ok === false) {
@@ -4512,16 +4519,20 @@ async function enviarOSServico({ valorServicos, endpoint = OS_SERVICOS_ENDPOINT 
     } else {
       alert("✅ OS de Serviços enviada com sucesso!");
     }
+
     return { ok:true, data };
   } catch (err) {
     console.error("❌ enviarOSServico erro:", err);
     const msg = err?.message || String(err);
+
     if (typeof mostrarPopupCustomizado === "function") {
       mostrarPopupCustomizado("❌ Erro ao enviar Serviços", msg, "error");
-    } else { alert("Erro ao enviar Serviços:\n" + msg); }
+    } else {
+      alert("Erro ao enviar Serviços:\n" + msg);
+    }
+
     return { ok:false, error: msg };
   }
 }
-
 /* Expor global */
 window.enviarOSServico = enviarOSServico;
