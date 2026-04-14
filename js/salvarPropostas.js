@@ -385,7 +385,8 @@ window.atualizarPropostaEditavel = async function () {
   codigoOmie: el.querySelector(".codigoCliente")?.value || "",
   cpfCnpj: el.querySelector(".cpfCnpj")?.value || "",
   funcao: el.querySelector(".funcaoCliente")?.value || "",
-  telefone: el.querySelector(".telefoneCliente")?.value || ""
+  telefone: el.querySelector(".telefoneCliente")?.value || "",
+  email: el.querySelector(".emailCliente")?.value || ""
 }));
 
     const condicaoPagamento = document.getElementById("condicaoPagamento")?.value?.trim() || "";
