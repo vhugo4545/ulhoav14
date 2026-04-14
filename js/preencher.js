@@ -145,11 +145,21 @@ function criarBotaoUltimaAtualizacao(data) {
 
 
 async function carregarPropostaEditavel(proposta) {
-  criarBotaoUltimaAtualizacao(proposta?.atualizado_em);
+  if (!proposta || typeof proposta !== "object") {
+    console.error("❌ Proposta inválida em carregarPropostaEditavel:", proposta);
+    return;
+  }
 
-  console.log(proposta);
-  console.log(proposta.grupos[0].itens[0].formula_custo);
-  console.log("🔍 Desconto informado:", proposta.camposFormulario.desconto);
+  criarBotaoUltimaAtualizacao(
+    proposta?.atualizado_em ||
+    proposta?.updatedAt ||
+    proposta?.criado_em ||
+    proposta?.createdAt
+  );
+
+  // deixa a proposta acessível para outras rotinas, inclusive parcelas de serviço
+  window.propostaEmEdicao = proposta;
+  window.propostaAtual = proposta;
 
   try {
     if (!proposta || typeof proposta !== "object") throw new Error("Proposta inválida.");
