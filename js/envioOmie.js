@@ -600,6 +600,12 @@ function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistent
         payload.camposFormulario = payload.camposFormulario || {};
         payload.camposFormulario.parcelasServico = parcelasServico;
 
+        console.group("💾 [salvarParcelasServicoNoServidor]");
+        console.log("idProposta:", idProposta);
+        console.log("parcelasServico que serão salvas:", JSON.parse(JSON.stringify(parcelasServico || [])));
+        console.log("payload.camposFormulario.parcelasServico:", JSON.parse(JSON.stringify(payload.camposFormulario.parcelasServico || [])));
+        console.groupEnd();
+
         const resposta = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${idProposta}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -641,6 +647,13 @@ function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistent
       Array.isArray(parcelasExistentes) && parcelasExistentes.length > 0
         ? parcelasExistentes
         : parcelasSalvasDaProposta;
+
+    console.group("🪟 [abrirPopupParcelamentoServicos] abertura");
+    console.log("valorTotalServicos:", valorTotalServicos);
+    console.log("parcelasExistentes parâmetro:", JSON.parse(JSON.stringify(parcelasExistentes || [])));
+    console.log("parcelasSalvasDaProposta:", JSON.parse(JSON.stringify(parcelasSalvasDaProposta || [])));
+    console.log("parcelasParaUsar:", JSON.parse(JSON.stringify(parcelasParaUsar || [])));
+    console.groupEnd();
 
     const bd = document.createElement("div");
     bd.className = "vv-modal-backdrop";
@@ -710,6 +723,15 @@ function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistent
       valor = "",
       vencimento = ""
     } = {}) {
+      console.group("➕ [criarLinhaParcelaServico]");
+      console.log("dados recebidos:", {
+        tipo_monetario,
+        condicao_pagto,
+        valor,
+        vencimento
+      });
+      console.groupEnd();
+
       const row = document.createElement("div");
       row.className = "row g-2 align-items-end mb-2";
       row.innerHTML = `
@@ -773,7 +795,11 @@ function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistent
         atualizarResumoParcelasServicos();
       });
 
-      row.querySelector(".data-parcela-servico").addEventListener("change", atualizarResumoParcelasServicos);
+      row.querySelector(".data-parcela-servico").addEventListener("change", () => {
+        console.log("📅 [popup serviços] data alterada:", row.querySelector(".data-parcela-servico")?.value || "");
+        atualizarResumoParcelasServicos();
+      });
+
       tipoSelect.addEventListener("change", atualizarResumoParcelasServicos);
       condicaoSelect.addEventListener("change", atualizarResumoParcelasServicos);
 
@@ -793,6 +819,15 @@ function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistent
         return acc + v;
       }, 0);
 
+      const snapshot = linhas.map((row, index) => ({
+        index,
+        tipo_monetario: row.querySelector(".tipo-monetario-servico")?.value || "",
+        condicao_pagto: row.querySelector(".condicao-pagto-servico")?.value || "",
+        valor_digitado: row.querySelector(".valor-parcela-servico")?.value || "",
+        valor_parseado: parseBRL(row.querySelector(".valor-parcela-servico")?.value || "0"),
+        data: row.querySelector(".data-parcela-servico")?.value || ""
+      }));
+
       const diferenca = Number((valorTotalServicos - totalParcelado).toFixed(2));
       const bate = Math.abs(diferenca) < 0.01;
 
@@ -806,6 +841,14 @@ function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistent
         $status.textContent = diferenca > 0 ? "Faltando valor" : "Valor excedente";
         $status.style.color = "#a61b1b";
       }
+
+      console.group("🧾 [atualizarResumoParcelasServicos]");
+      console.table(snapshot);
+      console.log("valorTotalServicos:", valorTotalServicos);
+      console.log("totalParcelado:", totalParcelado);
+      console.log("diferenca:", diferenca);
+      console.log("status:", bate ? "Fechado" : (diferenca > 0 ? "Faltando valor" : "Valor excedente"));
+      console.groupEnd();
     }
 
     function limparParcelasServicos() {
@@ -832,6 +875,12 @@ function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistent
           vencimento: ""
         });
       }
+
+      console.group("⚙️ [gerarParcelasIguais]");
+      console.log("qtd:", qtd);
+      console.log("base:", base);
+      console.log("acumulado final:", acumulado);
+      console.groupEnd();
     }
 
     by.querySelector("#vv-add-parcela-servico").addEventListener("click", () => {
@@ -855,15 +904,36 @@ function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistent
           return;
         }
 
-        const parcelas = linhas.map((row) => ({
-          tipo_monetario: row.querySelector(".tipo-monetario-servico")?.value || "",
-          condicao_pagto: row.querySelector(".condicao-pagto-servico")?.value || "",
-          valor: parseBRL(row.querySelector(".valor-parcela-servico")?.value || "0"),
-          vencimento: row.querySelector(".data-parcela-servico")?.value || ""
-        }));
+        const parcelas = linhas.map((row, index) => {
+          const dataSelecionada = row.querySelector(".data-parcela-servico")?.value || "";
+
+          return {
+            tipo_monetario: row.querySelector(".tipo-monetario-servico")?.value || "",
+            condicao_pagto: row.querySelector(".condicao-pagto-servico")?.value || "",
+            valor: parseBRL(row.querySelector(".valor-parcela-servico")?.value || "0"),
+            previsao: dataSelecionada,
+            vencimento: dataSelecionada
+          };
+        });
 
         const totalParcelado = parcelas.reduce((acc, p) => acc + Number(p.valor || 0), 0);
         const diferenca = Math.abs(Number((valorTotalServicos - totalParcelado).toFixed(2)));
+
+        console.group("✅ [confirmar parcelamento serviços]");
+        console.table(
+          parcelas.map((p, i) => ({
+            index: i,
+            tipo_monetario: p?.tipo_monetario || "",
+            condicao_pagto: p?.condicao_pagto || "",
+            valor: p?.valor || 0,
+            previsao: p?.previsao || "",
+            vencimento: p?.vencimento || ""
+          }))
+        );
+        console.log("valorTotalServicos:", valorTotalServicos);
+        console.log("totalParcelado:", totalParcelado);
+        console.log("diferenca:", diferenca);
+        console.groupEnd();
 
         if (diferenca >= 0.01) {
           alert(`O parcelamento dos serviços não fecha. Total dos serviços: ${fmtBRL(valorTotalServicos)} | Parcelado: ${fmtBRL(totalParcelado)}`);
@@ -871,6 +941,14 @@ function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistent
         }
 
         await salvarParcelasServicoNoServidor(parcelas);
+
+        window.vvParcelasServicoOmie = parcelas;
+
+        console.group("🧠 [memória após confirmar parcelamento]");
+        console.log("window.vvParcelasServicoOmie:", JSON.parse(JSON.stringify(window.vvParcelasServicoOmie || [])));
+        console.log("window.propostaEmEdicao?.camposFormulario?.parcelasServico:", JSON.parse(JSON.stringify(window.propostaEmEdicao?.camposFormulario?.parcelasServico || [])));
+        console.log("window.propostaAtual?.camposFormulario?.parcelasServico:", JSON.parse(JSON.stringify(window.propostaAtual?.camposFormulario?.parcelasServico || [])));
+        console.groupEnd();
 
         document.body.removeChild(bd);
         resolveParcelas({
@@ -890,7 +968,7 @@ function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistent
           tipo_monetario: parcela?.tipo_monetario || "",
           condicao_pagto: parcela?.condicao_pagto || "",
           valor: Number(parcela?.valor || 0),
-          vencimento: parcela?.vencimento || ""
+          vencimento: parcela?.previsao || parcela?.vencimento || ""
         });
       });
     } else {
@@ -901,6 +979,8 @@ function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistent
     }
   });
 }
+
+
 
 async function abrirPopupSelecaoItensOmie(itens){
 verificarClienteEAtualizar()
@@ -3948,40 +4028,72 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
 
 
 function obterParcelasServicoCorretas(parcelasServico = null) {
-  if (Array.isArray(parcelasServico) && parcelasServico.length > 0) {
-    return parcelasServico;
-  }
+  console.group("🔎 [obterParcelasServicoCorretas] entrada");
+  console.log("parcelasServico parâmetro:", JSON.parse(JSON.stringify(parcelasServico || null)));
+  console.log("window.vvUltimosTotaisSelecaoItensOmie?.parcelasServico:", JSON.parse(JSON.stringify(window.vvUltimosTotaisSelecaoItensOmie?.parcelasServico || null)));
+  console.log("window.vvParcelasServicoOmie:", JSON.parse(JSON.stringify(window.vvParcelasServicoOmie || null)));
+  console.log("window.propostaEmEdicao?.camposFormulario?.parcelasServico:", JSON.parse(JSON.stringify(window.propostaEmEdicao?.camposFormulario?.parcelasServico || null)));
+  console.log("window.propostaAtual?.camposFormulario?.parcelasServico:", JSON.parse(JSON.stringify(window.propostaAtual?.camposFormulario?.parcelasServico || null)));
+  console.groupEnd();
 
-  if (
+  let parcelas = [];
+
+  if (Array.isArray(parcelasServico) && parcelasServico.length > 0) {
+    parcelas = parcelasServico;
+    console.log("✅ Fonte usada: parâmetro parcelasServico");
+  } else if (
     Array.isArray(window.vvUltimosTotaisSelecaoItensOmie?.parcelasServico) &&
     window.vvUltimosTotaisSelecaoItensOmie.parcelasServico.length > 0
   ) {
-    return window.vvUltimosTotaisSelecaoItensOmie.parcelasServico;
-  }
-
-  if (
+    parcelas = window.vvUltimosTotaisSelecaoItensOmie.parcelasServico;
+    console.log("✅ Fonte usada: window.vvUltimosTotaisSelecaoItensOmie.parcelasServico");
+  } else if (
     Array.isArray(window.vvParcelasServicoOmie) &&
     window.vvParcelasServicoOmie.length > 0
   ) {
-    return window.vvParcelasServicoOmie;
-  }
-
-  if (
+    parcelas = window.vvParcelasServicoOmie;
+    console.log("✅ Fonte usada: window.vvParcelasServicoOmie");
+  } else if (
     Array.isArray(window.propostaEmEdicao?.camposFormulario?.parcelasServico) &&
     window.propostaEmEdicao.camposFormulario.parcelasServico.length > 0
   ) {
-    return window.propostaEmEdicao.camposFormulario.parcelasServico;
-  }
-
-  if (
+    parcelas = window.propostaEmEdicao.camposFormulario.parcelasServico;
+    console.log("✅ Fonte usada: window.propostaEmEdicao.camposFormulario.parcelasServico");
+  } else if (
     Array.isArray(window.propostaAtual?.camposFormulario?.parcelasServico) &&
     window.propostaAtual.camposFormulario.parcelasServico.length > 0
   ) {
-    return window.propostaAtual.camposFormulario.parcelasServico;
+    parcelas = window.propostaAtual.camposFormulario.parcelasServico;
+    console.log("✅ Fonte usada: window.propostaAtual.camposFormulario.parcelasServico");
+  } else {
+    console.warn("⚠️ Nenhuma fonte de parcelas de serviço encontrada.");
   }
 
-  return [];
+  const parcelasNormalizadas = parcelas.map((p, index) => ({
+    ...p,
+    previsao: p?.previsao || p?.vencimento || "",
+    vencimento: p?.vencimento || p?.previsao || ""
+  }));
+
+  console.group("📦 [obterParcelasServicoCorretas] saída normalizada");
+  console.log("parcelas originais:", JSON.parse(JSON.stringify(parcelas || [])));
+  console.log("parcelas normalizadas:", JSON.parse(JSON.stringify(parcelasNormalizadas || [])));
+  console.table(
+    parcelasNormalizadas.map((p, i) => ({
+      index: i,
+      tipo_monetario: p?.tipo_monetario || "",
+      condicao_pagto: p?.condicao_pagto || "",
+      valor: p?.valor || 0,
+      previsao: p?.previsao || "",
+      vencimento: p?.vencimento || ""
+    }))
+  );
+  console.groupEnd();
+
+  return parcelasNormalizadas;
 }
+
+
 /* ================== CONFIG ================== */
 const OS_SERVICOS_ENDPOINT = window.OS_SERVICOS_ENDPOINT
   || "https://ulhoa-servico-ec4e1aa95355.herokuapp.com/os";
@@ -4144,14 +4256,69 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 /* ================== UTILS ================== */
-function toBR(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
+function toBR(valor) {
+  if (!valor) return "";
+
+  const v = String(valor).trim();
+
+  // já está em BR
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) {
+    return v;
+  }
+
+  // ISO puro: YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    const [y, m, d] = v.split("-");
+    return `${d}/${m}/${y}`;
+  }
+
+  // datetime ISO: YYYY-MM-DDTHH:mm:ss...
+  const isoMatch = v.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+  if (isoMatch) {
+    const [, y, m, d] = isoMatch;
+    return `${d}/${m}/${y}`;
+  }
+
+  // fallback
+  const d = new Date(v);
   if (isNaN(d)) return "";
-  const dd = String(d.getDate()).padStart(2,"0");
-  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
   return `${dd}/${mm}/${d.getFullYear()}`;
 }
+
+function toISO(valor) {
+  if (!valor) return "";
+
+  const v = String(valor).trim();
+
+  // já está em ISO puro
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    return v;
+  }
+
+  // BR -> ISO
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) {
+    const [d, m, y] = v.split("/");
+    return `${y}-${m}-${d}`;
+  }
+
+  // datetime ISO: YYYY-MM-DDTHH:mm:ss...
+  const isoMatch = v.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+  if (isoMatch) {
+    const [, y, m, d] = isoMatch;
+    return `${y}-${m}-${d}`;
+  }
+
+  // fallback
+  const d = new Date(v);
+  if (isNaN(d)) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const da = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${da}`;
+}
+
 function toISO(iso) {
   if (!iso) return "";
   const d = new Date(iso);
@@ -4161,6 +4328,7 @@ function toISO(iso) {
   const da = String(d.getDate()).padStart(2,"0");
   return `${y}-${m}-${da}`;
 }
+
 function vv_fmtBRL(n){
   return (Number(n)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 }
@@ -4292,17 +4460,33 @@ function ctxParcelasOS(parcelasServico = null) {
 
   const nQtdeParc = parcelasCorretas.length || 1;
 
-  const primeiraISO = parcelasCorretas
-    .map(p => String(p?.vencimento || "").trim())
+  const primeiraData = parcelasCorretas
+    .map(p => String(p?.previsao || p?.vencimento || "").trim())
     .find(Boolean) || "";
+
+  const dDtPrevisaoBR = toBR(primeiraData);
+  const dDtPrevisaoISO = toISO(primeiraData);
+
+  console.group("🧮 [ctxParcelasOS AJUSTADO]");
+  console.table(
+    parcelasCorretas.map((p, i) => ({
+      index: i,
+      previsao: p?.previsao || "",
+      vencimento: p?.vencimento || "",
+      valor: p?.valor || 0
+    }))
+  );
+  console.log("primeiraData:", primeiraData);
+  console.log("dDtPrevisaoBR:", dDtPrevisaoBR);
+  console.log("dDtPrevisaoISO:", dDtPrevisaoISO);
+  console.groupEnd();
 
   return {
     nQtdeParc,
-    dDtPrevisaoBR: toBR(primeiraISO),
-    dDtPrevisaoISO: toISO(primeiraISO)
+    dDtPrevisaoBR,
+    dDtPrevisaoISO
   };
 }
-
 function ctxHeaderOS() {
   const orc = document.getElementById("numeroOrcamento");
   const cCodIntOS =
@@ -4342,91 +4526,145 @@ function ctxHeaderOS() {
  }
 =========================================================================== */
 function montarPayloadOS({
-  cCodIntOS, nCodCli, dDtPrevisaoBR, dDtPrevisaoISO, valorServicos
+  cCodIntOS,
+  nCodCli,
+  dDtPrevisaoBR,
+  dDtPrevisaoISO,
+  valorServicos
 }) {
-  // Prioridade: valores dos inputs dedicados (se existirem)
-  const {
-    cCodIntOS_form,
-    dDtPrevisao_form,
-    nCodCli_form,
-    nQtdeParc_form,
-    cDadosAdicNF_form
-  } = ctxFormOS();
+  const getVal = (selector) => {
+    const el = document.querySelector(selector);
+    if (!el) return "";
+    return (
+      el.value?.trim?.() ||
+      el.dataset?.valorOriginal?.trim?.() ||
+      el.textContent?.trim?.() ||
+      ""
+    );
+  };
 
-  // Cabeçalho
-const Cabecalho = {
-  cCodIntOS: String(cCodIntOS_form || cCodIntOS || ""),
-  cCodParc: CCODPARC_DEFAULT,
-  cEtapa: CETAPA_DEFAULT,
-  nCodVend: Number(NCODVEND_SERVICO_DEFAULT) || 0,
-  dDtPrevisao: String(
-    dDtPrevisao_form || dDtPrevisaoBR || dDtPrevisaoISO || ""
-  ).trim()
-};
+  const numeroOrcamento =
+    getVal("#numeroOrcamento") ||
+    getVal('input[name="numeroOrcamento"]') ||
+    cCodIntOS ||
+    "";
 
-  // nCodCli é aceito como vazio pelo seu server; inclua se tiver (form tem prioridade)
-  const resolvedCodCli = (typeof nCodCli_form === "number" && nCodCli_form > 0)
-    ? nCodCli_form
-    : (nCodCli ? Number(nCodCli) : undefined);
-  if (resolvedCodCli) Cabecalho.nCodCli = resolvedCodCli;
+  const cCodParc_form =
+    getVal("#cCodParc") ||
+    "999";
 
-  // nQtdeParc: prioridade form, senão tenta derivar do contexto de parcelas
+  const cEtapa_form =
+    getVal("#cEtapa") ||
+    "20";
+
+  const cDadosAdicNF_form =
+    getVal("#cDadosAdicNF") ||
+    `OS incluída via API • Orçamento ${numeroOrcamento}`;
+
+  const vendedorSelect =
+    document.querySelector("#vendedorResponsavel") ||
+    document.querySelector('select[name="vendedorResponsavel"]');
+
+  let nCodVend = undefined;
+  if (vendedorSelect) {
+    nCodVend = Number(
+      vendedorSelect.selectedOptions?.[0]?.dataset?.codigo ||
+      vendedorSelect.value ||
+      0
+    ) || undefined;
+  }
+
+  const CCODCATEG_DEFAULT = "1.01.99";
+  const NCODCC_DEFAULT = 10937506623;
+  const CCOD_LC116_DEFAULT = "7.01";
+  const CCOD_MUN_DEFAULT = "0701-0/01-88";
+
+  const Cabecalho = {
+    cCodIntOS: String(cCodIntOS || numeroOrcamento || "").trim(),
+    cCodParc: String(cCodParc_form || "999").trim(),
+    cEtapa: String(cEtapa_form || "20").trim(),
+    dDtPrevisao: String(dDtPrevisaoBR || "").trim()
+  };
+
+  if (nCodVend) {
+    Cabecalho.nCodVend = Number(nCodVend);
+  }
+
+  if (nCodCli) {
+    Cabecalho.nCodCli = Number(nCodCli);
+  }
+
   const { nQtdeParc } = ctxParcelasOS();
-  Cabecalho.nQtdeParc = Number(nQtdeParc_form || nQtdeParc || 1);
+  Cabecalho.nQtdeParc = Number(nQtdeParc || 1);
 
-  // Se valorServicos não for válido, aborta antes de montar
   const nValUnitFinal = Number(valorServicos);
   if (!(nValUnitFinal > 0)) {
     throw new Error("Valor de Serviços inválido ou zero.");
   }
 
-  const Departamentos = []; // sem uso por enquanto
+  const Departamentos = [];
 
-const emailsClientes = Array.from(document.querySelectorAll(".emailCliente"))
-  .map(input =>
-    input?.value?.trim() ||
-    input?.dataset?.valorOriginal?.trim() ||
-    ""
-  )
-  .filter(email => email);
+  const emailsClientes = Array.from(document.querySelectorAll(".emailCliente"))
+    .map(input =>
+      input?.value?.trim() ||
+      input?.dataset?.valorOriginal?.trim() ||
+      ""
+    )
+    .filter(email => email);
 
-const Email = {
-  cEnvBoleto: "S",
-  cEnvLink: "S",
-  cEnviarPara: emailsClientes.join(",")
-};
+  const Email = {
+    cEnvBoleto: "S",
+    cEnvLink: "S",
+    cEnviarPara: emailsClientes.join(",")
+  };
 
   const InformacoesAdicionais = {
-    cCodCateg:   CCODCATEG_DEFAULT,
-    cDadosAdicNF: String(cDadosAdicNF_form || `OS incluída via API • Orçamento ${Cabecalho.cCodIntOS}`).trim(),
-    nCodCC:      NCODCC_DEFAULT
+    cCodCateg: CCODCATEG_DEFAULT,
+    cDadosAdicNF: String(
+      cDadosAdicNF_form || `OS incluída via API • Orçamento ${Cabecalho.cCodIntOS}`
+    ).trim(),
+    nCodCC: NCODCC_DEFAULT
   };
 
   const ServicosPrestados = [
     {
       cCodServLC116: CCOD_LC116_DEFAULT,
-      cCodServMun:   CCOD_MUN_DEFAULT,
-      cRetemISS:     "N",
-      cTribServ:     "01",
+      cCodServMun: CCOD_MUN_DEFAULT,
+      cRetemISS: "N",
+      cTribServ: "01",
       impostos: {
         cRetemIRRF: "N",
-        cRetemPIS:  "N",
-        nAliqIRRF:  0,
-        nAliqISS:   0,
-        nAliqPIS:   0
+        cRetemPIS: "N",
+        nAliqIRRF: 0,
+        nAliqISS: 0,
+        nAliqPIS: 0
       },
       nQtde: 1,
-      nValUnit: Number(nValUnitFinal.toFixed(2))
+      nValUnit: Number(nValUnitFinal.toFixed(2)),
+      cDescServ: "Serviço"
     }
   ];
 
-  return {
+  const payload = {
     Cabecalho,
     Departamentos,
     Email,
     InformacoesAdicionais,
     ServicosPrestados
   };
+
+  console.group("📦 [montarPayloadOS] FINAL");
+  console.log("cCodIntOS:", cCodIntOS);
+  console.log("nCodCli recebido de ctxHeaderOS:", nCodCli);
+  console.log("dDtPrevisaoBR recebida:", dDtPrevisaoBR);
+  console.log("dDtPrevisaoISO recebida:", dDtPrevisaoISO);
+  console.log("valorServicos:", valorServicos);
+  console.log("Cabecalho final:", JSON.parse(JSON.stringify(Cabecalho)));
+  console.log("payload completo:", JSON.parse(JSON.stringify(payload)));
+  console.log("payload JSON:", JSON.stringify(payload, null, 2));
+  console.groupEnd();
+
+  return payload;
 }
 
 /* ================== ENVIO PARA /os ================== */
@@ -4443,14 +4681,35 @@ async function enviarOSServico({
       } else {
         alert(msg);
       }
-      return { ok:false, error: msg };
+      return { ok: false, error: msg };
     }
 
     const parcelasServicoCorretas = obterParcelasServicoCorretas(parcelasServico);
 
-    // Contextos
     const { cCodIntOS, nCodCli } = ctxHeaderOS();
-    const { dDtPrevisaoBR, dDtPrevisaoISO } = ctxParcelasOS(parcelasServicoCorretas);
+    const { dDtPrevisaoBR, dDtPrevisaoISO, nQtdeParc } = ctxParcelasOS(parcelasServicoCorretas);
+
+    console.group("🧾 [SERVIÇOS] PARCELAS ANTES DO ENVIO");
+    console.log("endpoint:", endpoint);
+    console.log("valorServicos:", valorServicos);
+    console.log("cCodIntOS:", cCodIntOS);
+    console.log("nCodCli:", nCodCli);
+    console.log("nQtdeParc:", nQtdeParc);
+    console.log("dDtPrevisaoBR:", dDtPrevisaoBR);
+    console.log("dDtPrevisaoISO:", dDtPrevisaoISO);
+    console.log("parcelasServico parâmetro:", JSON.parse(JSON.stringify(parcelasServico || null)));
+    console.log("parcelasServicoCorretas:", JSON.parse(JSON.stringify(parcelasServicoCorretas || [])));
+    console.table(
+      (parcelasServicoCorretas || []).map((p, i) => ({
+        index: i,
+        tipo_monetario: p?.tipo_monetario || "",
+        condicao_pagto: p?.condicao_pagto || "",
+        valor: p?.valor || 0,
+        previsao: p?.previsao || "",
+        vencimento: p?.vencimento || ""
+      }))
+    );
+    console.groupEnd();
 
     const payload = montarPayloadOS({
       cCodIntOS,
@@ -4460,15 +4719,28 @@ async function enviarOSServico({
       valorServicos
     });
 
-    console.group("🛠️ ENVIO /os");
-    console.log("valorServicos:", valorServicos);
-    console.log("parcelasServicoCorretas:", JSON.parse(JSON.stringify(parcelasServicoCorretas || [])));
-    console.log("payload final /os:", JSON.parse(JSON.stringify(payload)));
+    console.group("🚀 [SERVIÇOS] REQUEST FINAL PARA OMIE");
+    console.log("URL:", endpoint);
+    console.log("Método:", "POST");
+    console.log("Payload objeto:", JSON.parse(JSON.stringify(payload)));
+    console.log("Payload JSON stringify:", JSON.stringify(payload, null, 2));
+    console.log("Cabecalho enviado:", JSON.parse(JSON.stringify(payload?.Cabecalho || {})));
+    console.log("ServicosPrestados enviado:", JSON.parse(JSON.stringify(payload?.ServicosPrestados || [])));
     console.groupEnd();
 
     const headers = { "Content-Type": "application/json" };
-    const token = localStorage.getItem("accessTokenServico") || localStorage.getItem("accessToken");
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const token =
+      localStorage.getItem("accessTokenServico") ||
+      localStorage.getItem("accessToken");
+
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    console.group("📡 [SERVIÇOS] FETCH");
+    console.log("headers:", JSON.parse(JSON.stringify(headers)));
+    console.log("body cru:", JSON.stringify(payload));
+    console.groupEnd();
 
     const resp = await fetch(endpoint, {
       method: "POST",
@@ -4478,13 +4750,19 @@ async function enviarOSServico({
 
     const raw = await resp.text();
     let data;
+
     try {
       data = JSON.parse(raw);
     } catch {
       data = { ok: resp.ok, raw };
     }
 
-    console.log("⬅️ /os status:", resp.status, data);
+    console.group("⬅️ [SERVIÇOS] RESPOSTA OMIE");
+    console.log("status HTTP:", resp.status);
+    console.log("ok HTTP:", resp.ok);
+    console.log("resposta parseada:", data);
+    console.log("resposta raw:", raw);
+    console.groupEnd();
 
     if (!resp.ok || data?.ok === false) {
       const motivo = data?.detail
@@ -4507,7 +4785,8 @@ async function enviarOSServico({
       } else {
         alert(`Erro ao enviar OS de Serviços:\n${motivo}`);
       }
-      return { ok:false, error: motivo, data };
+
+      return { ok: false, error: motivo, data };
     }
 
     if (typeof mostrarPopupCustomizado === "function") {
@@ -4520,7 +4799,7 @@ async function enviarOSServico({
       alert("✅ OS de Serviços enviada com sucesso!");
     }
 
-    return { ok:true, data };
+    return { ok: true, status: resp.status, data };
   } catch (err) {
     console.error("❌ enviarOSServico erro:", err);
     const msg = err?.message || String(err);
@@ -4531,8 +4810,11 @@ async function enviarOSServico({
       alert("Erro ao enviar Serviços:\n" + msg);
     }
 
-    return { ok:false, error: msg };
+    return { ok: false, error: msg };
   }
 }
 /* Expor global */
 window.enviarOSServico = enviarOSServico;
+
+
+
