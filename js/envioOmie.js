@@ -1086,52 +1086,29 @@ function vvEscolherParcelasIniciaisProdutosServicos({
   parcelasProduto = [],
   parcelasServico = []
 } = {}) {
-  let parcelasProdutoIniciais = (parcelasProduto || []).map(vvNormalizarParcelaControle).filter(parcela => parcela.valor > 0);
-  const parcelasServicoIniciais = (parcelasServico || []).map(vvNormalizarParcelaControle).filter(parcela => parcela.valor > 0);
+  const parcelasProdutoIniciais = (parcelasProduto || [])
+    .map(vvNormalizarParcelaControle)
+    .filter(parcela => parcela.valor > 0);
 
-  const somaProduto = vvSomarParcelasControle(parcelasProdutoIniciais);
-  const somaServico = vvSomarParcelasControle(parcelasServicoIniciais);
+  const parcelasServicoIniciais = (parcelasServico || [])
+    .map(vvNormalizarParcelaControle)
+    .filter(parcela => parcela.valor > 0);
 
+  // Só cria parcela inicial de produto se não houver nenhuma salva
   if (!parcelasProdutoIniciais.length && valorTotalProdutos > 0) {
-    parcelasProdutoIniciais = [{
+    parcelasProdutoIniciais.push({
       tipo_monetario: "",
       condicao_pagto: "",
       valor: vvRound2ControleParcelas(valorTotalProdutos),
-      vencimento: ""
-    }];
+      vencimento: "",
+      ignorar: false
+    });
   }
 
-  if (
-    Math.abs(somaProduto - valorTotalProdutos) < 0.02 &&
-    Math.abs(somaServico - valorTotalServicos) < 0.02
-  ) {
-    return {
-      origem: "persistido",
-      parcelasProdutoIniciais,
-      parcelasServicoIniciais
-    };
-  }
-
-  const somaLegadoEsperada = vvRound2ControleParcelas(valorTotalProdutos + valorTotalServicos);
-  if (
-    parcelasServicoIniciais.length > 0 &&
-    Math.abs(somaServico - valorTotalServicos) < 0.02 &&
-    Math.abs(somaProduto - somaLegadoEsperada) < 0.02
-  ) {
-    const legado = vvSubtrairParcelasServicoDeParcelasProduto(parcelasProdutoIniciais, parcelasServicoIniciais);
-    const somaLegadoProdutos = vvSomarParcelasControle(legado.parcelasProdutoAjustadas || []);
-
-    if (legado.ok && Math.abs(somaLegadoProdutos - valorTotalProdutos) < 0.02) {
-      return {
-        origem: "legado",
-        parcelasProdutoIniciais: legado.parcelasProdutoAjustadas,
-        parcelasServicoIniciais
-      };
-    }
-  }
+  // Serviços: nunca cria automaticamente — o usuário adiciona se quiser
 
   return {
-    origem: "formulario",
+    origem: "persistido",
     parcelasProdutoIniciais,
     parcelasServicoIniciais
   };
@@ -1258,6 +1235,7 @@ function abrirPopupParcelamentoProdutosServicos({
         label: "Produtos",
         target: totalProdutosTarget,
         list: by.querySelector('[data-bucket-list="produtos"]'),
+        alvoEl: by.querySelector("#vv-prod-alvo"),
         sumEl: by.querySelector("#vv-prod-somado"),
         diffEl: by.querySelector("#vv-prod-diferenca"),
         statusEl: by.querySelector("#vv-prod-status")
@@ -1266,6 +1244,7 @@ function abrirPopupParcelamentoProdutosServicos({
         label: "Servicos",
         target: totalServicosTarget,
         list: by.querySelector('[data-bucket-list="servicos"]'),
+        alvoEl: by.querySelector("#vv-serv-alvo"),
         sumEl: by.querySelector("#vv-serv-somado"),
         diffEl: by.querySelector("#vv-serv-diferenca"),
         statusEl: by.querySelector("#vv-serv-status")
@@ -1333,14 +1312,16 @@ function abrirPopupParcelamentoProdutosServicos({
       if (valorInput) valorInput.value = normalizada.valor > 0 ? vvFmtBRLControleParcelas(normalizada.valor) : "";
       if (dataInput) dataInput.value = normalizada.vencimento || "";
 
-      // Ignorar (faturamento direto)
       const ignorarCheck = card.querySelector(".vv-ignorar-parcela");
       if (ignorarCheck) {
         ignorarCheck.checked = !!normalizada.ignorar;
-        if (ignorarCheck.checked) card.classList.add("vv-ignorada");
         ignorarCheck.addEventListener("change", () => {
-          card.classList.toggle("vv-ignorada", ignorarCheck.checked);
-          atualizarResumoParcelasControle();
+          if (ignorarCheck.checked) {
+            const bucketAtual = card.dataset.bucket || bucket;
+            card.remove();
+            atualizarEstadoLista(bucketAtual);
+            atualizarResumoParcelasControle();
+          }
         });
       }
 
@@ -1384,13 +1365,11 @@ function abrirPopupParcelamentoProdutosServicos({
       return [...buckets[bucket].list.querySelectorAll(".vv-parcela-card")]
         .map(card => {
           const condicaoEl = card.querySelector(".condicao-pagto-transfer");
-          const ignorar = card.querySelector(".vv-ignorar-parcela")?.checked === true;
           return vvNormalizarParcelaControle({
             tipo_monetario: card.querySelector(".tipo-monetario-transfer")?.value || "",
             condicao_pagto: condicaoEl?.value || "",
             valor: card.querySelector(".valor-parcela-transfer")?.value || "",
-            vencimento: card.querySelector(".data-parcela-transfer")?.value || "",
-            ignorar
+            vencimento: card.querySelector(".data-parcela-transfer")?.value || ""
           });
         })
         .filter(parcela =>
@@ -1463,11 +1442,12 @@ function abrirPopupParcelamentoProdutosServicos({
       }
     }
 
-    function atualizarResumoBucket(bucket, totalParcelado) {
+    function atualizarResumoBucket(bucket, totalParcelado, alvoEfetivo) {
       const info = buckets[bucket];
-      const diferenca = vvRound2ControleParcelas(info.target - totalParcelado);
+      const diferenca = vvRound2ControleParcelas(alvoEfetivo - totalParcelado);
       const fechado = Math.abs(diferenca) < 0.01;
 
+      if (info.alvoEl) info.alvoEl.textContent = vvFmtBRLControleParcelas(alvoEfetivo);
       info.sumEl.textContent = vvFmtBRLControleParcelas(totalParcelado);
       info.diffEl.textContent = vvFmtBRLControleParcelas(diferenca);
 
@@ -1486,14 +1466,30 @@ function abrirPopupParcelamentoProdutosServicos({
     function atualizarResumoParcelasControle() {
       const parcelasProdutos = coletarParcelasBucket("produtos");
       const parcelasServicos = coletarParcelasBucket("servicos");
-      const totalProdutos = vvSomarParcelasControle(parcelasProdutos);
-      const totalServicos = vvSomarParcelasControle(parcelasServicos);
 
-      atualizarResumoBucket("produtos", totalProdutos);
-      atualizarResumoBucket("servicos", totalServicos);
+      // Calcula o alvo efetivo descontando parcelas ignoradas (faturamento direto)
+      const ignoradoProdutos = vvRound2ControleParcelas(
+        parcelasProdutos.filter(p => p.ignorar).reduce((s, p) => s + p.valor, 0)
+      );
+      const ignoradoServicos = vvRound2ControleParcelas(
+        parcelasServicos.filter(p => p.ignorar).reduce((s, p) => s + p.valor, 0)
+      );
+      const alvoEfetivoProdutos = vvRound2ControleParcelas(totalProdutosTarget - ignoradoProdutos);
+      const alvoEfetivoServicos = vvRound2ControleParcelas(totalServicosTarget - ignoradoServicos);
 
-      const diffProdutos = vvRound2ControleParcelas(totalProdutosTarget - totalProdutos);
-      const diffServicos = vvRound2ControleParcelas(totalServicosTarget - totalServicos);
+      // Soma apenas nao ignoradas
+      const totalProdutos = vvRound2ControleParcelas(
+        parcelasProdutos.filter(p => !p.ignorar).reduce((s, p) => s + p.valor, 0)
+      );
+      const totalServicos = vvRound2ControleParcelas(
+        parcelasServicos.filter(p => !p.ignorar).reduce((s, p) => s + p.valor, 0)
+      );
+
+      atualizarResumoBucket("produtos", totalProdutos, alvoEfetivoProdutos);
+      atualizarResumoBucket("servicos", totalServicos, alvoEfetivoServicos);
+
+      const diffProdutos = vvRound2ControleParcelas(alvoEfetivoProdutos - totalProdutos);
+      const diffServicos = vvRound2ControleParcelas(alvoEfetivoServicos - totalServicos);
       const fechadoGeral =
         Math.abs(diffProdutos) < 0.01 &&
         Math.abs(diffServicos) < 0.01;
@@ -1507,8 +1503,8 @@ function abrirPopupParcelamentoProdutosServicos({
       }
 
       helpControleEl.textContent = fechadoGeral
-        ? "Parcelamento fechado. Produtos vao para o formulario principal e servicos vao para a OS."
-        : "Arraste, adicione ou ajuste os valores ate fechar os totais de produtos e servicos.";
+        ? "Parcelamento confirmado. Apenas parcelas nao ignoradas serao enviadas para a Omie."
+        : "Arraste, adicione ou ajuste os valores ate fechar os totais (parcelas ignoradas nao contam).";
     }
 
     function moverLinhaParaBucket(card, bucketDestino, valorTransferencia = null) {
@@ -1600,26 +1596,43 @@ function abrirPopupParcelamentoProdutosServicos({
       resolveParcelas(null);
     });
 
-    ft.querySelector("#vv-confirmar-controle-parcelas")?.addEventListener("click", async () => {
+    ft.querySelector("#vv-confirmar-controle-parcelas")?.addEventListener("click", () => {
       try {
         const parcelasProduto = coletarParcelasBucket("produtos").filter(parcela => parcela.valor > 0);
         const parcelasServico = coletarParcelasBucket("servicos").filter(parcela => parcela.valor > 0);
 
-        // Apenas as que serao enviadas (nao ignoradas) contam para fechar o total
+        // Separa as que serao efetivamente enviadas (nao ignoradas)
         const parcelasProdutoEnvio = parcelasProduto.filter(p => !p.ignorar);
         const parcelasServicoEnvio = parcelasServico.filter(p => !p.ignorar);
 
-        const totalProdutos = vvSomarParcelasControle(parcelasProduto);
-        const totalServicos = vvSomarParcelasControle(parcelasServico);
-        const diffProdutos = Math.abs(vvRound2ControleParcelas(totalProdutosTarget - totalProdutos));
-        const diffServicos = Math.abs(vvRound2ControleParcelas(totalServicosTarget - totalServicos));
+        // O valor ignorado é faturamento direto — desconta do alvo para fechar
+        const valorIgnoradoProdutos = vvRound2ControleParcelas(
+          parcelasProduto.filter(p => p.ignorar).reduce((s, p) => s + p.valor, 0)
+        );
+        const valorIgnoradoServicos = vvRound2ControleParcelas(
+          parcelasServico.filter(p => p.ignorar).reduce((s, p) => s + p.valor, 0)
+        );
 
-        if (totalProdutosTarget > 0 && !parcelasProdutoEnvio.length) {
+        const alvoEfetivoProdutos = vvRound2ControleParcelas(totalProdutosTarget - valorIgnoradoProdutos);
+        const alvoEfetivoServicos = vvRound2ControleParcelas(totalServicosTarget - valorIgnoradoServicos);
+
+        // Soma apenas parcelas nao ignoradas
+        const totalProdutos = vvRound2ControleParcelas(
+          parcelasProdutoEnvio.reduce((s, p) => s + p.valor, 0)
+        );
+        const totalServicos = vvRound2ControleParcelas(
+          parcelasServicoEnvio.reduce((s, p) => s + p.valor, 0)
+        );
+
+        const diffProdutos = Math.abs(vvRound2ControleParcelas(alvoEfetivoProdutos - totalProdutos));
+        const diffServicos = Math.abs(vvRound2ControleParcelas(alvoEfetivoServicos - totalServicos));
+
+        if (alvoEfetivoProdutos > 0 && !parcelasProdutoEnvio.length) {
           alert("Adicione pelo menos uma parcela (nao ignorada) para os produtos.");
           return;
         }
 
-        if (totalServicosTarget > 0 && !parcelasServicoEnvio.length) {
+        if (alvoEfetivoServicos > 0 && !parcelasServicoEnvio.length) {
           alert("Adicione pelo menos uma parcela (nao ignorada) para os servicos.");
           return;
         }
@@ -1627,49 +1640,37 @@ function abrirPopupParcelamentoProdutosServicos({
         if (diffProdutos >= 0.01 || diffServicos >= 0.01) {
           alert(
             `O controle de parcelas nao fecha.\n` +
-            `Produtos: alvo ${vvFmtBRLControleParcelas(totalProdutosTarget)} | parcelado ${vvFmtBRLControleParcelas(totalProdutos)}\n` +
-            `Servicos: alvo ${vvFmtBRLControleParcelas(totalServicosTarget)} | parcelado ${vvFmtBRLControleParcelas(totalServicos)}`
+            `Produtos: alvo ${vvFmtBRLControleParcelas(alvoEfetivoProdutos)} | parcelado ${vvFmtBRLControleParcelas(totalProdutos)}\n` +
+            `Servicos: alvo ${vvFmtBRLControleParcelas(alvoEfetivoServicos)} | parcelado ${vvFmtBRLControleParcelas(totalServicos)}`
           );
           return;
         }
 
-        await vvSalvarParcelamentoOmieNoServidor({
-          parcelasProduto,
-          parcelasServico
-        });
-
-        // Atualiza o formulário de parcelas visualmente (erro aqui não deve
-        // bloquear o envio para a Omie — atualizarValoresParcelas pode tentar
-        // ler inputs ausentes nesta página e lançar TypeError).
-        try {
-          vvAtualizarListaParcelasFormulario(parcelasProduto);
-        } catch (erroFormulario) {
-          console.warn("[parcelas] vvAtualizarListaParcelasFormulario ignorado (DOM incompleto):", erroFormulario);
-        }
-
+        // Serializa apenas o que sera enviado (ignoradas excluidas pela propria funcao)
         const parcelasServicoServidor = vvSerializarParcelasServicoParaServidor(parcelasServico);
+        const parcelasProdutoServidor = vvSerializarParcelasProdutoParaFormulario(parcelasProduto);
 
-        window.vvParcelasProdutoOmie = parcelasProduto;
+        window.vvParcelasProdutoOmie = parcelasProdutoEnvio;
         window.vvParcelasServicoOmie = parcelasServicoServidor;
         window.vvParcelamentoProdutosServicosOmie = {
-          totalProdutos: totalProdutosTarget,
-          totalServicos: totalServicosTarget,
-          parcelasProduto,
+          totalProdutos: alvoEfetivoProdutos,
+          totalServicos: alvoEfetivoServicos,
+          parcelasProduto: parcelasProdutoEnvio,
           parcelasServico: parcelasServicoServidor
         };
 
         document.body.removeChild(bd);
         resolveParcelas({
-          totalProdutos: totalProdutosTarget,
-          totalServicos: totalServicosTarget,
+          totalProdutos: alvoEfetivoProdutos,
+          totalServicos: alvoEfetivoServicos,
           totalParceladoProdutos: totalProdutos,
           totalParceladoServicos: totalServicos,
-          parcelasProduto,
+          parcelasProduto: parcelasProdutoEnvio,
           parcelasServico: parcelasServicoServidor
         });
       } catch (erro) {
         console.error("[parcelas] erro ao confirmar controle de parcelas:", erro);
-        alert("Erro ao salvar o controle de parcelas de produtos e servicos.");
+        alert("Erro ao confirmar o controle de parcelas.");
       }
     });
 
@@ -2660,8 +2661,10 @@ function recalc(){
     totalLiquidoGeral += baseLiquida;
   });
 
+  // Serviços: em modo percentual, a base correta é totalLiquidoGeral (já com desconto aplicado),
+  // pois o desconto impacta o pedido inteiro e de lá derivamos produtos e serviços.
   const servTotal = getModoServicos()==='percent'
-    ? ((Number($srvPercent.value||0)/100) * totalBaseMO)
+    ? ((Number($srvPercent.value||0)/100) * totalLiquidoGeral)
     : vv_parseBRL($srvValor.value||'0');
 
   const servAplicavel = Math.max(0, Math.min(servTotal, totalLiquidoGeral));
@@ -3073,12 +3076,16 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
             []
           );
 
-    parcelamentoProdutosServicos = await abrirPopupParcelamentoProdutosServicos({
-      valorTotalProdutos: totalFinalProdutos,
-      valorTotalServicos: valorServicos,
-      parcelasProdutoExistentes: parcelasProdutoSalvas,
-      parcelasServicoExistentes: parcelasServicoSalvas
-    });
+  // Os alvos (totalFinalProdutos / valorServicos) já refletem desconto e
+  // itens ignorados do popup anterior — são os valores corretos.
+  // As parcelas existentes são carregadas apenas como ponto de partida;
+  // o usuário ajusta se necessário antes de confirmar.
+  parcelamentoProdutosServicos = await abrirPopupParcelamentoProdutosServicos({
+    valorTotalProdutos: totalFinalProdutos,
+    valorTotalServicos: valorServicos,
+    parcelasProdutoExistentes: parcelasProdutoSalvas,
+    parcelasServicoExistentes: parcelasServicoSalvas
+  });
 
     if (!parcelamentoProdutosServicos) {
       vvToast('Controle de parcelas cancelado.', 'info');
@@ -5607,3 +5614,6 @@ async function enviarOSServico({
 }
 /* Expor global */
 window.enviarOSServico = enviarOSServico;
+
+
+
