@@ -265,6 +265,39 @@ function gerarNumeroPedidoUnico() {
   .vv-parcela-card.is-dragging{
     opacity:.6;
   }
+  .vv-parcela-card.vv-ignorada{
+    opacity:.55;
+    background:#fafafa;
+    border-color:#e2e8f0;
+    border-style:dashed;
+  }
+  .vv-parcela-card.vv-ignorada .row{
+    pointer-events:none;
+    user-select:none;
+  }
+  .vv-ignorar-label{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    font-weight:600;
+    color:#b42318;
+    cursor:pointer;
+    user-select:none;
+    padding:2px 8px;
+    border:1px solid #f5b5b5;
+    border-radius:6px;
+    background:#fff5f5;
+    transition:background .12s;
+  }
+  .vv-ignorar-label:has(input:checked){
+    background:#fee2e2;
+    color:#7f1d1d;
+  }
+  .vv-ignorar-label input{
+    margin:0;
+    cursor:pointer;
+  }
   .vv-parcela-head{
     display:flex;
     align-items:center;
@@ -775,20 +808,23 @@ function vvNormalizarParcelaControle(parcela = {}) {
     tipo_monetario: String(parcela?.tipo_monetario ?? parcela?.tipo ?? "").trim(),
     condicao_pagto: String(parcela?.condicao_pagto ?? parcela?.condicao ?? "").trim(),
     valor: vvRound2ControleParcelas(vvParseBRLControleParcelas(valorBruto)),
-    vencimento: String(parcela?.vencimento ?? parcela?.data ?? parcela?.previsao ?? "").trim()
+    vencimento: String(parcela?.vencimento ?? parcela?.data ?? parcela?.previsao ?? "").trim(),
+    ignorar: parcela?.ignorar === true || parcela?.ignorar === "true"
   };
 }
 
 function vvSomarParcelasControle(parcelas = []) {
   return vvRound2ControleParcelas(
-    (parcelas || []).reduce((acc, parcela) => acc + Number(parcela?.valor || 0), 0)
+    (parcelas || [])
+      .filter(parcela => !parcela?.ignorar)
+      .reduce((acc, parcela) => acc + Number(parcela?.valor || 0), 0)
   );
 }
 
 function vvSerializarParcelasProdutoParaFormulario(parcelasProduto = []) {
   return (parcelasProduto || [])
     .map(vvNormalizarParcelaControle)
-    .filter(parcela => parcela.valor > 0)
+    .filter(parcela => parcela.valor > 0 && !parcela.ignorar)
     .map(parcela => ({
       tipo: parcela.tipo_monetario || "",
       condicao: parcela.condicao_pagto || "",
@@ -800,7 +836,7 @@ function vvSerializarParcelasProdutoParaFormulario(parcelasProduto = []) {
 function vvSerializarParcelasServicoParaServidor(parcelasServico = []) {
   return (parcelasServico || [])
     .map(vvNormalizarParcelaControle)
-    .filter(parcela => parcela.valor > 0)
+    .filter(parcela => parcela.valor > 0 && !parcela.ignorar)
     .map(parcela => ({
       tipo_monetario: parcela.tipo_monetario || "",
       condicao_pagto: parcela.condicao_pagto || "",
@@ -1251,7 +1287,12 @@ function abrirPopupParcelamentoProdutosServicos({
       card.innerHTML = `
         <div class="vv-parcela-head">
           <span class="vv-drag-handle">Arraste para transferir</span>
-          <button type="button" class="vv-btn danger vv-remover-parcela-transfer">Remover</button>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label class="vv-ignorar-label" title="Faturamento direto — esta parcela nao sera enviada para a Omie">
+              <input type="checkbox" class="vv-ignorar-parcela"> Ignorar (fat. direto)
+            </label>
+            <button type="button" class="vv-btn danger vv-remover-parcela-transfer">Remover</button>
+          </div>
         </div>
         <div class="row g-2 align-items-end">
           <div class="col-12 col-xl-3">
@@ -1291,6 +1332,17 @@ function abrirPopupParcelamentoProdutosServicos({
       if (tipoSelect) tipoSelect.value = normalizada.tipo_monetario || "";
       if (valorInput) valorInput.value = normalizada.valor > 0 ? vvFmtBRLControleParcelas(normalizada.valor) : "";
       if (dataInput) dataInput.value = normalizada.vencimento || "";
+
+      // Ignorar (faturamento direto)
+      const ignorarCheck = card.querySelector(".vv-ignorar-parcela");
+      if (ignorarCheck) {
+        ignorarCheck.checked = !!normalizada.ignorar;
+        if (ignorarCheck.checked) card.classList.add("vv-ignorada");
+        ignorarCheck.addEventListener("change", () => {
+          card.classList.toggle("vv-ignorada", ignorarCheck.checked);
+          atualizarResumoParcelasControle();
+        });
+      }
 
       vvMontarCampoCondicaoParcelas(wrapper, {
         className: "condicao-pagto-transfer",
@@ -1332,11 +1384,13 @@ function abrirPopupParcelamentoProdutosServicos({
       return [...buckets[bucket].list.querySelectorAll(".vv-parcela-card")]
         .map(card => {
           const condicaoEl = card.querySelector(".condicao-pagto-transfer");
+          const ignorar = card.querySelector(".vv-ignorar-parcela")?.checked === true;
           return vvNormalizarParcelaControle({
             tipo_monetario: card.querySelector(".tipo-monetario-transfer")?.value || "",
             condicao_pagto: condicaoEl?.value || "",
             valor: card.querySelector(".valor-parcela-transfer")?.value || "",
-            vencimento: card.querySelector(".data-parcela-transfer")?.value || ""
+            vencimento: card.querySelector(".data-parcela-transfer")?.value || "",
+            ignorar
           });
         })
         .filter(parcela =>
@@ -1551,18 +1605,22 @@ function abrirPopupParcelamentoProdutosServicos({
         const parcelasProduto = coletarParcelasBucket("produtos").filter(parcela => parcela.valor > 0);
         const parcelasServico = coletarParcelasBucket("servicos").filter(parcela => parcela.valor > 0);
 
+        // Apenas as que serao enviadas (nao ignoradas) contam para fechar o total
+        const parcelasProdutoEnvio = parcelasProduto.filter(p => !p.ignorar);
+        const parcelasServicoEnvio = parcelasServico.filter(p => !p.ignorar);
+
         const totalProdutos = vvSomarParcelasControle(parcelasProduto);
         const totalServicos = vvSomarParcelasControle(parcelasServico);
         const diffProdutos = Math.abs(vvRound2ControleParcelas(totalProdutosTarget - totalProdutos));
         const diffServicos = Math.abs(vvRound2ControleParcelas(totalServicosTarget - totalServicos));
 
-        if (totalProdutosTarget > 0 && !parcelasProduto.length) {
-          alert("Adicione pelo menos uma parcela para os produtos.");
+        if (totalProdutosTarget > 0 && !parcelasProdutoEnvio.length) {
+          alert("Adicione pelo menos uma parcela (nao ignorada) para os produtos.");
           return;
         }
 
-        if (totalServicosTarget > 0 && !parcelasServico.length) {
-          alert("Adicione pelo menos uma parcela para os servicos.");
+        if (totalServicosTarget > 0 && !parcelasServicoEnvio.length) {
+          alert("Adicione pelo menos uma parcela (nao ignorada) para os servicos.");
           return;
         }
 
@@ -5549,6 +5607,3 @@ async function enviarOSServico({
 }
 /* Expor global */
 window.enviarOSServico = enviarOSServico;
-
-
-
