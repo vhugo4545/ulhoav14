@@ -210,6 +210,97 @@ function gerarNumeroPedidoUnico() {
   .vv-btn:hover{ background:#f8fafc; }
   .vv-btn.primary{ background:#2563eb; border-color:#2563eb; color:#fff; }
   .vv-btn.primary:disabled{ opacity:.6; cursor:not-allowed; }
+  .vv-transfer-grid{
+    display:grid;
+    gap:12px;
+    grid-template-columns:repeat(auto-fit,minmax(380px,1fr));
+    align-items:start;
+  }
+  .vv-transfer-panel{
+    display:grid;
+    gap:12px;
+    border:1px solid #e2e8f0;
+    border-radius:14px;
+    padding:14px;
+    background:#fff;
+    min-height:320px;
+  }
+  .vv-transfer-summary{
+    display:grid;
+    gap:8px;
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    padding:12px;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    background:#f8fafc;
+  }
+  .vv-transfer-list{
+    min-height:180px;
+    display:grid;
+    gap:10px;
+    padding:10px;
+    border:2px dashed #cbd5e1;
+    border-radius:12px;
+    background:#f8fbff;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .vv-transfer-list.is-over{
+    border-color:#2563eb;
+    background:#eff6ff;
+  }
+  .vv-transfer-empty{
+    margin:0;
+    color:#64748b;
+    font-size:13px;
+    text-align:center;
+    padding:12px 8px;
+  }
+  .vv-parcela-card{
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    padding:12px;
+    background:#fff;
+    box-shadow:0 2px 8px rgba(15,23,42,.05);
+  }
+  .vv-parcela-card.is-dragging{
+    opacity:.6;
+  }
+  .vv-parcela-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .vv-drag-handle{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    color:#475569;
+    font-size:12px;
+    font-weight:600;
+    cursor:grab;
+    user-select:none;
+  }
+  .vv-transfer-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .vv-btn.danger{
+    color:#b42318;
+    border-color:#f5b5b5;
+    background:#fff5f5;
+  }
+  @media (max-width: 900px){
+    .vv-modal{
+      width:min(96vw, 1500px);
+    }
+    .vv-footer{
+      flex-direction:column;
+      align-items:stretch;
+    }
+  }
   `;
   document.head.appendChild(style);
 })();
@@ -564,95 +655,475 @@ async function verificarClienteEAtualizar() {
   }
 }
 
-function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistentes = []) {
-  return new Promise((resolveParcelas) => {
-    const parseBRL = (s) => {
-      if (typeof vv_parseBRL === "function") return vv_parseBRL(s || "0");
-      return Number(
-        String(s || "0")
-          .replace(/\u00A0/g, " ")
-          .replace(/[^\d,.-]/g, "")
-          .replace(/\./g, "")
-          .replace(",", ".")
-      ) || 0;
-    };
+const VV_CONDICOES_PAGTO_PARCELAS = [
+  { value: "avista", label: "3 dias apos finalizar instalacao completa." },
+  { value: "na-retirada", label: "3 dias apos finalizar instalacao da estrutura." },
+  { value: "30-dias", label: "3 dias apos finalizar instalacao dos vidros." },
+  { value: "entrada+30", label: "Na retirada/entrega do produto." },
+  { value: "personalizado", label: "Personalizado" }
+];
 
-    const fmtBRL = (n) => {
-      if (typeof vv_fmtBRL === "function") return vv_fmtBRL(Number(n || 0));
-      return `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
-    };
+function vvParseBRLControleParcelas(valor) {
+  if (typeof vv_parseBRL === "function") return vv_parseBRL(valor || "0");
+  return Number(
+    String(valor || "0")
+      .replace(/\u00A0/g, " ")
+      .replace(/[^\d,.-]/g, "")
+      .replace(/\./g, "")
+      .replace(",", ".")
+  ) || 0;
+}
 
-    async function salvarParcelasServicoNoServidor(parcelasServico = []) {
-      try {
-        const idProposta = new URLSearchParams(window.location.search).get("id");
-        if (!idProposta) {
-          console.warn("⚠️ ID da proposta não encontrado na URL. Parcelas de serviço não foram salvas no servidor.");
-          return null;
-        }
+function vvFmtBRLControleParcelas(valor) {
+  if (typeof vv_fmtBRL === "function") return vv_fmtBRL(Number(valor || 0));
+  return `R$ ${Number(valor || 0).toFixed(2).replace(".", ",")}`;
+}
 
-        const propostaBase = window.propostaEmEdicao || window.propostaAtual;
-        if (!propostaBase || typeof propostaBase !== "object") {
-          console.warn("⚠️ Proposta base não encontrada em memória. Parcelas de serviço não foram salvas no servidor.");
-          return null;
-        }
+function vvRound2ControleParcelas(valor) {
+  if (typeof vv_round2 === "function") return vv_round2(valor);
+  return Math.round((Number(valor) || 0) * 100) / 100;
+}
 
-        const payload = JSON.parse(JSON.stringify(propostaBase));
-        payload.camposFormulario = payload.camposFormulario || {};
-        payload.camposFormulario.parcelasServico = parcelasServico;
+function vvCondicaoEhPersonalizadaParcelas(condicao = "") {
+  const valor = String(condicao || "").trim();
+  if (!valor) return false;
+  return !VV_CONDICOES_PAGTO_PARCELAS.some(op => op.value === valor);
+}
 
-        console.group("💾 [salvarParcelasServicoNoServidor]");
-        console.log("idProposta:", idProposta);
-        console.log("parcelasServico que serão salvas:", JSON.parse(JSON.stringify(parcelasServico || [])));
-        console.log("payload.camposFormulario.parcelasServico:", JSON.parse(JSON.stringify(payload.camposFormulario.parcelasServico || [])));
-        console.groupEnd();
+function vvCriarSelectCondicaoParcelas(className = "condicao-pagto") {
+  const select = document.createElement("select");
+  select.className = `form-select ${className}`;
 
-        const resposta = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${idProposta}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
+  const optPlaceholder = document.createElement("option");
+  optPlaceholder.value = "";
+  optPlaceholder.disabled = true;
+  optPlaceholder.selected = true;
+  optPlaceholder.textContent = "Selecione...";
+  select.appendChild(optPlaceholder);
 
-        const resultado = await resposta.json();
+  VV_CONDICOES_PAGTO_PARCELAS.forEach(op => {
+    const option = document.createElement("option");
+    option.value = op.value;
+    option.textContent = op.label;
+    select.appendChild(option);
+  });
 
-        if (!resposta.ok) {
-          throw new Error(resultado?.erro || resultado?.message || "Falha ao salvar parcelas de serviço.");
-        }
+  return select;
+}
 
-        if (window.propostaEmEdicao) {
-          window.propostaEmEdicao.camposFormulario = window.propostaEmEdicao.camposFormulario || {};
-          window.propostaEmEdicao.camposFormulario.parcelasServico = parcelasServico;
-        }
+function vvCriarInputCondicaoParcelas(className = "condicao-pagto", valor = "") {
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = `form-control ${className}`;
+  input.placeholder = "Descreva a condicao de pagamento...";
+  input.value = valor || "Personalizado - ";
+  return input;
+}
 
-        if (window.propostaAtual) {
-          window.propostaAtual.camposFormulario = window.propostaAtual.camposFormulario || {};
-          window.propostaAtual.camposFormulario.parcelasServico = parcelasServico;
-        }
+function vvMontarCampoCondicaoParcelas(wrapper, {
+  className = "condicao-pagto",
+  valor = "",
+  onChange = null
+} = {}) {
+  const registrar = (el) => {
+    if (!el || typeof onChange !== "function") return el;
+    el.addEventListener("input", onChange);
+    el.addEventListener("change", onChange);
+    return el;
+  };
 
-        console.log("✅ Parcelas de serviço salvas no servidor:", parcelasServico);
-        return resultado;
-      } catch (erro) {
-        console.error("❌ Erro ao salvar parcelas de serviço no servidor:", erro);
-        throw erro;
+  wrapper.innerHTML = "";
+
+  if (vvCondicaoEhPersonalizadaParcelas(valor)) {
+    const input = registrar(vvCriarInputCondicaoParcelas(className, valor));
+    wrapper.appendChild(input);
+    return input;
+  }
+
+  const select = vvCriarSelectCondicaoParcelas(className);
+  if (valor) {
+    select.value = valor;
+  } else {
+    select.selectedIndex = 0;
+  }
+
+  select.addEventListener("change", () => {
+    if (select.value === "personalizado") {
+      const input = registrar(vvCriarInputCondicaoParcelas(className));
+      wrapper.innerHTML = "";
+      wrapper.appendChild(input);
+      requestAnimationFrame(() => input.focus());
+      if (typeof onChange === "function") onChange();
+      return;
+    }
+
+    if (typeof onChange === "function") onChange();
+  });
+
+  wrapper.appendChild(registrar(select));
+  return select;
+}
+
+function vvNormalizarParcelaControle(parcela = {}) {
+  const valorBruto =
+    parcela?.valor ??
+    parcela?.valor_digitado ??
+    parcela?.valor_formatado ??
+    0;
+
+  return {
+    tipo_monetario: String(parcela?.tipo_monetario ?? parcela?.tipo ?? "").trim(),
+    condicao_pagto: String(parcela?.condicao_pagto ?? parcela?.condicao ?? "").trim(),
+    valor: vvRound2ControleParcelas(vvParseBRLControleParcelas(valorBruto)),
+    vencimento: String(parcela?.vencimento ?? parcela?.data ?? parcela?.previsao ?? "").trim()
+  };
+}
+
+function vvSomarParcelasControle(parcelas = []) {
+  return vvRound2ControleParcelas(
+    (parcelas || []).reduce((acc, parcela) => acc + Number(parcela?.valor || 0), 0)
+  );
+}
+
+function vvSerializarParcelasProdutoParaFormulario(parcelasProduto = []) {
+  return (parcelasProduto || [])
+    .map(vvNormalizarParcelaControle)
+    .filter(parcela => parcela.valor > 0)
+    .map(parcela => ({
+      tipo: parcela.tipo_monetario || "",
+      condicao: parcela.condicao_pagto || "",
+      valor: vvFmtBRLControleParcelas(parcela.valor),
+      data: parcela.vencimento || ""
+    }));
+}
+
+function vvSerializarParcelasServicoParaServidor(parcelasServico = []) {
+  return (parcelasServico || [])
+    .map(vvNormalizarParcelaControle)
+    .filter(parcela => parcela.valor > 0)
+    .map(parcela => ({
+      tipo_monetario: parcela.tipo_monetario || "",
+      condicao_pagto: parcela.condicao_pagto || "",
+      valor: vvRound2ControleParcelas(parcela.valor),
+      previsao: parcela.vencimento || "",
+      vencimento: parcela.vencimento || ""
+    }));
+}
+
+function vvLerParcelasFormularioPrincipal() {
+  const linhas = [...document.querySelectorAll("#listaParcelas .row")];
+  return linhas
+    .map(row => {
+      const condSelect = row.querySelector("select.condicao-pagto");
+      const condInput = row.querySelector("input.condicao-pagto");
+      return vvNormalizarParcelaControle({
+        tipo: row.querySelector(".tipo-monetario")?.value || "",
+        condicao: condSelect?.value || condInput?.value || row.querySelector(".condicao-pagto")?.value || "",
+        valor: row.querySelector(".valor-parcela")?.value || "",
+        data: row.querySelector(".data-parcela")?.value || ""
+      });
+    })
+    .filter(parcela =>
+      parcela.valor > 0 ||
+      parcela.vencimento ||
+      parcela.tipo_monetario ||
+      parcela.condicao_pagto
+    );
+}
+
+function vvCriarLinhaParcelaFormularioFallback() {
+  const row = document.createElement("div");
+  row.className = "row g-2 align-items-end mb-2";
+  row.innerHTML = `
+    <div class="col-3 col-lg-2">
+      <label class="form-label mb-0">Tipo Monetario</label>
+      <select class="form-select tipo-monetario">
+        <option value="" disabled selected>Selecione...</option>
+        <option value="PIX">Pix</option>
+        <option value="DIN">Dinheiro</option>
+        <option value="CRCP">Cartao Parcelado</option>
+        <option value="CRC">Cartao de Credito</option>
+        <option value="CRD">Cartao de Debito</option>
+        <option value="BOLR">Boleto Recorrente</option>
+        <option value="BOLV">Boleto a Vista</option>
+        <option value="PER">Permuta</option>
+      </select>
+    </div>
+    <div class="col-4 col-lg-3">
+      <label class="form-label mb-0">Condicao de Pagto</label>
+      <div class="condicao-wrapper"></div>
+    </div>
+    <div class="col-3 col-lg-2">
+      <label class="form-label mb-0">Valor</label>
+      <input type="text" class="form-control valor-parcela" placeholder="Ex: 1000,00">
+    </div>
+    <div class="col-2 col-lg-3">
+      <label class="form-label mb-0">Vencimento</label>
+      <input type="date" class="form-control data-parcela">
+    </div>
+    <div class="col-12 col-lg-2">
+      <button type="button" class="btn btn-outline-danger w-100 btn-remover-parcela-formulario">Remover</button>
+    </div>
+  `;
+
+  const wrapper = row.querySelector(".condicao-wrapper");
+  vvMontarCampoCondicaoParcelas(wrapper, { className: "condicao-pagto" });
+
+  row.querySelector(".btn-remover-parcela-formulario")?.addEventListener("click", () => {
+    row.remove();
+    if (typeof atualizarValoresParcelas === "function") atualizarValoresParcelas();
+  });
+
+  return row;
+}
+
+function vvAplicarParcelaProdutoNaLinhaFormulario(row, parcela = {}) {
+  const normalizada = vvNormalizarParcelaControle(parcela);
+  const tipoSelect = row.querySelector(".tipo-monetario");
+  const valorInput = row.querySelector(".valor-parcela");
+  const dataInput = row.querySelector(".data-parcela");
+  const condWrapper = row.querySelector(".condicao-wrapper");
+
+  if (tipoSelect) tipoSelect.value = normalizada.tipo_monetario || "";
+  if (valorInput) valorInput.value = normalizada.valor > 0 ? vvFmtBRLControleParcelas(normalizada.valor) : "";
+  if (dataInput) dataInput.value = normalizada.vencimento || "";
+  if (condWrapper) {
+    vvMontarCampoCondicaoParcelas(condWrapper, {
+      className: "condicao-pagto",
+      valor: normalizada.condicao_pagto || ""
+    });
+  }
+}
+
+function vvAtualizarListaParcelasFormulario(parcelasProduto = []) {
+  const lista = document.getElementById("listaParcelas");
+  if (!lista) {
+    console.warn("[parcelas] #listaParcelas nao encontrado para aplicar parcelas de produtos.");
+    return false;
+  }
+
+  const parcelasNormalizadas = (parcelasProduto || [])
+    .map(vvNormalizarParcelaControle)
+    .filter(parcela => parcela.valor > 0);
+
+  lista.innerHTML = "";
+
+  const parcelamentoContainer = document.getElementById("parcelamentoContainer");
+  if (parcelamentoContainer) {
+    parcelamentoContainer.style.display = "block";
+  }
+
+  parcelasNormalizadas.forEach(parcela => {
+    let row = null;
+
+    if (typeof adicionarParcela === "function") {
+      adicionarParcela();
+      const linhas = document.querySelectorAll("#listaParcelas .row");
+      row = linhas[linhas.length - 1] || null;
+    }
+
+    if (!row) {
+      row = vvCriarLinhaParcelaFormularioFallback();
+      lista.appendChild(row);
+      if (typeof aplicarEventosParcela === "function") {
+        aplicarEventosParcela(row);
       }
     }
 
-    const parcelasSalvasDaProposta =
-      Array.isArray(window.propostaEmEdicao?.camposFormulario?.parcelasServico)
-        ? window.propostaEmEdicao.camposFormulario.parcelasServico
-        : Array.isArray(window.propostaAtual?.camposFormulario?.parcelasServico)
-          ? window.propostaAtual.camposFormulario.parcelasServico
-          : [];
+    vvAplicarParcelaProdutoNaLinhaFormulario(row, parcela);
+  });
 
-    const parcelasParaUsar =
-      Array.isArray(parcelasExistentes) && parcelasExistentes.length > 0
-        ? parcelasExistentes
-        : parcelasSalvasDaProposta;
+  if (typeof atualizarValoresParcelas === "function") {
+    atualizarValoresParcelas();
+  }
 
-    console.group("🪟 [abrirPopupParcelamentoServicos] abertura");
-    console.log("valorTotalServicos:", valorTotalServicos);
-    console.log("parcelasExistentes parâmetro:", JSON.parse(JSON.stringify(parcelasExistentes || [])));
-    console.log("parcelasSalvasDaProposta:", JSON.parse(JSON.stringify(parcelasSalvasDaProposta || [])));
-    console.log("parcelasParaUsar:", JSON.parse(JSON.stringify(parcelasParaUsar || [])));
+  return true;
+}
+
+async function vvSalvarParcelamentoOmieNoServidor({
+  parcelasProduto = [],
+  parcelasServico = []
+} = {}) {
+  try {
+    const idProposta = new URLSearchParams(window.location.search).get("id");
+    if (!idProposta) {
+      console.warn("[parcelas] ID da proposta nao encontrado na URL. Parcelas nao foram salvas no servidor.");
+      return null;
+    }
+
+    const propostaBase = window.propostaEmEdicao || window.propostaAtual;
+    if (!propostaBase || typeof propostaBase !== "object") {
+      console.warn("[parcelas] Proposta base nao encontrada em memoria. Parcelas nao foram salvas no servidor.");
+      return null;
+    }
+
+    const parcelasProdutoFormulario = vvSerializarParcelasProdutoParaFormulario(parcelasProduto);
+    const parcelasServicoServidor = vvSerializarParcelasServicoParaServidor(parcelasServico);
+
+    const payload = JSON.parse(JSON.stringify(propostaBase));
+    payload.camposFormulario = payload.camposFormulario || {};
+    payload.camposFormulario.parcelas = parcelasProdutoFormulario;
+    payload.camposFormulario.parcelasServico = parcelasServicoServidor;
+
+    console.group("[parcelas] salvando no servidor");
+    console.log("idProposta:", idProposta);
+    console.log("parcelasProdutoFormulario:", JSON.parse(JSON.stringify(parcelasProdutoFormulario || [])));
+    console.log("parcelasServicoServidor:", JSON.parse(JSON.stringify(parcelasServicoServidor || [])));
+    console.groupEnd();
+
+    const resposta = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${idProposta}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const resultado = await resposta.json();
+
+    if (!resposta.ok) {
+      throw new Error(resultado?.erro || resultado?.message || "Falha ao salvar parcelamento de produtos e servicos.");
+    }
+
+    if (window.propostaEmEdicao) {
+      window.propostaEmEdicao.camposFormulario = window.propostaEmEdicao.camposFormulario || {};
+      window.propostaEmEdicao.camposFormulario.parcelas = parcelasProdutoFormulario;
+      window.propostaEmEdicao.camposFormulario.parcelasServico = parcelasServicoServidor;
+    }
+
+    if (window.propostaAtual) {
+      window.propostaAtual.camposFormulario = window.propostaAtual.camposFormulario || {};
+      window.propostaAtual.camposFormulario.parcelas = parcelasProdutoFormulario;
+      window.propostaAtual.camposFormulario.parcelasServico = parcelasServicoServidor;
+    }
+
+    return resultado;
+  } catch (erro) {
+    console.error("[parcelas] erro ao salvar no servidor:", erro);
+    throw erro;
+  }
+}
+
+function vvSubtrairParcelasServicoDeParcelasProduto(parcelasProduto = [], parcelasServico = []) {
+  const produtos = (parcelasProduto || []).map(vvNormalizarParcelaControle);
+  const servicos = (parcelasServico || []).map(vvNormalizarParcelaControle).filter(parcela => parcela.valor > 0);
+
+  for (const servico of servicos) {
+    let restante = vvRound2ControleParcelas(servico.valor);
+
+    const indicesPreferenciais = [];
+    produtos.forEach((produto, index) => {
+      if (produto.valor > 0 && produto.vencimento && produto.vencimento === servico.vencimento) {
+        indicesPreferenciais.push(index);
+      }
+    });
+
+    produtos.forEach((produto, index) => {
+      if (produto.valor > 0 && !indicesPreferenciais.includes(index)) {
+        indicesPreferenciais.push(index);
+      }
+    });
+
+    for (const index of indicesPreferenciais) {
+      if (restante <= 0.009) break;
+      const produto = produtos[index];
+      const abatido = Math.min(produto.valor, restante);
+      produto.valor = vvRound2ControleParcelas(produto.valor - abatido);
+      restante = vvRound2ControleParcelas(restante - abatido);
+    }
+
+    if (restante > 0.02) {
+      return {
+        ok: false,
+        parcelasProdutoAjustadas: (parcelasProduto || []).map(vvNormalizarParcelaControle)
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    parcelasProdutoAjustadas: produtos.filter(produto => produto.valor > 0.009)
+  };
+}
+
+function vvEscolherParcelasIniciaisProdutosServicos({
+  valorTotalProdutos = 0,
+  valorTotalServicos = 0,
+  parcelasProduto = [],
+  parcelasServico = []
+} = {}) {
+  let parcelasProdutoIniciais = (parcelasProduto || []).map(vvNormalizarParcelaControle).filter(parcela => parcela.valor > 0);
+  const parcelasServicoIniciais = (parcelasServico || []).map(vvNormalizarParcelaControle).filter(parcela => parcela.valor > 0);
+
+  const somaProduto = vvSomarParcelasControle(parcelasProdutoIniciais);
+  const somaServico = vvSomarParcelasControle(parcelasServicoIniciais);
+
+  if (!parcelasProdutoIniciais.length && valorTotalProdutos > 0) {
+    parcelasProdutoIniciais = [{
+      tipo_monetario: "",
+      condicao_pagto: "",
+      valor: vvRound2ControleParcelas(valorTotalProdutos),
+      vencimento: ""
+    }];
+  }
+
+  if (
+    Math.abs(somaProduto - valorTotalProdutos) < 0.02 &&
+    Math.abs(somaServico - valorTotalServicos) < 0.02
+  ) {
+    return {
+      origem: "persistido",
+      parcelasProdutoIniciais,
+      parcelasServicoIniciais
+    };
+  }
+
+  const somaLegadoEsperada = vvRound2ControleParcelas(valorTotalProdutos + valorTotalServicos);
+  if (
+    parcelasServicoIniciais.length > 0 &&
+    Math.abs(somaServico - valorTotalServicos) < 0.02 &&
+    Math.abs(somaProduto - somaLegadoEsperada) < 0.02
+  ) {
+    const legado = vvSubtrairParcelasServicoDeParcelasProduto(parcelasProdutoIniciais, parcelasServicoIniciais);
+    const somaLegadoProdutos = vvSomarParcelasControle(legado.parcelasProdutoAjustadas || []);
+
+    if (legado.ok && Math.abs(somaLegadoProdutos - valorTotalProdutos) < 0.02) {
+      return {
+        origem: "legado",
+        parcelasProdutoIniciais: legado.parcelasProdutoAjustadas,
+        parcelasServicoIniciais
+      };
+    }
+  }
+
+  return {
+    origem: "formulario",
+    parcelasProdutoIniciais,
+    parcelasServicoIniciais
+  };
+}
+
+function abrirPopupParcelamentoProdutosServicos({
+  valorTotalProdutos = 0,
+  valorTotalServicos = 0,
+  parcelasProdutoExistentes = [],
+  parcelasServicoExistentes = []
+} = {}) {
+  return new Promise((resolveParcelas) => {
+    const totalProdutosTarget = vvRound2ControleParcelas(valorTotalProdutos);
+    const totalServicosTarget = vvRound2ControleParcelas(valorTotalServicos);
+
+    const inicial = vvEscolherParcelasIniciaisProdutosServicos({
+      valorTotalProdutos: totalProdutosTarget,
+      valorTotalServicos: totalServicosTarget,
+      parcelasProduto: parcelasProdutoExistentes,
+      parcelasServico: parcelasServicoExistentes
+    });
+
+    console.group("[parcelas] abrirPopupParcelamentoProdutosServicos");
+    console.log("valorTotalProdutos:", totalProdutosTarget);
+    console.log("valorTotalServicos:", totalServicosTarget);
+    console.log("origem inicial:", inicial.origem);
+    console.log("parcelasProdutoIniciais:", JSON.parse(JSON.stringify(inicial.parcelasProdutoIniciais || [])));
+    console.log("parcelasServicoIniciais:", JSON.parse(JSON.stringify(inicial.parcelasServicoIniciais || [])));
     console.groupEnd();
 
     const bd = document.createElement("div");
@@ -660,49 +1131,83 @@ function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistent
 
     const md = document.createElement("div");
     md.className = "vv-modal";
-    md.style.maxWidth = "1100px";
+    md.style.maxWidth = "1400px";
     md.style.width = "96vw";
 
     const hd = document.createElement("header");
     hd.innerHTML = `
-      <h3>Parcelamento dos Serviços</h3>
-      <div class="vv-help" style="margin-top:4px;">
-        Informe como o valor de serviços será parcelado. Total de serviços: <b>${fmtBRL(valorTotalServicos)}</b>
+      <div style="display:grid; gap:4px;">
+        <h3>Controle de Parcelas: Produtos e Servicos</h3>
+        <div class="vv-help" style="margin:0;">
+          Arraste parcelas entre produtos e servicos. Quando o valor arrastado passar do que falta no destino, a parcela sera dividida automaticamente.
+        </div>
       </div>
     `;
 
     const by = document.createElement("div");
     by.className = "vv-body";
-
     by.innerHTML = `
       <div style="display:grid; gap:12px;">
-        <div id="vv-resumo-servicos" style="
-          display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px;
-          padding:12px; border:1px solid #e5e7eb; border-radius:12px; background:#f8fafc;
-        ">
-          <div>Total de serviços: <b id="vv-serv-total">${fmtBRL(valorTotalServicos)}</b></div>
-          <div>Total parcelado: <b id="vv-serv-somado">${fmtBRL(0)}</b></div>
-          <div>Diferença: <b id="vv-serv-diferenca">${fmtBRL(valorTotalServicos)}</b></div>
-          <div>Status: <b id="vv-serv-status" style="color:#a61b1b;">Pendente</b></div>
+        <div class="vv-transfer-summary">
+          <div>Total alvo produtos: <b id="vv-total-target-produtos">${vvFmtBRLControleParcelas(totalProdutosTarget)}</b></div>
+          <div>Total alvo servicos: <b id="vv-total-target-servicos">${vvFmtBRLControleParcelas(totalServicosTarget)}</b></div>
+          <div>Total combinado: <b id="vv-total-target-geral">${vvFmtBRLControleParcelas(totalProdutosTarget + totalServicosTarget)}</b></div>
+          <div>Status geral: <b id="vv-status-geral" style="color:#a61b1b;">Pendente</b></div>
         </div>
-
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button type="button" class="vv-btn" id="vv-add-parcela-servico">Adicionar parcela</button>
-          <button type="button" class="vv-btn" id="vv-gerar-1x-servico">Gerar 1 parcela</button>
-          <button type="button" class="vv-btn" id="vv-gerar-2x-servico">Gerar 2 parcelas iguais</button>
+        <div class="vv-transfer-grid">
+          <section class="vv-transfer-panel">
+            <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+              <div>
+                <h4 style="margin:0;">Produtos</h4>
+                <div class="vv-help" style="margin:4px 0 0 0;">Essas parcelas vao para o pedido de produtos da Omie.</div>
+              </div>
+              <div class="vv-transfer-actions">
+                <button type="button" class="vv-btn" id="vv-add-parcela-produto">Adicionar</button>
+                <button type="button" class="vv-btn" id="vv-gerar-1x-produto">Gerar 1x</button>
+                <button type="button" class="vv-btn" id="vv-gerar-2x-produto">Gerar 2x</button>
+              </div>
+            </div>
+            <div class="vv-transfer-summary">
+              <div>Total alvo: <b id="vv-prod-alvo">${vvFmtBRLControleParcelas(totalProdutosTarget)}</b></div>
+              <div>Total parcelado: <b id="vv-prod-somado">${vvFmtBRLControleParcelas(0)}</b></div>
+              <div>Diferenca: <b id="vv-prod-diferenca">${vvFmtBRLControleParcelas(totalProdutosTarget)}</b></div>
+              <div>Status: <b id="vv-prod-status" style="color:#a61b1b;">Pendente</b></div>
+            </div>
+            <div class="vv-transfer-list" data-bucket-list="produtos"></div>
+          </section>
+          <section class="vv-transfer-panel">
+            <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+              <div>
+                <h4 style="margin:0;">Servicos</h4>
+                <div class="vv-help" style="margin:4px 0 0 0;">Essas parcelas vao para a OS de servicos.</div>
+              </div>
+              <div class="vv-transfer-actions">
+                <button type="button" class="vv-btn" id="vv-add-parcela-servico">Adicionar</button>
+                <button type="button" class="vv-btn" id="vv-gerar-1x-servico">Gerar 1x</button>
+                <button type="button" class="vv-btn" id="vv-gerar-2x-servico">Gerar 2x</button>
+              </div>
+            </div>
+            <div class="vv-transfer-summary">
+              <div>Total alvo: <b id="vv-serv-alvo">${vvFmtBRLControleParcelas(totalServicosTarget)}</b></div>
+              <div>Total parcelado: <b id="vv-serv-somado">${vvFmtBRLControleParcelas(0)}</b></div>
+              <div>Diferenca: <b id="vv-serv-diferenca">${vvFmtBRLControleParcelas(totalServicosTarget)}</b></div>
+              <div>Status: <b id="vv-serv-status" style="color:#a61b1b;">Pendente</b></div>
+            </div>
+            <div class="vv-transfer-list" data-bucket-list="servicos"></div>
+          </section>
         </div>
-
-        <div id="listaParcelasServicos"></div>
       </div>
     `;
 
     const ft = document.createElement("div");
     ft.className = "vv-footer";
     ft.innerHTML = `
-      <div class="vv-help">As parcelas abaixo representam apenas o valor de serviços.</div>
-      <div style="display:flex; gap:8px;">
-        <button class="vv-btn" id="vv-cancelar-parcelas-servico">Cancelar</button>
-        <button class="vv-btn primary" id="vv-confirmar-parcelas-servico">Confirmar parcelamento</button>
+      <div class="vv-help" id="vv-help-controle-parcelas">
+        As parcelas de produtos atualizam o formulario principal. As de servicos sao gravadas para o envio da OS.
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="vv-btn" id="vv-cancelar-controle-parcelas">Cancelar</button>
+        <button class="vv-btn primary" id="vv-confirmar-controle-parcelas">Confirmar parcelamento</button>
       </div>
     `;
 
@@ -712,271 +1217,410 @@ function abrirPopupParcelamentoServicos(valorTotalServicos = 0, parcelasExistent
     bd.appendChild(md);
     document.body.appendChild(bd);
 
-    const lista = by.querySelector("#listaParcelasServicos");
-    const $somado = by.querySelector("#vv-serv-somado");
-    const $diferenca = by.querySelector("#vv-serv-diferenca");
-    const $status = by.querySelector("#vv-serv-status");
+    const buckets = {
+      produtos: {
+        label: "Produtos",
+        target: totalProdutosTarget,
+        list: by.querySelector('[data-bucket-list="produtos"]'),
+        sumEl: by.querySelector("#vv-prod-somado"),
+        diffEl: by.querySelector("#vv-prod-diferenca"),
+        statusEl: by.querySelector("#vv-prod-status")
+      },
+      servicos: {
+        label: "Servicos",
+        target: totalServicosTarget,
+        list: by.querySelector('[data-bucket-list="servicos"]'),
+        sumEl: by.querySelector("#vv-serv-somado"),
+        diffEl: by.querySelector("#vv-serv-diferenca"),
+        statusEl: by.querySelector("#vv-serv-status")
+      }
+    };
 
-    function criarLinhaParcelaServico({
-      tipo_monetario = "",
-      condicao_pagto = "",
-      valor = "",
-      vencimento = ""
-    } = {}) {
-      console.group("➕ [criarLinhaParcelaServico]");
-      console.log("dados recebidos:", {
-        tipo_monetario,
-        condicao_pagto,
-        valor,
-        vencimento
-      });
-      console.groupEnd();
+    const geralStatusEl = by.querySelector("#vv-status-geral");
+    const helpControleEl = ft.querySelector("#vv-help-controle-parcelas");
+    let draggedRow = null;
 
-      const row = document.createElement("div");
-      row.className = "row g-2 align-items-end mb-2";
-      row.innerHTML = `
-        <div class="col-3 col-lg-2">
-          <label class="form-label mb-0">Tipo Monetário</label>
-          <select class="form-select tipo-monetario-servico">
-            <option value="" disabled ${!tipo_monetario ? "selected" : ""}>Selecione…</option>
-            <option value="PIX">Pix</option>
-            <option value="DIN">Dinheiro</option>
-            <option value="CRCP">Cartão Parcelado</option>
-            <option value="CRC">Cartão de Crédito</option>
-            <option value="CRD">Cartão de Débito</option>
-            <option value="BOLR">Boleto Recorrente</option>
-            <option value="BOLV">Boleto à Vista</option>
-            <option value="PER">Permuta</option>
-          </select>
+    function criarLinhaParcelaCard(parcela = {}, bucket = "produtos") {
+      const normalizada = vvNormalizarParcelaControle(parcela);
+
+      const card = document.createElement("div");
+      card.className = "vv-parcela-card";
+      card.draggable = true;
+      card.dataset.bucket = bucket;
+
+      card.innerHTML = `
+        <div class="vv-parcela-head">
+          <span class="vv-drag-handle">Arraste para transferir</span>
+          <button type="button" class="vv-btn danger vv-remover-parcela-transfer">Remover</button>
         </div>
-
-        <div class="col-4 col-lg-3">
-          <label class="form-label mb-0">Condição de Pagto</label>
-          <div class="condicao-wrapper">
-            <select class="form-select condicao-pagto-servico">
-              <option value="" disabled ${!condicao_pagto ? "selected" : ""}>Selecione…</option>
-              <option value="avista">3 dias após finalizar instalação completa.</option>
-              <option value="na-retirada">3 dias após finalizar instalação da estrutura.</option>
-              <option value="30-dias">3 dias após finalizar instalação dos vidros.</option>
-              <option value="entrada+30">Na retirada/entrega do produto.</option>
-              <option value="personalizado">Personalizado</option>
+        <div class="row g-2 align-items-end">
+          <div class="col-12 col-xl-3">
+            <label class="form-label mb-0">Tipo Monetario</label>
+            <select class="form-select tipo-monetario-transfer">
+              <option value="" disabled selected>Selecione...</option>
+              <option value="PIX">Pix</option>
+              <option value="DIN">Dinheiro</option>
+              <option value="CRCP">Cartao Parcelado</option>
+              <option value="CRC">Cartao de Credito</option>
+              <option value="CRD">Cartao de Debito</option>
+              <option value="BOLR">Boleto Recorrente</option>
+              <option value="BOLV">Boleto a Vista</option>
+              <option value="PER">Permuta</option>
             </select>
           </div>
-        </div>
-
-        <div class="col-3 col-lg-2">
-          <label class="form-label mb-0">Valor</label>
-          <input type="text" class="form-control valor-parcela-servico" placeholder="Ex: 1000,00" value="${valor !== "" ? fmtBRL(valor) : ""}">
-        </div>
-
-        <div class="col-2 col-lg-3">
-          <label class="form-label mb-0">Vencimento</label>
-          <input type="date" class="form-control data-parcela-servico" value="${vencimento || ""}">
-        </div>
-
-        <div class="col-12 col-lg-2">
-          <button type="button" class="btn btn-outline-danger w-100 btn-remover-parcela-servico">
-            Remover
-          </button>
+          <div class="col-12 col-xl-4">
+            <label class="form-label mb-0">Condicao de Pagto</label>
+            <div class="condicao-wrapper-transfer"></div>
+          </div>
+          <div class="col-12 col-xl-2">
+            <label class="form-label mb-0">Valor</label>
+            <input type="text" class="form-control valor-parcela-transfer" placeholder="Ex: 1000,00">
+          </div>
+          <div class="col-12 col-xl-3">
+            <label class="form-label mb-0">Vencimento</label>
+            <input type="date" class="form-control data-parcela-transfer">
+          </div>
         </div>
       `;
 
-      const tipoSelect = row.querySelector(".tipo-monetario-servico");
-      const condicaoSelect = row.querySelector(".condicao-pagto-servico");
-      const valorInput = row.querySelector(".valor-parcela-servico");
-      const removerBtn = row.querySelector(".btn-remover-parcela-servico");
+      const tipoSelect = card.querySelector(".tipo-monetario-transfer");
+      const valorInput = card.querySelector(".valor-parcela-transfer");
+      const dataInput = card.querySelector(".data-parcela-transfer");
+      const wrapper = card.querySelector(".condicao-wrapper-transfer");
 
-      if (tipo_monetario) tipoSelect.value = tipo_monetario;
-      if (condicao_pagto) condicaoSelect.value = condicao_pagto;
+      if (tipoSelect) tipoSelect.value = normalizada.tipo_monetario || "";
+      if (valorInput) valorInput.value = normalizada.valor > 0 ? vvFmtBRLControleParcelas(normalizada.valor) : "";
+      if (dataInput) dataInput.value = normalizada.vencimento || "";
 
-      valorInput.addEventListener("input", atualizarResumoParcelasServicos);
-      valorInput.addEventListener("blur", () => {
-        valorInput.value = fmtBRL(parseBRL(valorInput.value || "0"));
-        atualizarResumoParcelasServicos();
+      vvMontarCampoCondicaoParcelas(wrapper, {
+        className: "condicao-pagto-transfer",
+        valor: normalizada.condicao_pagto || "",
+        onChange: atualizarResumoParcelasControle
       });
 
-      row.querySelector(".data-parcela-servico").addEventListener("change", () => {
-        console.log("📅 [popup serviços] data alterada:", row.querySelector(".data-parcela-servico")?.value || "");
-        atualizarResumoParcelasServicos();
+      tipoSelect?.addEventListener("change", atualizarResumoParcelasControle);
+      valorInput?.addEventListener("input", atualizarResumoParcelasControle);
+      valorInput?.addEventListener("blur", () => {
+        const valor = vvParseBRLControleParcelas(valorInput.value || "0");
+        valorInput.value = valor > 0 ? vvFmtBRLControleParcelas(valor) : "";
+        atualizarResumoParcelasControle();
+      });
+      dataInput?.addEventListener("change", atualizarResumoParcelasControle);
+
+      card.querySelector(".vv-remover-parcela-transfer")?.addEventListener("click", () => {
+        const bucketAtual = card.dataset.bucket || bucket;
+        card.remove();
+        atualizarEstadoLista(bucketAtual);
+        atualizarResumoParcelasControle();
       });
 
-      tipoSelect.addEventListener("change", atualizarResumoParcelasServicos);
-      condicaoSelect.addEventListener("change", atualizarResumoParcelasServicos);
-
-      removerBtn.addEventListener("click", () => {
-        row.remove();
-        atualizarResumoParcelasServicos();
+      card.addEventListener("dragstart", () => {
+        draggedRow = card;
+        card.classList.add("is-dragging");
       });
 
-      lista.appendChild(row);
-      atualizarResumoParcelasServicos();
+      card.addEventListener("dragend", () => {
+        card.classList.remove("is-dragging");
+        draggedRow = null;
+        Object.values(buckets).forEach(info => info.list.classList.remove("is-over"));
+      });
+
+      return card;
     }
 
-    function atualizarResumoParcelasServicos() {
-      const linhas = [...lista.querySelectorAll(".row")];
-      const totalParcelado = linhas.reduce((acc, row) => {
-        const v = parseBRL(row.querySelector(".valor-parcela-servico")?.value || "0");
-        return acc + v;
-      }, 0);
+    function coletarParcelasBucket(bucket) {
+      return [...buckets[bucket].list.querySelectorAll(".vv-parcela-card")]
+        .map(card => {
+          const condicaoEl = card.querySelector(".condicao-pagto-transfer");
+          return vvNormalizarParcelaControle({
+            tipo_monetario: card.querySelector(".tipo-monetario-transfer")?.value || "",
+            condicao_pagto: condicaoEl?.value || "",
+            valor: card.querySelector(".valor-parcela-transfer")?.value || "",
+            vencimento: card.querySelector(".data-parcela-transfer")?.value || ""
+          });
+        })
+        .filter(parcela =>
+          parcela.valor > 0 ||
+          parcela.vencimento ||
+          parcela.tipo_monetario ||
+          parcela.condicao_pagto
+        );
+    }
 
-      const snapshot = linhas.map((row, index) => ({
-        index,
-        tipo_monetario: row.querySelector(".tipo-monetario-servico")?.value || "",
-        condicao_pagto: row.querySelector(".condicao-pagto-servico")?.value || "",
-        valor_digitado: row.querySelector(".valor-parcela-servico")?.value || "",
-        valor_parseado: parseBRL(row.querySelector(".valor-parcela-servico")?.value || "0"),
-        data: row.querySelector(".data-parcela-servico")?.value || ""
-      }));
+    function atualizarEstadoLista(bucket) {
+      const info = buckets[bucket];
+      if (!info) return;
 
-      const diferenca = Number((valorTotalServicos - totalParcelado).toFixed(2));
-      const bate = Math.abs(diferenca) < 0.01;
+      let vazio = info.list.querySelector(".vv-transfer-empty");
+      const temCards = info.list.querySelector(".vv-parcela-card");
 
-      $somado.textContent = fmtBRL(totalParcelado);
-      $diferenca.textContent = fmtBRL(diferenca);
-
-      if (bate) {
-        $status.textContent = "Fechado";
-        $status.style.color = "#146c2e";
-      } else {
-        $status.textContent = diferenca > 0 ? "Faltando valor" : "Valor excedente";
-        $status.style.color = "#a61b1b";
+      if (!temCards && !vazio) {
+        vazio = document.createElement("p");
+        vazio.className = "vv-transfer-empty";
+        vazio.textContent = bucket === "produtos"
+          ? "Arraste parcelas para produtos ou crie novas."
+          : "Arraste parcelas para servicos ou crie novas.";
+        info.list.appendChild(vazio);
       }
 
-      console.group("🧾 [atualizarResumoParcelasServicos]");
-      console.table(snapshot);
-      console.log("valorTotalServicos:", valorTotalServicos);
-      console.log("totalParcelado:", totalParcelado);
-      console.log("diferenca:", diferenca);
-      console.log("status:", bate ? "Fechado" : (diferenca > 0 ? "Faltando valor" : "Valor excedente"));
-      console.groupEnd();
+      if (temCards && vazio) {
+        vazio.remove();
+      }
     }
 
-    function limparParcelasServicos() {
-      lista.innerHTML = "";
-      atualizarResumoParcelasServicos();
+    function adicionarLinhaNoBucket(bucket, parcela = {}) {
+      const card = criarLinhaParcelaCard(parcela, bucket);
+      buckets[bucket].list.appendChild(card);
+      atualizarEstadoLista(bucket);
+      atualizarResumoParcelasControle();
+      return card;
     }
 
-    function gerarParcelasIguais(qtd) {
-      limparParcelasServicos();
+    function limparBucket(bucket) {
+      buckets[bucket].list.innerHTML = "";
+      atualizarEstadoLista(bucket);
+      atualizarResumoParcelasControle();
+    }
+
+    function gerarParcelasIguais(bucket, qtd) {
       if (!qtd || qtd <= 0) return;
 
-      const base = Number((valorTotalServicos / qtd).toFixed(2));
+      const target = buckets[bucket].target;
+      const atuais = coletarParcelasBucket(bucket);
+      const outroBucket = bucket === "produtos" ? "servicos" : "produtos";
+      const referencia = atuais[0] || coletarParcelasBucket(outroBucket)[0] || {};
+
+      limparBucket(bucket);
+
       let acumulado = 0;
-
       for (let i = 0; i < qtd; i++) {
-        let valor = base;
+        let valor = vvRound2ControleParcelas(target / qtd);
         if (i === qtd - 1) {
-          valor = Number((valorTotalServicos - acumulado).toFixed(2));
+          valor = vvRound2ControleParcelas(target - acumulado);
         }
-        acumulado += valor;
+        acumulado = vvRound2ControleParcelas(acumulado + valor);
 
-        criarLinhaParcelaServico({
+        adicionarLinhaNoBucket(bucket, {
+          tipo_monetario: referencia.tipo_monetario || "",
+          condicao_pagto: referencia.condicao_pagto || "",
           valor,
-          vencimento: ""
+          vencimento: i === 0 ? (referencia.vencimento || "") : ""
         });
       }
-
-      console.group("⚙️ [gerarParcelasIguais]");
-      console.log("qtd:", qtd);
-      console.log("base:", base);
-      console.log("acumulado final:", acumulado);
-      console.groupEnd();
     }
 
-    by.querySelector("#vv-add-parcela-servico").addEventListener("click", () => {
-      criarLinhaParcelaServico({});
+    function atualizarResumoBucket(bucket, totalParcelado) {
+      const info = buckets[bucket];
+      const diferenca = vvRound2ControleParcelas(info.target - totalParcelado);
+      const fechado = Math.abs(diferenca) < 0.01;
+
+      info.sumEl.textContent = vvFmtBRLControleParcelas(totalParcelado);
+      info.diffEl.textContent = vvFmtBRLControleParcelas(diferenca);
+
+      if (fechado) {
+        info.statusEl.textContent = "Fechado";
+        info.statusEl.style.color = "#146c2e";
+      } else if (diferenca > 0) {
+        info.statusEl.textContent = "Faltando valor";
+        info.statusEl.style.color = "#a61b1b";
+      } else {
+        info.statusEl.textContent = "Valor excedente";
+        info.statusEl.style.color = "#a61b1b";
+      }
+    }
+
+    function atualizarResumoParcelasControle() {
+      const parcelasProdutos = coletarParcelasBucket("produtos");
+      const parcelasServicos = coletarParcelasBucket("servicos");
+      const totalProdutos = vvSomarParcelasControle(parcelasProdutos);
+      const totalServicos = vvSomarParcelasControle(parcelasServicos);
+
+      atualizarResumoBucket("produtos", totalProdutos);
+      atualizarResumoBucket("servicos", totalServicos);
+
+      const diffProdutos = vvRound2ControleParcelas(totalProdutosTarget - totalProdutos);
+      const diffServicos = vvRound2ControleParcelas(totalServicosTarget - totalServicos);
+      const fechadoGeral =
+        Math.abs(diffProdutos) < 0.01 &&
+        Math.abs(diffServicos) < 0.01;
+
+      if (fechadoGeral) {
+        geralStatusEl.textContent = "Fechado";
+        geralStatusEl.style.color = "#146c2e";
+      } else {
+        geralStatusEl.textContent = "Pendente";
+        geralStatusEl.style.color = "#a61b1b";
+      }
+
+      helpControleEl.textContent = fechadoGeral
+        ? "Parcelamento fechado. Produtos vao para o formulario principal e servicos vao para a OS."
+        : "Arraste, adicione ou ajuste os valores ate fechar os totais de produtos e servicos.";
+    }
+
+    function moverLinhaParaBucket(card, bucketDestino, valorTransferencia = null) {
+      if (!card) return;
+
+      const bucketOrigem = card.dataset.bucket || "produtos";
+      if (bucketOrigem === bucketDestino) return;
+
+      const dadosOriginais = vvNormalizarParcelaControle({
+        tipo_monetario: card.querySelector(".tipo-monetario-transfer")?.value || "",
+        condicao_pagto: card.querySelector(".condicao-pagto-transfer")?.value || "",
+        valor: card.querySelector(".valor-parcela-transfer")?.value || "",
+        vencimento: card.querySelector(".data-parcela-transfer")?.value || ""
+      });
+
+      if (
+        typeof valorTransferencia === "number" &&
+        valorTransferencia > 0.009 &&
+        valorTransferencia < dadosOriginais.valor - 0.009
+      ) {
+        const valorRestante = vvRound2ControleParcelas(dadosOriginais.valor - valorTransferencia);
+        const valorInput = card.querySelector(".valor-parcela-transfer");
+
+        if (valorRestante > 0.009 && valorInput) {
+          valorInput.value = vvFmtBRLControleParcelas(valorRestante);
+        } else {
+          card.remove();
+        }
+
+        const clone = criarLinhaParcelaCard({
+          ...dadosOriginais,
+          valor: valorTransferencia
+        }, bucketDestino);
+        buckets[bucketDestino].list.appendChild(clone);
+      } else {
+        card.dataset.bucket = bucketDestino;
+        buckets[bucketDestino].list.appendChild(card);
+      }
+
+      atualizarEstadoLista(bucketOrigem);
+      atualizarEstadoLista(bucketDestino);
+      atualizarResumoParcelasControle();
+    }
+
+    Object.entries(buckets).forEach(([bucket, info]) => {
+      info.list.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        info.list.classList.add("is-over");
+      });
+
+      info.list.addEventListener("dragleave", () => {
+        info.list.classList.remove("is-over");
+      });
+
+      info.list.addEventListener("drop", (event) => {
+        event.preventDefault();
+        info.list.classList.remove("is-over");
+
+        if (!draggedRow) return;
+
+        const valorLinha = vvParseBRLControleParcelas(
+          draggedRow.querySelector(".valor-parcela-transfer")?.value || "0"
+        );
+
+        const totalAtualDestino = vvSomarParcelasControle(coletarParcelasBucket(bucket));
+        const faltaDestino = vvRound2ControleParcelas(info.target - totalAtualDestino);
+        const valorTransferencia =
+          faltaDestino > 0.009 && valorLinha > faltaDestino + 0.009
+            ? faltaDestino
+            : null;
+
+        moverLinhaParaBucket(draggedRow, bucket, valorTransferencia);
+      });
     });
 
-    by.querySelector("#vv-gerar-1x-servico").addEventListener("click", () => gerarParcelasIguais(1));
-    by.querySelector("#vv-gerar-2x-servico").addEventListener("click", () => gerarParcelasIguais(2));
+    by.querySelector("#vv-add-parcela-produto")?.addEventListener("click", () => {
+      adicionarLinhaNoBucket("produtos");
+    });
+    by.querySelector("#vv-add-parcela-servico")?.addEventListener("click", () => {
+      adicionarLinhaNoBucket("servicos");
+    });
+    by.querySelector("#vv-gerar-1x-produto")?.addEventListener("click", () => gerarParcelasIguais("produtos", 1));
+    by.querySelector("#vv-gerar-2x-produto")?.addEventListener("click", () => gerarParcelasIguais("produtos", 2));
+    by.querySelector("#vv-gerar-1x-servico")?.addEventListener("click", () => gerarParcelasIguais("servicos", 1));
+    by.querySelector("#vv-gerar-2x-servico")?.addEventListener("click", () => gerarParcelasIguais("servicos", 2));
 
-    ft.querySelector("#vv-cancelar-parcelas-servico").addEventListener("click", () => {
+    ft.querySelector("#vv-cancelar-controle-parcelas")?.addEventListener("click", () => {
       document.body.removeChild(bd);
       resolveParcelas(null);
     });
 
-    ft.querySelector("#vv-confirmar-parcelas-servico").addEventListener("click", async () => {
+    ft.querySelector("#vv-confirmar-controle-parcelas")?.addEventListener("click", async () => {
       try {
-        const linhas = [...lista.querySelectorAll(".row")];
+        const parcelasProduto = coletarParcelasBucket("produtos").filter(parcela => parcela.valor > 0);
+        const parcelasServico = coletarParcelasBucket("servicos").filter(parcela => parcela.valor > 0);
 
-        if (!linhas.length) {
-          alert("Adicione pelo menos uma parcela para os serviços.");
+        const totalProdutos = vvSomarParcelasControle(parcelasProduto);
+        const totalServicos = vvSomarParcelasControle(parcelasServico);
+        const diffProdutos = Math.abs(vvRound2ControleParcelas(totalProdutosTarget - totalProdutos));
+        const diffServicos = Math.abs(vvRound2ControleParcelas(totalServicosTarget - totalServicos));
+
+        if (totalProdutosTarget > 0 && !parcelasProduto.length) {
+          alert("Adicione pelo menos uma parcela para os produtos.");
           return;
         }
 
-        const parcelas = linhas.map((row, index) => {
-          const dataSelecionada = row.querySelector(".data-parcela-servico")?.value || "";
+        if (totalServicosTarget > 0 && !parcelasServico.length) {
+          alert("Adicione pelo menos uma parcela para os servicos.");
+          return;
+        }
 
-          return {
-            tipo_monetario: row.querySelector(".tipo-monetario-servico")?.value || "",
-            condicao_pagto: row.querySelector(".condicao-pagto-servico")?.value || "",
-            valor: parseBRL(row.querySelector(".valor-parcela-servico")?.value || "0"),
-            previsao: dataSelecionada,
-            vencimento: dataSelecionada
-          };
+        if (diffProdutos >= 0.01 || diffServicos >= 0.01) {
+          alert(
+            `O controle de parcelas nao fecha.\n` +
+            `Produtos: alvo ${vvFmtBRLControleParcelas(totalProdutosTarget)} | parcelado ${vvFmtBRLControleParcelas(totalProdutos)}\n` +
+            `Servicos: alvo ${vvFmtBRLControleParcelas(totalServicosTarget)} | parcelado ${vvFmtBRLControleParcelas(totalServicos)}`
+          );
+          return;
+        }
+
+        await vvSalvarParcelamentoOmieNoServidor({
+          parcelasProduto,
+          parcelasServico
         });
 
-        const totalParcelado = parcelas.reduce((acc, p) => acc + Number(p.valor || 0), 0);
-        const diferenca = Math.abs(Number((valorTotalServicos - totalParcelado).toFixed(2)));
-
-        console.group("✅ [confirmar parcelamento serviços]");
-        console.table(
-          parcelas.map((p, i) => ({
-            index: i,
-            tipo_monetario: p?.tipo_monetario || "",
-            condicao_pagto: p?.condicao_pagto || "",
-            valor: p?.valor || 0,
-            previsao: p?.previsao || "",
-            vencimento: p?.vencimento || ""
-          }))
-        );
-        console.log("valorTotalServicos:", valorTotalServicos);
-        console.log("totalParcelado:", totalParcelado);
-        console.log("diferenca:", diferenca);
-        console.groupEnd();
-
-        if (diferenca >= 0.01) {
-          alert(`O parcelamento dos serviços não fecha. Total dos serviços: ${fmtBRL(valorTotalServicos)} | Parcelado: ${fmtBRL(totalParcelado)}`);
-          return;
+        // Atualiza o formulário de parcelas visualmente (erro aqui não deve
+        // bloquear o envio para a Omie — atualizarValoresParcelas pode tentar
+        // ler inputs ausentes nesta página e lançar TypeError).
+        try {
+          vvAtualizarListaParcelasFormulario(parcelasProduto);
+        } catch (erroFormulario) {
+          console.warn("[parcelas] vvAtualizarListaParcelasFormulario ignorado (DOM incompleto):", erroFormulario);
         }
 
-        await salvarParcelasServicoNoServidor(parcelas);
+        const parcelasServicoServidor = vvSerializarParcelasServicoParaServidor(parcelasServico);
 
-        window.vvParcelasServicoOmie = parcelas;
-
-        console.group("🧠 [memória após confirmar parcelamento]");
-        console.log("window.vvParcelasServicoOmie:", JSON.parse(JSON.stringify(window.vvParcelasServicoOmie || [])));
-        console.log("window.propostaEmEdicao?.camposFormulario?.parcelasServico:", JSON.parse(JSON.stringify(window.propostaEmEdicao?.camposFormulario?.parcelasServico || [])));
-        console.log("window.propostaAtual?.camposFormulario?.parcelasServico:", JSON.parse(JSON.stringify(window.propostaAtual?.camposFormulario?.parcelasServico || [])));
-        console.groupEnd();
+        window.vvParcelasProdutoOmie = parcelasProduto;
+        window.vvParcelasServicoOmie = parcelasServicoServidor;
+        window.vvParcelamentoProdutosServicosOmie = {
+          totalProdutos: totalProdutosTarget,
+          totalServicos: totalServicosTarget,
+          parcelasProduto,
+          parcelasServico: parcelasServicoServidor
+        };
 
         document.body.removeChild(bd);
         resolveParcelas({
-          totalServicos: valorTotalServicos,
-          totalParcelado,
-          parcelas
+          totalProdutos: totalProdutosTarget,
+          totalServicos: totalServicosTarget,
+          totalParceladoProdutos: totalProdutos,
+          totalParceladoServicos: totalServicos,
+          parcelasProduto,
+          parcelasServico: parcelasServicoServidor
         });
       } catch (erro) {
-        console.error("❌ Erro ao confirmar parcelamento dos serviços:", erro);
-        alert("Erro ao salvar parcelas de serviço no servidor.");
+        console.error("[parcelas] erro ao confirmar controle de parcelas:", erro);
+        alert("Erro ao salvar o controle de parcelas de produtos e servicos.");
       }
     });
 
-    if (Array.isArray(parcelasParaUsar) && parcelasParaUsar.length > 0) {
-      parcelasParaUsar.forEach((parcela) => {
-        criarLinhaParcelaServico({
-          tipo_monetario: parcela?.tipo_monetario || "",
-          condicao_pagto: parcela?.condicao_pagto || "",
-          valor: Number(parcela?.valor || 0),
-          vencimento: parcela?.previsao || parcela?.vencimento || ""
-        });
-      });
-    } else {
-      criarLinhaParcelaServico({
-        valor: valorTotalServicos,
-        vencimento: ""
-      });
-    }
+    (inicial.parcelasProdutoIniciais || []).forEach(parcela => adicionarLinhaNoBucket("produtos", parcela));
+    (inicial.parcelasServicoIniciais || []).forEach(parcela => adicionarLinhaNoBucket("servicos", parcela));
+
+    atualizarEstadoLista("produtos");
+    atualizarEstadoLista("servicos");
+    atualizarResumoParcelasControle();
   });
 }
 
@@ -1159,7 +1803,9 @@ function abrirPopupComissao(){
     };
 
     function lerValorProdutoResumo(){
-      const el = document.getElementById('vv-cat-produto');
+      const el =
+        document.getElementById('vv-total-ajustado') ||
+        document.getElementById('vv-cat-produto');
       return parseBRL(el?.textContent || '0');
     }
 
@@ -1253,7 +1899,7 @@ function abrirPopupComissao(){
           <div class="vv-help">
             Base fixa (Vendedor = 1%):
             <b id="vv-com-base-vend">${fmtBRL(lerValorProdutoResumo() || 0)}</b>
-            <span class="vv-help" style="margin-left:8px;">(vem de #vv-cat-produto)</span>
+            <span class="vv-help" style="margin-left:8px;">(vem do total final de produtos enviado para a Omie)</span>
           </div>
         </div>
 
@@ -1675,7 +2321,7 @@ function abrirPopupComissao(){
     const help = document.createElement('div');
     help.className = 'vv-help';
     help.innerHTML = `
-      Ordem: <b>Desconto</b> sobre TODOS → <b>Ignorar</b> → <b>MO</b> redistribuída entre aprovados → <b>Serviços</b> proporcional. Arredonda só no final.
+      Ordem: <b>Desconto</b> sobre TODOS → <b>Ignorar</b> → <b>MO</b> redistribuida entre aprovados → <b>Servicos</b> abatidos do total final de produtos. Arredonda so no final.
     `;
 
     const filtros = document.createElement('div');
@@ -1944,19 +2590,64 @@ function recalc(){
     totalBaseMO += base;
   });
 
+  const descontoAplicavel = Math.min(descontoTotal, totalBaseMO);
+  const cotaDescontoIgual = nAprov > 0 ? (descontoAplicavel / nAprov) : 0;
+  const baseLiquidaMap = new Map();
+  let totalLiquidoGeral = 0;
+  aprovadosRows.forEach(tr => {
+    const key = tr.dataset.key;
+    const base = baseMOMap.get(key) || (Number(tr.dataset.valor || 0) || 0);
+    const baseLiquida = Math.max(0, base - cotaDescontoIgual);
+    baseLiquidaMap.set(key, baseLiquida);
+    totalLiquidoGeral += baseLiquida;
+  });
+
   const servTotal = getModoServicos()==='percent'
     ? ((Number($srvPercent.value||0)/100) * totalBaseMO)
     : vv_parseBRL($srvValor.value||'0');
 
-  const descontoAplicavel = Math.min(descontoTotal, totalBaseMO);
-  const servAplicavel = Math.max(0, servTotal);
+  const servAplicavel = Math.max(0, Math.min(servTotal, totalLiquidoGeral));
+  const totalProdutosDestino = Math.max(0, totalLiquidoGeral - servAplicavel);
+  const totalProdutosDestinoC = toCents(totalProdutosDestino);
 
-  const cotaDescontoIgual = nAprov > 0 ? (descontoAplicavel / nAprov) : 0;
-  const cotaServIgual = nAprov > 0 ? (servAplicavel / nAprov) : 0;
+  const rowsProdutosOmie = aprovadosRows.filter(tr => {
+    const kind = tr.dataset.kind;
+    const isLabor = tr.dataset.islabor === '1';
+    return kind !== 'servico' && !isLabor;
+  });
 
-  let totFinalCents = 0;
+  const baseProdutosParaRateio = rowsProdutosOmie.reduce((acc, tr) => {
+    return acc + (baseLiquidaMap.get(tr.dataset.key) || 0);
+  }, 0);
+
+  const alocacaoProdutoC = new Map();
+  if (rowsProdutosOmie.length > 0 && baseProdutosParaRateio > 0 && totalProdutosDestinoC > 0) {
+    let totalAlocadoC = 0;
+    const restos = [];
+
+    rowsProdutosOmie.forEach(tr => {
+      const key = tr.dataset.key;
+      const baseLiquida = baseLiquidaMap.get(key) || 0;
+      const brutoC = (baseLiquida / baseProdutosParaRateio) * totalProdutosDestinoC;
+      const pisoC = Math.floor(brutoC);
+
+      alocacaoProdutoC.set(key, pisoC);
+      totalAlocadoC += pisoC;
+      restos.push({ key, resto: brutoC - pisoC });
+    });
+
+    restos.sort((a, b) => b.resto - a.resto);
+
+    let faltanteC = totalProdutosDestinoC - totalAlocadoC;
+    while (faltanteC > 0 && restos.length > 0) {
+      const item = restos.shift();
+      alocacaoProdutoC.set(item.key, (alocacaoProdutoC.get(item.key) || 0) + 1);
+      faltanteC -= 1;
+    }
+  }
+
   let catProdutoC = 0;
-  let catServicoC = 0;
+  let catServicoC = toCents(servAplicavel);
   let catVidroC = 0;
 
   aprovadosRows.forEach(tr => {
@@ -1966,27 +2657,22 @@ function recalc(){
 
     const original = Number(tr.dataset.valor||0) || 0;
     const base = baseMOMap.get(key) || original;
+    const baseLiquida = baseLiquidaMap.get(key) || 0;
 
     const part = totalBaseMO > 0 ? (base / totalBaseMO) * 100 : 0;
     tr.querySelector('[data-col="part"]').textContent = `${part.toFixed(2)}%`;
 
-    const ajustado = base + cotaServIgual;
-    tr.querySelector('[data-col="ajustado"]').textContent = vv_fmtBRL(ajustado);
+    tr.querySelector('[data-col="ajustado"]').textContent = vv_fmtBRL(baseLiquida);
 
     // REGRA ORIGINAL + TRAVA PARA NÃO NEGATIVAR
-    const finalBruto = base - cotaDescontoIgual;
-    const final = Math.max(0, finalBruto);
+    const finalC = alocacaoProdutoC.get(key) || 0;
+    const final = fromCents(finalC);
 
     tr.querySelector('[data-col="final"]').textContent = vv_fmtBRL(final);
 
-    const finalC = toCents(final);
-    totFinalCents += finalC;
-
     if (kind === 'vidro') {
       catVidroC += finalC;
-    } else if (kind === 'servico' || isLabor) {
-      catServicoC += finalC;
-    } else {
+    } else if (kind !== 'servico' && !isLabor) {
       catProdutoC += finalC;
     }
   });
@@ -2008,7 +2694,7 @@ function recalc(){
     : fromCents( toCents( vv_parseBRL($comValor.value||'0') ) );
 
   $totCom.textContent   = vv_fmtBRL(comDisplay);
-  $totAjust.textContent = vv_fmtBRL(fromCents(totFinalCents));
+  $totAjust.textContent = vv_fmtBRL(fromCents(totalProdutosDestinoC));
   $catProduto.textContent = vv_fmtBRL(fromCents(catProdutoC));
   $catServico.textContent = vv_fmtBRL(fromCents(catServicoC));
   $catVidro.textContent   = vv_fmtBRL(fromCents(catVidroC));
@@ -2304,23 +2990,43 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
   const valorComissaoInfo      = vv_parseBRL($totCom.textContent || '0');
   const totalFinalProdutos     = vv_parseBRL($totAjust.textContent || '0');
 
+  let parcelamentoProdutosServicos = null;
   let parcelamentoServicos = null;
 
-  if (valorServicos > 0 && typeof abrirPopupParcelamentoServicos === 'function') {
+  if (valorServicos > 0 && typeof abrirPopupParcelamentoProdutosServicos === 'function') {
+    const parcelasProdutoAtuais = vvLerParcelasFormularioPrincipal();
+    const parcelasProdutoSalvas =
+      parcelasProdutoAtuais.length > 0
+        ? parcelasProdutoAtuais
+        : (Array.isArray(window.vvParcelasProdutoOmie) && window.vvParcelasProdutoOmie.length > 0)
+          ? window.vvParcelasProdutoOmie
+          : (
+              window.propostaEmEdicao?.camposFormulario?.parcelas ||
+              window.propostaAtual?.camposFormulario?.parcelas ||
+              []
+            );
+
     const parcelasServicoSalvas =
-      window.propostaEmEdicao?.camposFormulario?.parcelasServico ||
-      window.propostaAtual?.camposFormulario?.parcelasServico ||
-      [];
+      (Array.isArray(window.vvParcelasServicoOmie) && window.vvParcelasServicoOmie.length > 0)
+        ? window.vvParcelasServicoOmie
+        : (
+            window.propostaEmEdicao?.camposFormulario?.parcelasServico ||
+            window.propostaAtual?.camposFormulario?.parcelasServico ||
+            []
+          );
 
-    parcelamentoServicos = await abrirPopupParcelamentoServicos(
-      valorServicos,
-      parcelasServicoSalvas
-    );
+    parcelamentoProdutosServicos = await abrirPopupParcelamentoProdutosServicos({
+      valorTotalProdutos: totalFinalProdutos,
+      valorTotalServicos: valorServicos,
+      parcelasProdutoExistentes: parcelasProdutoSalvas,
+      parcelasServicoExistentes: parcelasServicoSalvas
+    });
 
-    if (!parcelamentoServicos) {
-      vvToast('Parcelamento dos serviços cancelado.', 'info');
+    if (!parcelamentoProdutosServicos) {
+      vvToast('Controle de parcelas cancelado.', 'info');
       return;
     }
+    parcelamentoServicos = parcelamentoProdutosServicos.parcelasServico || null;
   }
 
   prepararComissoesAutomaticamente();
@@ -2379,7 +3085,10 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
     valorDesconto,
     valorComissaoInfo,
     totalFinalProdutos,
+    parcelamentoProdutosServicos,
     parcelamentoServicos,
+    parcelasProduto: parcelamentoProdutosServicos?.parcelasProduto || [],
+    parcelasServico: parcelamentoProdutosServicos?.parcelasServico || [],
     comissoes: {
       baseConsiderada: baseVendFinalTotal,
       arquiteto: { ...comissoesParaEnvio.arquiteto },
@@ -2402,7 +3111,10 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
   window.vvTotalProdutoCategoria         = totaisPayload.porCategoria.produto;
   window.vvTotalServicoCategoria         = totaisPayload.porCategoria.servico;
   window.vvTotalVidroCategoria           = totaisPayload.porCategoria.vidro;
+  window.vvParcelasProdutoOmie           = totaisPayload.parcelasProduto;
+  window.vvParcelasServicoOmie           = totaisPayload.parcelasServico;
   window.vvParcelamentoServicosOmie      = parcelamentoServicos;
+  window.vvParcelamentoProdutosServicosOmie = parcelamentoProdutosServicos;
 
   console.log('💾 Totais da seleção Omie gravados em window:', totaisPayload);
 
@@ -2674,11 +3386,9 @@ async function conferirTotalProdutosOmieComMarcador() {
       return;
     }
 
-    const elTotalTela = document.getElementById("vv-cat-produto");
-    if (!elTotalTela) {
-      alert("Elemento #vv-cat-produto não encontrado na tela.");
-      return;
-    }
+    const elTotalTela =
+      document.getElementById("vv-total-ajustado") ||
+      document.getElementById("vv-cat-produto");
 
     function parseMoedaBR(valor) {
       return Number(
@@ -2721,11 +3431,18 @@ async function conferirTotalProdutosOmieComMarcador() {
 
     totalOmie = round2(totalOmie);
 
-    const totalTela = round2(parseMoedaBR(elTotalTela.textContent));
+    const totalTela = round2(
+      Number(window.vvUltimoTotalFinalProdutosOmie ?? 0) ||
+      parseMoedaBR(elTotalTela?.textContent || "0") ||
+      (
+        parseMoedaBR(document.getElementById("vv-cat-produto")?.textContent || "0") +
+        parseMoedaBR(document.getElementById("vv-cat-vidro")?.textContent || "0")
+      )
+    );
     const bate = Math.abs(totalOmie - totalTela) < 0.01;
 
     let marcador = document.getElementById("vv-marcador-conferencia-omie");
-    if (!marcador) {
+    if (!marcador && elTotalTela?.parentNode) {
       marcador = document.createElement("div");
       marcador.id = "vv-marcador-conferencia-omie";
       marcador.style.marginTop = "8px";
@@ -2739,7 +3456,7 @@ async function conferirTotalProdutosOmieComMarcador() {
       elTotalTela.parentNode.appendChild(marcador);
     }
 
-    if (bate) {
+    if (marcador && bate) {
       marcador.style.background = "#e8f7ee";
       marcador.style.color = "#146c2e";
       marcador.style.borderColor = "#b7e4c7";
@@ -2748,7 +3465,7 @@ async function conferirTotalProdutosOmieComMarcador() {
         Omie: <strong>R$ ${totalOmie.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong><br>
         Tela: <strong>R$ ${totalTela.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
       `;
-    } else {
+    } else if (marcador) {
       marcador.style.background = "#fdecec";
       marcador.style.color = "#a61b1b";
       marcador.style.borderColor = "#f5b5b5";
@@ -2800,17 +3517,17 @@ async function gerarPayloadOmie() {
     pendencias.push("Selecione um Vendedor Responsável válido.");
   }
 
-  const primeiraDataParcelaRaw = Array.from(document.querySelectorAll(".data-parcela"))
+  let primeiraDataParcelaRaw = Array.from(document.querySelectorAll(".data-parcela"))
     .map(el => (el.value || "").trim())
     .find(Boolean);
 
-  const primeiraDataParcela = typeof formatarDataBR === "function"
+  let primeiraDataParcela = typeof formatarDataBR === "function"
     ? formatarDataBR(primeiraDataParcelaRaw)
     : "";
 
   if (!primeiraDataParcela) pendencias.push("Data da 1ª parcela não preenchida.");
 
-  const linhasParcelas = document.querySelectorAll("#listaParcelas .row");
+  let linhasParcelas = document.querySelectorAll("#listaParcelas .row");
   if (!linhasParcelas.length) pendencias.push("Nenhuma parcela informada.");
 
   const blocosContainer = document.getElementById("blocosProdutosContainer");
@@ -2922,7 +3639,9 @@ async function gerarPayloadOmie() {
   function atualizarMarcadorConferencia(totalOmie, totalTela) {
     const bate = Math.abs(round2(totalOmie) - round2(totalTela)) < 0.01;
 
-    const elTotalTela = document.getElementById("vv-cat-produto");
+    const elTotalTela =
+      document.getElementById("vv-total-ajustado") ||
+      document.getElementById("vv-cat-produto");
     if (!elTotalTela || !elTotalTela.parentNode) {
       console.warn("⚠️ Elemento #vv-cat-produto não encontrado para marcador visual.");
       return { bate, totalOmie, totalTela, diferenca: round2(totalOmie - totalTela) };
@@ -3090,6 +3809,14 @@ async function gerarPayloadOmie() {
     console.warn("produtosFaturadosParaOCliente falhou:", e);
   }
 
+  primeiraDataParcelaRaw = Array.from(document.querySelectorAll(".data-parcela"))
+    .map(el => (el.value || "").trim())
+    .find(Boolean);
+
+  primeiraDataParcela = typeof formatarDataBR === "function"
+    ? formatarDataBR(primeiraDataParcelaRaw)
+    : (primeiraDataParcelaRaw || "");
+
   const numeroPedido = (typeof gerarNumeroPedidoUnico === "function")
     ? gerarNumeroPedidoUnico()
     : ("PED-" + Date.now());
@@ -3215,6 +3942,8 @@ async function gerarPayloadOmie() {
     return null;
   }
 
+  linhasParcelas = document.querySelectorAll("#listaParcelas .row");
+
   const parcelasPayload = [];
   const valores = [];
 
@@ -3244,7 +3973,12 @@ async function gerarPayloadOmie() {
   }));
 
   const totalTelaProdutos = round2(
-    parseMoedaBR(document.getElementById("vv-cat-produto")?.textContent || "0")
+    Number(window.vvUltimoTotalFinalProdutosOmie ?? 0) ||
+    parseMoedaBR(document.getElementById("vv-total-ajustado")?.textContent || "0") ||
+    (
+      parseMoedaBR(document.getElementById("vv-cat-produto")?.textContent || "0") +
+      parseMoedaBR(document.getElementById("vv-cat-vidro")?.textContent || "0")
+    )
   );
 
   const resumoConferencia = atualizarMarcadorConferencia(totalProdutosOmie, totalTelaProdutos);
