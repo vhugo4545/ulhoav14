@@ -810,7 +810,8 @@ function vvNormalizarParcelaControle(parcela = {}) {
     valor: vvRound2ControleParcelas(vvParseBRLControleParcelas(valorBruto)),
     vencimento: String(parcela?.vencimento ?? parcela?.data ?? parcela?.previsao ?? "").trim(),
     ignorar: parcela?.ignorar === true || parcela?.ignorar === "true",
-    descritivo: String(parcela?.descritivo ?? parcela?.observacao ?? "").trim()
+    descritivo: String(parcela?.descritivo ?? parcela?.observacao ?? "").trim(),
+    tipo_parcelamento: String(parcela?.tipo_parcelamento ?? "normal").trim() || "normal"
   };
 }
 
@@ -831,7 +832,8 @@ function vvSerializarParcelasProdutoParaFormulario(parcelasProduto = []) {
       condicao: parcela.condicao_pagto || "",
       valor: vvFmtBRLControleParcelas(parcela.valor),
       data: parcela.vencimento || "",
-      descritivo: parcela.descritivo || ""
+      descritivo: parcela.descritivo || "",
+      tipo_parcelamento: parcela.tipo_parcelamento || "normal"
     }));
 }
 
@@ -845,7 +847,8 @@ function vvSerializarParcelasServicoParaServidor(parcelasServico = []) {
       valor: vvRound2ControleParcelas(parcela.valor),
       previsao: parcela.vencimento || "",
       vencimento: parcela.vencimento || "",
-      descritivo: parcela.descritivo || ""
+      descritivo: parcela.descritivo || "",
+      tipo_parcelamento: parcela.tipo_parcelamento || "normal"
     }));
 }
 
@@ -1282,6 +1285,13 @@ function abrirPopupParcelamentoProdutosServicos({
             <label class="form-label mb-0">Vencimento</label>
             <input type="date" class="form-control data-parcela-transfer">
           </div>
+          <div class="col-12 col-xl-3">
+            <label class="form-label mb-0">Tipo de Parcelamento</label>
+            <select class="form-select tipo-parcelamento-transfer">
+              <option value="normal">Normal</option>
+              <option value="faturamento_direto">Faturamento Direto</option>
+            </select>
+          </div>
           <div class="col-12">
             <label class="form-label mb-0">Descritivo</label>
             <input type="text" class="form-control descritivo-parcela-transfer" placeholder="Ex: Entrada, 1ª parcela...">
@@ -1297,6 +1307,11 @@ function abrirPopupParcelamentoProdutosServicos({
       if (tipoSelect) tipoSelect.value = normalizada.tipo_monetario || "";
       if (valorInput) valorInput.value = normalizada.valor > 0 ? vvFmtBRLControleParcelas(normalizada.valor) : "";
       if (dataInput) dataInput.value = normalizada.vencimento || "";
+      const tipoParcelamentoSelect = card.querySelector(".tipo-parcelamento-transfer");
+      if (tipoParcelamentoSelect) {
+        tipoParcelamentoSelect.value = normalizada.tipo_parcelamento || "normal";
+        tipoParcelamentoSelect.addEventListener("change", atualizarResumoParcelasControle);
+      }
       const descrInput = card.querySelector(".descritivo-parcela-transfer");
       if (descrInput) {
         descrInput.value = normalizada.descritivo || "";
@@ -1361,7 +1376,8 @@ function abrirPopupParcelamentoProdutosServicos({
             condicao_pagto: condicaoEl?.value || "",
             valor: card.querySelector(".valor-parcela-transfer")?.value || "",
             vencimento: card.querySelector(".data-parcela-transfer")?.value || "",
-            descritivo: card.querySelector(".descritivo-parcela-transfer")?.value || ""
+            descritivo: card.querySelector(".descritivo-parcela-transfer")?.value || "",
+            tipo_parcelamento: card.querySelector(".tipo-parcelamento-transfer")?.value || "normal"
           });
         })
         .filter(parcela =>
@@ -3911,6 +3927,41 @@ async function gerarPayloadOmie() {
   if (!payload.det.length) {
     alert("Nenhum item válido foi montado para envio à Omie. Verifique código Omie e valor dos produtos.");
     return null;
+  }
+
+  // Garante que a soma dos itens bate com o Total parcelado (produtos) confirmado no popup de parcelas.
+  // Se o usuário ajustou as parcelas (ex: faturamento direto, arredondamentos), o valor correto a
+  // enviar é a soma das parcelas de produto — não o total calculado internamente.
+  const totalParceladoProdutos = round2(
+    (window.vvParcelamentoProdutosServicosOmie?.parcelasProduto || [])
+      .reduce((s, p) => s + Number(p?.valor || 0), 0)
+  ) || round2(
+    (window.vvParcelasProdutoOmie || [])
+      .reduce((s, p) => s + Number(p?.valor || 0), 0)
+  );
+
+  if (totalParceladoProdutos > 0 && Math.abs(totalParceladoProdutos - totalProdutosOmie) >= 0.01) {
+    const fator = totalParceladoProdutos / totalProdutosOmie;
+    let acumulado = 0;
+
+    payload.det.forEach((item, idx) => {
+      if (idx < payload.det.length - 1) {
+        const novoValor = round2(item.produto.valor_unitario * fator);
+        acumulado = round2(acumulado + novoValor * item.produto.quantidade);
+        item.produto.valor_unitario = novoValor;
+      } else {
+        // último item absorve o resíduo de arredondamento
+        const restante = round2(totalParceladoProdutos - acumulado);
+        item.produto.valor_unitario = round2(
+          item.produto.quantidade > 0 ? restante / item.produto.quantidade : restante
+        );
+      }
+    });
+
+    console.log(
+      `[payload] valor_unitario reescalado: ${totalProdutosOmie} → ${totalParceladoProdutos} (fator ${fator.toFixed(6)})`
+    );
+    totalProdutosOmie = totalParceladoProdutos;
   }
 
   linhasParcelas = document.querySelectorAll("#listaParcelas .row");
