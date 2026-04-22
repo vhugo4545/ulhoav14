@@ -117,6 +117,205 @@
     </div>
 
     <script>
+
+function habilitarEdicaoTitulosAccordion() {
+  const paginaValida =
+    window.location.origin === 'https://vhugo4545.github.io' &&
+    window.location.pathname === '/ulhoav14/pages/editar.html';
+
+  if (!paginaValida) {
+    console.log('[habilitarEdicaoTitulosAccordion] Página inválida, função não executada.');
+    return;
+  }
+
+  console.log('[habilitarEdicaoTitulosAccordion] Função iniciada com sucesso.');
+
+  const titulos = document.querySelectorAll('[id^="titulo-accordion-bloco-"]');
+
+  if (!titulos.length) {
+    console.log('[habilitarEdicaoTitulosAccordion] Nenhum título encontrado.');
+    return;
+  }
+
+  titulos.forEach((span) => {
+    if (span.dataset.editorAtivado === 'true') return;
+    span.dataset.editorAtivado = 'true';
+
+    const container = document.createElement('span');
+    container.className = 'titulo-editavel-wrapper';
+    container.style.display = 'inline-flex';
+    container.style.alignItems = 'center';
+    container.style.gap = '8px';
+    container.style.flexWrap = 'wrap';
+
+    span.parentNode.insertBefore(container, span);
+    container.appendChild(span);
+
+    const btnEditar = document.createElement('button');
+    btnEditar.type = 'button';
+    btnEditar.innerHTML = '✏️';
+    btnEditar.className = 'btn-editar-titulo';
+    btnEditar.style.border = 'none';
+    btnEditar.style.background = 'transparent';
+    btnEditar.style.cursor = 'pointer';
+    btnEditar.style.fontSize = '16px';
+    btnEditar.style.padding = '2px 4px';
+    btnEditar.title = 'Editar título';
+
+    container.appendChild(btnEditar);
+
+    btnEditar.addEventListener('click', function () {
+      if (container.querySelector('.editor-titulo-inline')) return;
+
+      const textoAtual = span.textContent.trim();
+      span.style.display = 'none';
+      btnEditar.style.display = 'none';
+
+      const editor = document.createElement('div');
+      editor.className = 'editor-titulo-inline';
+      editor.style.display = 'inline-flex';
+      editor.style.alignItems = 'center';
+      editor.style.gap = '8px';
+      editor.style.flexWrap = 'wrap';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = textoAtual;
+      input.className = 'input-editar-titulo';
+      input.style.padding = '6px 10px';
+      input.style.border = '1px solid #ccc';
+      input.style.borderRadius = '8px';
+      input.style.minWidth = '220px';
+      input.style.fontSize = '14px';
+
+      const btnOk = document.createElement('button');
+      btnOk.type = 'button';
+      btnOk.textContent = 'OK';
+      btnOk.style.padding = '6px 12px';
+      btnOk.style.border = 'none';
+      btnOk.style.borderRadius = '8px';
+      btnOk.style.background = '#0d6efd';
+      btnOk.style.color = '#fff';
+      btnOk.style.cursor = 'pointer';
+
+      const btnCancelar = document.createElement('button');
+      btnCancelar.type = 'button';
+      btnCancelar.textContent = 'Cancelar';
+      btnCancelar.style.padding = '6px 12px';
+      btnCancelar.style.border = 'none';
+      btnCancelar.style.borderRadius = '8px';
+      btnCancelar.style.background = '#6c757d';
+      btnCancelar.style.color = '#fff';
+      btnCancelar.style.cursor = 'pointer';
+
+      editor.appendChild(input);
+      editor.appendChild(btnOk);
+      editor.appendChild(btnCancelar);
+      container.appendChild(editor);
+
+      input.focus();
+      input.select();
+
+      function fecharEditor(salvar) {
+        if (salvar) {
+          const novoTexto = input.value.trim();
+          if (novoTexto) {
+            span.textContent = novoTexto;
+          }
+        }
+
+        editor.remove();
+        span.style.display = '';
+        btnEditar.style.display = '';
+      }
+
+      btnOk.addEventListener('click', function () {
+        fecharEditor(true);
+      });
+
+      btnCancelar.addEventListener('click', function () {
+        fecharEditor(false);
+      });
+
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          fecharEditor(true);
+        }
+
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          fecharEditor(false);
+        }
+      });
+    });
+  });
+
+  console.log(`[habilitarEdicaoTitulosAccordion] ${titulos.length} título(s) preparados para edição.`);
+}
+
+function criarBotaoFlutuanteEdicaoTitulos() {
+  const paginaValida =
+    window.location.origin === 'https://vhugo4545.github.io' &&
+    window.location.pathname === '/ulhoav14/pages/editar.html';
+
+  if (!paginaValida) {
+    console.log('[criarBotaoFlutuanteEdicaoTitulos] Página inválida, botão não criado.');
+    return;
+  }
+
+  if (document.getElementById('btn-flutuante-editar-titulos')) {
+    console.log('[criarBotaoFlutuanteEdicaoTitulos] Botão já existe.');
+    return;
+  }
+
+  const botao = document.createElement('button');
+  botao.id = 'btn-flutuante-editar-titulos';
+  botao.type = 'button';
+  botao.innerHTML = '✏️ Editar títulos';
+  botao.title = 'Ativar edição dos títulos';
+
+  botao.style.position = 'fixed';
+  botao.style.top = '18px';
+  botao.style.right = '18px';
+  botao.style.zIndex = '9999';
+  botao.style.height = '46px';
+  botao.style.padding = '0 16px';
+  botao.style.border = 'none';
+  botao.style.borderRadius = '999px';
+  botao.style.background = '#0d6efd';
+  botao.style.color = '#fff';
+  botao.style.fontSize = '14px';
+  botao.style.fontWeight = '600';
+  botao.style.cursor = 'pointer';
+  botao.style.boxShadow = '0 10px 24px rgba(13, 110, 253, 0.28)';
+  botao.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease';
+
+  botao.addEventListener('mouseenter', () => {
+    botao.style.transform = 'translateY(-1px)';
+    botao.style.boxShadow = '0 14px 30px rgba(13, 110, 253, 0.34)';
+  });
+
+  botao.addEventListener('mouseleave', () => {
+    botao.style.transform = 'translateY(0)';
+    botao.style.boxShadow = '0 10px 24px rgba(13, 110, 253, 0.28)';
+  });
+
+  botao.addEventListener('click', () => {
+    console.log('[criarBotaoFlutuanteEdicaoTitulos] Botão clicado.');
+    habilitarEdicaoTitulosAccordion();
+  });
+
+  document.body.appendChild(botao);
+
+  console.log('[criarBotaoFlutuanteEdicaoTitulos] Botão criado com sucesso.');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  criarBotaoFlutuanteEdicaoTitulos();
+});
+
+      
       function redirecionarParaEdicao() {
         const id = new URLSearchParams(location.search).get("id");
         window.location.href = "editar.html?id=" + "68746e305b9691a7ed3b3f97";
@@ -136,6 +335,8 @@
           setTimeout(() => btn.disabled = false, 2000);
         }, true);
       });
+
+      
     </script>
   </main>
 
