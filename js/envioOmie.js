@@ -389,10 +389,11 @@ window.garantirNumeroPedidoPreenchido = garantirNumeroPedidoPreenchido;
     display:grid;
     gap:12px;
     grid-template-columns:repeat(auto-fit,minmax(380px,1fr));
-    align-items:start;
+    align-items:stretch;
   }
   .vv-transfer-panel{
-    display:grid;
+    display:flex;
+    flex-direction:column;
     gap:12px;
     border:1px solid #e2e8f0;
     border-radius:14px;
@@ -411,8 +412,10 @@ window.garantirNumeroPedidoPreenchido = garantirNumeroPedidoPreenchido;
   }
   .vv-transfer-list{
     min-height:180px;
-    display:grid;
+    display:flex;
+    flex-direction:column;
     gap:10px;
+    flex:1;
     padding:10px;
     border:2px dashed #cbd5e1;
     border-radius:12px;
@@ -425,6 +428,10 @@ window.garantirNumeroPedidoPreenchido = garantirNumeroPedidoPreenchido;
   }
   .vv-transfer-empty{
     margin:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:1;
     color:#64748b;
     font-size:13px;
     text-align:center;
@@ -1624,6 +1631,29 @@ function abrirPopupParcelamentoProdutosServicos({
       if (temCards && vazio) {
         vazio.remove();
       }
+
+      sincronizarAlturaListasTransferencia();
+    }
+
+    function sincronizarAlturaListasTransferencia() {
+      const listas = Object.values(buckets)
+        .map(info => info?.list)
+        .filter(Boolean);
+
+      if (!listas.length) return;
+
+      listas.forEach(lista => {
+        lista.style.minHeight = "";
+      });
+
+      const maiorAltura = Math.max(
+        180,
+        ...listas.map(lista => Math.ceil(lista.scrollHeight || 0))
+      );
+
+      listas.forEach(lista => {
+        lista.style.minHeight = `${maiorAltura}px`;
+      });
     }
 
     function adicionarLinhaNoBucket(bucket, parcela = {}) {
