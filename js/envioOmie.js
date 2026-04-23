@@ -3759,6 +3759,95 @@ async function gerarPayloadOmie() {
     });
   }
 
+  function lerValorCampoOmie(id) {
+    const el = document.getElementById(id);
+    if (!el) return "";
+    return (
+      el.value?.trim?.() ||
+      el.dataset?.valorOriginal?.trim?.() ||
+      el.textContent?.trim?.() ||
+      ""
+    );
+  }
+
+  function obterContatoClienteParaOmie() {
+    const seletores = [
+      "#clientesWrapper .cliente-item .nomeContato",
+      ".cliente-item .nomeContato",
+      ".nomeContato",
+      "#contatoResponsavel",
+      ".contatoResponsavel",
+      "#popupCliente_contato",
+      'input[name="contato"]'
+    ];
+
+    for (const seletor of seletores) {
+      const el = document.querySelector(seletor);
+      const valor =
+        el?.value?.trim?.() ||
+        el?.dataset?.valorOriginal?.trim?.() ||
+        el?.textContent?.trim?.() ||
+        "";
+
+      if (valor) return valor;
+    }
+
+    return "";
+  }
+
+  function obterResumoGrupoParaOmie(grupoId) {
+    if (!grupoId) return "";
+
+    const textarea =
+      document.getElementById(`resumo-${grupoId}`) ||
+      document.querySelector(`textarea[id="resumo-${grupoId}"]`);
+
+    return (
+      textarea?.value?.trim?.() ||
+      textarea?.dataset?.valorOriginal?.trim?.() ||
+      textarea?.textContent?.trim?.() ||
+      ""
+    );
+  }
+
+  function montarDadosAdicionaisNFOmie(numeroPedido, numeroOrcamento, parcelasProduto = []) {
+    const linhas = [];
+    const numeroPedidoLimpo = String(numeroPedido || "").trim();
+    const numeroOrcamentoLimpo = String(numeroOrcamento || "").trim();
+
+    if (numeroPedidoLimpo) {
+      linhas.push(`Numero de pedido: ${numeroPedidoLimpo}`);
+    }
+
+    if (numeroOrcamentoLimpo) {
+      linhas.push(`Numero de orcamento: ${numeroOrcamentoLimpo}`);
+    }
+
+    const parcelasTexto = (parcelasProduto || [])
+      .map(vvNormalizarParcelaControle)
+      .filter(parcela => parcela.valor > 0 && !parcela.ignorar)
+      .map((parcela, index) => {
+        const partes = [`Parcela ${index + 1}`];
+        const dataFormatada = formatarDataBR(parcela.vencimento) || parcela.vencimento;
+
+        if (dataFormatada) partes.push(`vencimento ${dataFormatada}`);
+        partes.push(`valor R$ ${formatarMoedaBR(parcela.valor)}`);
+
+        if (parcela.tipo_monetario) partes.push(`tipo ${parcela.tipo_monetario}`);
+        if (parcela.condicao_pagto) partes.push(`condicao ${parcela.condicao_pagto}`);
+        if (parcela.descritivo) partes.push(`descricao ${parcela.descritivo}`);
+
+        return partes.join(" | ");
+      });
+
+    if (parcelasTexto.length) {
+      linhas.push("Parcelas:");
+      linhas.push(parcelasTexto.join("\n"));
+    }
+
+    return linhas.join("\n").trim();
+  }
+
   function atualizarMarcadorConferencia(totalOmie, totalTela) {
     const bate = Math.abs(round2(totalOmie) - round2(totalTela)) < 0.01;
 
@@ -3958,17 +4047,25 @@ async function gerarPayloadOmie() {
     return null;
   }
 
-  const numeroPedido = (typeof gerarNumeroPedidoUnico === "function")
+  const codigoPedidoIntegracao = (typeof gerarNumeroPedidoUnico === "function")
     ? gerarNumeroPedidoUnico()
     : ("PED-" + Date.now());
+  const numeroPedidoTela = String(lerValorCampoOmie("numeroPedido") || "").trim();
+  const numeroOrcamentoTela = lerValorCampoOmie("numeroOrcamento");
+  const contatoClienteTela = obterContatoClienteParaOmie();
+  const dadosAdicionaisNF = montarDadosAdicionaisNFOmie(
+    numeroPedidoTela,
+    numeroOrcamentoTela,
+    parcelasProdutoParaEnvio
+  );
 
   const payload = {
     cabecalho: {
       codigo_cliente: codigoCliente,
-      codigo_pedido_integracao: numeroPedido,
+      codigo_pedido_integracao: codigoPedidoIntegracao,
       data_previsao: primeiraDataParcela,
       etapa: "10",
-      numero_pedido: numeroPedido,
+      numero_pedido: numeroPedidoTela,
       codigo_parcela: "999",
       quantidade_itens: 0
     },
@@ -3977,7 +4074,11 @@ async function gerarPayloadOmie() {
     frete: { modalidade: "9" },
     informacoes_adicionais: {
       codigo_categoria: "1.01.01",
-      codigo_conta_corrente: 2523861035,
+      codigo_conta_corrente: 2513856536,
+      numero_pedido_cliente: numeroPedidoTela,
+      numero_contrato: numeroPedidoTela,
+      contato: contatoClienteTela,
+      dados_adicionais_nf: dadosAdicionaisNF,
       consumidor_final: "S",
       enviar_email: "S",
       codVend: vendedorInfo.codigo
@@ -4043,11 +4144,15 @@ async function gerarPayloadOmie() {
 
     payload.det.push({
       ide: {
-        codigo_item_integracao: `${numeroPedido}-${index + 1}`
+        codigo_item_integracao: `${codigoPedidoIntegracao}-${index + 1}`
       },
       inf_adic: {
         peso_bruto: 1,
-        peso_liquido: 1
+        peso_liquido: 1,
+        dados_adicionais_item: obterResumoGrupoParaOmie(item.grupoId)
+      },
+      observacao: {
+        obs_item: numeroOrcamentoTela
       },
       produto: {
         cfop: "5.102",
@@ -4129,7 +4234,13 @@ async function gerarPayloadOmie() {
   const resumoConferencia = atualizarMarcadorConferencia(totalProdutosOmie, totalTelaProdutos);
 
   window.__vvResumoPayloadOmie = {
-    numeroPedido,
+    codigoPedidoIntegracao,
+    numeroPedido: numeroPedidoTela,
+    numeroPedidoCliente: numeroPedidoTela,
+    numeroContrato: numeroPedidoTela,
+    contato: contatoClienteTela,
+    numeroOrcamento: numeroOrcamentoTela,
+    dadosAdicionaisNF,
     totalProdutosOmie,
     totalTelaProdutos,
     diferenca: round2(totalProdutosOmie - totalTelaProdutos),
