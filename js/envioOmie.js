@@ -159,7 +159,25 @@ function gerarNumeroPedidoUnico() {
   const hora = pad(agora.getHours());
   const minuto = pad(agora.getMinutes());
   const segundo = pad(agora.getSeconds());
-  return `${ano}${mes}${dia}${hora}${minuto}${segundo}001`;
+  const milesimo = String(agora.getMilliseconds()).padStart(3, "0");
+  const aleatorio = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+  return `${ano}${mes}${dia}${hora}${minuto}${segundo}${milesimo}${aleatorio}`;
+}
+
+function gerarCodigoIntegracaoOmie(prefixo = "OMIE") {
+  const agora = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  const timestamp = [
+    agora.getFullYear(),
+    pad(agora.getMonth() + 1),
+    pad(agora.getDate()),
+    pad(agora.getHours()),
+    pad(agora.getMinutes()),
+    pad(agora.getSeconds()),
+    String(agora.getMilliseconds()).padStart(3, "0")
+  ].join("");
+  const aleatorio = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `${prefixo}-${timestamp}-${aleatorio}`;
 }
 
 
@@ -5346,10 +5364,12 @@ function ctxParcelasOS(parcelasServico = null) {
 }
 function ctxHeaderOS() {
   const orc = document.getElementById("numeroOrcamento");
-  const cCodIntOS =
+  const numeroOrcamento =
     (orc?.value && String(orc.value).trim())
     || (orc?.dataset?.valorOriginal && String(orc.dataset.valorOriginal).trim())
-    || ("PED-" + Date.now());
+    || "";
+
+  const cCodIntOS = gerarCodigoIntegracaoOmie("OS");
 
   const razaoEl = document.querySelector("input.form-control.razaoSocial");
   const razao =
@@ -5361,7 +5381,7 @@ function ctxHeaderOS() {
     ? (getCodigoClientePorRazao(razao) || "")
     : "";
 
-  return { cCodIntOS, nCodCli, razaoSocial: razao };
+  return { cCodIntOS, nCodCli, razaoSocial: razao, numeroOrcamento };
 }
 
 /* =============== MONTAGEM DO PAYLOAD (FORMATO EXATO SOLICITADO) ===============
@@ -5404,8 +5424,9 @@ function montarPayloadOS({
   const numeroOrcamento =
     getVal("#numeroOrcamento") ||
     getVal('input[name="numeroOrcamento"]') ||
-    cCodIntOS ||
     "";
+
+  const codigoIntegracaoOS = String(cCodIntOS || gerarCodigoIntegracaoOmie("OS")).trim();
 
   const cCodParc_form =
     getVal("#cCodParc") ||
@@ -5438,7 +5459,7 @@ function montarPayloadOS({
   const CCOD_MUN_DEFAULT = "0701-0/01-88";
 
   const Cabecalho = {
-    cCodIntOS: String(cCodIntOS || numeroOrcamento || "").trim(),
+    cCodIntOS: codigoIntegracaoOS,
     cCodParc: String(cCodParc_form || "999").trim(),
     cEtapa: String(cEtapa_form || "20").trim(),
     dDtPrevisao: String(dDtPrevisaoBR || "").trim()
