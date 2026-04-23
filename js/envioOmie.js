@@ -1,7 +1,52 @@
-function formatarDataBR(dataISO) {
-  if (!dataISO || !dataISO.includes("-")) return "";
-  const [ano, mes, dia] = dataISO.split("-");
-  return `${dia}/${mes}/${ano}`;
+function vvDataPartesSemTimezone(valor) {
+  if (!valor) return null;
+
+  if (valor instanceof Date && !isNaN(valor.getTime())) {
+    return {
+      ano: String(valor.getFullYear()),
+      mes: String(valor.getMonth() + 1).padStart(2, "0"),
+      dia: String(valor.getDate()).padStart(2, "0")
+    };
+  }
+
+  const texto = String(valor).trim();
+  if (!texto) return null;
+
+  let match = texto.match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/);
+  if (match) {
+    return { ano: match[1], mes: match[2], dia: match[3] };
+  }
+
+  match = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (match) {
+    return { ano: match[3], mes: match[2], dia: match[1] };
+  }
+
+  match = texto.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+  if (match) {
+    return { ano: match[1], mes: match[2], dia: match[3] };
+  }
+
+  const data = new Date(texto);
+  if (isNaN(data.getTime())) return null;
+
+  return {
+    ano: String(data.getFullYear()),
+    mes: String(data.getMonth() + 1).padStart(2, "0"),
+    dia: String(data.getDate()).padStart(2, "0")
+  };
+}
+
+function vvDataISO(valor) {
+  const partes = vvDataPartesSemTimezone(valor);
+  if (!partes) return "";
+  return `${partes.ano}-${partes.mes}-${partes.dia}`;
+}
+
+function formatarDataBR(valor) {
+  const partes = vvDataPartesSemTimezone(valor);
+  if (!partes) return "";
+  return `${partes.dia}/${partes.mes}/${partes.ano}`;
 }
 
 function mostrarPopupPendencias(pendencias) {
@@ -457,11 +502,7 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
   const toISODate = (d) => {
     if (!d) return "";
     try {
-      const dt = new Date(d);
-      if (isNaN(dt.getTime())) return "";
-      const m = String(dt.getMonth() + 1).padStart(2, "0");
-      const day = String(dt.getDate()).padStart(2, "0");
-      return `${dt.getFullYear()}-${m}-${day}`;
+      return vvDataISO(d);
     } catch { return ""; }
   };
 
@@ -873,6 +914,46 @@ function vvLerParcelasFormularioPrincipal() {
     );
 }
 
+function vvObterParcelasProdutoParaEnvioOmie(parcelasPreferidas = null) {
+  const fontes = [
+    parcelasPreferidas,
+    window.vvParcelamentoProdutosServicosOmie?.parcelasProduto,
+    window.vvParcelasProdutoOmie,
+    vvLerParcelasFormularioPrincipal()
+  ];
+
+  for (const fonte of fontes) {
+    if (!Array.isArray(fonte) || !fonte.length) continue;
+
+    const normalizadas = fonte
+      .map(vvNormalizarParcelaControle)
+      .filter(parcela => parcela.valor > 0 && !parcela.ignorar);
+
+    if (normalizadas.length) return normalizadas;
+  }
+
+  return [];
+}
+
+function vvMontarParcelasProdutoPayloadOmie(parcelasProduto = []) {
+  const parcelasValidas = (parcelasProduto || [])
+    .map(vvNormalizarParcelaControle)
+    .filter(parcela => parcela.valor > 0 && !parcela.ignorar && formatarDataBR(parcela.vencimento));
+
+  const totalParcelas = vvRound2ControleParcelas(
+    parcelasValidas.reduce((acc, parcela) => acc + Number(parcela.valor || 0), 0)
+  );
+
+  return parcelasValidas.map((parcela, index) => ({
+    numero_parcela: index + 1,
+    percentual: totalParcelas > 0
+      ? Number(((Number(parcela.valor || 0) / totalParcelas) * 100).toFixed(2))
+      : 0,
+    data_vencimento: formatarDataBR(parcela.vencimento),
+    valor: vvRound2ControleParcelas(parcela.valor)
+  }));
+}
+
 function vvCriarLinhaParcelaFormularioFallback() {
   const row = document.createElement("div");
   row.className = "row g-2 align-items-end mb-2";
@@ -984,9 +1065,15 @@ function vvAtualizarListaParcelasFormulario(parcelasProduto = []) {
 
 async function vvSalvarParcelamentoOmieNoServidor({
   parcelasProduto = [],
-  parcelasServico = []
+  parcelasServico = [],
+  persistirNoServidor = false
 } = {}) {
   try {
+    if (!persistirNoServidor) {
+      console.info("[parcelas] persistencia no Heroku bloqueada no envio Omie; usando parcelas apenas em memoria para montar os payloads.");
+      return { ok: true, skipped: true };
+    }
+
     const idProposta = new URLSearchParams(window.location.search).get("id");
     if (!idProposta) {
       console.warn("[parcelas] ID da proposta nao encontrado na URL. Parcelas nao foram salvas no servidor.");
@@ -1209,7 +1296,7 @@ function abrirPopupParcelamentoProdutosServicos({
     ft.className = "vv-footer";
     ft.innerHTML = `
       <div class="vv-help" id="vv-help-controle-parcelas">
-        As parcelas de produtos atualizam o formulario principal. As de servicos sao gravadas para o envio da OS.
+        As parcelas aqui sao usadas apenas neste envio para Omie. O formulario e o Heroku nao sao alterados.
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="vv-btn" id="vv-cancelar-controle-parcelas">Cancelar</button>
@@ -3136,11 +3223,7 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
 
   const toISODate = (d) => {
     if (!d) return "";
-    const dt = new Date(d);
-    if (isNaN(dt.getTime())) return "";
-    const m = String(dt.getMonth() + 1).padStart(2, "0");
-    const day = String(dt.getDate()).padStart(2, "0");
-    return `${dt.getFullYear()}-${m}-${day}`;
+    return vvDataISO(d);
   };
 
   function comissaoExiste(fonte) {
@@ -3512,10 +3595,8 @@ async function gerarPayloadOmie() {
     ? formatarDataBR(primeiraDataParcelaRaw)
     : "";
 
-  if (!primeiraDataParcela) pendencias.push("Data da 1ª parcela não preenchida.");
 
   let linhasParcelas = document.querySelectorAll("#listaParcelas .row");
-  if (!linhasParcelas.length) pendencias.push("Nenhuma parcela informada.");
 
   const blocosContainer = document.getElementById("blocosProdutosContainer");
   const temProdutosNaTela =
@@ -3796,13 +3877,31 @@ async function gerarPayloadOmie() {
     console.warn("produtosFaturadosParaOCliente falhou:", e);
   }
 
-  primeiraDataParcelaRaw = Array.from(document.querySelectorAll(".data-parcela"))
-    .map(el => (el.value || "").trim())
-    .find(Boolean);
+  const parcelasProdutoParaEnvio = vvObterParcelasProdutoParaEnvioOmie(totais?.parcelasProduto || null);
+  const parcelasProdutoSemData = parcelasProdutoParaEnvio
+    .map((parcela, index) => ({ parcela, index }))
+    .filter(item => !formatarDataBR(item.parcela?.vencimento));
 
-  primeiraDataParcela = typeof formatarDataBR === "function"
-    ? formatarDataBR(primeiraDataParcelaRaw)
-    : (primeiraDataParcelaRaw || "");
+  if (!parcelasProdutoParaEnvio.length) {
+    alert("Nenhuma parcela de produto válida foi informada para enviar à Omie.");
+    return null;
+  }
+
+  if (parcelasProdutoSemData.length) {
+    alert(
+      "Preencha a data de vencimento das parcelas de produto antes de enviar à Omie.\n" +
+      parcelasProdutoSemData.map(item => `Parcela ${item.index + 1}`).join(", ")
+    );
+    return null;
+  }
+
+  const parcelasProdutoPayloadOmie = vvMontarParcelasProdutoPayloadOmie(parcelasProdutoParaEnvio);
+  primeiraDataParcela = parcelasProdutoPayloadOmie[0]?.data_vencimento || "";
+
+  if (!primeiraDataParcela) {
+    alert("Data da 1ª parcela de produto não preenchida.");
+    return null;
+  }
 
   const numeroPedido = (typeof gerarNumeroPedidoUnico === "function")
     ? gerarNumeroPedidoUnico()
@@ -3933,10 +4032,7 @@ async function gerarPayloadOmie() {
   // Se o usuário ajustou as parcelas (ex: faturamento direto, arredondamentos), o valor correto a
   // enviar é a soma das parcelas de produto — não o total calculado internamente.
   const totalParceladoProdutos = round2(
-    (window.vvParcelamentoProdutosServicosOmie?.parcelasProduto || [])
-      .reduce((s, p) => s + Number(p?.valor || 0), 0)
-  ) || round2(
-    (window.vvParcelasProdutoOmie || [])
+    (parcelasProdutoParaEnvio || [])
       .reduce((s, p) => s + Number(p?.valor || 0), 0)
   );
 
@@ -3964,35 +4060,7 @@ async function gerarPayloadOmie() {
     totalProdutosOmie = totalParceladoProdutos;
   }
 
-  linhasParcelas = document.querySelectorAll("#listaParcelas .row");
-
-  const parcelasPayload = [];
-  const valores = [];
-
-  linhasParcelas.forEach((linha, i) => {
-    const elValor = linha.querySelector(".valor-parcela");
-    const valor = parseValorParcela(elValor);
-    const data_vencimento = obterDataParcelaFormatada(linha);
-
-    if (valor > 0 && data_vencimento) {
-      parcelasPayload.push({
-        numero_parcela: i + 1,
-        percentual: 0,
-        data_vencimento,
-        valor
-      });
-      valores.push(valor);
-    }
-  });
-
-  const totalParcelas = valores.reduce((acc, n) => acc + n, 0);
-
-  payload.lista_parcelas.parcela = parcelasPayload.map(p => ({
-    ...p,
-    percentual: totalParcelas > 0
-      ? Number(((p.valor / totalParcelas) * 100).toFixed(2))
-      : 0
-  }));
+  payload.lista_parcelas.parcela = parcelasProdutoPayloadOmie;
 
   const totalTelaProdutos = round2(
     Number(window.vvUltimoTotalFinalProdutosOmie ?? 0) ||
@@ -4259,9 +4327,7 @@ async function atualizarNaOmie() {
       );
     }
 
-    if (typeof atualizarPropostaEditavel === "function") {
-      atualizarPropostaEditavel();
-    }
+    console.info("[Omie] Proposta nao foi atualizada no Heroku apos o envio; parcelas usadas apenas para este envio.");
 
   } catch (erro) {
     console.error("❌ Erro em atualizarNaOmie:", erro);
@@ -5013,6 +5079,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 /* ================== UTILS ================== */
 function toBR(valor) {
+  return formatarDataBR(valor);
   if (!valor) return "";
 
   const v = String(valor).trim();
@@ -5044,6 +5111,7 @@ function toBR(valor) {
 }
 
 function toISO(valor) {
+  return vvDataISO(valor);
   if (!valor) return "";
 
   const v = String(valor).trim();
@@ -5076,6 +5144,7 @@ function toISO(valor) {
 }
 
 function toISO(iso) {
+  return vvDataISO(iso);
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d)) return "";
@@ -5286,7 +5355,8 @@ function montarPayloadOS({
   nCodCli,
   dDtPrevisaoBR,
   dDtPrevisaoISO,
-  valorServicos
+  valorServicos,
+  nQtdeParc = 1
 }) {
   const getVal = (selector) => {
     const el = document.querySelector(selector);
@@ -5350,7 +5420,6 @@ function montarPayloadOS({
     Cabecalho.nCodCli = Number(nCodCli);
   }
 
-  const { nQtdeParc } = ctxParcelasOS();
   Cabecalho.nQtdeParc = Number(nQtdeParc || 1);
 
   const nValUnitFinal = Number(valorServicos);
@@ -5444,6 +5513,24 @@ async function enviarOSServico({
 
     const { cCodIntOS, nCodCli } = ctxHeaderOS();
     const { dDtPrevisaoBR, dDtPrevisaoISO, nQtdeParc } = ctxParcelasOS(parcelasServicoCorretas);
+    const parcelasServicoSemData = (parcelasServicoCorretas || [])
+      .map((parcela, index) => ({ parcela, index }))
+      .filter(item => !formatarDataBR(item.parcela?.previsao || item.parcela?.vencimento));
+
+    if (!dDtPrevisaoBR || parcelasServicoSemData.length) {
+      const msg = parcelasServicoSemData.length
+        ? "Preencha a data de vencimento das parcelas de serviço antes de enviar à Omie: " +
+          parcelasServicoSemData.map(item => `Parcela ${item.index + 1}`).join(", ")
+        : "Data de previsão das parcelas de serviço não preenchida.";
+
+      if (typeof mostrarPopupCustomizado === "function") {
+        mostrarPopupCustomizado("❌ Erro ao enviar Serviços", msg, "error");
+      } else {
+        alert(msg);
+      }
+
+      return { ok: false, error: msg };
+    }
 
     console.group("🧾 [SERVIÇOS] PARCELAS ANTES DO ENVIO");
     console.log("endpoint:", endpoint);
@@ -5472,7 +5559,8 @@ async function enviarOSServico({
       nCodCli,
       dDtPrevisaoBR,
       dDtPrevisaoISO,
-      valorServicos
+      valorServicos,
+      nQtdeParc
     });
 
     console.group("🚀 [SERVIÇOS] REQUEST FINAL PARA OMIE");
