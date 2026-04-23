@@ -43,6 +43,36 @@ function vvDataISO(valor) {
   return `${partes.ano}-${partes.mes}-${partes.dia}`;
 }
 
+function vvSomarMesesDataISO(valor, meses = 0) {
+  const partes = vvDataPartesSemTimezone(valor);
+  if (!partes) return "";
+
+  const ano = Number(partes.ano);
+  const mesIndex = Number(partes.mes) - 1;
+  const dia = Number(partes.dia);
+  const data = new Date(ano, mesIndex + Number(meses || 0), 1);
+  const ultimoDiaMes = new Date(data.getFullYear(), data.getMonth() + 1, 0).getDate();
+
+  data.setDate(Math.min(dia, ultimoDiaMes));
+
+  const anoFinal = String(data.getFullYear());
+  const mesFinal = String(data.getMonth() + 1).padStart(2, "0");
+  const diaFinal = String(data.getDate()).padStart(2, "0");
+  return `${anoFinal}-${mesFinal}-${diaFinal}`;
+}
+
+function vvDataPrevisaoServicoParaOmie(valor) {
+  if (!valor) return "";
+
+  // A OS da Omie gera o vencimento um ciclo mensal apos a previsao.
+  // Enviar um mes antes faz o vencimento bater com a data escolhida na parcela.
+  if (window.VV_SERVICOS_COMPENSAR_MES_OMIE === false) {
+    return vvDataISO(valor);
+  }
+
+  return vvSomarMesesDataISO(valor, -1);
+}
+
 function formatarDataBR(valor) {
   const partes = vvDataPartesSemTimezone(valor);
   if (!partes) return "";
@@ -164,12 +194,24 @@ function gerarNumeroPedidoUnico() {
   // Formatação de datas
   window.formatarDataBR ||= function(iso){
     if (!iso) return "";
-    const d = new Date(iso);
+    const v = String(iso).trim();
+    // ISO puro YYYY-MM-DD: split direto, sem new Date() para evitar fuso
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+      const [y, m, d] = v.split("-");
+      return `${d}/${m}/${y}`;
+    }
+    // datetime ISO: YYYY-MM-DDTHH:mm:ss
+    const isoMatch = v.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+    if (isoMatch) {
+      const [, y, m, d] = isoMatch;
+      return `${d}/${m}/${y}`;
+    }
+    // fallback com UTC
+    const d = new Date(v);
     if (isNaN(d)) return "";
-    const dd = String(d.getDate()).padStart(2,"0");
-    const mm = String(d.getMonth()+1).padStart(2,"0");
-    const aaaa = d.getFullYear();
-    return `${dd}/${mm}/${aaaa}`;
+    const dd = String(d.getUTCDate()).padStart(2,"0");
+    const mm = String(d.getUTCMonth()+1).padStart(2,"0");
+    return `${dd}/${mm}/${d.getUTCFullYear()}`;
   };
 
   // Números / dinheiro
@@ -2897,12 +2939,7 @@ function prepararComissoesAutomaticamente() {
 
   const toISODateLocal = (d) => {
     if (!d) return '';
-    const dt = new Date(d);
-    if (isNaN(dt.getTime())) return '';
-    const y = dt.getFullYear();
-    const m = String(dt.getMonth() + 1).padStart(2, '0');
-    const day = String(dt.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    return vvDataISO(d);
   };
 
   const proximoDia15 = (base = new Date()) => {
@@ -3883,13 +3920,13 @@ async function gerarPayloadOmie() {
     .filter(item => !formatarDataBR(item.parcela?.vencimento));
 
   if (!parcelasProdutoParaEnvio.length) {
-    alert("Nenhuma parcela de produto válida foi informada para enviar à Omie.");
+    alert("Nenhuma parcela de produto valida foi informada para enviar a Omie.");
     return null;
   }
 
   if (parcelasProdutoSemData.length) {
     alert(
-      "Preencha a data de vencimento das parcelas de produto antes de enviar à Omie.\n" +
+      "Preencha a data de vencimento das parcelas de produto antes de enviar a Omie.\n" +
       parcelasProdutoSemData.map(item => `Parcela ${item.index + 1}`).join(", ")
     );
     return null;
@@ -3899,7 +3936,7 @@ async function gerarPayloadOmie() {
   primeiraDataParcela = parcelasProdutoPayloadOmie[0]?.data_vencimento || "";
 
   if (!primeiraDataParcela) {
-    alert("Data da 1ª parcela de produto não preenchida.");
+    alert("Data da 1a parcela de produto nao preenchida.");
     return null;
   }
 
@@ -4100,7 +4137,7 @@ async function gerarPayloadOmie() {
    6) ENVIAR PARA OMIE (botão/onclick)
    ======================================= */
 async function atualizarNaOmie() {
-  
+
   const botao =
     document.getElementById("btn-gerar-pedido") ||
     document.getElementById("btnEnviarOmie") ||
@@ -4891,11 +4928,16 @@ function obterParcelasServicoCorretas(parcelasServico = null) {
     console.warn("⚠️ Nenhuma fonte de parcelas de serviço encontrada.");
   }
 
-  const parcelasNormalizadas = parcelas.map((p, index) => ({
-    ...p,
-    previsao: p?.previsao || p?.vencimento || "",
-    vencimento: p?.vencimento || p?.previsao || ""
-  }));
+  const parcelasNormalizadas = parcelas.map((p) => {
+    const dataServico = p?.vencimento || p?.data || p?.previsao || "";
+    return {
+      ...p,
+      // Para OS, a data que o usuario define na parcela e o vencimento.
+      // Evita usar uma previsao antiga que pode ter sido gerada um mes a frente.
+      previsao: dataServico,
+      vencimento: dataServico
+    };
+  });
 
   console.group("📦 [obterParcelasServicoCorretas] saída normalizada");
   console.log("parcelas originais:", JSON.parse(JSON.stringify(parcelas || [])));
@@ -5079,7 +5121,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 /* ================== UTILS ================== */
 function toBR(valor) {
-  return formatarDataBR(valor);
   if (!valor) return "";
 
   const v = String(valor).trim();
@@ -5102,16 +5143,15 @@ function toBR(valor) {
     return `${d}/${m}/${y}`;
   }
 
-  // fallback
+  // fallback — usa UTC para evitar deslocamento de fuso horário
   const d = new Date(v);
   if (isNaN(d)) return "";
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  return `${dd}/${mm}/${d.getFullYear()}`;
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  return `${dd}/${mm}/${d.getUTCFullYear()}`;
 }
 
 function toISO(valor) {
-  return vvDataISO(valor);
   if (!valor) return "";
 
   const v = String(valor).trim();
@@ -5134,23 +5174,12 @@ function toISO(valor) {
     return `${y}-${m}-${d}`;
   }
 
-  // fallback
+  // fallback — usa UTC para evitar deslocamento de fuso horário
   const d = new Date(v);
   if (isNaN(d)) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const da = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${da}`;
-}
-
-function toISO(iso) {
-  return vvDataISO(iso);
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d)) return "";
-  const y  = d.getFullYear();
-  const m  = String(d.getMonth()+1).padStart(2,"0");
-  const da = String(d.getDate()).padStart(2,"0");
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const da = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${da}`;
 }
 
@@ -5286,11 +5315,12 @@ function ctxParcelasOS(parcelasServico = null) {
   const nQtdeParc = parcelasCorretas.length || 1;
 
   const primeiraData = parcelasCorretas
-    .map(p => String(p?.previsao || p?.vencimento || "").trim())
+    .map(p => String(p?.vencimento || p?.previsao || "").trim())
     .find(Boolean) || "";
 
-  const dDtPrevisaoBR = toBR(primeiraData);
-  const dDtPrevisaoISO = toISO(primeiraData);
+  const dataPrevisaoOmie = vvDataPrevisaoServicoParaOmie(primeiraData);
+  const dDtPrevisaoBR = toBR(dataPrevisaoOmie);
+  const dDtPrevisaoISO = toISO(dataPrevisaoOmie);
 
   console.group("🧮 [ctxParcelasOS AJUSTADO]");
   console.table(
@@ -5301,7 +5331,8 @@ function ctxParcelasOS(parcelasServico = null) {
       valor: p?.valor || 0
     }))
   );
-  console.log("primeiraData:", primeiraData);
+  console.log("vencimento escolhido na parcela:", primeiraData);
+  console.log("dataPrevisaoOmie compensada:", dataPrevisaoOmie);
   console.log("dDtPrevisaoBR:", dDtPrevisaoBR);
   console.log("dDtPrevisaoISO:", dDtPrevisaoISO);
   console.groupEnd();
@@ -5309,7 +5340,8 @@ function ctxParcelasOS(parcelasServico = null) {
   return {
     nQtdeParc,
     dDtPrevisaoBR,
-    dDtPrevisaoISO
+    dDtPrevisaoISO,
+    vencimentoServicoOriginal: primeiraData
   };
 }
 function ctxHeaderOS() {
@@ -5515,16 +5547,16 @@ async function enviarOSServico({
     const { dDtPrevisaoBR, dDtPrevisaoISO, nQtdeParc } = ctxParcelasOS(parcelasServicoCorretas);
     const parcelasServicoSemData = (parcelasServicoCorretas || [])
       .map((parcela, index) => ({ parcela, index }))
-      .filter(item => !formatarDataBR(item.parcela?.previsao || item.parcela?.vencimento));
+      .filter(item => !formatarDataBR(item.parcela?.vencimento || item.parcela?.previsao));
 
     if (!dDtPrevisaoBR || parcelasServicoSemData.length) {
       const msg = parcelasServicoSemData.length
-        ? "Preencha a data de vencimento das parcelas de serviço antes de enviar à Omie: " +
+        ? "Preencha a data de vencimento das parcelas de servico antes de enviar a Omie: " +
           parcelasServicoSemData.map(item => `Parcela ${item.index + 1}`).join(", ")
-        : "Data de previsão das parcelas de serviço não preenchida.";
+        : "Data de previsao das parcelas de servico nao preenchida.";
 
       if (typeof mostrarPopupCustomizado === "function") {
-        mostrarPopupCustomizado("❌ Erro ao enviar Serviços", msg, "error");
+        mostrarPopupCustomizado("Erro ao enviar Servicos", msg, "error");
       } else {
         alert(msg);
       }
@@ -5659,6 +5691,3 @@ async function enviarOSServico({
 }
 /* Expor global */
 window.enviarOSServico = enviarOSServico;
-
-
-
