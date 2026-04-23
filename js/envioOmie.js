@@ -180,6 +180,76 @@ function gerarCodigoIntegracaoOmie(prefixo = "OMIE") {
   return `${prefixo}-${timestamp}-${aleatorio}`;
 }
 
+const CONTATOR_ULHOA_API_BASE = (
+  window.CONTATOR_ULHOA_API_BASE ||
+  "https://contator-ulhoa-3d28d89efa68.herokuapp.com"
+).replace(/\/+$/, "");
+
+async function garantirNumeroPedidoPreenchido() {
+  const campoNumeroPedido = document.getElementById("numeroPedido");
+
+  if (!campoNumeroPedido) {
+    throw new Error("Campo #numeroPedido nao encontrado para preencher o numero do pedido.");
+  }
+
+  const numeroAtual = String(
+    campoNumeroPedido.value?.trim?.() ||
+    campoNumeroPedido.dataset?.valorOriginal?.trim?.() ||
+    campoNumeroPedido.getAttribute("data-valor-original")?.trim?.() ||
+    campoNumeroPedido.textContent?.trim?.() ||
+    ""
+  ).trim();
+
+  if (numeroAtual) {
+    campoNumeroPedido.value = numeroAtual;
+    campoNumeroPedido.dataset.valorOriginal = numeroAtual;
+    campoNumeroPedido.setAttribute("data-valor-original", numeroAtual);
+    return numeroAtual;
+  }
+
+  const resposta = await fetch(`${CONTATOR_ULHOA_API_BASE}/pedido`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json"
+    }
+  });
+
+  if (!resposta.ok) {
+    throw new Error(`Nao foi possivel buscar o proximo numero do pedido. HTTP ${resposta.status}.`);
+  }
+
+  let dados = null;
+  try {
+    dados = await resposta.json();
+  } catch {
+    throw new Error("A resposta da API de pedido veio invalida.");
+  }
+
+  const numeroPedido = [
+    dados?.pedido_proximo,
+    dados?.numero,
+    dados?.pedido,
+    dados?.proximo,
+    dados?.next
+  ]
+    .map(valor => String(valor ?? "").trim())
+    .find(Boolean);
+
+  if (!numeroPedido) {
+    throw new Error("A API nao retornou um numero de pedido valido.");
+  }
+
+  campoNumeroPedido.value = numeroPedido;
+  campoNumeroPedido.dataset.valorOriginal = numeroPedido;
+  campoNumeroPedido.setAttribute("data-valor-original", numeroPedido);
+  campoNumeroPedido.dispatchEvent(new Event("input", { bubbles: true }));
+  campoNumeroPedido.dispatchEvent(new Event("change", { bubbles: true }));
+
+  return numeroPedido;
+}
+
+window.garantirNumeroPedidoPreenchido = garantirNumeroPedidoPreenchido;
+
 
 
 
@@ -3770,6 +3840,69 @@ async function gerarPayloadOmie() {
     );
   }
 
+  async function garantirNumeroPedidoPreenchido() {
+    const campoNumeroPedido = document.getElementById("numeroPedido");
+
+    if (!campoNumeroPedido) {
+      throw new Error("Campo #numeroPedido nao encontrado para preencher o numero do pedido.");
+    }
+
+    const numeroAtual = String(
+      campoNumeroPedido.value?.trim?.() ||
+      campoNumeroPedido.dataset?.valorOriginal?.trim?.() ||
+      campoNumeroPedido.getAttribute("data-valor-original")?.trim?.() ||
+      campoNumeroPedido.textContent?.trim?.() ||
+      ""
+    ).trim();
+
+    if (numeroAtual) {
+      campoNumeroPedido.value = numeroAtual;
+      campoNumeroPedido.dataset.valorOriginal = numeroAtual;
+      campoNumeroPedido.setAttribute("data-valor-original", numeroAtual);
+      return numeroAtual;
+    }
+
+    const resposta = await fetch(`${CONTATOR_ULHOA_API_BASE}/pedido`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!resposta.ok) {
+      throw new Error(`Nao foi possivel buscar o proximo numero do pedido. HTTP ${resposta.status}.`);
+    }
+
+    let dados = null;
+    try {
+      dados = await resposta.json();
+    } catch {
+      throw new Error("A resposta da API de pedido veio invalida.");
+    }
+
+    const numeroPedido = [
+      dados?.pedido_proximo,
+      dados?.numero,
+      dados?.pedido,
+      dados?.proximo,
+      dados?.next
+    ]
+      .map(valor => String(valor ?? "").trim())
+      .find(Boolean);
+
+    if (!numeroPedido) {
+      throw new Error("A API nao retornou um numero de pedido valido.");
+    }
+
+    campoNumeroPedido.value = numeroPedido;
+    campoNumeroPedido.dataset.valorOriginal = numeroPedido;
+    campoNumeroPedido.setAttribute("data-valor-original", numeroPedido);
+    campoNumeroPedido.dispatchEvent(new Event("input", { bubbles: true }));
+    campoNumeroPedido.dispatchEvent(new Event("change", { bubbles: true }));
+
+    return numeroPedido;
+  }
+
   function obterContatoClienteParaOmie() {
     const seletores = [
       "#clientesWrapper .cliente-item .nomeContato",
@@ -3810,7 +3943,7 @@ async function gerarPayloadOmie() {
     );
   }
 
-  function montarDadosAdicionaisNFOmie(numeroPedido, numeroOrcamento, parcelasProduto = []) {
+  function montarDadosAdicionaisNFOmie(numeroPedido, numeroOrcamento) {
     const linhas = [];
     const numeroPedidoLimpo = String(numeroPedido || "").trim();
     const numeroOrcamentoLimpo = String(numeroOrcamento || "").trim();
@@ -3821,6 +3954,17 @@ async function gerarPayloadOmie() {
 
     if (numeroOrcamentoLimpo) {
       linhas.push(`Numero de orcamento: ${numeroOrcamentoLimpo}`);
+    }
+
+    return linhas.join("\n").trim();
+  }
+
+  function montarObservacoesVendaOmie(numeroPedido, numeroOrcamento, parcelasProduto = []) {
+    const linhas = [];
+    const dadosAdicionaisNF = montarDadosAdicionaisNFOmie(numeroPedido, numeroOrcamento);
+
+    if (dadosAdicionaisNF) {
+      linhas.push(dadosAdicionaisNF);
     }
 
     const parcelasTexto = (parcelasProduto || [])
@@ -4055,6 +4199,10 @@ async function gerarPayloadOmie() {
   const contatoClienteTela = obterContatoClienteParaOmie();
   const dadosAdicionaisNF = montarDadosAdicionaisNFOmie(
     numeroPedidoTela,
+    numeroOrcamentoTela
+  );
+  const observacoesVenda = montarObservacoesVendaOmie(
+    numeroPedidoTela,
     numeroOrcamentoTela,
     parcelasProdutoParaEnvio
   );
@@ -4072,6 +4220,9 @@ async function gerarPayloadOmie() {
     det: [],
     lista_parcelas: { parcela: [] },
     frete: { modalidade: "9" },
+    observacoes: {
+      obs_venda: observacoesVenda
+    },
     informacoes_adicionais: {
       codigo_categoria: "1.01.01",
       codigo_conta_corrente: 2513856536,
@@ -4241,6 +4392,7 @@ async function gerarPayloadOmie() {
     contato: contatoClienteTela,
     numeroOrcamento: numeroOrcamentoTela,
     dadosAdicionaisNF,
+    observacoesVenda,
     totalProdutosOmie,
     totalTelaProdutos,
     diferenca: round2(totalProdutosOmie - totalTelaProdutos),
@@ -4316,6 +4468,14 @@ async function atualizarNaOmie() {
     if (botao) botao.disabled = true;
 
     abrirStatus(
+      "Conferindo pedido",
+      "Validando se o numero do pedido esta preenchido antes de iniciar o envio.",
+      "info"
+    );
+
+    const numeroPedidoGarantido = await garantirNumeroPedidoPreenchido();
+
+    abrirStatus(
       "⏳ Iniciando envio",
       "Estamos preparando o pedido de produtos e os serviços.",
       "info"
@@ -4371,6 +4531,7 @@ async function atualizarNaOmie() {
       retornoProdutos?.parsed?.numeroPedido ||
       retornoProdutos?.parsed?.pedido?.numeroPedido ||
       retornoProdutos?.parsed?.nCodPed ||
+      numeroPedidoGarantido ||
       document.getElementById("numeroPedido")?.value ||
       "";
 
@@ -5672,6 +5833,8 @@ async function enviarOSServico({
       }
       return { ok: false, error: msg };
     }
+
+    await garantirNumeroPedidoPreenchido();
 
     const parcelasServicoCorretas = obterParcelasServicoCorretas(parcelasServico);
 
