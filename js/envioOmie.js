@@ -249,6 +249,92 @@ async function garantirNumeroPedidoPreenchido() {
 }
 
 window.garantirNumeroPedidoPreenchido = garantirNumeroPedidoPreenchido;
+window.__vvEnvioOmieVersion = "2026-04-24-comissao-campos-obrigatorios-v16";
+
+const OMIE_ULHOA_API_BASE = (
+  window.OMIE_ULHOA_API_BASE ||
+  "https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com"
+).replace(/\/+$/, "");
+
+const OMIE_PROJETOS_ENDPOINT = (
+  window.OMIE_PROJETOS_ENDPOINT ||
+  `${OMIE_ULHOA_API_BASE}/api/omie/projetos`
+).replace(/\/+$/, "");
+
+async function vvGarantirProjetoOmiePorPedido(numeroPedido, { force = false } = {}) {
+  const nomeProjeto = String(numeroPedido || "").trim();
+
+  if (!nomeProjeto) {
+    throw new Error("Numero do pedido ausente para criar o projeto na Omie.");
+  }
+
+  window.__vvProjetosOmiePorPedido = window.__vvProjetosOmiePorPedido || {};
+  const cache = window.__vvProjetosOmiePorPedido[nomeProjeto];
+
+  if (!force && cache?.codigo) {
+    return Number(cache.codigo);
+  }
+
+  const codint = `PROJ-${Date.now()}`.slice(0, 20);
+
+  console.group("🚀 [CRIAR PROJETO OMIE]");
+  console.log("numeroPedido:", nomeProjeto);
+  console.log("codint:", codint);
+  console.groupEnd();
+
+  const resposta = await fetch(OMIE_PROJETOS_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      codint,
+      nome: nomeProjeto,
+      inativo: "N"
+    })
+  });
+
+  const json = await resposta.json().catch(() => ({}));
+
+  console.group("📥 [CRIAR PROJETO OMIE] Resposta");
+  console.log("HTTP status:", resposta.status);
+  console.log("ok:", resposta.ok);
+  console.log("Resposta completa:", json);
+  console.groupEnd();
+
+  const codigoProjeto = Number(json?.omie?.codigo || 0);
+
+  if (!resposta.ok || json?.ok === false || !(codigoProjeto > 0)) {
+    throw new Error(
+      json?.error ||
+      json?.message ||
+      json?.omie?.descricao ||
+      `Falha ao criar projeto na Omie para o pedido ${nomeProjeto}.`
+    );
+  }
+
+  const projeto = {
+    numeroPedido: nomeProjeto,
+    codigo: codigoProjeto,
+    codint,
+    resposta: json
+  };
+
+  window.__vvProjetosOmiePorPedido[nomeProjeto] = projeto;
+  window.__vvUltimoProjetoOmie = projeto;
+
+  return codigoProjeto;
+}
+
+window.vvGarantirProjetoOmiePorPedido = vvGarantirProjetoOmiePorPedido;
+window.criarProjetoTeste = async function criarProjetoTeste() {
+  const numeroPedido = await garantirNumeroPedidoPreenchido();
+  const codigoProjeto = await vvGarantirProjetoOmiePorPedido(numeroPedido, { force: true });
+  return {
+    ok: true,
+    numeroPedido,
+    codigoProjeto,
+    projeto: window.__vvUltimoProjetoOmie || null
+  };
+};
 
 
 
@@ -623,169 +709,13 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
    ---------------------------------------------------------
    - Mantém a assinatura: window.enviarComissoes(payload)
    - Envia arquiteto e vendedor em paralelo para sua rota
-    https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/api/omie/comissao
+    https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/omie/comissao
    - Dispara eventos:
        vv:comissoes:prontas    (antes do POST)
        vv:comissoes:enviadas   (após POST, com resultados)
    ========================================================= */
 
 
-(function () {
-  if (window.enviarComissoes) return; // evita redefinir
-
-  const API_URL = "https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/omie/comissao";
-
-  // Utilitário: normaliza para YYYY-MM-DD (aceita Date, string ou vazio)
-  const toISODate = (d) => {
-    if (!d) return "";
-    try {
-      return vvDataISO(d);
-    } catch { return ""; }
-  };
-
-  // Toast simples
-  function toast(msg, ok = true) {
-    try {
-      const id = "vv-comm-toast";
-      let t = document.getElementById(id);
-      if (!t) {
-        t = document.createElement("div");
-        t.id = id;
-        t.style.cssText =
-          "position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:999999;padding:10px 14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);font:500 14px/1.2 Inter,system-ui;max-width:92vw;white-space:pre-line;text-align:center";
-        document.body.appendChild(t);
-      }
-      t.textContent = msg;
-      t.style.background = ok ? "#10b981" : "#ef4444";
-      t.style.color = "#fff";
-      t.style.opacity = "0";
-      t.style.transition = "opacity .2s ease";
-      requestAnimationFrame(() => { t.style.opacity = "1"; });
-      setTimeout(() => { t.style.opacity = "0"; }, 2600);
-    } catch {}
-  }
-
-  // Monta o payload esperado pela sua rota, respeitando defaults do backend.
-  function montarLancamento(tipo, fonte, baseConsiderada) {
-    // fonte = { nome, codigo, modo, percent, valorManual, valorCalculado, previsao, vencimento, observacao }
-    const calc = Number(fonte?.valorCalculado || 0);
-    const manual = Number(fonte?.valorManual || 0);
-    const valor_documento = Number((calc > 0 ? calc : manual).toFixed(2));
-
-    const data_previsao   = toISODate(fonte?.previsao || "");
-    const data_vencimento = toISODate(fonte?.vencimento || "");
-
-    // Campos opcionais: se vierem vazios, não enviamos — o backend aplica defaults
-    const payload = {
-      valor_documento,
-      data_previsao,
-      data_vencimento,
-      ...(fonte?.codigo ? { codigo_cliente_fornecedor: String(fonte.codigo).trim() } : {}),
-      // Se quiser sobrescrever categoria/conta, descomente:
-      // codigo_categoria: "2.02.01",
-      // id_conta_corrente: "2523861035",
-      observacao:
-        (fonte?.observacao?.trim()
-          || `Comissão ${tipo} — ${fonte?.nome || ""} (base: ${Number(baseConsiderada||0).toFixed(2)})`)
-    };
-
-    return payload;
-  }
-
-  // Validação leve antes de enviar (evita 400 do backend)
-  function validarLancamento(lanc, papel) {
-    const erros = [];
-    if (!(lanc?.valor_documento > 0)) erros.push("valor_documento inválido");
-    if (!lanc?.data_previsao)  erros.push("data_previsao ausente");
-    if (!lanc?.data_vencimento) erros.push("data_vencimento ausente");
-    return { valido: erros.length === 0, erros, papel };
-  }
-
-  async function postarLancamento(lanc, papel) {
-    try {
-      const r = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(lanc)
-      });
-      const json = await r.json().catch(() => ({}));
-      if (!r.ok || json?.ok === false) {
-        const msg = json?.error || `HTTP ${r.status}`;
-        return { ok: false, papel, erro: msg, resposta: json, enviado: lanc };
-      }
-      return { ok: true, papel, resposta: json, enviado: lanc };
-    } catch (e) {
-      return { ok: false, papel, erro: e?.message || "Falha de rede", enviado: lanc };
-    }
-  }
-
-  // === Função global que o popup chama no Confirmar ===
-  // Espera payload: { baseConsiderada, arquiteto:{...}, vendedor:{...} }
- window.enviarComissoes = async function (payload) {
-  try {
-    document.dispatchEvent(
-      new CustomEvent("vv:comissoes:prontas", { detail: { payload } })
-    );
-  } catch {}
-
-  const lancArq = montarLancamento("arquiteto", payload?.arquiteto, payload?.baseConsiderada);
-  const lancVend = montarLancamento("vendedor", payload?.vendedor, payload?.baseConsiderada);
-
-  const vArq = validarLancamento(lancArq, "arquiteto");
-  const vVend = validarLancamento(lancVend, "vendedor");
-
-  let resArq = { ok: false }, resVend = { ok: false };
-
-  // Envio separado para ARQUITETO
-  if (vArq.valido) {
-    resArq = await postarLancamento(lancArq, "arquiteto");
-    if (resArq.ok) {
-      toast("Comissão enviada com sucesso (arquiteto).");
-    } else {
-      toast(`Falha ao enviar comissão do arquiteto: ${resArq.erro || "erro"}`, false);
-    }
-  } else {
-    toast(`Comissão do arquiteto inválida: ${vArq.erros.join(", ")}`, false);
-  }
-
-  // Envio separado para VENDEDOR
-  if (vVend.valido) {
-    resVend = await postarLancamento(lancVend, "vendedor");
-    if (resVend.ok) {
-      toast("Comissão enviada com sucesso (vendedor).");
-    } else {
-      toast(`Falha ao enviar comissão do vendedor: ${resVend.erro || "erro"}`, false);
-    }
-  } else {
-    toast(`Comissão do vendedor inválida: ${vVend.erros.join(", ")}`, false);
-  }
-
-  const okGeral = resArq.ok || resVend.ok;
-
-  try {
-    document.dispatchEvent(
-      new CustomEvent("vv:comissoes:enviadas", {
-        detail: {
-          ok: okGeral,
-          resultados: {
-            arquiteto: resArq,
-            vendedor: resVend
-          }
-        }
-      })
-    );
-  } catch {}
-
-  return {
-    ok: okGeral,
-    resultados: {
-      arquiteto: resArq,
-      vendedor: resVend
-    }
-  };
-};
-
-})();
 
 /* =========================================================
    2) POPUP DE SELEÇÃO + RATEIO + ENVIO DE COMISSÕES
@@ -865,6 +795,107 @@ async function verificarClienteEAtualizar() {
     console.log("✅ Cliente encontrado nas duas bases (Omie e sistema local).");
   }
 }
+
+const VV_CLIENTES_VISUALIZAR_URL = "https://ulhoa-0a02024d350a.herokuapp.com/clientes/visualizar";
+
+function vvNormalizarNomeClienteOmie(valor) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function vvExtrairListaClientesVisualizar(payload) {
+  if (Array.isArray(payload?.clientes)) return payload.clientes;
+  if (Array.isArray(payload)) return payload;
+  return [];
+}
+
+async function vvCarregarClientesVisualizar({ force = false } = {}) {
+  window.__vvClientesVisualizarCache = window.__vvClientesVisualizarCache || {
+    lista: [],
+    fetchedAt: 0
+  };
+
+  const cache = window.__vvClientesVisualizarCache;
+  if (!force && Array.isArray(cache.lista) && cache.lista.length) {
+    return cache.lista;
+  }
+
+  const resposta = await fetch(VV_CLIENTES_VISUALIZAR_URL, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+
+  if (!resposta.ok) {
+    throw new Error(`Nao foi possivel carregar clientes para comissao. HTTP ${resposta.status}.`);
+  }
+
+  const json = await resposta.json().catch(() => null);
+  const lista = vvExtrairListaClientesVisualizar(json);
+
+  cache.lista = Array.isArray(lista) ? lista : [];
+  cache.fetchedAt = Date.now();
+
+  if (cache.lista.length) {
+    window.listaClientesServico = cache.lista;
+  }
+
+  return cache.lista;
+}
+
+function vvEncontrarClienteVisualizarPorNome(nome, lista = []) {
+  const alvo = vvNormalizarNomeClienteOmie(nome);
+  if (!alvo) return null;
+
+  const base = Array.isArray(lista) ? lista : [];
+
+  let match = base.find(cliente => (
+    vvNormalizarNomeClienteOmie(
+      cliente?.razao_social ||
+      cliente?.nome_fantasia ||
+      cliente?.nome ||
+      ""
+    ) === alvo
+  ));
+
+  if (match) return match;
+
+  match = base.find(cliente => {
+    const nomeCliente = vvNormalizarNomeClienteOmie(
+      cliente?.razao_social ||
+      cliente?.nome_fantasia ||
+      cliente?.nome ||
+      ""
+    );
+    return nomeCliente.includes(alvo) || alvo.includes(nomeCliente);
+  });
+
+  return match || null;
+}
+
+async function vvBuscarCodigoClienteOmiePorNome(nome, { force = false } = {}) {
+  const alvo = String(nome || "").trim();
+  if (!alvo) return "";
+
+  const lista = await vvCarregarClientesVisualizar({ force });
+  const cliente = vvEncontrarClienteVisualizarPorNome(alvo, lista);
+
+  if (!cliente) return "";
+
+  const codigo = Number(
+    cliente?.codigo_cliente_omie ||
+    cliente?.codigoClienteOmie ||
+    cliente?.codigo ||
+    0
+  ) || 0;
+
+  return codigo > 0 ? String(codigo) : "";
+}
+
+window.vvBuscarCodigoClienteOmiePorNome = vvBuscarCodigoClienteOmiePorNome;
 
 const VV_CONDICOES_PAGTO_PARCELAS = [
   { value: "avista", label: "3 dias apos finalizar instalacao completa." },
@@ -2079,6 +2110,21 @@ function abrirPopupComissao(){
     _comVend.percent = 1;
     _comVend.valorManual = 0;
 
+    const codigoVendedorPopupInicial = (
+      document.getElementById('codigoVendedor')?.value?.trim() ||
+      resolverCodigoVendedor(vendedorDefault) ||
+      _comVend?.codigo_vendedor ||
+      _comVend?.codigo ||
+      ''
+    ).trim();
+    const codigoClienteFornecedorVendedorPopupInicial = String(
+      _comVend?.codigo_cliente_fornecedor ||
+      _comVend?.codigoClienteFornecedor ||
+      _comVend?.codigo_fornecedor ||
+      _comVend?.codigoFornecedor ||
+      ''
+    ).trim();
+
     if (!window._comDesc) window._comDesc = { modo:'percent', percent:0, valorManual:0 };
 
     const bd = document.createElement('div');
@@ -2136,8 +2182,8 @@ function abrirPopupComissao(){
                 <input id="comArqNome" class="form-control" placeholder="Nome do arquiteto" value="${_comArq?.nome||''}">
               </div>
               <div class="col-4">
-                <label class="form-label">Código</label>
-                <input id="comArqCodigo" class="form-control" placeholder="Código" value="${_comArq?.codigo||''}">
+                <label class="form-label">Código cliente/fornecedor</label>
+                <input id="comArqCodigo" class="form-control" placeholder="Código cliente/fornecedor" value="${_comArq?.codigo||''}">
               </div>
             </div>
 
@@ -2176,13 +2222,17 @@ function abrirPopupComissao(){
             <h4 style="margin:0 0 8px 0;">Vendedor</h4>
 
             <div class="row g-2" style="margin-bottom:8px;">
-              <div class="col-8">
+              <div class="col-6">
                 <label class="form-label">Nome</label>
                 <input id="comVendNome" class="form-control" placeholder="Nome do vendedor" value="${_comVend?.nome|| (document.getElementById('vendedorResponsavel')?.value||'')}">
               </div>
-              <div class="col-4">
-                <label class="form-label">Código</label>
-                <input id="comVendCodigo" class="form-control" placeholder="Código" value="${_comVend?.codigo|| (document.getElementById('codigoVendedor')?.value||'')}">
+              <div class="col-3">
+                <label class="form-label">Código do vendedor</label>
+                <input id="comVendCodigo" class="form-control" placeholder="Código do vendedor" value="${codigoVendedorPopupInicial}" data-valor-original="${codigoVendedorPopupInicial}">
+              </div>
+              <div class="col-3">
+                <label class="form-label">Código cliente/fornecedor</label>
+                <input id="comVendCodigoFornecedor" class="form-control" placeholder="Código cliente/fornecedor" value="${codigoClienteFornecedorVendedorPopupInicial}" data-valor-original="${codigoClienteFornecedorVendedorPopupInicial}">
               </div>
             </div>
 
@@ -2254,11 +2304,15 @@ function abrirPopupComissao(){
 
     const $comVendNome    = by.querySelector('#comVendNome');
     const $comVendCodigo  = by.querySelector('#comVendCodigo');
+    const $comVendCodigoFornecedor = by.querySelector('#comVendCodigoFornecedor');
     const $comVendPercent = by.querySelector('#comVendPercent');
     const $comVendValor   = by.querySelector('#comVendValor');
     const $vendPrev       = by.querySelector('#vendPrev');
     const $vendVenc       = by.querySelector('#vendVenc');
     const $vendObs        = by.querySelector('#vendObs');
+
+    if ($arqObs) $arqObs.value = vv_normalizarObservacaoComissao($arqObs.value);
+    if ($vendObs) $vendObs.value = vv_normalizarObservacaoComissao($vendObs.value);
 
     const $comArqCalc   = by.querySelector('#comArqCalc');
     const $comVendCalc  = by.querySelector('#comVendCalc');
@@ -2267,6 +2321,7 @@ function abrirPopupComissao(){
     const $sumTot       = by.querySelector('#sumTot');
     const $baseArqLabel = by.querySelector('#vv-com-base-arq');
     const $baseVendLabel= by.querySelector('#vv-com-base-vend');
+    const $vendedorTela = document.getElementById('vendedorResponsavel');
 
     const getModoArq = ()=> by.querySelector('input[name="comArqModo"]:checked')?.value || 'valor';
 
@@ -2286,8 +2341,88 @@ function abrirPopupComissao(){
         if (!opt) return;
         $comArqNome.value   = opt.value || '';
         $comArqCodigo.value = opt.getAttribute('data-codigo') || '';
+        sincronizarCodigoArquitetoPopup();
       });
     }
+
+    async function sincronizarCodigoArquitetoPopup() {
+      const nomeArquiteto = ($comArqNome?.value || '').trim();
+      if (!nomeArquiteto || !$comArqCodigo) return;
+
+      try {
+        const codigo = await vvBuscarCodigoClienteOmiePorNome(nomeArquiteto);
+        if (!codigo) return;
+        $comArqCodigo.value = codigo;
+        $comArqCodigo.dataset.valorOriginal = codigo;
+        $comArqCodigo.setAttribute('data-valor-original', codigo);
+      } catch (erro) {
+        console.warn('[comissao] nao foi possivel resolver codigo do arquiteto pela API de clientes.', erro);
+      }
+    }
+
+    function sincronizarCodigoVendedorPopup() {
+      if (!$comVendCodigo) return;
+
+      const nomeVendedor =
+        $comVendNome?.value?.trim() ||
+        $vendedorTela?.options?.[$vendedorTela.selectedIndex]?.text?.trim() ||
+        $vendedorTela?.value?.trim() ||
+        _comVend?.nome ||
+        '';
+
+      const codigo =
+        resolverCodigoVendedor(nomeVendedor) ||
+        document.getElementById('codigoVendedor')?.value?.trim() ||
+        '';
+
+      if (!codigo) return;
+
+      $comVendCodigo.value = codigo;
+      $comVendCodigo.dataset.valorOriginal = codigo;
+      $comVendCodigo.setAttribute('data-valor-original', codigo);
+    }
+
+    async function sincronizarCodigoFornecedorVendedorPopup() {
+      const nomeVendedor = ($comVendNome?.value || '').trim();
+      if (!nomeVendedor || !$comVendCodigoFornecedor) return;
+
+      try {
+        const codigo = await vvBuscarCodigoClienteOmiePorNome(nomeVendedor);
+        if (!codigo) return;
+        $comVendCodigoFornecedor.value = codigo;
+        $comVendCodigoFornecedor.dataset.valorOriginal = codigo;
+        $comVendCodigoFornecedor.setAttribute('data-valor-original', codigo);
+      } catch (erro) {
+        console.warn('[comissao] nao foi possivel resolver codigo cliente/fornecedor do vendedor pela API de clientes.', erro);
+      }
+    }
+
+    function limparSyncCodigoVendedorPopup() {
+      $comVendNome?.removeEventListener('input', sincronizarCodigoVendedorPopup);
+      $comVendNome?.removeEventListener('change', sincronizarCodigoVendedorPopup);
+      $vendedorTela?.removeEventListener('change', sincronizarCodigoVendedorPopup);
+      $vendedorTela?.removeEventListener('input', sincronizarCodigoVendedorPopup);
+      $comArqNome?.removeEventListener('input', sincronizarCodigoArquitetoPopup);
+      $comArqNome?.removeEventListener('change', sincronizarCodigoArquitetoPopup);
+      $comVendNome?.removeEventListener('input', sincronizarCodigoFornecedorVendedorPopup);
+      $comVendNome?.removeEventListener('change', sincronizarCodigoFornecedorVendedorPopup);
+      $vendedorTela?.removeEventListener('change', sincronizarCodigoFornecedorVendedorPopup);
+      $vendedorTela?.removeEventListener('input', sincronizarCodigoFornecedorVendedorPopup);
+    }
+
+    $comArqNome?.addEventListener('input', sincronizarCodigoArquitetoPopup);
+    $comArqNome?.addEventListener('change', sincronizarCodigoArquitetoPopup);
+    $comVendNome?.addEventListener('input', sincronizarCodigoVendedorPopup);
+    $comVendNome?.addEventListener('change', sincronizarCodigoVendedorPopup);
+    $comVendNome?.addEventListener('input', sincronizarCodigoFornecedorVendedorPopup);
+    $comVendNome?.addEventListener('change', sincronizarCodigoFornecedorVendedorPopup);
+    $vendedorTela?.addEventListener('change', sincronizarCodigoVendedorPopup);
+    $vendedorTela?.addEventListener('input', sincronizarCodigoVendedorPopup);
+    $vendedorTela?.addEventListener('change', sincronizarCodigoFornecedorVendedorPopup);
+    $vendedorTela?.addEventListener('input', sincronizarCodigoFornecedorVendedorPopup);
+    sincronizarCodigoArquitetoPopup();
+    sincronizarCodigoVendedorPopup();
+    sincronizarCodigoFornecedorVendedorPopup();
 
     function recalcComm(){
       const baseArqResumo = lerComissaoArquitetoResumoVisual();
@@ -2324,11 +2459,22 @@ function abrirPopupComissao(){
     recalcComm();
 
     ft.querySelector('#commCancel').addEventListener('click', ()=>{
+      limparSyncCodigoVendedorPopup();
       document.body.removeChild(bd);
       resolveC(null);
     });
 
     ft.querySelector('#commSave').addEventListener('click', ()=>{
+      const codigoVendedorSalvo = ($comVendCodigo.value || '').trim();
+      const codigoClienteFornecedorVendedorSalvo = String(
+        $comVendCodigoFornecedor?.value ||
+        _comVend?.codigo_cliente_fornecedor ||
+        _comVend?.codigoClienteFornecedor ||
+        _comVend?.codigo_fornecedor ||
+        _comVend?.codigoFornecedor ||
+        ''
+      ).trim();
+
       _comArq = {
         modo: getModoArq(),
         percent: Number($comArqPercent.value || 0),
@@ -2341,11 +2487,14 @@ function abrirPopupComissao(){
       };
 
       _comVend = {
+        ..._comVend,
         modo: 'percent',
         percent: 1,
         valorManual: 0,
         nome: $comVendNome.value || '',
-        codigo: $comVendCodigo.value || '',
+        codigo: codigoVendedorSalvo,
+        codigo_vendedor: codigoVendedorSalvo,
+        codigo_cliente_fornecedor: codigoClienteFornecedorVendedorSalvo,
         prev: $vendPrev.value || '',
         venc: $vendVenc.value || '',
         obs: $vendObs.value || ''
@@ -2358,6 +2507,7 @@ function abrirPopupComissao(){
         atualizarComissaoArquitetoNoResumo(arqCalc);
       }
 
+      limparSyncCodigoVendedorPopup();
       document.body.removeChild(bd);
       resolveC({
         baseConsiderada: lerValorProdutoResumo(),
@@ -2379,21 +2529,41 @@ function abrirPopupComissao(){
       .trim()
       .toUpperCase();
   }
-  const VENDEDORES_CODIGO = [
-    { nome:"FELIPE ULHOA FERREIRA", codigo:"2452908656", aliases:["FELIPE ULHOA","FELIPE U","FELIPE F","FELIPE FERREIRA"] },
-    { nome:"JOAO CLEBER MARTINS",   codigo:"2487961636", aliases:["JOAO CLEBER","JOÃO CLEBER","JOAO C MARTINS","J C MARTINS","JOAO MARTINS"] },
-    { nome:"RAFAEL ANGELO ARAUJO DA SILVA", codigo:"2458334379", aliases:["RAFAEL ANGELO","RAFAEL A A SILVA","RAFAEL ARAUJO","RAFAEL SILVA"] }
+ const VENDEDORES_CODIGO = [
+    { nome:"FELIPE ULHOA FERREIRA", codigo:"2452905682", aliases:["FELIPE ULHOA","FELIPE U","FELIPE F","FELIPE FERREIRA"] },
+    { nome:"JOAO CLEBER MARTINS",   codigo:"2452905334", aliases:["JOAO CLEBER","JOÃO CLEBER","JOAO C MARTINS","J C MARTINS","JOAO MARTINS"] },
+    { nome:"RAFAEL ANGELO ARAUJO DA SILVA", codigo:"2452905445", aliases:["RAFAEL ANGELO","RAFAEL A A SILVA","RAFAEL ARAUJO","RAFAEL SILVA"] }
   ];
+
+  window.VV_VENDEDORES_CODIGO = VENDEDORES_CODIGO.map(vendedor => ({
+    nome: String(vendedor?.nome || "").trim(),
+    codigo: String(vendedor?.codigo || "").trim(),
+    aliases: Array.isArray(vendedor?.aliases) ? [...vendedor.aliases] : []
+  }));
+  window.VV_VENDEDORES_CODIGO = [
+    { nome:"FELIPE ULHOA FERREIRA", codigo:"2452905682", aliases:["FELIPE ULHOA","FELIPE U","FELIPE F","FELIPE FERREIRA"] },
+    { nome:"JOAO CLEBER MARTINS",   codigo:"2452905334", aliases:["JOAO CLEBER","JOAO C MARTINS","J C MARTINS","JOAO MARTINS"] },
+    { nome:"RAFAEL ANGELO ARAUJO DA SILVA", codigo:"2452905445", aliases:["RAFAEL ANGELO","RAFAEL A A SILVA","RAFAEL ARAUJO","RAFAEL SILVA"] }
+  ];
+  window.VV_VENDEDORES_CODIGO_COMISSAO = window.VV_VENDEDORES_CODIGO.map(vendedor => ({
+    nome: String(vendedor?.nome || "").trim(),
+    codigo: String(vendedor?.codigo || "").trim(),
+    aliases: Array.isArray(vendedor?.aliases) ? [...vendedor.aliases] : []
+  }));
+
   function resolverCodigoVendedor(nome){
     const n = _vv_normNome(nome);
+    const vendedores = Array.isArray(window.VV_VENDEDORES_CODIGO) && window.VV_VENDEDORES_CODIGO.length
+      ? window.VV_VENDEDORES_CODIGO
+      : VENDEDORES_CODIGO;
     if (!n) return "";
-    for (const v of VENDEDORES_CODIGO){
+    for (const v of vendedores){
       if (_vv_normNome(v.nome) === n) return v.codigo;
     }
-    for (const v of VENDEDORES_CODIGO){
+    for (const v of vendedores){
       if ((v.aliases||[]).some(a => _vv_normNome(a) === n)) return v.codigo;
     }
-    for (const v of VENDEDORES_CODIGO){
+    for (const v of vendedores){
       const alvo = _vv_normNome(v.nome);
       if (n.includes(alvo) || alvo.includes(n)) return v.codigo;
       if ((v.aliases||[]).some(a => {
@@ -3043,7 +3213,7 @@ async function tentarEnviarComissoes(payload){
   }
 }
 
-function prepararComissoesAutomaticamente() {
+async function prepararComissoesAutomaticamente() {
   const parseBRL = (s) => {
     if (window.vv_parseBRL) return vv_parseBRL(s);
     return Number(
@@ -3103,20 +3273,25 @@ function prepararComissoesAutomaticamente() {
   };
 
   const resolverCodigoVendedorTela = () => {
-    const codigoDireto =
+    return (
       document.getElementById('comVendCodigo')?.value?.trim() ||
       document.getElementById('codigoVendedor')?.value?.trim() ||
-      '';
+      vv_resolverCodigoVendedorComissaoPorNome?.(resolverNomeVendedorTela()) ||
+      _comVend?.codigo_vendedor ||
+      _comVend?.codigo ||
+      ''
+    );
+  };
 
-    if (codigoDireto) return codigoDireto;
-
-    const nome = resolverNomeVendedorTela();
-    if (typeof resolverCodigoVendedor === 'function' && nome) {
-      const cod = resolverCodigoVendedor(nome);
-      if (cod) return cod;
-    }
-
-    return _comVend?.codigo || '';
+  const resolverCodigoClienteFornecedorVendedorTela = () => {
+    return (
+      document.getElementById('comVendCodigoFornecedor')?.value?.trim() ||
+      _comVend?.codigo_cliente_fornecedor ||
+      _comVend?.codigoClienteFornecedor ||
+      _comVend?.codigo_fornecedor ||
+      _comVend?.codigoFornecedor ||
+      ''
+    );
   };
 
   const resolverNomeArquitetoTela = () => {
@@ -3156,6 +3331,9 @@ function prepararComissoesAutomaticamente() {
   _comArq.valorManual = Number(_comArq.valorManual || valorArquitetoResumo || 0);
   _comArq.nome = resolverNomeArquitetoTela();
   _comArq.codigo = resolverCodigoArquitetoTela();
+  if (!_comArq.codigo && _comArq.nome) {
+    _comArq.codigo = await vvBuscarCodigoClienteOmiePorNome(_comArq.nome).catch(() => '');
+  }
   _comArq.prev = _comArq.prev || defaultArq;
   _comArq.venc = _comArq.venc || defaultArq;
   _comArq.obs = _comArq.obs || obsPadrao;
@@ -3166,6 +3344,11 @@ function prepararComissoesAutomaticamente() {
   _comVend.valorManual = 0;
   _comVend.nome = resolverNomeVendedorTela();
   _comVend.codigo = resolverCodigoVendedorTela();
+  _comVend.codigo_vendedor = resolverCodigoVendedorTela();
+  _comVend.codigo_cliente_fornecedor = resolverCodigoClienteFornecedorVendedorTela();
+  if (!_comVend.codigo_cliente_fornecedor && _comVend.nome) {
+    _comVend.codigo_cliente_fornecedor = await vvBuscarCodigoClienteOmiePorNome(_comVend.nome).catch(() => '');
+  }
   _comVend.prev = _comVend.prev || defaultVend;
   _comVend.venc = _comVend.venc || defaultVend;
   _comVend.obs = _comVend.obs || obsPadrao;
@@ -3258,7 +3441,7 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
     parcelamentoServicos = parcelamentoProdutosServicos.parcelasServico || null;
   }
 
-  prepararComissoesAutomaticamente();
+  await prepararComissoesAutomaticamente();
 
   const calcFromState = (s, base) => {
     const modo = s?.modo || 'percent';
@@ -3277,26 +3460,33 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
     arquiteto: {
       nome: _comArq?.nome || '',
       codigo: _comArq?.codigo || '',
+      codigo_cliente_fornecedor: _comArq?.codigo || '',
       modo: _comArq?.modo || 'percent',
       percent: Number(_comArq?.percent || 0),
       valorManual: Number(_comArq?.valorManual || 0),
       valorCalculado: Number(arqCalc || 0),
       previsao: _comArq?.prev || '',
       vencimento: _comArq?.venc || '',
-      observacao: _comArq?.obs || '',
-      codigo_categoria: "2.08.02"
+      observacao: vv_normalizarObservacaoComissao(_comArq?.obs),
+      codigo_categoria: "2.08.02",
+      numero_pedido: vv_getNumeroPedidoComissao() || '',
+      id_conta_corrente: 2523861035
     },
     vendedor: {
       nome: _comVend?.nome || '',
       codigo: _comVend?.codigo || '',
+      codigo_vendedor: _comVend?.codigo_vendedor || _comVend?.codigo || '',
+      codigo_cliente_fornecedor: _comVend?.codigo_cliente_fornecedor || _comVend?.codigoClienteFornecedor || '',
       modo: 'percent',
       percent: 1,
       valorManual: 0,
       valorCalculado: Number(vendCalc || 0),
       previsao: _comVend?.prev || '',
       vencimento: _comVend?.venc || '',
-      observacao: _comVend?.obs || '',
-      codigo_categoria: "2.07.99"
+      observacao: vv_normalizarObservacaoComissao(_comVend?.obs),
+      codigo_categoria: "2.07.99",
+      numero_pedido: vv_getNumeroPedidoComissao() || '',
+      id_conta_corrente: 2523861035
     }
   };
 
@@ -3374,7 +3564,7 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
 (function () {
   if (window.enviarComissoes && window.enviarComissoes.__vvFixCategoriasIndependenteFinal) return;
 
-  const API_URL = "https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/omie/comissao";
+  const API_URL = `${OMIE_ULHOA_API_BASE}/api/omie/comissao`;
 
   const toISODate = (d) => {
     if (!d) return "";
@@ -3386,37 +3576,82 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
     return !!codigo;
   }
 
-  function montarLancamento(tipo, fonte, baseConsiderada) {
-    const calc = Number(fonte?.valorCalculado || 0);
-    const manual = Number(fonte?.valorManual || 0);
-    const valor_documento = Number((calc > 0 ? calc : manual).toFixed(2));
+function montarLancamento(tipo, fonte, baseConsiderada, codigoProjeto) {
+  const calc   = Number(fonte?.valorCalculado || 0);
+  const manual = Number(fonte?.valorManual    || 0);
+  const valor_documento = Number((calc > 0 ? calc : manual).toFixed(2));
 
-    const data_previsao = toISODate(fonte?.previsao || "");
-    const data_vencimento = toISODate(fonte?.vencimento || "");
+  const data_previsao   = toISODate(fonte?.previsao   || "");
+  const data_vencimento = toISODate(fonte?.vencimento || "");
 
-    const tipoNorm = String(tipo || "")
-      .trim()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
+  const tipoNorm = String(tipo || "")
+    .trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-    const codigo_categoria = tipoNorm.includes("arquit")
-      ? "2.08.02"
-      : "2.07.99";
+  const codigo_categoria = tipoNorm.includes("arquit") ? "2.09.05" : "2.07.98";
+  const codigoClienteRaw = String(fonte?.codigo || "").trim();
 
-    return {
-      valor_documento,
-      data_previsao,
-      data_vencimento,
-      codigo_categoria,
-      tipo: tipoNorm,
-      papel: tipoNorm,
-      ...(fonte?.codigo ? { codigo_cliente_fornecedor: String(fonte.codigo).trim() } : {}),
-      observacao:
-        (fonte?.observacao?.trim()
-          || `Comissão ${tipo} — ${fonte?.nome || ""} (base: ${Number(baseConsiderada || 0).toFixed(2)})`)
-    };
-  }
+  const numero_pedido = String(
+    fonte?.numero_pedido ||
+    vv_getNumeroPedidoComissao() ||
+    ""
+  ).trim().slice(0, 15);
+
+  const id_conta_corrente = Number(
+    fonte?.id_conta_corrente ||
+    2523861035
+  ) || 2523861035;
+
+  const codigoVendedorRaw = String(
+    tipoNorm.includes("vendedor")
+      ? (
+          fonte?.codigo_vendedor ||
+          vv_getCodigoVendedorComissao() ||
+          ""
+        )
+      : (
+          fonte?.codigo_vendedor ||
+          vv_getCodigoVendedorComissao() ||
+          ""
+        )
+  ).trim();
+  const codigo_vendedor = codigoVendedorRaw !== "" && Number.isFinite(Number(codigoVendedorRaw))
+    ? Number(codigoVendedorRaw)
+    : undefined;
+
+  const codigo_cliente_fornecedor = codigoClienteRaw !== "" && Number.isFinite(Number(codigoClienteRaw))
+    ? Number(codigoClienteRaw)
+    : undefined;
+
+  const observacaoLocal = vv_normalizarObservacaoComissao(fonte?.observacao);
+  const observacaoPadrao = vv_getObservacaoPadraoComissao();
+  const observacao = observacaoLocal || observacaoPadrao ||
+    `Comissão ${tipo} — ${fonte?.nome || ""} (base: ${Number(baseConsiderada || 0).toFixed(2)})`;
+
+  const payload = {
+    codigo_categoria,
+    id_conta_corrente,
+    valor_documento,
+    data_vencimento,
+    data_previsao,
+    observacao,
+  };
+
+  if (codigo_cliente_fornecedor !== undefined) payload.codigo_cliente_fornecedor = codigo_cliente_fornecedor;
+  if (codigoProjeto !== undefined && Number(codigoProjeto) > 0) payload.codigo_projeto = Number(codigoProjeto);
+  if (numero_pedido)                           payload.numero_pedido             = numero_pedido;
+  if (codigo_vendedor !== undefined)           payload.codigo_vendedor           = codigo_vendedor;
+
+  console.group(`🧾 [montarLancamento] ${tipo}`);
+  console.log("payload final:", JSON.parse(JSON.stringify(payload)));
+  console.log("id_conta_corrente:", typeof payload.id_conta_corrente, payload.id_conta_corrente);
+  console.log("tipos → codigo_cliente_fornecedor:", typeof payload.codigo_cliente_fornecedor, payload.codigo_cliente_fornecedor);
+  console.log("tipos → codigo_projeto:", typeof payload.codigo_projeto, payload.codigo_projeto);
+  console.log("tipos → codigo_vendedor:", typeof payload.codigo_vendedor, payload.codigo_vendedor);
+  console.groupEnd();
+
+  return payload;
+}
 
   function validarLancamento(lanc, papel) {
     const erros = [];
@@ -3424,54 +3659,100 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
     if (!lanc?.data_previsao) erros.push("data_previsao ausente");
     if (!lanc?.data_vencimento) erros.push("data_vencimento ausente");
     if (!lanc?.codigo_cliente_fornecedor) erros.push("codigo_cliente_fornecedor ausente");
+    if (!lanc?.codigo_projeto) erros.push("codigo_projeto ausente");
     if (!lanc?.codigo_categoria) erros.push("codigo_categoria ausente");
+    if (!lanc?.numero_pedido) erros.push("numero_pedido ausente");
+    if (!lanc?.codigo_vendedor) erros.push("codigo_vendedor ausente");
     return { valido: erros.length === 0, erros, papel };
   }
 
-  async function postarLancamento(lanc, papel) {
-    console.group(`📤 [COMISSÕES] POST ${papel}`);
-    console.log("URL:", API_URL);
-    console.log("Body:", JSON.parse(JSON.stringify(lanc || {})));
+ async function postarLancamento(lanc, papel) {
+  // ✅ Força tipos integer para campos que a Omie exige como number
+  const lancFinal = { ...lanc };
+  if (lancFinal.codigo_cliente_fornecedor !== undefined)
+    lancFinal.codigo_cliente_fornecedor = Number(lancFinal.codigo_cliente_fornecedor);
+  if (lancFinal.codigo_projeto !== undefined)
+    lancFinal.codigo_projeto = Number(lancFinal.codigo_projeto);
+  if (lancFinal.codigo_vendedor !== undefined)
+    lancFinal.codigo_vendedor = Number(lancFinal.codigo_vendedor);
+  if (lancFinal.id_conta_corrente !== undefined)
+    lancFinal.id_conta_corrente = Number(lancFinal.id_conta_corrente);
+
+  console.group(`🚨 [PRÉ-ENVIO COMISSÃO] ${papel.toUpperCase()}`);
+  console.log("Body FINAL enviado:", JSON.stringify(lancFinal, null, 2));
+  console.log("codigo_cliente_fornecedor:", lancFinal.codigo_cliente_fornecedor, typeof lancFinal.codigo_cliente_fornecedor);
+  console.log("codigo_projeto:", lancFinal.codigo_projeto, typeof lancFinal.codigo_projeto);
+  console.log("codigo_vendedor:", lancFinal.codigo_vendedor, typeof lancFinal.codigo_vendedor);
+  console.log("numero_pedido:", lancFinal.numero_pedido, typeof lancFinal.numero_pedido);
+  console.log("codigo_categoria:", lancFinal.codigo_categoria);
+  const tabelaDebugComissao = [{
+    papel,
+    codigo_cliente_fornecedor: lancFinal.codigo_cliente_fornecedor ?? "",
+    codigo_projeto: lancFinal.codigo_projeto ?? "",
+    codigo_categoria: lancFinal.codigo_categoria ?? "",
+    numero_pedido: lancFinal.numero_pedido ?? "",
+    codigo_vendedor: lancFinal.codigo_vendedor ?? "",
+    id_conta_corrente: lancFinal.id_conta_corrente ?? "",
+    valor_documento: lancFinal.valor_documento ?? "",
+    data_previsao: lancFinal.data_previsao ?? "",
+    data_vencimento: lancFinal.data_vencimento ?? "",
+    observacao: lancFinal.observacao ?? ""
+  }];
+  console.table(tabelaDebugComissao);
+  console.groupEnd();
+
+  window.__vvUltimoLancamentoComissao = {
+    papel,
+    body: JSON.parse(JSON.stringify(lancFinal))
+  };
+  window.__vvUltimosLancamentosComissao = window.__vvUltimosLancamentosComissao || {};
+  window.__vvUltimosLancamentosComissao[papel] = JSON.parse(JSON.stringify(lancFinal));
+  window.__vvTabelaDebugComissao = window.__vvTabelaDebugComissao || {};
+  window.__vvTabelaDebugComissao[papel] = JSON.parse(JSON.stringify(tabelaDebugComissao));
+
+  try {
+    const r = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lancFinal)
+    });
+
+    const json = await r.json().catch(() => ({}));
+
+    console.group(`📥 [RESPOSTA COMISSÃO] ${papel}`);
+    console.log("HTTP status:", r.status);
+    console.log("HTTP ok:", r.ok);
+    console.log("JSON retornado:", json);
     console.groupEnd();
 
-    try {
-      const r = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(lanc)
-      });
-
-      const json = await r.json().catch(() => ({}));
-
-      console.group(`📥 [COMISSÕES] RESPOSTA ${papel}`);
-      console.log("HTTP status:", r.status);
-      console.log("HTTP ok:", r.ok);
-      console.log("JSON:", json);
-      console.groupEnd();
-
-      if (!r.ok || json?.ok === false) {
-        const msg = json?.error || json?.message || `HTTP ${r.status}`;
-        return { ok: false, papel, status: 'erro', erro: msg, resposta: json, enviado: lanc };
-      }
-
-      return { ok: true, papel, status: 'enviado', resposta: json, enviado: lanc };
-    } catch (e) {
-      return { ok: false, papel, status: 'erro', erro: e?.message || "Falha de rede", enviado: lanc };
+    if (!r.ok || json?.ok === false) {
+      const msg = json?.error || json?.message || `HTTP ${r.status}`;
+      return { ok: false, papel, status: 'erro', erro: msg, resposta: json, enviado: lancFinal };
     }
-  }
 
+    return { ok: true, papel, status: 'enviado', resposta: json, enviado: lancFinal };
+  } catch (e) {
+    return { ok: false, papel, status: 'erro', erro: e?.message || "Falha de rede", enviado: lancFinal };
+  }
+}
   window.enviarComissoes = async function (payload) {
+    await garantirNumeroPedidoPreenchido().catch(() => "");
+
+    const numeroPedidoProjeto = vv_getNumeroPedidoComissao() || "";
+    const codigoProjeto = await vvGarantirProjetoOmiePorPedido(numeroPedidoProjeto);
+
     const fonteArq = payload?.arquiteto || {};
     const fonteVend = payload?.vendedor || {};
 
     const existeArq = comissaoExiste(fonteArq);
     const existeVend = comissaoExiste(fonteVend);
 
-    const lancArq = montarLancamento("arquiteto", fonteArq, payload?.baseConsiderada);
-    const lancVend = montarLancamento("vendedor", fonteVend, payload?.baseConsiderada);
+    const lancArq = montarLancamento("arquiteto", fonteArq, payload?.baseConsiderada, codigoProjeto);
+    const lancVend = montarLancamento("vendedor", fonteVend, payload?.baseConsiderada, codigoProjeto);
 
     console.group("🧾 [COMISSÕES] Pré-envio");
     console.log("Payload original:", JSON.parse(JSON.stringify(payload || {})));
+    console.log("codigoProjeto:", codigoProjeto);
     console.log("Existe arquiteto?", existeArq, "Código:", fonteArq?.codigo || "");
     console.log("Existe vendedor?", existeVend, "Código:", fonteVend?.codigo || "");
     console.log("Lançamento arquiteto:", JSON.parse(JSON.stringify(lancArq || {})));
@@ -3548,6 +3829,315 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
   window.enviarComissoes.__vvFixCategoriasIndependenteFinal = true;
 })();
 
+(function () {
+  const API_URL = "https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/omie/comissao";
+
+  const toISODate = (valor) => {
+    if (!valor) return "";
+    try {
+      return vvDataISO(valor);
+    } catch {
+      return "";
+    }
+  };
+
+  function vvMontarLancamentoComProjeto(tipo, fonte, baseConsiderada, codigoProjeto) {
+    const calc = Number(fonte?.valorCalculado || 0);
+    const manual = Number(fonte?.valorManual || 0);
+    const valor_documento = Number((calc > 0 ? calc : manual).toFixed(2));
+    const tipoNorm = String(tipo || "").trim().toLowerCase();
+    const codigoCliente = String(
+      tipoNorm.includes("vendedor")
+        ? (
+            fonte?.codigo_cliente_fornecedor ||
+            fonte?.codigoClienteFornecedor ||
+            fonte?.codigo_fornecedor ||
+            fonte?.codigoFornecedor ||
+            ""
+          )
+        : (
+            fonte?.codigo ||
+            fonte?.codigo_cliente_fornecedor ||
+            fonte?.codigoClienteFornecedor ||
+            ""
+          )
+    ).trim();
+    const codigoVendedor = String(
+      fonte?.codigo_vendedor ||
+      fonte?.codigoVendedor ||
+      (
+        tipoNorm.includes("vendedor")
+          ? (
+              fonte?.codigo ||
+              vv_getCodigoVendedorComissao() ||
+              vv_resolverCodigoVendedorComissaoPorNome(fonte?.nome || "") ||
+              ""
+            )
+          : ""
+      )
+    ).trim();
+    const numeroPedido = String(
+      fonte?.numero_pedido ||
+      vv_getNumeroPedidoComissao() ||
+      ""
+    ).trim().slice(0, 15);
+    const codigoCategoria = String(fonte?.codigo_categoria || "").trim();
+    const observacao =
+      vv_normalizarObservacaoComissao(fonte?.observacao) ||
+      `Comissao ${tipo} - ${fonte?.nome || ""} (base: ${Number(baseConsiderada || 0).toFixed(2)})`;
+
+    const payload = {
+      valor_documento,
+      data_previsao: toISODate(fonte?.previsao || ""),
+      data_vencimento: toISODate(fonte?.vencimento || ""),
+      observacao
+    };
+
+    if (codigoCliente) {
+      payload.codigo_cliente_fornecedor = Number.isFinite(Number(codigoCliente))
+        ? Number(codigoCliente)
+        : codigoCliente;
+    }
+
+    if (codigoVendedor) {
+      payload.codigo_vendedor = Number.isFinite(Number(codigoVendedor))
+        ? Number(codigoVendedor)
+        : codigoVendedor;
+    }
+
+    if (codigoCategoria) payload.codigo_categoria = codigoCategoria;
+
+    if (fonte?.id_conta_corrente) {
+      payload.id_conta_corrente = Number(fonte.id_conta_corrente);
+    }
+
+    if (numeroPedido) {
+      payload.numero_pedido = numeroPedido;
+    }
+
+    if (codigoProjeto !== undefined && Number(codigoProjeto) > 0) {
+      payload.codigo_projeto = Number(codigoProjeto);
+    }
+
+    return payload;
+  }
+
+  function vvValidarLancamentoComProjeto(lanc, papel) {
+    const erros = [];
+    if (!(lanc?.valor_documento > 0)) erros.push("valor_documento invalido");
+    if (!lanc?.data_previsao) erros.push("data_previsao ausente");
+    if (!lanc?.data_vencimento) erros.push("data_vencimento ausente");
+    if (!lanc?.codigo_cliente_fornecedor) erros.push("codigo_cliente_fornecedor ausente");
+    if (!lanc?.numero_pedido) erros.push("numero_pedido ausente");
+    if (!lanc?.codigo_projeto) erros.push("codigo_projeto ausente");
+    if (String(papel || "").toLowerCase().includes("vendedor") && !lanc?.codigo_vendedor) {
+      erros.push("codigo_vendedor ausente");
+    }
+    return { valido: erros.length === 0, erros, papel };
+  }
+
+  async function vvPostarLancamentoComProjeto(lanc, papel) {
+    const lancFinal = { ...lanc };
+
+    if (lancFinal.codigo_cliente_fornecedor !== undefined) {
+      lancFinal.codigo_cliente_fornecedor = Number(lancFinal.codigo_cliente_fornecedor);
+    }
+
+    if (lancFinal.codigo_projeto !== undefined) {
+      lancFinal.codigo_projeto = Number(lancFinal.codigo_projeto);
+    }
+
+    if (lancFinal.codigo_vendedor !== undefined) {
+      lancFinal.codigo_vendedor = Number(lancFinal.codigo_vendedor);
+    }
+
+    if (lancFinal.id_conta_corrente !== undefined) {
+      lancFinal.id_conta_corrente = Number(lancFinal.id_conta_corrente);
+    }
+
+    window.__vvUltimoLancamentoComissao = {
+      papel,
+      body: JSON.parse(JSON.stringify(lancFinal))
+    };
+    window.__vvUltimosLancamentosComissao = window.__vvUltimosLancamentosComissao || {};
+    window.__vvUltimosLancamentosComissao[papel] = JSON.parse(JSON.stringify(lancFinal));
+
+    try {
+      const resposta = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lancFinal)
+      });
+
+      const json = await resposta.json().catch(() => ({}));
+
+      if (!resposta.ok || json?.ok === false) {
+        const erro = json?.error || json?.message || `HTTP ${resposta.status}`;
+        return { ok: false, papel, status: "erro", erro, resposta: json, enviado: lancFinal };
+      }
+
+      return { ok: true, papel, status: "enviado", resposta: json, enviado: lancFinal };
+    } catch (erro) {
+      return {
+        ok: false,
+        papel,
+        status: "erro",
+        erro: erro?.message || "Falha de rede",
+        enviado: lancFinal
+      };
+    }
+  }
+
+  window.enviarComissoes = async function (payload) {
+    try {
+      document.dispatchEvent(
+        new CustomEvent("vv:comissoes:prontas", { detail: { payload } })
+      );
+    } catch {}
+
+    await garantirNumeroPedidoPreenchido().catch(() => "");
+
+    const numeroPedidoProjeto = vv_getNumeroPedidoComissao() || "";
+    if (!numeroPedidoProjeto) {
+      throw new Error("Numero do pedido ausente para enviar a comissao.");
+    }
+
+    const codigoProjeto = await vvGarantirProjetoOmiePorPedido(numeroPedidoProjeto);
+    const fonteArqBase = payload?.arquiteto || {};
+    const fonteVendBase = payload?.vendedor || {};
+
+    const codigoClienteFornecedorArquiteto =
+      String(
+        fonteArqBase?.codigo ||
+        fonteArqBase?.codigo_cliente_fornecedor ||
+        fonteArqBase?.codigoClienteFornecedor ||
+        ""
+      ).trim() ||
+      await vvBuscarCodigoClienteOmiePorNome(fonteArqBase?.nome || "").catch(() => "");
+
+    const codigoClienteFornecedorVendedor =
+      String(
+        fonteVendBase?.codigo_cliente_fornecedor ||
+        fonteVendBase?.codigoClienteFornecedor ||
+        fonteVendBase?.codigo_fornecedor ||
+        fonteVendBase?.codigoFornecedor ||
+        ""
+      ).trim() ||
+      await vvBuscarCodigoClienteOmiePorNome(fonteVendBase?.nome || "").catch(() => "");
+
+    const codigoVendedor =
+      String(
+        fonteVendBase?.codigo_vendedor ||
+        fonteVendBase?.codigoVendedor ||
+        fonteVendBase?.codigo ||
+        vv_getCodigoVendedorComissao() ||
+        vv_resolverCodigoVendedorComissaoPorNome(fonteVendBase?.nome || "") ||
+        ""
+      ).trim();
+
+    const fonteArq = {
+      ...fonteArqBase,
+      codigo: codigoClienteFornecedorArquiteto,
+      codigo_cliente_fornecedor: codigoClienteFornecedorArquiteto,
+      numero_pedido: String(fonteArqBase?.numero_pedido || numeroPedidoProjeto).trim().slice(0, 15)
+    };
+
+    const fonteVend = {
+      ...fonteVendBase,
+      codigo: codigoVendedor,
+      codigo_vendedor: codigoVendedor,
+      codigo_cliente_fornecedor: codigoClienteFornecedorVendedor,
+      numero_pedido: String(fonteVendBase?.numero_pedido || numeroPedidoProjeto).trim().slice(0, 15)
+    };
+
+    const existeArq = !!String(fonteArq?.codigo || "").trim();
+    const existeVend = !!String(
+      fonteVend?.codigo ||
+      fonteVend?.codigo_vendedor ||
+      fonteVend?.codigo_cliente_fornecedor ||
+      ""
+    ).trim();
+
+    const lancArq = vvMontarLancamentoComProjeto("arquiteto", fonteArq, payload?.baseConsiderada, codigoProjeto);
+    const lancVend = vvMontarLancamentoComProjeto("vendedor", fonteVend, payload?.baseConsiderada, codigoProjeto);
+
+    let resArq = {
+      ok: false,
+      status: "ignorado",
+      papel: "arquiteto",
+      erro: "Comissao nao existente (sem codigo)."
+    };
+
+    let resVend = {
+      ok: false,
+      status: "ignorado",
+      papel: "vendedor",
+      erro: "Comissao nao existente (sem codigo)."
+    };
+
+    if (existeArq) {
+      const validacaoArq = vvValidarLancamentoComProjeto(lancArq, "arquiteto");
+      if (validacaoArq.valido) {
+        resArq = await vvPostarLancamentoComProjeto(lancArq, "arquiteto");
+      } else {
+        resArq = {
+          ok: false,
+          status: "invalido",
+          papel: "arquiteto",
+          erro: validacaoArq.erros.join(", "),
+          validacao: validacaoArq
+        };
+      }
+    }
+
+    if (existeVend) {
+      const validacaoVend = vvValidarLancamentoComProjeto(lancVend, "vendedor");
+      if (validacaoVend.valido) {
+        resVend = await vvPostarLancamentoComProjeto(lancVend, "vendedor");
+      } else {
+        resVend = {
+          ok: false,
+          status: "invalido",
+          papel: "vendedor",
+          erro: validacaoVend.erros.join(", "),
+          validacao: validacaoVend
+        };
+      }
+    }
+
+    const retorno = {
+      ok: !!(resArq.ok || resVend.ok),
+      resultados: {
+        arquiteto: resArq,
+        vendedor: resVend
+      },
+      resumo: {
+        existeArquiteto: existeArq,
+        existeVendedor: existeVend,
+        enviadoArquiteto: !!resArq.ok,
+        enviadoVendedor: !!resVend.ok,
+        codigoProjeto: codigoProjeto || ""
+      }
+    };
+
+    try {
+      document.dispatchEvent(
+        new CustomEvent("vv:comissoes:enviadas", {
+          detail: {
+            ok: retorno.ok,
+            resultados: retorno.resultados,
+            resumo: retorno.resumo
+          }
+        })
+      );
+    } catch {}
+
+    return retorno;
+  };
+
+  window.enviarComissoes.__vvEstruturaCorretaProjeto = true;
+})();
+
 
 
 
@@ -3575,6 +4165,115 @@ function vv_getClienteNome() {
 function vv_getNumeroOrcamento() {
   const inp = document.getElementById('numeroOrcamento');
   return (inp?.value ?? inp?.textContent ?? '').toString().trim();
+}
+function vv_getNumeroPedidoComissao() {
+  const inp = document.getElementById('numeroPedido');
+  return (
+    inp?.value?.trim?.() ||
+    inp?.dataset?.valorOriginal?.trim?.() ||
+    inp?.getAttribute?.('data-valor-original')?.trim?.() ||
+    inp?.textContent?.trim?.() ||
+    ''
+  );
+}
+function vv_getVendedoresCodigoComissao() {
+  const fallback = [
+    { nome:"FELIPE ULHOA FERREIRA", codigo:"2452905682", aliases:["FELIPE ULHOA","FELIPE U","FELIPE F","FELIPE FERREIRA"] },
+    { nome:"JOAO CLEBER MARTINS",   codigo:"2452905334", aliases:["JOAO CLEBER","JOAO C MARTINS","J C MARTINS","JOAO MARTINS"] },
+    { nome:"RAFAEL ANGELO ARAUJO DA SILVA", codigo:"2452905445", aliases:["RAFAEL ANGELO","RAFAEL A A SILVA","RAFAEL ARAUJO","RAFAEL SILVA"] }
+  ];
+
+  const base = Array.isArray(window.VV_VENDEDORES_CODIGO_COMISSAO) && window.VV_VENDEDORES_CODIGO_COMISSAO.length
+    ? window.VV_VENDEDORES_CODIGO_COMISSAO
+    : Array.isArray(window.VV_VENDEDORES_CODIGO) && window.VV_VENDEDORES_CODIGO.length
+      ? window.VV_VENDEDORES_CODIGO
+      : fallback;
+
+  return base.map(vendedor => ({
+    nome: String(vendedor?.nome || "").trim(),
+    codigo: String(vendedor?.codigo || "").trim(),
+    aliases: Array.isArray(vendedor?.aliases) ? [...vendedor.aliases] : []
+  }));
+}
+function vv_normNomeComissao(s) {
+  return String(s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+function vv_getNomeVendedorComissao() {
+  const select = document.getElementById('vendedorResponsavel');
+  return (
+    document.getElementById('comVendNome')?.value?.trim() ||
+    select?.options?.[select.selectedIndex]?.text?.trim() ||
+    select?.value?.trim() ||
+    ''
+  );
+}
+function vv_resolverCodigoVendedorComissaoPorNome(nome) {
+  const alvo = vv_normNomeComissao(nome);
+  if (!alvo) return '';
+  const vendedores = vv_getVendedoresCodigoComissao();
+
+  for (const vendedor of vendedores) {
+    if (vv_normNomeComissao(vendedor.nome) === alvo) return vendedor.codigo;
+  }
+
+  for (const vendedor of vendedores) {
+    if ((vendedor.aliases || []).some(alias => vv_normNomeComissao(alias) === alvo)) {
+      return vendedor.codigo;
+    }
+  }
+
+  for (const vendedor of vendedores) {
+    const nomeVendedor = vv_normNomeComissao(vendedor.nome);
+    if (alvo.includes(nomeVendedor) || nomeVendedor.includes(alvo)) {
+      return vendedor.codigo;
+    }
+
+    if ((vendedor.aliases || []).some(alias => {
+      const aliasNorm = vv_normNomeComissao(alias);
+      return alvo.includes(aliasNorm) || aliasNorm.includes(alvo);
+    })) {
+      return vendedor.codigo;
+    }
+  }
+
+  return '';
+}
+function vv_getCodigoVendedorComissao() {
+  const codigoManual = document.getElementById('codigoVendedor')?.value?.trim() || '';
+  const nomeVendedor = vv_getNomeVendedorComissao();
+  const codigoPorNome = vv_resolverCodigoVendedorComissaoPorNome(nomeVendedor);
+
+  if (codigoManual && codigoPorNome && codigoManual !== codigoPorNome) {
+    console.warn('[comissao] codigo_vendedor manual divergente do vendedor selecionado; usando o codigo do vendedor responsavel.', {
+      nomeVendedor,
+      codigoManual,
+      codigoPorNome
+    });
+  }
+
+  return codigoPorNome || codigoManual || '';
+}
+function vv_getObservacaoPadraoComissao() {
+  const numeroPedido = vv_getNumeroPedidoComissao();
+  const numeroOrcamento = vv_getNumeroOrcamento();
+
+  if (!numeroPedido && !numeroOrcamento) return '';
+
+  return `numero do pedido: ${numeroPedido} - numero do orçamento: ${numeroOrcamento}`;
+}
+function vv_normalizarObservacaoComissao(valor) {
+  const texto = String(valor || '').trim();
+  const padrao = vv_getObservacaoPadraoComissao();
+
+  if (!texto) return padrao;
+  if (/^Or/i.test(texto)) return padrao || texto;
+  if (/^numero do pedido:/i.test(texto)) return padrao || texto;
+  return texto;
 }
 function vv_getPrimeiraDataParcelaISO() {
   const first = Array.from(document.querySelectorAll('.data-parcela'))
@@ -3983,7 +4682,7 @@ async function gerarPayloadOmie() {
     }
 
     if (numeroOrcamentoLimpo) {
-      linhas.push(`Numero de orcamento: ${numeroOrcamentoLimpo}`);
+      linhas.push(`Numero de orçamento: ${numeroOrcamentoLimpo}`);
     }
 
     return linhas.join("\n").trim();
@@ -4225,6 +4924,7 @@ async function gerarPayloadOmie() {
     ? gerarNumeroPedidoUnico()
     : ("PED-" + Date.now());
   const numeroPedidoTela = String(lerValorCampoOmie("numeroPedido") || "").trim();
+  const codigoProjetoOmie = await vvGarantirProjetoOmiePorPedido(numeroPedidoTela);
   const numeroOrcamentoTela = lerValorCampoOmie("numeroOrcamento");
   const contatoClienteTela = obterContatoClienteParaOmie();
   const dadosAdicionaisNF = montarDadosAdicionaisNFOmie(
@@ -4262,7 +4962,8 @@ async function gerarPayloadOmie() {
       dados_adicionais_nf: dadosAdicionaisNF,
       consumidor_final: "S",
       enviar_email: "S",
-      codVend: vendedorInfo.codigo
+      codVend: vendedorInfo.codigo,
+      codProj: codigoProjetoOmie
     },
     agropecuario: {
       cNumReceita: "",
@@ -4416,6 +5117,7 @@ async function gerarPayloadOmie() {
 
   window.__vvResumoPayloadOmie = {
     codigoPedidoIntegracao,
+    codigoProjeto: codigoProjetoOmie,
     numeroPedido: numeroPedidoTela,
     numeroPedidoCliente: numeroPedidoTela,
     numeroContrato: numeroPedidoTela,
