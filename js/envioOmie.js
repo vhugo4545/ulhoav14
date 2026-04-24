@@ -249,11 +249,16 @@ async function garantirNumeroPedidoPreenchido() {
 }
 
 window.garantirNumeroPedidoPreenchido = garantirNumeroPedidoPreenchido;
-window.__vvEnvioOmieVersion = "2026-04-24-comissao-campos-obrigatorios-v16";
+window.__vvEnvioOmieVersion = "2026-04-24-cliente-servicos-fonte-correta-v19";
 
 const OMIE_ULHOA_API_BASE = (
   window.OMIE_ULHOA_API_BASE ||
   "https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com"
+).replace(/\/+$/, "");
+
+const OMIE_SERVICOS_API_BASE = (
+  window.OMIE_SERVICOS_API_BASE ||
+  "https://ulhoa-servico-ec4e1aa95355.herokuapp.com"
 ).replace(/\/+$/, "");
 
 const OMIE_PROJETOS_ENDPOINT = (
@@ -261,15 +266,26 @@ const OMIE_PROJETOS_ENDPOINT = (
   `${OMIE_ULHOA_API_BASE}/api/omie/projetos`
 ).replace(/\/+$/, "");
 
-async function vvGarantirProjetoOmiePorPedido(numeroPedido, { force = false } = {}) {
+const OMIE_PROJETOS_SERVICOS_ENDPOINT = (
+  window.OMIE_PROJETOS_SERVICOS_ENDPOINT ||
+  `${OMIE_SERVICOS_API_BASE}/api/omie/projetos`
+).replace(/\/+$/, "");
+
+async function vvGarantirProjetoOmiePorPedidoBase(numeroPedido, {
+  force = false,
+  endpoint = OMIE_PROJETOS_ENDPOINT,
+  cacheKey = "__vvProjetosOmiePorPedido",
+  ultimoKey = "__vvUltimoProjetoOmie",
+  origem = "produtos"
+} = {}) {
   const nomeProjeto = String(numeroPedido || "").trim();
 
   if (!nomeProjeto) {
     throw new Error("Numero do pedido ausente para criar o projeto na Omie.");
   }
 
-  window.__vvProjetosOmiePorPedido = window.__vvProjetosOmiePorPedido || {};
-  const cache = window.__vvProjetosOmiePorPedido[nomeProjeto];
+  window[cacheKey] = window[cacheKey] || {};
+  const cache = window[cacheKey][nomeProjeto];
 
   if (!force && cache?.codigo) {
     return Number(cache.codigo);
@@ -277,12 +293,13 @@ async function vvGarantirProjetoOmiePorPedido(numeroPedido, { force = false } = 
 
   const codint = `PROJ-${Date.now()}`.slice(0, 20);
 
-  console.group("🚀 [CRIAR PROJETO OMIE]");
+  console.group(`🚀 [CRIAR PROJETO OMIE ${origem.toUpperCase()}]`);
   console.log("numeroPedido:", nomeProjeto);
   console.log("codint:", codint);
+  console.log("endpoint:", endpoint);
   console.groupEnd();
 
-  const resposta = await fetch(OMIE_PROJETOS_ENDPOINT, {
+  const resposta = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -294,7 +311,7 @@ async function vvGarantirProjetoOmiePorPedido(numeroPedido, { force = false } = 
 
   const json = await resposta.json().catch(() => ({}));
 
-  console.group("📥 [CRIAR PROJETO OMIE] Resposta");
+  console.group(`📥 [CRIAR PROJETO OMIE ${origem.toUpperCase()}] Resposta`);
   console.log("HTTP status:", resposta.status);
   console.log("ok:", resposta.ok);
   console.log("Resposta completa:", json);
@@ -315,16 +332,40 @@ async function vvGarantirProjetoOmiePorPedido(numeroPedido, { force = false } = 
     numeroPedido: nomeProjeto,
     codigo: codigoProjeto,
     codint,
+    endpoint,
+    origem,
     resposta: json
   };
 
-  window.__vvProjetosOmiePorPedido[nomeProjeto] = projeto;
+  window[cacheKey][nomeProjeto] = projeto;
+  window[ultimoKey] = projeto;
   window.__vvUltimoProjetoOmie = projeto;
 
   return codigoProjeto;
 }
 
+async function vvGarantirProjetoOmiePorPedido(numeroPedido, { force = false } = {}) {
+  return vvGarantirProjetoOmiePorPedidoBase(numeroPedido, {
+    force,
+    endpoint: OMIE_PROJETOS_ENDPOINT,
+    cacheKey: "__vvProjetosOmiePorPedido",
+    ultimoKey: "__vvUltimoProjetoOmie",
+    origem: "produtos"
+  });
+}
+
+async function vvGarantirProjetoOmieServicoPorPedido(numeroPedido, { force = false } = {}) {
+  return vvGarantirProjetoOmiePorPedidoBase(numeroPedido, {
+    force,
+    endpoint: OMIE_PROJETOS_SERVICOS_ENDPOINT,
+    cacheKey: "__vvProjetosOmieServicoPorPedido",
+    ultimoKey: "__vvUltimoProjetoOmieServico",
+    origem: "servicos"
+  });
+}
+
 window.vvGarantirProjetoOmiePorPedido = vvGarantirProjetoOmiePorPedido;
+window.vvGarantirProjetoOmieServicoPorPedido = vvGarantirProjetoOmieServicoPorPedido;
 window.criarProjetoTeste = async function criarProjetoTeste() {
   const numeroPedido = await garantirNumeroPedidoPreenchido();
   const codigoProjeto = await vvGarantirProjetoOmiePorPedido(numeroPedido, { force: true });
@@ -333,6 +374,16 @@ window.criarProjetoTeste = async function criarProjetoTeste() {
     numeroPedido,
     codigoProjeto,
     projeto: window.__vvUltimoProjetoOmie || null
+  };
+};
+window.criarProjetoServicoTeste = async function criarProjetoServicoTeste() {
+  const numeroPedido = await garantirNumeroPedidoPreenchido();
+  const codigoProjeto = await vvGarantirProjetoOmieServicoPorPedido(numeroPedido, { force: true });
+  return {
+    ok: true,
+    numeroPedido,
+    codigoProjeto,
+    projeto: window.__vvUltimoProjetoOmieServico || null
   };
 };
 
@@ -797,6 +848,7 @@ async function verificarClienteEAtualizar() {
 }
 
 const VV_CLIENTES_VISUALIZAR_URL = "https://ulhoa-0a02024d350a.herokuapp.com/clientes/visualizar";
+const VV_CLIENTES_SERVICO_URL = "https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes";
 
 function vvNormalizarNomeClienteOmie(valor) {
   return String(valor || "")
@@ -840,7 +892,7 @@ async function vvCarregarClientesVisualizar({ force = false } = {}) {
   cache.fetchedAt = Date.now();
 
   if (cache.lista.length) {
-    window.listaClientesServico = cache.lista;
+    window.__vvClientesVisualizarLista = cache.lista;
   }
 
   return cache.lista;
@@ -6242,6 +6294,45 @@ function normalizarTexto(str) {
 
 window.listaClientesServico = window.listaClientesServico || [];
 
+function vvExtrairListaClientesServico(payload) {
+  if (Array.isArray(payload?.clientes)) return payload.clientes;
+  if (Array.isArray(payload)) return payload;
+  return [];
+}
+
+async function vvCarregarClientesServicoOmie({ force = false } = {}) {
+  window.__vvClientesServicoCache = window.__vvClientesServicoCache || {
+    lista: [],
+    fetchedAt: 0
+  };
+
+  const cache = window.__vvClientesServicoCache;
+  if (!force && Array.isArray(cache.lista) && cache.lista.length) {
+    window.listaClientesServico = cache.lista;
+    return cache.lista;
+  }
+
+  const resposta = await fetch(VV_CLIENTES_SERVICO_URL, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+
+  if (!resposta.ok) {
+    throw new Error(`Nao foi possivel carregar clientes de servicos. HTTP ${resposta.status}.`);
+  }
+
+  const json = await resposta.json().catch(() => null);
+  const lista = vvExtrairListaClientesServico(json);
+
+  cache.lista = Array.isArray(lista) ? lista : [];
+  cache.fetchedAt = Date.now();
+  window.listaClientesServico = cache.lista;
+
+  return cache.lista;
+}
+
+window.vvCarregarClientesServicoOmie = vvCarregarClientesServicoOmie;
+
 /**
  * Retorna o codigo_cliente_omie (número) a partir da razão social / nome fantasia.
  * Usada em ctxHeaderOS -> getCodigoClientePorRazao(razao)
@@ -6259,13 +6350,13 @@ function getCodigoClientePorRazao(razaoBusca) {
 
   // 1) Match exato
   let cliente = lista.find(
-    (c) => normalizarTexto(c.nome_fantasia) === alvo
+    (c) => normalizarTexto(c.razao_social || c.nome_fantasia || c.nome) === alvo
   );
 
   // 2) Fallback: contém
   if (!cliente) {
     cliente = lista.find(
-      (c) => normalizarTexto(c.nome_fantasia).includes(alvo)
+      (c) => normalizarTexto(c.razao_social || c.nome_fantasia || c.nome).includes(alvo)
     );
   }
 
@@ -6388,6 +6479,87 @@ function ctxHeaderOS() {
   return { cCodIntOS, nCodCli, razaoSocial: razao, numeroOrcamento };
 }
 
+function vvMontarDadosAdicNFServico(numeroPedido, numeroOrcamento) {
+  const pedido = String(numeroPedido || "").trim();
+  const orcamento = String(numeroOrcamento || "").trim();
+
+  if (pedido && orcamento) {
+    return `numero do pedido: ${pedido} e numero do orcamento: ${orcamento}`;
+  }
+
+  if (pedido) {
+    return `numero do pedido: ${pedido}`;
+  }
+
+  if (orcamento) {
+    return `numero do orcamento: ${orcamento}`;
+  }
+
+  return "";
+}
+
+function vvFormatarValorServicoTexto(valor) {
+  return Number(valor || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function vvMontarObservacoesServicoOmie(numeroPedido, numeroOrcamento, parcelasServico = []) {
+  const linhas = [];
+  const dadosAdicNF = vvMontarDadosAdicNFServico(numeroPedido, numeroOrcamento);
+
+  if (dadosAdicNF) {
+    linhas.push(dadosAdicNF);
+  }
+
+  const parcelasTexto = (parcelasServico || [])
+    .map(vvNormalizarParcelaControle)
+    .filter(parcela => parcela.valor > 0 && !parcela.ignorar)
+    .map((parcela, index) => {
+      const partes = [`Parcela ${index + 1}`];
+      const dataFormatada = formatarDataBR(parcela.vencimento) || parcela.vencimento;
+
+      if (dataFormatada) partes.push(`vencimento ${dataFormatada}`);
+      partes.push(`valor R$ ${vvFormatarValorServicoTexto(parcela.valor)}`);
+
+      if (parcela.tipo_monetario) partes.push(`tipo ${parcela.tipo_monetario}`);
+      if (parcela.condicao_pagto) partes.push(`condicao ${parcela.condicao_pagto}`);
+      if (parcela.descritivo) partes.push(`descricao ${parcela.descritivo}`);
+
+      return partes.join(" | ");
+    });
+
+  if (parcelasTexto.length) {
+    linhas.push("Parcelas:");
+    linhas.push(parcelasTexto.join("\n"));
+  }
+
+  return linhas.join("\n").trim() || "Servico";
+}
+
+function vvColetarEmailsClientesOS() {
+  const emails = [];
+  const vistos = new Set();
+
+  Array.from(document.querySelectorAll(".emailCliente"))
+    .map(input =>
+      input?.value?.trim() ||
+      input?.dataset?.valorOriginal?.trim() ||
+      ""
+    )
+    .filter(Boolean)
+    .forEach(email => {
+      const valor = String(email).trim();
+      const chave = valor.toLowerCase();
+      if (vistos.has(chave)) return;
+      vistos.add(chave);
+      emails.push(valor);
+    });
+
+  return emails.join(",");
+}
+
 /* =============== MONTAGEM DO PAYLOAD (FORMATO EXATO SOLICITADO) ===============
  Estrutura final enviada:
  {
@@ -6412,7 +6584,11 @@ function montarPayloadOS({
   dDtPrevisaoBR,
   dDtPrevisaoISO,
   valorServicos,
-  nQtdeParc = 1
+  nQtdeParc = 1,
+  numeroPedido = "",
+  numeroOrcamento = "",
+  codigoProjeto = "",
+  parcelasServico = []
 }) {
   const getVal = (selector) => {
     const el = document.querySelector(selector);
@@ -6425,10 +6601,18 @@ function montarPayloadOS({
     );
   };
 
-  const numeroOrcamento =
+  const numeroPedidoOS = String(
+    numeroPedido ||
+    vv_getNumeroPedidoComissao() ||
+    getVal("#numeroPedido")
+  ).trim();
+
+  const numeroOrcamentoOS = String(
+    numeroOrcamento ||
+    vv_getNumeroOrcamento() ||
     getVal("#numeroOrcamento") ||
-    getVal('input[name="numeroOrcamento"]') ||
-    "";
+    getVal('input[name="numeroOrcamento"]')
+  ).trim();
 
   const codigoIntegracaoOS = String(cCodIntOS || gerarCodigoIntegracaoOmie("OS")).trim();
 
@@ -6441,8 +6625,9 @@ function montarPayloadOS({
     "20";
 
   const cDadosAdicNF_form =
+    vvMontarDadosAdicNFServico(numeroPedidoOS, numeroOrcamentoOS) ||
     getVal("#cDadosAdicNF") ||
-    `OS incluída via API • Orçamento ${numeroOrcamento}`;
+    "";
 
   const vendedorSelect =
     document.querySelector("#vendedorResponsavel") ||
@@ -6486,27 +6671,27 @@ function montarPayloadOS({
 
   const Departamentos = [];
 
-  const emailsClientes = Array.from(document.querySelectorAll(".emailCliente"))
-    .map(input =>
-      input?.value?.trim() ||
-      input?.dataset?.valorOriginal?.trim() ||
-      ""
-    )
-    .filter(email => email);
-
   const Email = {
     cEnvBoleto: "S",
     cEnvLink: "S",
-    cEnviarPara: emailsClientes.join(",")
+    cEnviarPara: vvColetarEmailsClientesOS()
   };
 
   const InformacoesAdicionais = {
     cCodCateg: CCODCATEG_DEFAULT,
-    cDadosAdicNF: String(
-      cDadosAdicNF_form || `OS incluída via API • Orçamento ${Cabecalho.cCodIntOS}`
-    ).trim(),
+    cDadosAdicNF: String(cDadosAdicNF_form || "").trim(),
     nCodCC: NCODCC_DEFAULT
   };
+
+  if (numeroPedidoOS) {
+    InformacoesAdicionais.cNumPedido = numeroPedidoOS;
+    InformacoesAdicionais.cNumContrato = numeroPedidoOS;
+  }
+
+  const codigoProjetoNumero = Number(codigoProjeto || 0);
+  if (codigoProjetoNumero > 0) {
+    InformacoesAdicionais.nCodProj = codigoProjetoNumero;
+  }
 
   const ServicosPrestados = [
     {
@@ -6523,7 +6708,11 @@ function montarPayloadOS({
       },
       nQtde: 1,
       nValUnit: Number(nValUnitFinal.toFixed(2)),
-      cDescServ: "Serviço"
+      cDescServ: vvMontarObservacoesServicoOmie(
+        numeroPedidoOS,
+        numeroOrcamentoOS,
+        parcelasServico
+      )
     }
   ];
 
@@ -6535,6 +6724,8 @@ function montarPayloadOS({
     ServicosPrestados
   };
 
+  window.__vvUltimoPayloadOSOmie = JSON.parse(JSON.stringify(payload));
+
   console.group("📦 [montarPayloadOS] FINAL");
   console.log("cCodIntOS:", cCodIntOS);
   console.log("nCodCli recebido de ctxHeaderOS:", nCodCli);
@@ -6542,6 +6733,9 @@ function montarPayloadOS({
   console.log("dDtPrevisaoISO recebida:", dDtPrevisaoISO);
   console.log("valorServicos:", valorServicos);
   console.log("Cabecalho final:", JSON.parse(JSON.stringify(Cabecalho)));
+  console.log("InformacoesAdicionais final:", JSON.parse(JSON.stringify(InformacoesAdicionais)));
+  console.log("Email final:", JSON.parse(JSON.stringify(Email)));
+  console.log("ServicosPrestados final:", JSON.parse(JSON.stringify(ServicosPrestados)));
   console.log("payload completo:", JSON.parse(JSON.stringify(payload)));
   console.log("payload JSON:", JSON.stringify(payload, null, 2));
   console.groupEnd();
@@ -6566,11 +6760,13 @@ async function enviarOSServico({
       return { ok: false, error: msg };
     }
 
-    await garantirNumeroPedidoPreenchido();
+    const numeroPedidoGarantido = await garantirNumeroPedidoPreenchido();
+    await vvCarregarClientesServicoOmie();
+    const codigoProjeto = await vvGarantirProjetoOmieServicoPorPedido(numeroPedidoGarantido);
 
     const parcelasServicoCorretas = obterParcelasServicoCorretas(parcelasServico);
 
-    const { cCodIntOS, nCodCli } = ctxHeaderOS();
+    const { cCodIntOS, nCodCli, numeroOrcamento } = ctxHeaderOS();
     const { dDtPrevisaoBR, dDtPrevisaoISO, nQtdeParc } = ctxParcelasOS(parcelasServicoCorretas);
     const parcelasServicoSemData = (parcelasServicoCorretas || [])
       .map((parcela, index) => ({ parcela, index }))
@@ -6594,6 +6790,9 @@ async function enviarOSServico({
     console.group("🧾 [SERVIÇOS] PARCELAS ANTES DO ENVIO");
     console.log("endpoint:", endpoint);
     console.log("valorServicos:", valorServicos);
+    console.log("numeroPedidoGarantido:", numeroPedidoGarantido);
+    console.log("numeroOrcamento:", numeroOrcamento);
+    console.log("codigoProjeto:", codigoProjeto);
     console.log("cCodIntOS:", cCodIntOS);
     console.log("nCodCli:", nCodCli);
     console.log("nQtdeParc:", nQtdeParc);
@@ -6619,7 +6818,11 @@ async function enviarOSServico({
       dDtPrevisaoBR,
       dDtPrevisaoISO,
       valorServicos,
-      nQtdeParc
+      nQtdeParc,
+      numeroPedido: numeroPedidoGarantido,
+      numeroOrcamento,
+      codigoProjeto,
+      parcelasServico: parcelasServicoCorretas
     });
 
     console.group("🚀 [SERVIÇOS] REQUEST FINAL PARA OMIE");
