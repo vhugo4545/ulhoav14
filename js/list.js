@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const table            = document.getElementById("data-table");
   const alertaVencimento = document.getElementById("alerta-vencimento");
 
-  const API_BASE = "http://localhost:3000";
+  const API_BASE = "https://ulhoa-0a02024d350a.herokuapp.com";
   const TOKEN = localStorage.getItem("accessToken");
 
   // ===== Estado =====
