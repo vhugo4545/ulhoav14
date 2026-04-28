@@ -12,26 +12,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   const table            = document.getElementById("data-table");
   const alertaVencimento = document.getElementById("alerta-vencimento");
 
-  const API_BASE = "https://ulhoa-0a02024d350a.herokuapp.com";
+  const API_BASE = "http://localhost:3000";
   const TOKEN = localStorage.getItem("accessToken");
 
-  let data = [];
-  let sellers = [];
+  // ===== Estado =====
   let currentPage = 1;
+  let totalPages = 1;
+  let totalRegistros = 0;
   const rowsPerPage = 50;
 
   let searchText = "";
   let selectedSeller = "";
   let selectedStatus = "";
-  let filteredDataGlobal = [];
 
+  let dataAtual = [];          // propostas da página atual (já mapeadas)
+  let abortController = null;  // cancela request anterior
+
+  // ===== Helpers =====
   function extrairNumero(valor) {
     if (valor === null || valor === undefined) return 0;
     if (typeof valor === "number") return isNaN(valor) ? 0 : valor;
-
     const texto = String(valor).trim();
     if (!texto) return 0;
-
     const limpo = texto
       .replace(/\u00A0/g, " ")
       .replace(/\s/g, "")
@@ -39,15 +41,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replace("%", "")
       .replace(/\./g, "")
       .replace(",", ".");
-
     const numero = parseFloat(limpo);
     return isNaN(numero) ? 0 : numero;
   }
 
   function calcularTotalFinalProposta(campos, grupos) {
-    const subtotal = (grupos || []).reduce((somaGrupos, grupo) => {
+    const subtotal = (grupos || []).reduce((soma, grupo) => {
       const valorGrupo = extrairNumero(grupo?.itens?.[0]?.valor_total_produto);
-      return somaGrupos + valorGrupo;
+      return soma + valorGrupo;
     }, 0);
 
     const descontoTexto = String(campos?.desconto || "").trim();
@@ -58,183 +59,209 @@ document.addEventListener("DOMContentLoaded", async () => {
         const percentual = extrairNumero(descontoTexto);
         totalFinal = subtotal - (subtotal * percentual / 100);
       } else {
-        const descontoValor = extrairNumero(descontoTexto);
-        totalFinal = subtotal - descontoValor;
+        totalFinal = subtotal - extrairNumero(descontoTexto);
       }
     }
-
     return totalFinal < 0 ? 0 : totalFinal;
-  }
-
-  function normalizarRespostaPropostas(resposta) {
-    /**
-     * Formato antigo esperado pelo sistema:
-     * [
-     *   { ...proposta },
-     *   { ...proposta }
-     * ]
-     */
-    if (Array.isArray(resposta)) {
-      return resposta;
-    }
-
-    /**
-     * Formato novo temporário do cache:
-     * {
-     *   origem: "cache",
-     *   total: 10,
-     *   propostas: [...]
-     * }
-     */
-    if (resposta && Array.isArray(resposta.propostas)) {
-      return resposta.propostas;
-    }
-
-    console.warn("Resposta inesperada da API de propostas:", resposta);
-    return [];
-  }
-
-  try {
-    loadingDiv.style.display = "block";
-    table.style.display = "none";
-
-    const res = await fetch(`${API_BASE}/api/propostas?t=${Date.now()}`, {
-      headers: {
-        Authorization: `Bearer ${TOKEN}`
-      },
-      cache: "no-store"
-    });
-
-    if (!res.ok) {
-      throw new Error(`Erro ${res.status}: ${await res.text()}`);
-    }
-
-    const resposta = await res.json();
-    const propostas = normalizarRespostaPropostas(resposta);
-
-    const hoje = new Date();
-    const vencidas = [];
-    const prestesAVencer = [];
-    const sellerSet = new Set();
-
-    data = propostas
-      .filter(p => p && p.tipoProposta === "editavel")
-      .map(p => {
-        const campos = p.camposFormulario || {};
-        const grupos = p.grupos || [];
-
-        const clienteObj = (campos.clientes && campos.clientes[0]) || {};
-        const nomeCliente = clienteObj.nome_razao_social || "Cliente sem nome";
-        const cnpjCpf = clienteObj.cpfCnpj || "--";
-        const vendedor = campos.vendedorResponsavel || "Indefinido";
-        const status = p.statusOrcamento || "Sem status";
-        const tipoProposta = p.tipoProposta || "--";
-        const nomeEvento = campos.nomeEvento || "--";
-        const numeroProposta = p.numeroProposta || campos.numeroProposta || "--";
-        const numeroPedido = p.numeroPedido || campos.numeroPedido || "--";
-
-        const createdAt = new Date(p.criado_em || p.createdAt || Date.now());
-        const dataCriacao = createdAt.toLocaleDateString("pt-BR");
-
-        const validade = calcularValidade(createdAt, 5);
-        const isVencida = validade < hoje;
-        const diasParaVencer = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
-        const isPrestes = !isVencida && diasParaVencer <= 2;
-
-        if (isVencida) vencidas.push({ nomeCliente, validade });
-        if (isPrestes) prestesAVencer.push({ nomeCliente, validade });
-
-        sellerSet.add(vendedor);
-
-        return {
-          _id: p._id,
-          numeroProposta,
-          numeroPedido,
-          cliente: nomeCliente,
-          cnpjCpf,
-          vendedor,
-          status,
-          tipoProposta,
-          evento: nomeEvento,
-          date: dataCriacao,
-          createdAt,
-          validade: validade.toLocaleDateString("pt-BR"),
-          vencida: isVencida,
-          campos,
-          grupos
-        };
-      })
-      .sort((a, b) => b.createdAt - a.createdAt);
-
-    data.forEach((item, index) => {
-      item.id = index + 1;
-    });
-
-    sellers = Array.from(sellerSet).sort();
-
-    const sellerOptions = ['<option value="">Todos</option>']
-      .concat(sellers.map(v => `<option value="${v}">${v}</option>`))
-      .join("");
-
-    filterSeller.innerHTML = sellerOptions;
-
-    filterTable(true);
-    renderAlertas(vencidas, prestesAVencer);
-  } catch (err) {
-    console.error("Erro ao buscar propostas:", err);
-    loadingDiv.innerHTML = "❌ Erro ao carregar propostas.";
-    return;
-  } finally {
-    loadingDiv.style.display = "none";
-    table.style.display = "table";
   }
 
   function calcularValidade(dataInicial, diasUteis) {
     const result = new Date(dataInicial);
     let adicionados = 0;
-
     while (adicionados < diasUteis) {
       result.setDate(result.getDate() + 1);
-
       const dia = result.getDay();
-
-      if (dia !== 0 && dia !== 6) {
-        adicionados++;
-      }
+      if (dia !== 0 && dia !== 6) adicionados++;
     }
-
     return result;
   }
 
+  function debounce(fn, ms = 400) {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), ms);
+    };
+  }
+
+  // ===== Mapeamento de proposta =====
+  function mapProposta(p) {
+    const campos = p.camposFormulario || {};
+    const grupos = p.grupos || [];
+
+    const clienteObj   = (campos.clientes && campos.clientes[0]) || {};
+    const nomeCliente  = clienteObj.nome_razao_social || "Cliente sem nome";
+    const cnpjCpf      = clienteObj.cpfCnpj || "--";
+    const vendedor     = campos.vendedorResponsavel || "Indefinido";
+    const status       = p.statusOrcamento || "Sem status";
+    const tipoProposta = p.tipoProposta || "--";
+    const nomeEvento   = campos.nomeEvento || "--";
+    const numeroProposta = p.numeroProposta || "--";
+    const numeroPedido = p.numeroPedido || campos.numeroPedido || "--";
+
+    const createdAt   = new Date(p.criado_em || p.createdAt);
+    const validade    = calcularValidade(createdAt, 5);
+    const hoje        = new Date();
+    const isVencida   = validade < hoje;
+    const diasParaVencer = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+    const isPrestes   = !isVencida && diasParaVencer <= 2;
+
+    return {
+      _id: p._id,
+      numeroProposta, numeroPedido,
+      cliente: nomeCliente, cnpjCpf,
+      vendedor, status, tipoProposta,
+      evento: nomeEvento,
+      date: createdAt.toLocaleDateString("pt-BR"),
+      createdAt,
+      validade: validade.toLocaleDateString("pt-BR"),
+      validadeRaw: validade,
+      vencida: isVencida,
+      prestesAVencer: isPrestes,
+      campos, grupos
+    };
+  }
+
+  // ===== Request paginada (com cancelamento) =====
+  async function fetchPropostasPaginadas() {
+    if (abortController) abortController.abort();
+    abortController = new AbortController();
+
+    const params = new URLSearchParams();
+    params.append("page", currentPage);
+    params.append("limit", rowsPerPage);
+    params.append("tipoProposta", "editavel"); // filtro fixo
+    if (searchText)     params.append("search", searchText);
+    if (selectedStatus) params.append("status", selectedStatus);
+    if (selectedSeller) params.append("vendedor", selectedSeller);
+
+    const res = await fetch(`${API_BASE}/api/propostas?${params}`, {
+      headers: { Authorization: `Bearer ${TOKEN}` },
+      cache: "no-store",
+      signal: abortController.signal
+    });
+
+    if (!res.ok) throw new Error(`Erro ${res.status}: ${await res.text()}`);
+    return await res.json();
+  }
+
+  // ===== Request "leve" para alertas + lista de vendedores =====
+  // Pega TODAS as propostas, mas só os campos mínimos (rápido por causa do .lean() + .select())
+  async function fetchResumoGlobal() {
+    const params = new URLSearchParams();
+    params.append("page", 1);
+    params.append("limit", 10000); // teto alto pra trazer tudo
+    params.append("tipoProposta", "editavel");
+    params.append(
+      "campos",
+      "criado_em camposFormulario.clientes camposFormulario.vendedorResponsavel statusOrcamento tipoProposta"
+    );
+
+    const res = await fetch(`${API_BASE}/api/propostas?${params}`, {
+      headers: { Authorization: `Bearer ${TOKEN}` },
+      cache: "no-store"
+    });
+
+    if (!res.ok) return { propostas: [] };
+    return await res.json();
+  }
+
+  // ===== Carrega página da tabela =====
+  async function carregarPagina() {
+    try {
+      loadingDiv.style.display = "block";
+      table.style.display = "none";
+
+      const resp = await fetchPropostasPaginadas();
+
+      // Compatibilidade: aceita resposta nova (objeto) ou antiga (array)
+      let propostas, total, totalPag;
+      if (Array.isArray(resp)) {
+        propostas = resp;
+        total = resp.length;
+        totalPag = 1;
+      } else {
+        propostas = resp.propostas || [];
+        total     = resp.total       ?? propostas.length;
+        totalPag  = resp.totalPaginas ?? 1;
+      }
+
+      totalRegistros = total;
+      totalPages = Math.max(1, totalPag);
+
+      dataAtual = propostas
+        .filter(p => p.tipoProposta === "editavel") // segurança extra
+        .map(mapProposta);
+
+      renderTable(dataAtual);
+    } catch (err) {
+      if (err.name === "AbortError") return; // request anterior cancelada
+      console.error("Erro ao buscar propostas:", err);
+      loadingDiv.innerHTML = "❌ Erro ao carregar propostas.";
+    } finally {
+      loadingDiv.style.display = "none";
+      table.style.display = "table";
+    }
+  }
+
+  // ===== Carrega resumo (vendedores + alertas), uma vez só =====
+  async function carregarResumoGlobal() {
+    try {
+      const resp = await fetchResumoGlobal();
+      const lista = (resp.propostas || resp || []).filter(p => p.tipoProposta === "editavel");
+
+      const sellerSet = new Set();
+      const vencidas = [];
+      const prestesAVencer = [];
+      const hoje = new Date();
+
+      lista.forEach(p => {
+        const campos = p.camposFormulario || {};
+        const cliente = (campos.clientes && campos.clientes[0]?.nome_razao_social) || "Cliente sem nome";
+        const vendedor = campos.vendedorResponsavel || "Indefinido";
+        sellerSet.add(vendedor);
+
+        const createdAt = new Date(p.criado_em || p.createdAt);
+        const validade = calcularValidade(createdAt, 5);
+        const dias = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+
+        if (validade < hoje) vencidas.push({ nomeCliente: cliente, validade });
+        else if (dias <= 2) prestesAVencer.push({ nomeCliente: cliente, validade });
+      });
+
+      // Popula filtro de vendedores
+      const sellers = Array.from(sellerSet).sort();
+      filterSeller.innerHTML = ['<option value="">Todos</option>']
+        .concat(sellers.map(v => `<option value="${v}">${v}</option>`))
+        .join("");
+
+      renderAlertas(vencidas, prestesAVencer);
+    } catch (err) {
+      console.warn("Não foi possível carregar resumo global:", err);
+    }
+  }
+
+  // ===== Renderização =====
   function renderTable(list) {
     ocultarCarregando();
-
     tableBody.innerHTML = "";
 
-    const start = (currentPage - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    const visibleItems = list.slice(start, end);
-
     let html = "";
-
-    visibleItems.forEach((item, index) => {
+    list.forEach((item, index) => {
       const total = calcularTotalFinalProposta(item.campos, item.grupos);
       const value = `R$ ${total.toFixed(2)}`;
+      const numeroExibido = (currentPage - 1) * rowsPerPage + index + 1;
 
       html += `
         <tr>
-          <td>${start + index + 1}</td>
+          <td>${numeroExibido}</td>
           <td>${item.numeroProposta}</td>
           <td>${item.numeroPedido}</td>
           <td>${item.date}</td>
           <td>${item.vendedor}</td>
           <td>${item.cliente}</td>
           <td>${item.cnpjCpf}</td>
-          <td>
-            <span class="status ${String(item.status).toLowerCase().replace(/\s/g, "-")}">
-              ${item.status}
-            </span>
-          </td>
+          <td><span class="status ${String(item.status).toLowerCase().replace(/\s/g, "-")}">${item.status}</span></td>
           <td>
             <span title="Validade da proposta">${item.validade}</span>
             ${item.vencida ? '<br><span style="color:red; font-weight:bold;">VENCIDA</span>' : ""}
@@ -248,13 +275,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         </tr>
       `;
     });
-
     tableBody.innerHTML = html;
 
-    const totalPages = Math.max(1, Math.ceil(list.length / rowsPerPage));
-    pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
-
-    prevPageBtn.disabled = currentPage === 1;
+    pageInfo.textContent = `Página ${currentPage} de ${totalPages} — ${totalRegistros} registro(s)`;
+    prevPageBtn.disabled = currentPage <= 1;
     nextPageBtn.disabled = currentPage >= totalPages;
 
     addActionEventListeners();
@@ -262,7 +286,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderAlertas(vencidas, prestesAVencer) {
     if (!alertaVencimento) return;
-
     alertaVencimento.innerHTML = "";
 
     if (vencidas.length) {
@@ -273,7 +296,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         ).join("") +
         `</div>`;
     }
-
     if (prestesAVencer.length) {
       alertaVencimento.innerHTML +=
         `<div><h4>Próximas a Vencer:</h4>` +
@@ -288,82 +310,58 @@ document.addEventListener("DOMContentLoaded", async () => {
     tableBody.querySelectorAll(".edit-btn").forEach(button => {
       button.addEventListener("click", event => {
         const itemId = event.currentTarget.getAttribute("data-id");
-
-        if (itemId) {
-          window.location.href = `editar.html?id=${itemId}`;
-        } else {
-          alert("❌ ID não encontrado.");
-        }
+        if (itemId) window.location.href = `editar.html?id=${itemId}`;
+        else alert("❌ ID não encontrado.");
       });
     });
   }
 
-  function filterTable(resetPage = false) {
-    filteredDataGlobal = data.filter(item => {
-      if (selectedSeller && item.vendedor !== selectedSeller) return false;
-      if (selectedStatus && item.status !== selectedStatus) return false;
-      if (!searchText) return true;
-
-      return (
-        String(item.numeroProposta || "").toLowerCase().includes(searchText) ||
-        String(item.numeroPedido || "").toLowerCase().includes(searchText) ||
-        String(item.cliente || "").toLowerCase().includes(searchText) ||
-        String(item.cnpjCpf || "").toLowerCase().includes(searchText) ||
-        String(item.evento || "").toLowerCase().includes(searchText) ||
-        String(item.vendedor || "").toLowerCase().includes(searchText) ||
-        String(item.tipoProposta || "").toLowerCase().includes(searchText) ||
-        String(item.status || "").toLowerCase().includes(searchText)
-      );
-    });
-
-    if (resetPage) {
-      currentPage = 1;
-    }
-
-    const totalPages = Math.max(1, Math.ceil(filteredDataGlobal.length / rowsPerPage));
-
-    if (currentPage > totalPages) {
-      currentPage = totalPages;
-    }
-
-    renderTable(filteredDataGlobal);
-  }
+  // ===== Eventos =====
+  const aplicarBuscaDebounced = debounce(() => {
+    currentPage = 1;
+    carregarPagina();
+  }, 400);
 
   searchInput.addEventListener("input", e => {
     searchText = e.target.value.trim().toLowerCase();
-    filterTable(true);
+    aplicarBuscaDebounced();
   });
 
   filterSeller.addEventListener("change", e => {
     selectedSeller = e.target.value;
-    filterTable(true);
+    currentPage = 1;
+    carregarPagina();
   });
 
   filterStatus.addEventListener("change", e => {
     selectedStatus = e.target.value;
-    filterTable(true);
+    currentPage = 1;
+    carregarPagina();
   });
 
   prevPageBtn.addEventListener("click", () => {
     if (currentPage > 1) {
       currentPage--;
-      filterTable(false);
+      carregarPagina();
     }
   });
 
   nextPageBtn.addEventListener("click", () => {
-    const totalPages = Math.max(1, Math.ceil(filteredDataGlobal.length / rowsPerPage));
-
     if (currentPage < totalPages) {
       currentPage++;
-      filterTable(false);
+      carregarPagina();
     }
   });
+
+  // ===== Início =====
+  await Promise.all([
+    carregarPagina(),       // tabela
+    carregarResumoGlobal()  // alertas + dropdown vendedores
+  ]);
 });
 
 function irParaPagina(pagina, params = {}) {
   const query = new URLSearchParams(params).toString();
   const url = query ? `${pagina}?${query}` : pagina;
-
   window.location.href = url;
 }
