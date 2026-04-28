@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const table            = document.getElementById("data-table");
   const alertaVencimento = document.getElementById("alerta-vencimento");
 
- const API_BASE = "https://ulhoa-0a02024d350a.herokuapp.com";
+  const API_BASE = "https://ulhoa-0a02024d350a.herokuapp.com";
   const TOKEN = localStorage.getItem("accessToken");
 
   let data = [];
@@ -66,25 +66,59 @@ document.addEventListener("DOMContentLoaded", async () => {
     return totalFinal < 0 ? 0 : totalFinal;
   }
 
+  function normalizarRespostaPropostas(resposta) {
+    /**
+     * Formato antigo esperado pelo sistema:
+     * [
+     *   { ...proposta },
+     *   { ...proposta }
+     * ]
+     */
+    if (Array.isArray(resposta)) {
+      return resposta;
+    }
+
+    /**
+     * Formato novo temporário do cache:
+     * {
+     *   origem: "cache",
+     *   total: 10,
+     *   propostas: [...]
+     * }
+     */
+    if (resposta && Array.isArray(resposta.propostas)) {
+      return resposta.propostas;
+    }
+
+    console.warn("Resposta inesperada da API de propostas:", resposta);
+    return [];
+  }
+
   try {
     loadingDiv.style.display = "block";
     table.style.display = "none";
 
-    const res = await fetch(`${API_BASE}/api/propostas`, {
-      headers: { Authorization: `Bearer ${TOKEN}` },
+    const res = await fetch(`${API_BASE}/api/propostas?t=${Date.now()}`, {
+      headers: {
+        Authorization: `Bearer ${TOKEN}`
+      },
       cache: "no-store"
     });
 
-    if (!res.ok) throw new Error(`Erro ${res.status}: ${await res.text()}`);
+    if (!res.ok) {
+      throw new Error(`Erro ${res.status}: ${await res.text()}`);
+    }
 
-    const propostas = await res.json();
+    const resposta = await res.json();
+    const propostas = normalizarRespostaPropostas(resposta);
+
     const hoje = new Date();
     const vencidas = [];
     const prestesAVencer = [];
     const sellerSet = new Set();
 
     data = propostas
-      .filter(p => p.tipoProposta === "editavel")
+      .filter(p => p && p.tipoProposta === "editavel")
       .map(p => {
         const campos = p.camposFormulario || {};
         const grupos = p.grupos || [];
@@ -96,11 +130,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         const status = p.statusOrcamento || "Sem status";
         const tipoProposta = p.tipoProposta || "--";
         const nomeEvento = campos.nomeEvento || "--";
-        const numeroProposta = p.numeroProposta || "--";
+        const numeroProposta = p.numeroProposta || campos.numeroProposta || "--";
         const numeroPedido = p.numeroPedido || campos.numeroPedido || "--";
 
-        const createdAt = new Date(p.criado_em || p.createdAt);
+        const createdAt = new Date(p.criado_em || p.createdAt || Date.now());
         const dataCriacao = createdAt.toLocaleDateString("pt-BR");
+
         const validade = calcularValidade(createdAt, 5);
         const isVencida = validade < hoje;
         const diasParaVencer = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
@@ -136,9 +171,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     sellers = Array.from(sellerSet).sort();
+
     const sellerOptions = ['<option value="">Todos</option>']
       .concat(sellers.map(v => `<option value="${v}">${v}</option>`))
       .join("");
+
     filterSeller.innerHTML = sellerOptions;
 
     filterTable(true);
@@ -158,8 +195,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     while (adicionados < diasUteis) {
       result.setDate(result.getDate() + 1);
+
       const dia = result.getDay();
-      if (dia !== 0 && dia !== 6) adicionados++;
+
+      if (dia !== 0 && dia !== 6) {
+        adicionados++;
+      }
     }
 
     return result;
@@ -169,11 +210,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     ocultarCarregando();
 
     tableBody.innerHTML = "";
+
     const start = (currentPage - 1) * rowsPerPage;
     const end = start + rowsPerPage;
     const visibleItems = list.slice(start, end);
 
     let html = "";
+
     visibleItems.forEach((item, index) => {
       const total = calcularTotalFinalProposta(item.campos, item.grupos);
       const value = `R$ ${total.toFixed(2)}`;
@@ -187,7 +230,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           <td>${item.vendedor}</td>
           <td>${item.cliente}</td>
           <td>${item.cnpjCpf}</td>
-          <td><span class="status ${String(item.status).toLowerCase().replace(/\s/g, "-")}">${item.status}</span></td>
+          <td>
+            <span class="status ${String(item.status).toLowerCase().replace(/\s/g, "-")}">
+              ${item.status}
+            </span>
+          </td>
           <td>
             <span title="Validade da proposta">${item.validade}</span>
             ${item.vencida ? '<br><span style="color:red; font-weight:bold;">VENCIDA</span>' : ""}
@@ -215,6 +262,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderAlertas(vencidas, prestesAVencer) {
     if (!alertaVencimento) return;
+
     alertaVencimento.innerHTML = "";
 
     if (vencidas.length) {
@@ -240,6 +288,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     tableBody.querySelectorAll(".edit-btn").forEach(button => {
       button.addEventListener("click", event => {
         const itemId = event.currentTarget.getAttribute("data-id");
+
         if (itemId) {
           window.location.href = `editar.html?id=${itemId}`;
         } else {
@@ -267,10 +316,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
     });
 
-    if (resetPage) currentPage = 1;
+    if (resetPage) {
+      currentPage = 1;
+    }
 
     const totalPages = Math.max(1, Math.ceil(filteredDataGlobal.length / rowsPerPage));
-    if (currentPage > totalPages) currentPage = totalPages;
+
+    if (currentPage > totalPages) {
+      currentPage = totalPages;
+    }
 
     renderTable(filteredDataGlobal);
   }
@@ -299,6 +353,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   nextPageBtn.addEventListener("click", () => {
     const totalPages = Math.max(1, Math.ceil(filteredDataGlobal.length / rowsPerPage));
+
     if (currentPage < totalPages) {
       currentPage++;
       filterTable(false);
@@ -309,5 +364,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 function irParaPagina(pagina, params = {}) {
   const query = new URLSearchParams(params).toString();
   const url = query ? `${pagina}?${query}` : pagina;
+
   window.location.href = url;
 }
