@@ -1,198 +1,5 @@
 let blocoIndex = 0;
 
-function habilitarEdicaoTitulosAccordion() {
-  const urlExataPermitida = 'https://vhugo4545.github.io/ulhoav14/pages/editar.html?id=68746e305b9691a7ed3b3f97';
-
-  if (window.location.href !== urlExataPermitida) {
-    console.log('[habilitarEdicaoTitulosAccordion] URL inválida, função não executada.');
-    return;
-  }
-
-  console.log('[habilitarEdicaoTitulosAccordion] Função iniciada com sucesso.');
-
-  const titulos = document.querySelectorAll('[id^="titulo-accordion-bloco-"]');
-
-  if (!titulos.length) {
-    console.log('[habilitarEdicaoTitulosAccordion] Nenhum título encontrado.');
-    return;
-  }
-
-  titulos.forEach((span) => {
-    if (span.dataset.editorAtivado === 'true') return;
-    span.dataset.editorAtivado = 'true';
-
-    const container = document.createElement('span');
-    container.className = 'titulo-editavel-wrapper';
-    container.style.display = 'inline-flex';
-    container.style.alignItems = 'center';
-    container.style.gap = '8px';
-    container.style.flexWrap = 'wrap';
-
-    span.parentNode.insertBefore(container, span);
-    container.appendChild(span);
-
-    const btnEditar = document.createElement('button');
-    btnEditar.type = 'button';
-    btnEditar.innerHTML = '✏️';
-    btnEditar.className = 'btn-editar-titulo';
-    btnEditar.style.border = 'none';
-    btnEditar.style.background = 'transparent';
-    btnEditar.style.cursor = 'pointer';
-    btnEditar.style.fontSize = '16px';
-    btnEditar.style.padding = '2px 4px';
-    btnEditar.title = 'Editar título';
-
-    container.appendChild(btnEditar);
-
-    btnEditar.addEventListener('click', function () {
-      if (container.querySelector('.editor-titulo-inline')) return;
-
-      const textoAtual = span.textContent.trim();
-      span.style.display = 'none';
-      btnEditar.style.display = 'none';
-
-      const editor = document.createElement('div');
-      editor.className = 'editor-titulo-inline';
-      editor.style.display = 'inline-flex';
-      editor.style.alignItems = 'center';
-      editor.style.gap = '8px';
-      editor.style.flexWrap = 'wrap';
-
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = textoAtual;
-      input.className = 'input-editar-titulo';
-      input.style.padding = '6px 10px';
-      input.style.border = '1px solid #ccc';
-      input.style.borderRadius = '8px';
-      input.style.minWidth = '220px';
-      input.style.fontSize = '14px';
-
-      const btnOk = document.createElement('button');
-      btnOk.type = 'button';
-      btnOk.textContent = 'OK';
-      btnOk.style.padding = '6px 12px';
-      btnOk.style.border = 'none';
-      btnOk.style.borderRadius = '8px';
-      btnOk.style.background = '#0d6efd';
-      btnOk.style.color = '#fff';
-      btnOk.style.cursor = 'pointer';
-
-      const btnCancelar = document.createElement('button');
-      btnCancelar.type = 'button';
-      btnCancelar.textContent = 'Cancelar';
-      btnCancelar.style.padding = '6px 12px';
-      btnCancelar.style.border = 'none';
-      btnCancelar.style.borderRadius = '8px';
-      btnCancelar.style.background = '#6c757d';
-      btnCancelar.style.color = '#fff';
-      btnCancelar.style.cursor = 'pointer';
-
-      editor.appendChild(input);
-      editor.appendChild(btnOk);
-      editor.appendChild(btnCancelar);
-      container.appendChild(editor);
-
-      input.focus();
-      input.select();
-
-      function fecharEditor(salvar) {
-        if (salvar) {
-          const novoTexto = input.value.trim();
-          if (novoTexto) {
-            span.textContent = novoTexto;
-          }
-        }
-
-        editor.remove();
-        span.style.display = '';
-        btnEditar.style.display = '';
-      }
-
-      btnOk.addEventListener('click', function () {
-        fecharEditor(true);
-      });
-
-      btnCancelar.addEventListener('click', function () {
-        fecharEditor(false);
-      });
-
-      input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          fecharEditor(true);
-        }
-
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          fecharEditor(false);
-        }
-      });
-    });
-  });
-
-  console.log(`[habilitarEdicaoTitulosAccordion] ${titulos.length} título(s) preparados para edição.`);
-}
-
-function criarBotaoFlutuanteEdicaoTitulos() {
-  const urlExataPermitida = 'https://vhugo4545.github.io/ulhoav14/pages/editar.html?id=68746e305b9691a7ed3b3f97';
-
-  if (window.location.href !== urlExataPermitida) {
-    console.log('[criarBotaoFlutuanteEdicaoTitulos] URL inválida, botão não criado.');
-    return;
-  }
-
-  if (document.getElementById('btn-flutuante-editar-titulos')) {
-    console.log('[criarBotaoFlutuanteEdicaoTitulos] Botão já existe.');
-    return;
-  }
-
-  const botao = document.createElement('button');
-  botao.id = 'btn-flutuante-editar-titulos';
-  botao.type = 'button';
-  botao.innerHTML = '✏️ Editar títulos';
-  botao.title = 'Ativar edição dos títulos';
-
-  botao.style.position = 'fixed';
-  botao.style.top = '18px';
-  botao.style.right = '18px';
-  botao.style.zIndex = '9999';
-  botao.style.height = '46px';
-  botao.style.padding = '0 16px';
-  botao.style.border = 'none';
-  botao.style.borderRadius = '999px';
-  botao.style.background = '#0d6efd';
-  botao.style.color = '#fff';
-  botao.style.fontSize = '14px';
-  botao.style.fontWeight = '600';
-  botao.style.cursor = 'pointer';
-  botao.style.boxShadow = '0 10px 24px rgba(13, 110, 253, 0.28)';
-  botao.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease';
-
-  botao.addEventListener('mouseenter', () => {
-    botao.style.transform = 'translateY(-1px)';
-    botao.style.boxShadow = '0 14px 30px rgba(13, 110, 253, 0.34)';
-  });
-
-  botao.addEventListener('mouseleave', () => {
-    botao.style.transform = 'translateY(0)';
-    botao.style.boxShadow = '0 10px 24px rgba(13, 110, 253, 0.28)';
-  });
-
-  botao.addEventListener('click', () => {
-    console.log('[criarBotaoFlutuanteEdicaoTitulos] Botão clicado.');
-    habilitarEdicaoTitulosAccordion();
-  });
-
-  document.body.appendChild(botao);
-
-  console.log('[criarBotaoFlutuanteEdicaoTitulos] Botão criado com sucesso.');
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  criarBotaoFlutuanteEdicaoTitulos();
-});
-
 // 🕓 Aguarda até que um elemento exista no DOM
 function esperarElemento(seletor, tentativas = 20, intervalo = 300) {
   return new Promise((resolve, reject) => {
@@ -334,10 +141,11 @@ async function carregarPropostaEditavel(proposta) {
   );
 
   window.propostaEmEdicao = proposta;
-  window.propostaAtual    = proposta;
+  window.propostaAtual = proposta;
 
   try {
     if (!proposta || typeof proposta !== "object") throw new Error("Proposta inválida.");
+
     const dados = proposta.camposFormulario || {};
 
     const setIfExists = (id, val) => {
@@ -349,34 +157,66 @@ async function carregarPropostaEditavel(proposta) {
     console.log("criado_em:", proposta?.criado_em);
     console.log("atualizado_em:", proposta?.atualizado_em);
 
+    // Verifica se existe endereço da obra salvo
+    const possuiEnderecoObra =
+      dados.cepObra ||
+      dados.ruaObra ||
+      dados.numeroObra ||
+      dados.complementoObra ||
+      dados.bairroObra ||
+      dados.cidadeObra ||
+      dados.estadoObra;
+
+    // Se houver endereço da obra salvo e os campos ainda não existirem, cria o bloco
+    if (possuiEnderecoObra && !document.getElementById("cepObra")) {
+      if (typeof criarCamposEnderecoObra === "function") {
+        criarCamposEnderecoObra();
+      } else {
+        console.warn("⚠️ Função criarCamposEnderecoObra não encontrada. Os dados da obra não serão preenchidos.");
+      }
+    }
+
     // 🧾 Campos do formulário
     setIfExists("numeroOrcamento", dados.numeroOrcamento || proposta.numeroProposta);
     setIfExists("numeroPedido", proposta.numeroPedido || dados.numeroPedido);
-    console.log(proposta.numeroPedido, dados.numeroPedido);
-    setIfExists("dataOrcamento",    dados.dataOrcamento);
-    setIfExists("origemCliente",    dados.origemCliente);
-    setIfExists("cep",              dados.cep);
-    setIfExists("rua",              dados.rua);
-    setIfExists("numero",           dados.numero);
-    setIfExists("complemento",      dados.complemento);
-    setIfExists("bairro",           dados.bairro);
-    setIfExists("cidade",           dados.cidade);
-    setIfExists("estado",           dados.estado);
 
-    setIfExists("prazoEntrega",             dados.prazoEntrega);
+    console.log(proposta.numeroPedido, dados.numeroPedido);
+
+    setIfExists("dataOrcamento", dados.dataOrcamento);
+    setIfExists("origemCliente", dados.origemCliente);
+
+    // Endereço de cobrança / principal
+    setIfExists("cep", dados.cep);
+    setIfExists("rua", dados.rua);
+    setIfExists("numero", dados.numero);
+    setIfExists("complemento", dados.complemento);
+    setIfExists("bairro", dados.bairro);
+    setIfExists("cidade", dados.cidade);
+    setIfExists("estado", dados.estado);
+
+    // Endereço da obra
+    setIfExists("cepObra", dados.cepObra);
+    setIfExists("ruaObra", dados.ruaObra);
+    setIfExists("numeroObra", dados.numeroObra);
+    setIfExists("complementoObra", dados.complementoObra);
+    setIfExists("bairroObra", dados.bairroObra);
+    setIfExists("cidadeObra", dados.cidadeObra);
+    setIfExists("estadoObra", dados.estadoObra);
+
+    setIfExists("prazoEntrega", dados.prazoEntrega);
     setIfExists("dataPedidoEnviadoCliente", dados.dataPedidoEnviadoCliente);
-    setIfExists("meioEnvioPedido",          dados.meioEnvioPedido);
-    setIfExists("dataPedidoAssinado",       dados.dataPedidoAssinado);
-    setIfExists("dataEntregaProjeto",       dados.dataEntregaProjeto);
-    setIfExists("dataInicioProjeto",        dados.dataInicioProjeto);
+    setIfExists("meioEnvioPedido", dados.meioEnvioPedido);
+    setIfExists("dataPedidoAssinado", dados.dataPedidoAssinado);
+    setIfExists("dataEntregaProjeto", dados.dataEntregaProjeto);
+    setIfExists("dataInicioProjeto", dados.dataInicioProjeto);
     setIfExists("dataLiberacaoConferencia", dados.dataLiberacaoConferencia);
-    setIfExists("dataConferencia",          dados.dataConferencia);
-    setIfExists("obraLiberada",             dados.obraLiberada);
-    setIfExists("itensLiberacaoObra",       dados.itensLiberacaoObra);
-    setIfExists("dataLiberacaoObra",        dados.dataLiberacaoObra);
-    setIfExists("dataProjetoEnviado",       dados.dataProjetoEnviado);
-    setIfExists("dataProjetoAssinado",      dados.dataProjetoAssinado);
-    setIfExists("dataMedicaoRealizada",     dados.dataMedicaoRealizada);
+    setIfExists("dataConferencia", dados.dataConferencia);
+    setIfExists("obraLiberada", dados.obraLiberada);
+    setIfExists("itensLiberacaoObra", dados.itensLiberacaoObra);
+    setIfExists("dataLiberacaoObra", dados.dataLiberacaoObra);
+    setIfExists("dataProjetoEnviado", dados.dataProjetoEnviado);
+    setIfExists("dataProjetoAssinado", dados.dataProjetoAssinado);
+    setIfExists("dataMedicaoRealizada", dados.dataMedicaoRealizada);
 
     // ✅ Lista fixa (fallback na 2ª tentativa)
     const VENDEDORES_FIXOS_FALLBACK = {
@@ -385,17 +225,17 @@ async function carregarPropostaEditavel(proposta) {
       "registros": 12,
       "total_de_registros": 12,
       "cadastro": [
-        {"codInt":"","codigo":2452905334,"comissao":1,"email":"joaomartins@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"N","nome":"JOAO CLEBER MARTINS","visualiza_pedido":"N"},
-        {"codInt":"","codigo":2452905376,"comissao":0,"email":"","fatura_pedido":"N","inativo":"S","nome":"Paulo Sergio Machado da Silva","visualiza_pedido":"N"},
-        {"codInt":"","codigo":2452905381,"comissao":0,"email":"marilena.ulhoa@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"N","nome":"MARILENA DE ALMEIDA ULHOA","visualiza_pedido":"N"},
-        {"codInt":"","codigo":2452905445,"comissao":1,"email":"rafael.angelo@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"N","nome":"RAFAEL ANGELO ARAUJO DA SILVA","visualiza_pedido":"N"},
-        {"codInt":"","codigo":2452905491,"comissao":0,"email":"","fatura_pedido":"N","inativo":"S","nome":"DOUGLAS VITOR DA SILVA","visualiza_pedido":"N"},
-        {"codInt":"","codigo":2452905509,"comissao":0,"email":"","fatura_pedido":"N","inativo":"S","nome":"GABRIEL JUNIOR DO COUTO NEPOMUCENO","visualiza_pedido":"N"},
-        {"codInt":"","codigo":2452905682,"comissao":0,"email":"felipe.ulhoa@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"N","nome":"FELIPE ULHOA FERREIRA","visualiza_pedido":"N"},
-        {"codInt":"","codigo":2452911859,"comissao":0,"email":"","fatura_pedido":"N","inativo":"S","nome":"MAURO LUCIO","visualiza_pedido":"N"},
-        {"codInt":"","codigo":2452927579,"comissao":0,"email":"projetos@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"S","nome":"ANA FLAVIA RODRIGUES PRATES","visualiza_pedido":"N"},
-        {"codInt":"","codigo":2618640819,"comissao":0,"email":"lais.rabelo@ferreiraulhoa.com.br","fatura_pedido":"N","inativo":"S","nome":"LAIS MAGALHÃES RABELO","visualiza_pedido":"N"},
-        {"codInt":"","codigo":2698639092,"comissao":0,"email":"servidor@ferreiraulhoa.com.br","fatura_pedido":"S","inativo":"S","nome":"VANESSA ULHOA","visualiza_pedido":"N"},
+        { "codInt": "", "codigo": 2452905334, "comissao": 1, "email": "joaomartins@ferreiraulhoa.com.br", "fatura_pedido": "N", "inativo": "N", "nome": "JOAO CLEBER MARTINS", "visualiza_pedido": "N" },
+        { "codInt": "", "codigo": 2452905376, "comissao": 0, "email": "", "fatura_pedido": "N", "inativo": "S", "nome": "Paulo Sergio Machado da Silva", "visualiza_pedido": "N" },
+        { "codInt": "", "codigo": 2452905381, "comissao": 0, "email": "marilena.ulhoa@ferreiraulhoa.com.br", "fatura_pedido": "N", "inativo": "N", "nome": "MARILENA DE ALMEIDA ULHOA", "visualiza_pedido": "N" },
+        { "codInt": "", "codigo": 2452905445, "comissao": 1, "email": "rafael.angelo@ferreiraulhoa.com.br", "fatura_pedido": "N", "inativo": "N", "nome": "RAFAEL ANGELO ARAUJO DA SILVA", "visualiza_pedido": "N" },
+        { "codInt": "", "codigo": 2452905491, "comissao": 0, "email": "", "fatura_pedido": "N", "inativo": "S", "nome": "DOUGLAS VITOR DA SILVA", "visualiza_pedido": "N" },
+        { "codInt": "", "codigo": 2452905509, "comissao": 0, "email": "", "fatura_pedido": "N", "inativo": "S", "nome": "GABRIEL JUNIOR DO COUTO NEPOMUCENO", "visualiza_pedido": "N" },
+        { "codInt": "", "codigo": 2452905682, "comissao": 0, "email": "felipe.ulhoa@ferreiraulhoa.com.br", "fatura_pedido": "N", "inativo": "N", "nome": "FELIPE ULHOA FERREIRA", "visualiza_pedido": "N" },
+        { "codInt": "", "codigo": 2452911859, "comissao": 0, "email": "", "fatura_pedido": "N", "inativo": "S", "nome": "MAURO LUCIO", "visualiza_pedido": "N" },
+        { "codInt": "", "codigo": 2452927579, "comissao": 0, "email": "projetos@ferreiraulhoa.com.br", "fatura_pedido": "N", "inativo": "S", "nome": "ANA FLAVIA RODRIGUES PRATES", "visualiza_pedido": "N" },
+        { "codInt": "", "codigo": 2618640819, "comissao": 0, "email": "lais.rabelo@ferreiraulhoa.com.br", "fatura_pedido": "N", "inativo": "S", "nome": "LAIS MAGALHÃES RABELO", "visualiza_pedido": "N" },
+        { "codInt": "", "codigo": 2698639092, "comissao": 0, "email": "servidor@ferreiraulhoa.com.br", "fatura_pedido": "S", "inativo": "S", "nome": "VANESSA ULHOA", "visualiza_pedido": "N" }
       ]
     };
 
@@ -462,12 +302,18 @@ async function carregarPropostaEditavel(proposta) {
         backdrop.appendChild(box);
         document.body.appendChild(backdrop);
 
-        const fechar = (val) => { backdrop.remove(); resolve(val); };
+        const fechar = (val) => {
+          backdrop.remove();
+          resolve(val);
+        };
 
-        backdrop.addEventListener("click", (e) => { if (e.target === backdrop) fechar(null); });
+        backdrop.addEventListener("click", (e) => {
+          if (e.target === backdrop) fechar(null);
+        });
+
         document.getElementById("btn-fechar-modal-vend").onclick = () => fechar(null);
-        document.getElementById("btn-cancelar-vend").onclick    = () => fechar(null);
-        document.getElementById("btn-confirmar-vend").onclick   = () => {
+        document.getElementById("btn-cancelar-vend").onclick = () => fechar(null);
+        document.getElementById("btn-confirmar-vend").onclick = () => {
           const sel = document.getElementById("select-correcao-vendedor");
           fechar(sel?.value || "");
         };
@@ -487,10 +333,10 @@ async function carregarPropostaEditavel(proposta) {
       const isHex24 = (s) => /^[a-f0-9]{24}$/i.test(String(s || "").trim());
 
       const ALIASES_VENDEDORES = {
-        [norm("MARILENA")]:        "MARILENA DE ALMEIDA ULHOA",
-        [norm("MARILENA ULHOA")]:  "MARILENA DE ALMEIDA ULHOA",
-        [norm("RAFAEL ANGELO")]:   "RAFAEL ANGELO ARAUJO DA SILVA",
-        [norm("RAFAEL ÂNGELO")]:   "RAFAEL ANGELO ARAUJO DA SILVA",
+        [norm("MARILENA")]: "MARILENA DE ALMEIDA ULHOA",
+        [norm("MARILENA ULHOA")]: "MARILENA DE ALMEIDA ULHOA",
+        [norm("RAFAEL ANGELO")]: "RAFAEL ANGELO ARAUJO DA SILVA",
+        [norm("RAFAEL ÂNGELO")]: "RAFAEL ANGELO ARAUJO DA SILVA"
       };
 
       const VALIDOS_SET = new Set(
@@ -499,10 +345,13 @@ async function carregarPropostaEditavel(proposta) {
 
       function preencherListaFixaNoSelect(select) {
         const atuais = new Set(Array.from(select.options || []).map((o) => norm(o.value)));
+
         (VENDEDORES_FIXOS_FALLBACK?.cadastro || []).forEach((v) => {
           const nome = String(v.nome || "").trim().toUpperCase();
-          const key  = norm(nome);
+          const key = norm(nome);
+
           if (!key || atuais.has(key)) return;
+
           select.appendChild(new Option(nome, nome));
           atuais.add(key);
         });
@@ -511,6 +360,7 @@ async function carregarPropostaEditavel(proposta) {
       function buscarOpcao(select, nome) {
         const k = norm(nome);
         if (!k) return null;
+
         return (
           Array.from(select.options || []).find(
             (opt) => norm(opt.value) === k || norm(opt.text) === k
@@ -519,26 +369,30 @@ async function carregarPropostaEditavel(proposta) {
       }
 
       async function validarOuSelecionar(valorAtual) {
-        const bruto     = String(valorAtual || "").trim();
+        const bruto = String(valorAtual || "").trim();
         if (!bruto) return "";
 
-        const alias     = ALIASES_VENDEDORES[norm(bruto)];
+        const alias = ALIASES_VENDEDORES[norm(bruto)];
         const candidato = (alias || bruto).trim().toUpperCase();
 
         if (VALIDOS_SET.has(norm(candidato))) return candidato;
 
         const motivo = isHex24(candidato) ? " (ID inválido)" : "";
+
         alert(`⚠️ Vendedor inválido encontrado${motivo}: "${bruto}".\nSelecione um vendedor válido para continuar.`);
 
         const escolhido = await abrirModalSelecaoVendedor({ valorInvalido: bruto });
+
         if (escolhido === null) return "";
         if (!String(escolhido).trim()) return "";
 
         const finalNome = String(escolhido).trim().toUpperCase();
+
         if (!VALIDOS_SET.has(norm(finalNome))) {
           alert(`❌ Seleção inválida: "${finalNome}". Vou deixar vazio.`);
           return "";
         }
+
         return finalNome;
       }
 
@@ -546,6 +400,7 @@ async function carregarPropostaEditavel(proposta) {
         tentativaAtual++;
 
         const vendedorEl = document.getElementById("vendedorResponsavel");
+
         if (!vendedorEl) {
           if (tentativaAtual < tentativas) return setTimeout(() => tick(), delay);
           alert("❌ Falha ao preencher: campo #vendedorResponsavel não encontrado no DOM.");
@@ -561,13 +416,16 @@ async function carregarPropostaEditavel(proposta) {
         if (!corrigido) {
           vendedorEl.value = "";
           vendedorEl.dispatchEvent(new Event("change", { bubbles: true }));
-          vendedorEl.dispatchEvent(new Event("input",  { bubbles: true }));
+          vendedorEl.dispatchEvent(new Event("input", { bubbles: true }));
+
           console.log("ℹ️ Vendedor ficou vazio (sem seleção).");
+
           if (typeof ocultarCarregando === "function") ocultarCarregando();
           return;
         }
 
         let opt = buscarOpcao(vendedorEl, corrigido);
+
         if (!opt) {
           preencherListaFixaNoSelect(vendedorEl);
           opt = buscarOpcao(vendedorEl, corrigido);
@@ -575,16 +433,21 @@ async function carregarPropostaEditavel(proposta) {
 
         if (opt) {
           if (typeof mostrarCarregando === "function") mostrarCarregando();
+
           vendedorEl.value = opt.value;
           vendedorEl.dispatchEvent(new Event("change", { bubbles: true }));
-          vendedorEl.dispatchEvent(new Event("input",  { bubbles: true }));
+          vendedorEl.dispatchEvent(new Event("input", { bubbles: true }));
+
           console.log("✅ Vendedor preenchido:", vendedorEl.value, `(tentativa ${tentativaAtual})`);
+
           if (typeof ocultarCarregando === "function") ocultarCarregando();
           return;
         }
 
         if (tentativaAtual < tentativas) return setTimeout(() => tick(), delay);
+
         alert(`❌ Não foi possível selecionar o vendedor após ${tentativas} tentativas.`);
+
         if (typeof ocultarCarregando === "function") ocultarCarregando();
       };
 
@@ -593,27 +456,31 @@ async function carregarPropostaEditavel(proposta) {
 
     setTimeout(() => {
       if (typeof mostrarCarregando === "function") mostrarCarregando();
+
       tentarPreencherVendedor({
         vendedorNome: dados?.vendedorResponsavel,
-        tentativas:   3,
-        delay:        900
+        tentativas: 3,
+        delay: 900
       });
     }, 1000);
 
-    setIfExists("operadorInterno",    dados.operadorInterno);
-    setIfExists("prazosArea",         dados.prazosArea);
-    setIfExists("condicaoPagamento",  dados.condicaoPagamento);
-    setIfExists("condicoesGerais",    dados.condicoesGerais);
+    setIfExists("operadorInterno", dados.operadorInterno);
+    setIfExists("prazosArea", dados.prazosArea);
+    setIfExists("condicaoPagamento", dados.condicaoPagamento);
+    setIfExists("condicoesGerais", dados.condicoesGerais);
 
     setTimeout(() => {
       const campo = document.getElementById("campoDescontoFinal");
+
       if (campo) {
         campo.value = dados.desconto ?? "";
-        campo.dispatchEvent(new Event("input",  { bubbles: true }));
+        campo.dispatchEvent(new Event("input", { bubbles: true }));
         campo.dispatchEvent(new Event("change", { bubbles: true }));
-        if (typeof calcularSomaTotal          === "function") calcularSomaTotal();
-        if (typeof atualizarResumoFinanceiro  === "function") atualizarResumoFinanceiro();
-        if (typeof atualizarCamposReativos    === "function") atualizarCamposReativos();
+
+        if (typeof calcularSomaTotal === "function") calcularSomaTotal();
+        if (typeof atualizarResumoFinanceiro === "function") atualizarResumoFinanceiro();
+        if (typeof atualizarCamposReativos === "function") atualizarCamposReativos();
+
         ocultarCarregando();
       } else {
         console.warn("⚠️ Campo 'campoDescontoFinal' não encontrado.");
@@ -633,7 +500,7 @@ async function carregarPropostaEditavel(proposta) {
       (dados.clientes || []).forEach((cliente, i) => {
         const ref = i === 0 ? clienteBase : clienteBase.cloneNode(true);
 
-        const razaoEl       = ref.querySelector(".razaoSocial");
+        const razaoEl = ref.querySelector(".razaoSocial");
         if (razaoEl) razaoEl.value = cliente.nome_razao_social || "";
 
         const nomeContatoEl = ref.querySelector(".nomeContato");
@@ -643,20 +510,20 @@ async function carregarPropostaEditavel(proposta) {
           nomeContatoEl.dataset.valorOriginal = valorNome;
         }
 
-        const codEl   = ref.querySelector(".codigoCliente");
-        if (codEl)   codEl.value   = cliente.codigoOmie || "";
+        const codEl = ref.querySelector(".codigoCliente");
+        if (codEl) codEl.value = cliente.codigoOmie || "";
 
-        const cpfEl   = ref.querySelector(".cpfCnpj");
-        if (cpfEl)   cpfEl.value   = cliente.cpfCnpj   || "";
+        const cpfEl = ref.querySelector(".cpfCnpj");
+        if (cpfEl) cpfEl.value = cliente.cpfCnpj || "";
 
-        const funcEl  = ref.querySelector(".funcaoCliente");
-        if (funcEl)  funcEl.value  = cliente.funcao     || "";
+        const funcEl = ref.querySelector(".funcaoCliente");
+        if (funcEl) funcEl.value = cliente.funcao || "";
 
-        const telEl   = ref.querySelector(".telefoneCliente");
-        if (telEl)   telEl.value   = cliente.telefone   || "";
+        const telEl = ref.querySelector(".telefoneCliente");
+        if (telEl) telEl.value = cliente.telefone || "";
 
         const emailEl = ref.querySelector(".emailCliente");
-        if (emailEl) emailEl.value = cliente.email      || "";
+        if (emailEl) emailEl.value = cliente.email || "";
 
         if (i > 0) containerClientes.appendChild(ref);
       });
@@ -666,18 +533,18 @@ async function carregarPropostaEditavel(proposta) {
     // 💳 Parcelas — restauração com verificação contra opções reais do select
     // -----------------------------------------------------------------------
 
-    // Valores válidos do select (devem estar sincronizados com o HTML da página)
     const OPCOES_CONDICAO_VALIDAS = new Set([
       "avista",
       "na-retirada",
       "30-dias",
       "entrada+30"
-      // "personalizado" é o gatilho para campo de texto — não entra aqui
     ]);
 
     const containerParcelas = document.getElementById("listaParcelas");
+
     if (containerParcelas && Array.isArray(dados.parcelas)) {
       containerParcelas.innerHTML = "";
+
       const parcelamentoContainer = document.getElementById("parcelamentoContainer");
       if (parcelamentoContainer) parcelamentoContainer.style.display = "block";
 
@@ -685,44 +552,43 @@ async function carregarPropostaEditavel(proposta) {
         try {
           adicionarParcela();
 
-          const todas  = document.querySelectorAll("#listaParcelas .row");
+          const todas = document.querySelectorAll("#listaParcelas .row");
           const ultima = todas[todas.length - 1];
+
           if (!ultima) return;
 
-          const inputValor  = ultima.querySelector(".valor-parcela");
-          const inputData   = ultima.querySelector(".data-parcela");
-          const selectTipo  = ultima.querySelector(".tipo-monetario");
+          const inputValor = ultima.querySelector(".valor-parcela");
+          const inputData = ultima.querySelector(".data-parcela");
+          const selectTipo = ultima.querySelector(".tipo-monetario");
           const condWrapper = ultima.querySelector(".condicao-wrapper");
 
           if (inputValor) inputValor.value = parcela.valor || "";
-          if (inputData)  inputData.value  = parcela.data  || "";
-          if (selectTipo) selectTipo.value = parcela.tipo  || "";
+          if (inputData) inputData.value = parcela.data || "";
+          if (selectTipo) selectTipo.value = parcela.tipo || "";
 
-          // --- Restauração da condição de pagamento ---
           const condicaoSalva = String(parcela.condicao || "").trim();
 
           if (!condWrapper) return;
 
           if (OPCOES_CONDICAO_VALIDAS.has(condicaoSalva)) {
-            // ✅ Opção fixa do select — seleciona normalmente
             const sel = condWrapper.querySelector("select.condicao-pagto");
+
             if (sel) {
               sel.value = condicaoSalva;
               sel.dataset.valorOriginal = condicaoSalva;
             }
           } else if (condicaoSalva) {
-            // ✅ Texto livre ou "Personalizado - ..." — transforma em input de texto
             condWrapper.innerHTML = "";
+
             const input = document.createElement("input");
-            input.type                  = "text";
-            input.className             = "form-control condicao-pagto";
-            input.placeholder           = "Descreva a condição de pagamento...";
-            input.value                 = condicaoSalva;
+            input.type = "text";
+            input.className = "form-control condicao-pagto";
+            input.placeholder = "Descreva a condição de pagamento...";
+            input.value = condicaoSalva;
             input.dataset.valorOriginal = condicaoSalva;
+
             condWrapper.appendChild(input);
           }
-          // se condicaoSalva for vazio: deixa o select no estado "Selecione…"
-
         } catch (e) {
           console.error(`❌ Erro ao adicionar parcela #${index + 1}:`, e);
         }
@@ -731,34 +597,42 @@ async function carregarPropostaEditavel(proposta) {
 
     // 📦 Produtos por grupo
     const container = document.getElementById("blocosProdutosContainer");
+
     if (!container) throw new Error("Elemento #blocosProdutosContainer não encontrado.");
+
     container.innerHTML = "";
     blocoIndex = 0;
 
     for (let i = 0; i < proposta.grupos.length; i++) {
-      const grupo       = proposta.grupos[i];
-      const nomeGrupo   = grupo.nome    || `Grupo ${i + 1}`;
+      const grupo = proposta.grupos[i];
+      const nomeGrupo = grupo.nome || `Grupo ${i + 1}`;
       const nomeAmbiente = grupo.ambiente || "";
+
       console.log("O grupo", proposta);
 
       await esperarElemento("#blocosProdutosContainer");
+
       const idSuffix = criarBlocoDeProposta(nomeGrupo, nomeAmbiente);
+
       await esperarElemento(`#${idSuffix}`);
 
       const bloco = document.getElementById(idSuffix);
+
       if (!bloco) continue;
 
       if (window.location.pathname.includes("editarModelo.html")) {
         const spanTitulo = bloco.querySelector(`#titulo-accordion-${idSuffix}`);
+
         if (spanTitulo) {
           const inputTitulo = document.createElement("input");
-          inputTitulo.type      = "text";
+          inputTitulo.type = "text";
           inputTitulo.className = "form-control form-control-sm input-editar-nome-grupo";
-          inputTitulo.value     = spanTitulo.textContent.trim();
+          inputTitulo.value = spanTitulo.textContent.trim();
           inputTitulo.setAttribute("data-id", idSuffix);
           inputTitulo.addEventListener("input", (e) => {
             proposta.grupos[i].nome = e.target.value;
           });
+
           spanTitulo.replaceWith(inputTitulo);
         }
       }
@@ -768,10 +642,12 @@ async function carregarPropostaEditavel(proposta) {
 
       for (const [chave, valor] of Object.entries(grupo.parametros || {})) {
         const input = bloco.querySelector(`input[name="${chave}"]`);
+
         if (input) {
           const deveZerar =
             window.location.pathname.includes("editarModelo.html") &&
             ["altura_montante", "numero_montantes", "numero_protecoes", "descricao"].includes(chave);
+
           input.value = deveZerar ? "0" : valor;
         }
       }
@@ -783,21 +659,25 @@ async function carregarPropostaEditavel(proposta) {
       let resumoPreenchido = false;
 
       grupo.itens.forEach(item => {
-        const formula        = item.formula_quantidade || "";
-        const valorOriginal  = window.location.pathname.includes("editarModelo.html")
+        const formula = item.formula_quantidade || "";
+
+        const valorOriginal = window.location.pathname.includes("editarModelo.html")
           ? "0"
           : (item.quantidade_desejada || "");
-        const context        = { groupId: idSuffix };
+
+        const context = { groupId: idSuffix };
         const quantidadeFinal = arredondarCimaSeguro(formula || valorOriginal, context);
 
         if (resumoEl && !resumoPreenchido) {
-          resumoEl.value    = `${item.formula_custo}`;
-          resumoPreenchido  = true;
+          resumoEl.value = `${item.formula_custo}`;
+          resumoPreenchido = true;
           console.log("teste");
         }
 
         const tr = document.createElement("tr");
+
         console.log(item.formula_custo);
+
         tr.innerHTML = `
           <td>
             <textarea class="form-control form-control-sm" rows="3">
@@ -821,6 +701,7 @@ ${item.descricao_utilizacao || "Utilização Preencher"}
             <button class="btn btn-secondary btn-sm mt-1" onclick="abrirSubstituirProduto(this)">Substituir</button>
           </td>
         `;
+
         tbody.appendChild(tr);
       });
 
@@ -830,19 +711,22 @@ ${item.descricao_utilizacao || "Utilização Preencher"}
 
       if (i === 0) {
         const collapse = bloco.querySelector(`#collapse-${idSuffix}`);
+
         if (collapse && !collapse.classList.contains("show")) {
           collapse.classList.add("show");
         }
       }
     }
 
-    if (typeof renderizarTudo                          === "function") renderizarTudo();
-    if (typeof ativarRecalculoEmTodasTabelas           === "function") ativarRecalculoEmTodasTabelas();
-    if (typeof simularFocusEBlurEmTodosCamposFormula   === "function") simularFocusEBlurEmTodosCamposFormula();
+    if (typeof renderizarTudo === "function") renderizarTudo();
+    if (typeof ativarRecalculoEmTodasTabelas === "function") ativarRecalculoEmTodasTabelas();
+    if (typeof simularFocusEBlurEmTodosCamposFormula === "function") simularFocusEBlurEmTodosCamposFormula();
 
     if (window.location.pathname.includes("editarModelo.html")) {
       const form = document.getElementById("novoOrcamentoForm");
+
       if (form) form.style.display = "none";
+
       document.querySelectorAll('input[placeholder="Ambiente"]').forEach(input => {
         input.style.display = "none";
       });
