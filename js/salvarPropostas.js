@@ -287,17 +287,19 @@ async function salvarPropostaEditavel() {
       grupos
     };
 
-    const resposta = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/propostas", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(proposta)
-    });
+   console.log('📤 Enviando proposta:', JSON.stringify(proposta, null, 2));
 
-    const resultado = await resposta.json();
-    console.log("📦 Proposta salva com sucesso:", resultado);
-    ocultarCarregando();
-    mostrarPopupCustomizado("✅ Sucesso", "Proposta atualizada com sucesso!", "success");
-    console.log(resultado._id);
+const resposta = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/propostas", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(proposta)
+});
+
+const resultado = await resposta.json();
+console.log('📦 Proposta salva com sucesso:', JSON.stringify(resultado, null, 2));
+console.log('🆔 ID:', resultado._id);
+ocultarCarregando();
+mostrarPopupCustomizado("✅ Sucesso", "Proposta atualizada com sucesso!", "success");
 
     if (resultado && resultado._id) {
       window.location.href = `editar.html?id=${resultado._id}`;
@@ -404,49 +406,66 @@ window.atualizarPropostaEditavel = async function () {
     const numeroOrcamentoEl = document.getElementById("numeroOrcamento");
     const numeroPedidoEl = document.getElementById("numeroPedido");
 
-    const camposFormulario = {
-      numeroOrcamento:
-        numeroOrcamentoEl?.value?.trim() ||
-        numeroOrcamentoEl?.getAttribute("data-valor-original")?.trim() ||
-        "",
+   const camposFormulario = {
+  numeroOrcamento:
+    numeroOrcamentoEl?.value?.trim() ||
+    numeroOrcamentoEl?.getAttribute("data-valor-original")?.trim() ||
+    "",
 
-      numeroPedido:
-        numeroPedidoEl?.value?.trim() ||
-        numeroPedidoEl?.getAttribute("data-valor-original")?.trim() ||
-        "",
+  numeroPedido:
+    numeroPedidoEl?.value?.trim() ||
+    numeroPedidoEl?.getAttribute("data-valor-original")?.trim() ||
+    "",
 
-      dataOrcamento: document.getElementById("dataOrcamento")?.value || "",
-      origemCliente: document.getElementById("origemCliente")?.value || "",
-      clientes,
-      cep: document.getElementById("cep")?.value || "",
-      rua: document.getElementById("rua")?.value || "",
-      numero: document.getElementById("numero")?.value || "",
-      complemento: document.getElementById("complemento")?.value || "",
-      bairro: document.getElementById("bairro")?.value || "",
-      cidade: document.getElementById("cidade")?.value || "",
-      estado: document.getElementById("estado")?.value || "",
-      vendedorResponsavel: textoSelecionado,
-      operadorInterno: document.getElementById("operadorInterno")?.value || "",
-      prazosArea: document.getElementById("prazosArea")?.value || "",
-      condicaoPagamento,
-      condicoesGerais: document.getElementById("condicoesGerais")?.value || "",
-      desconto,
-      parcelas,
-      prazoEntrega: document.getElementById("prazoEntrega")?.value || "",
-      dataPedidoEnviadoCliente: document.getElementById("dataPedidoEnviadoCliente")?.value || "",
-      meioEnvioPedido: document.getElementById("meioEnvioPedido")?.value || "",
-      dataPedidoAssinado: document.getElementById("dataPedidoAssinado")?.value || "",
-      dataEntregaProjeto: document.getElementById("dataEntregaProjeto")?.value || "",
-      dataInicioProjeto: document.getElementById("dataInicioProjeto")?.value || "",
-      dataLiberacaoConferencia: document.getElementById("dataLiberacaoConferencia")?.value || "",
-      dataConferencia: document.getElementById("dataConferencia")?.value || "",
-      obraLiberada: document.getElementById("obraLiberada")?.value || "",
-      itensLiberacaoObra: document.getElementById("itensLiberacaoObra")?.value || "",
-      dataLiberacaoObra: document.getElementById("dataLiberacaoObra")?.value || "",
-      dataProjetoEnviado: document.getElementById("dataProjetoEnviado")?.value || "",
-      dataProjetoAssinado: document.getElementById("dataProjetoAssinado")?.value || "",
-      dataMedicaoRealizada: document.getElementById("dataMedicaoRealizada")?.value || ""
-    };
+  dataOrcamento: document.getElementById("dataOrcamento")?.value || "",
+  origemCliente: document.getElementById("origemCliente")?.value || "",
+  clientes,
+
+  // Endereço de cobrança
+  cep: document.getElementById("cep")?.value || "",
+  rua: document.getElementById("rua")?.value || "",
+  numero: document.getElementById("numero")?.value || "",
+  complemento: document.getElementById("complemento")?.value || "",
+  bairro: document.getElementById("bairro")?.value || "",
+  cidade: document.getElementById("cidade")?.value || "",
+  estado: document.getElementById("estado")?.value || "",
+
+  // Endereço da obra
+  cepObra: document.getElementById("cepObra")?.value || "",
+  ruaObra: document.getElementById("ruaObra")?.value || "",
+  numeroObra: document.getElementById("numeroObra")?.value || "",
+  complementoObra: document.getElementById("complementoObra")?.value || "",
+  bairroObra: document.getElementById("bairroObra")?.value || "",
+  cidadeObra: document.getElementById("cidadeObra")?.value || "",
+  estadoObra: document.getElementById("estadoObra")?.value || "",
+
+  vendedorResponsavel: textoSelecionado,
+  operadorInterno: document.getElementById("operadorInterno")?.value || "",
+
+  prazosArea: document.getElementById("prazosArea")?.value || "",
+  condicaoPagamento,
+  condicoesGerais: document.getElementById("condicoesGerais")?.value || "",
+
+  desconto,
+  parcelas,
+
+  prazoEntrega: document.getElementById("prazoEntrega")?.value || "",
+  dataPedidoEnviadoCliente: document.getElementById("dataPedidoEnviadoCliente")?.value || "",
+  meioEnvioPedido: document.getElementById("meioEnvioPedido")?.value || "",
+  dataPedidoAssinado: document.getElementById("dataPedidoAssinado")?.value || "",
+
+  dataEntregaProjeto: document.getElementById("dataEntregaProjeto")?.value || "",
+  dataInicioProjeto: document.getElementById("dataInicioProjeto")?.value || "",
+  dataLiberacaoConferencia: document.getElementById("dataLiberacaoConferencia")?.value || "",
+  dataConferencia: document.getElementById("dataConferencia")?.value || "",
+
+  obraLiberada: document.getElementById("obraLiberada")?.value || "",
+  itensLiberacaoObra: document.getElementById("itensLiberacaoObra")?.value || "",
+  dataLiberacaoObra: document.getElementById("dataLiberacaoObra")?.value || "",
+  dataProjetoEnviado: document.getElementById("dataProjetoEnviado")?.value || "",
+  dataProjetoAssinado: document.getElementById("dataProjetoAssinado")?.value || "",
+  dataMedicaoRealizada: document.getElementById("dataMedicaoRealizada")?.value || ""
+};
 
     const grupos = [];
     document.querySelectorAll(".main-container").forEach(bloco => {
