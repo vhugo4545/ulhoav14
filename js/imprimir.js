@@ -1585,13 +1585,14 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
         .num { text-align: center; width: 44px; }
         .qtd { text-align: right; width: 110px; }
 
-        .obs {
-          border-top: 1px solid #111;
-          padding: 8px 10px;
-          font-style: italic;
-          color: #333;
-          line-height: 1.35;
-        }
+    .obs {
+  border-top: 1px solid #111;
+  padding: 8px 10px;
+  font-style: italic;
+  color: #333;
+  line-height: 1.35;
+  font-size: 20px;
+}
 
         /* ====== BIG TABLES ====== */
         .fullBox { border: 1px solid #111; margin-top: 10px; }
@@ -2750,13 +2751,14 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
         .num { text-align: center; width: 44px; }
         .qtd { text-align: right; width: 110px; }
 
-        .obs {
-          border-top: 1px solid #111;
-          padding: 8px 10px;
-          font-style: italic;
-          color: #333;
-          line-height: 1.35;
-        }
+.obs {
+  border-top: 1px solid #111;
+  padding: 8px 10px;
+  font-style: italic;
+  color: #333;
+  line-height: 1.35;
+  font-size: 20px;
+}
 
         /* ====== BIG TABLES ====== */
         .fullBox { border: 1px solid #111; margin-top: 10px; }
@@ -5223,13 +5225,14 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             width: 110px;
           }
 
-          .obs {
-            border-top: 1px solid #111;
-            padding: 7px 9px;
-            font-style: italic;
-            color: #333;
-            line-height: 1.25;
-          }
+.obs {
+  border-top: 1px solid #111;
+  padding: 8px 10px;
+  font-style: italic;
+  color: #333;
+  line-height: 1.35;
+  font-size: 20px;
+}
 
           .fullBox {
             border: 1px solid #111;
