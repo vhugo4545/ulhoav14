@@ -134,9 +134,3 @@ button:active {
     font-size: 1.4rem;
   }
 }
-
-input.form-control[placeholder="Ambiente"] {
-  width: 800px !important;   /* ou o valor que preferir */
-  max-width: 98vw;
-  /* Mantém altura e fonte padrão do Bootstrap */
-}
