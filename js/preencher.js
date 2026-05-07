@@ -21,7 +21,11 @@ function mostrarLoader() {
 // ✅ Esconde o loader
 function esconderLoader() {
   document.getElementById("loader-overlay")?.style.setProperty("display", "none");
+  dobrarFonteResumosBlocos();
 }
+
+function dobrarFonteResumosBlocos() {  document.querySelectorAll('textarea[id^="resumo-bloco-"]').forEach(textarea => {    textarea.style.fontSize = '2em';  });}
+
 
 // 📥 Extrai o ID da URL (?id=...)
 function obterIdPropostaDaUrl() {
