@@ -1678,6 +1678,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
 .obs-text{
   line-height: 1.35;
   min-height: 70px;
+  font-size: 20px;
 }
 
 /* ======= PRIMEIRA PÁGINA (rodapé no final) ======= */
@@ -2842,6 +2843,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
 .obs-text{
   line-height: 1.35;
   min-height: 70px;
+  font-size: 20px;
 }
 
 /* ======= PRIMEIRA PÁGINA (rodapé no final) ======= */
