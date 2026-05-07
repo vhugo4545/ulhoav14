@@ -24,7 +24,7 @@ function esconderLoader() {
   dobrarFonteResumosBlocos();
 }
 
-function dobrarFonteResumosBlocos() {  document.querySelectorAll('textarea[id^="resumo-bloco-"]').forEach(textarea => {    textarea.style.fontSize = '1em';  });}
+function dobrarFonteResumosBlocos() {  document.querySelectorAll('textarea[id^="resumo-bloco-"]').forEach(textarea => {    textarea.style.fontSize = '1.5em';  });}
 
 
 // 📥 Extrai o ID da URL (?id=...)
