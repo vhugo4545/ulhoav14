@@ -2998,10 +2998,31 @@ function recalc(){
   const aprovadosRows = rows.filter(tr => !isIgnoredKey(tr.dataset.key));
   const nAprov = aprovadosRows.length;
 
-  // ✅ AJUSTE: usa data-custo (Custo Total de Material) para itens ignorados sem MO
-const catIgnoradosSemMO = rows
-  .filter(tr => isIgnoredKey(tr.dataset.key) && tr.dataset.islabor !== '1')
-  .reduce((acc, tr) => acc + toCents(Number(tr.dataset.custo || 0)), 0);
+  // Faturamento direto = ignorados sem MO, usando data-custo
+  const catIgnoradosSemMO = rows
+    .filter(tr => isIgnoredKey(tr.dataset.key) && tr.dataset.islabor !== '1')
+    .reduce((acc, tr) => acc + toCents(Number(tr.dataset.custo || 0)), 0);
+
+  // ✅ baseParaServico = (totalTodos - desconto) - faturamento direto
+  const totalTodosComDescontoParaServico = Math.max(0, totalTodos - descontoTotal);
+  const baseParaServico = Math.max(0, totalTodosComDescontoParaServico - fromCents(catIgnoradosSemMO));
+  const valorServicosAutomatic = baseParaServico * 0.20;
+
+  console.log('[recalc] catIgnoradosSemMO:', fromCents(catIgnoradosSemMO));
+  console.log('[recalc] baseParaServico:', baseParaServico);
+  console.log('[recalc] valorServicosAutomatic:', valorServicosAutomatic);
+
+  // Preenche campo de serviços automaticamente se vazio ou divergente
+  if ($srvValor && valorServicosAutomatic > 0) {
+    const valorAtual = vv_parseBRL($srvValor.value || '0');
+    if (Math.abs(valorAtual - valorServicosAutomatic) > 0.01) {
+      const rValorSrv = controls.querySelector('input[name="srvModo"][value="valor"]');
+      if (rValorSrv) rValorSrv.checked = true;
+      $srvValor.value = vv_fmtBRL(valorServicosAutomatic);
+      $srvValor.dataset.valorOriginal = vv_fmtBRL(valorServicosAutomatic);
+    }
+  }
+
   if (nAprov === 0){
     rows.forEach(tr => {
       tr.querySelector('[data-col="part"]').textContent = '0%';
@@ -3050,21 +3071,24 @@ const catIgnoradosSemMO = rows
     totalLiquidoGeral += baseLiquida;
   });
 
-  const servTotal = getModoServicos()==='percent'
-    ? ((Number($srvPercent.value||0)/100) * totalLiquidoGeral)
-    : vv_parseBRL($srvValor.value||'0');
+  // ✅ Usa valorServicosAutomatic direto — não lê o campo para evitar loop
+  const servTotal = valorServicosAutomatic > 0
+    ? valorServicosAutomatic
+    : getModoServicos() === 'percent'
+      ? ((Number($srvPercent.value||0)/100) * totalLiquidoGeral)
+      : vv_parseBRL($srvValor.value||'0');
 
   const servAplicavel = Math.max(0, Math.min(servTotal, totalLiquidoGeral));
 
-const totalProdutosDestino  = Math.max(0, totalLiquidoGeral - servAplicavel);
-const totalProdutosDestinoC = toCents(totalProdutosDestino);
-const catServicoC           = toCents(servAplicavel);
+  const totalProdutosDestino  = Math.max(0, totalLiquidoGeral - servAplicavel);
+  const totalProdutosDestinoC = toCents(totalProdutosDestino);
+  const catServicoC           = toCents(servAplicavel);
 
-const rowsProdutosOmie = aprovadosRows.filter(tr => {
-  const kind    = tr.dataset.kind;
-  const isLabor = tr.dataset.islabor === '1';
-  return kind !== 'servico' && !isLabor;
-});
+  const rowsProdutosOmie = aprovadosRows.filter(tr => {
+    const kind    = tr.dataset.kind;
+    const isLabor = tr.dataset.islabor === '1';
+    return kind !== 'servico' && !isLabor;
+  });
 
   const baseProdutosParaRateio = rowsProdutosOmie.reduce((acc, tr) => {
     return acc + (baseLiquidaMap.get(tr.dataset.key) || 0);
@@ -3125,14 +3149,13 @@ const rowsProdutosOmie = aprovadosRows.filter(tr => {
   $totDesc.textContent    = vv_fmtBRL(descontoAplicavel);
   $totCom.textContent     = vv_fmtBRL(comDisplay);
   $totAjust.textContent   = vv_fmtBRL(fromCents(totalProdutosDestinoC));
-// Total de TODOS os itens (aprovados + ignorados) menos o desconto
-const totalTodosComDesconto = Math.max(0, totalTodos - descontoTotal);
 
-// Total Produto = total com desconto - faturamento direto - serviços
-const catProdutoC = toCents(Math.max(0, totalTodosComDesconto - fromCents(catIgnoradosSemMO) - servAplicavel));
- $catProduto.textContent = vv_fmtBRL(fromCents(catProdutoC));
+  const totalTodosComDesconto = Math.max(0, totalTodos - descontoTotal);
+  const catProdutoC = toCents(Math.max(0, totalTodosComDesconto - fromCents(catIgnoradosSemMO) - servAplicavel));
+
+  $catProduto.textContent = vv_fmtBRL(fromCents(catProdutoC));
   $catServico.textContent = vv_fmtBRL(fromCents(catServicoC));
-  $catVidro.textContent   = vv_fmtBRL(fromCents(catIgnoradosSemMO)); // ✅ agora usa data-custo
+  $catVidro.textContent   = vv_fmtBRL(fromCents(catIgnoradosSemMO));
 
   _lastTotalBaseMO = totalBaseMO;
 }
