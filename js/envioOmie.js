@@ -1901,6 +1901,7 @@ function abrirPopupParcelamentoProdutosServicos({
 
     ft.querySelector("#vv-confirmar-controle-parcelas")?.addEventListener("click", () => {
       try {
+        sincronizarPDVparaKommo()
         const parcelasProduto = coletarParcelasBucket("produtos").filter(p => p.valor > 0);
         const parcelasServico = coletarParcelasBucket("servicos").filter(p => p.valor > 0);
 
@@ -6950,5 +6951,142 @@ async function enviarOSServico({
     return { ok: false, error: msg };
   }
 }
+
+async function sincronizarPDVparaKommo() {
+  const idProposta = new URLSearchParams(window.location.search).get("id");
+
+  if (!idProposta) {
+    console.warn("[SYNC] ID da proposta não encontrado na URL.");
+    return;
+  }
+
+  const campos = {};
+
+  // ── Nome / Razão Social ───────────────────────────
+  const nomeRazaoSocial = document.querySelector(".razaoSocial")?.value?.trim()
+    || document.querySelector(".razaoSocial")?.getAttribute("data-valor-original")?.trim();
+  if (nomeRazaoSocial) campos.kommo_nome_razao_social = nomeRazaoSocial;
+
+  // ── Nº do Pedido ──────────────────────────────────
+  const numeroPedido = document.getElementById("numeroPedido")?.value?.trim()
+    || document.getElementById("numeroPedido")?.getAttribute("data-valor-original")?.trim();
+  if (numeroPedido) campos.kommo_numero_pedido = numeroPedido;
+
+  // ── Número Orçamento ──────────────────────────────
+  const numeroOrcamento = document.getElementById("numeroOrcamento")?.value?.trim()
+    || document.getElementById("numeroOrcamento")?.getAttribute("data-valor-original")?.trim();
+  if (numeroOrcamento) campos.kommo_numero_orcamento = numeroOrcamento;
+
+  // ── Valor Total da Venda ──────────────────────────
+  const valorFinalTotalEl = document.getElementById("valorFinalTotal");
+  const valorFinalTotalTexto = (valorFinalTotalEl?.textContent || valorFinalTotalEl?.innerText || "")
+    .replace(/\u00A0/g, " ").trim();
+  const valorFinalTotal = vv_parseBRL(valorFinalTotalTexto);
+  if (valorFinalTotal > 0) campos.kommo_valor_venda = valorFinalTotal;
+
+  // ── Endereço da obra (#rua, #numero etc.) → campos obra na Kommo ─
+  const rua         = document.getElementById("rua")?.value?.trim();
+  const numero      = document.getElementById("numero")?.value?.trim();
+  const complemento = document.getElementById("complemento")?.value?.trim();
+  const bairro      = document.getElementById("bairro")?.value?.trim();
+  const cidade      = document.getElementById("cidade")?.value?.trim();
+
+  if (rua)         campos.kommo_rua        = rua;
+  if (numero)      campos.kommo_numero      = numero;
+  if (complemento) campos.kommo_complemento = complemento;
+  if (bairro)      campos.kommo_bairro      = bairro;
+  if (cidade)      campos.kommo_cidade      = cidade;
+
+  // ── Endereço de cobrança (#ruaObra etc.) → campos cobrança na Kommo ─
+  const ruaObra         = document.getElementById("ruaObra")?.value?.trim();
+  const numeroObra      = document.getElementById("numeroObra")?.value?.trim();
+  const complementoObra = document.getElementById("complementoObra")?.value?.trim();
+  const bairroObra      = document.getElementById("bairroObra")?.value?.trim();
+  const cidadeObra      = document.getElementById("cidadeObra")?.value?.trim();
+
+  if (ruaObra)         campos.kommo_rua_cobranca        = ruaObra;
+  if (numeroObra)      campos.kommo_numero_cobranca      = numeroObra;
+  if (complementoObra) campos.kommo_complemento_cobranca = complementoObra;
+  if (bairroObra)      campos.kommo_bairro_cobranca      = bairroObra;
+  if (cidadeObra)      campos.kommo_cidade_cobranca      = cidadeObra;
+
+  // ── Financeiro ────────────────────────────────────
+  const valorNFProduto = vv_parseBRL(document.getElementById("vv-cat-produto")?.textContent || "0");
+  const valorNFServico = vv_parseBRL(document.getElementById("vv-cat-servico")?.textContent || "0");
+  const valorFatDireto = vv_parseBRL(document.getElementById("vv-cat-vidro")?.textContent   || "0");
+
+  if (valorNFProduto) campos.kommo_valor_nf_produto = valorNFProduto;
+  if (valorNFServico) campos.kommo_valor_nf_servico = valorNFServico;
+  if (valorFatDireto) campos.kommo_valor_fat_direto = valorFatDireto;
+
+  // ── Vencimento Entrada = data da última parcela ✅ ─
+  const todasDatasParcelas = [...document.querySelectorAll("#listaParcelas .data-parcela")]
+    .map(el => el.value?.trim())
+    .filter(Boolean);
+  const ultimaDataParcela = todasDatasParcelas[todasDatasParcelas.length - 1] || null;
+  if (ultimaDataParcela) campos.kommo_vencimento_entrada = ultimaDataParcela;
+
+  // ── Datas ─────────────────────────────────────────
+  const dataPedidoEnviado   = document.getElementById("dataPedidoEnviadoCliente")?.value;
+  const dataPedidoAssinado  = document.getElementById("dataPedidoAssinado")?.value;
+  const dataMedicao         = document.getElementById("dataMedicaoRealizada")?.value;
+  const dataLiberacaoObra   = document.getElementById("dataLiberacaoObra")?.value;
+  const dataProjetoEnviado  = document.getElementById("dataProjetoEnviado")?.value;
+  const dataProjetoAssinado = document.getElementById("dataProjetoAssinado")?.value;
+
+  if (dataPedidoEnviado)   campos.kommo_contrato_enviado   = dataPedidoEnviado;
+  if (dataPedidoAssinado)  campos.kommo_contrato_assinado  = dataPedidoAssinado;
+  if (dataMedicao)         campos.kommo_medicao_realizada  = dataMedicao;
+  if (dataLiberacaoObra)   campos.kommo_obra_liberada      = dataLiberacaoObra;
+  if (dataProjetoEnviado)  campos.kommo_projeto_enviado    = dataProjetoEnviado;
+  if (dataProjetoAssinado) campos.kommo_assinatura_projeto = dataProjetoAssinado;
+
+  if (!Object.keys(campos).length) {
+    console.warn("[SYNC] Nenhum campo preenchido para sincronizar.");
+    return;
+  }
+
+  console.group("📤 [SYNC] PDV → Kommo");
+  console.log("Proposta ID:", idProposta);
+  console.log("Campos enviados:", campos);
+  console.groupEnd();
+
+  try {
+    const resposta = await fetch(
+      `https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/kommo`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campos })
+      }
+    );
+
+    const resultado = await resposta.json();
+
+    if (resposta.ok) {
+      console.group("✅ [SYNC] Sucesso");
+      console.log("Lead ID:", resultado.lead_id);
+      console.log("Lead nome:", resultado.lead_nome);
+      console.log("Campos atualizados:", resultado.campos_atualizados);
+      if (resultado.nao_mapeados?.length) {
+        console.warn("Campos não mapeados:", resultado.nao_mapeados);
+      }
+      console.groupEnd();
+    } else {
+      console.group("❌ [SYNC] Erro do servidor");
+      console.error("HTTP status:", resposta.status);
+      console.error("Erro:", resultado?.error);
+      console.error("Detalhes:", resultado?.details);
+      console.error("Validation errors:", JSON.stringify(resultado?.details?.['validation-errors'], null, 2));
+      console.groupEnd();
+    }
+
+    return resultado;
+
+  } catch (err) {
+    console.error("[SYNC] ❌ Erro de conexão:", err.message);
+  }
+}
+
 /* Expor global */
 window.enviarOSServico = enviarOSServico;
