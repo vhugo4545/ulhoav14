@@ -6960,6 +6960,19 @@ async function sincronizarPDVparaKommo() {
     return;
   }
 
+  // ── Parser BRL seguro ─────────────────────────────
+  function parseBRL(texto) {
+    if (!texto) return 0;
+    const limpo = texto
+      .replace(/\u00A0/g, " ")
+      .replace(/R\$\s*/g, "")
+      .replace(/\./g, "")
+      .replace(",", ".")
+      .trim();
+    const num = parseFloat(limpo);
+    return isNaN(num) ? 0 : num;
+  }
+
   const campos = {};
 
   // ── Nome / Razão Social ───────────────────────────
@@ -6968,7 +6981,6 @@ async function sincronizarPDVparaKommo() {
   if (nomeRazaoSocial) campos.kommo_nome_razao_social = nomeRazaoSocial;
 
   // ── Nº do Pedido ──────────────────────────────────
-  // Se vazio, busca próximo número no contador e preenche o campo
   let numeroPedido = document.getElementById("numeroPedido")?.value?.trim()
     || document.getElementById("numeroPedido")?.getAttribute("data-valor-original")?.trim();
 
@@ -7004,10 +7016,10 @@ async function sincronizarPDVparaKommo() {
   const valorFinalTotalEl = document.getElementById("valorFinalTotal");
   const valorFinalTotalTexto = (valorFinalTotalEl?.textContent || valorFinalTotalEl?.innerText || "")
     .replace(/\u00A0/g, " ").trim();
-  const valorFinalTotal = vv_parseBRL(valorFinalTotalTexto);
+  const valorFinalTotal = parseBRL(valorFinalTotalTexto);
   if (valorFinalTotal > 0) campos.kommo_valor_venda = valorFinalTotal;
 
-  // ── Endereço da obra (#rua, #numero etc.) → campos obra na Kommo ─
+  // ── Endereço da obra ──────────────────────────────
   const rua         = document.getElementById("rua")?.value?.trim();
   const numero      = document.getElementById("numero")?.value?.trim();
   const complemento = document.getElementById("complemento")?.value?.trim();
@@ -7020,7 +7032,7 @@ async function sincronizarPDVparaKommo() {
   if (bairro)      campos.kommo_bairro       = bairro;
   if (cidade)      campos.kommo_cidade       = cidade;
 
-  // ── Endereço de cobrança (#ruaObra etc.) → campos cobrança na Kommo ─
+  // ── Endereço de cobrança ──────────────────────────
   const ruaObra         = document.getElementById("ruaObra")?.value?.trim();
   const numeroObra      = document.getElementById("numeroObra")?.value?.trim();
   const complementoObra = document.getElementById("complementoObra")?.value?.trim();
@@ -7033,15 +7045,15 @@ async function sincronizarPDVparaKommo() {
   if (bairroObra)      campos.kommo_bairro_cobranca       = bairroObra;
   if (cidadeObra)      campos.kommo_cidade_cobranca       = cidadeObra;
 
-
- // ── Financeiro ────────────────────────────────────
-  const valorNFProduto = vv_parseBRL(document.getElementById("vv-cat-produto")?.textContent || "0");
-  const valorNFServico = vv_parseBRL(document.getElementById("vv-cat-servico")?.textContent || "0");
-  const valorFatDireto = vv_parseBRL(document.getElementById("vv-cat-vidro")?.textContent   || "0");
+  // ── Financeiro ────────────────────────────────────
+  const valorNFProduto = parseBRL(document.getElementById("vv-cat-produto")?.textContent || "0");
+  const valorNFServico = parseBRL(document.getElementById("vv-cat-servico")?.textContent || "0");
+  const valorFatDireto = parseBRL(document.getElementById("vv-cat-vidro")?.textContent   || "0");
 
   campos.kommo_valor_nf_produto = valorNFProduto || 0;
   campos.kommo_valor_nf_servico = valorNFServico || 0;
   campos.kommo_valor_fat_direto = valorFatDireto || 0;
+
   // ── Vencimento Entrada = data da última parcela ───
   const todasDatasParcelas = [...document.querySelectorAll("#listaParcelas .data-parcela")]
     .map(el => el.value?.trim())
@@ -7091,11 +7103,11 @@ async function sincronizarPDVparaKommo() {
       console.log("Lead ID:", resultado.lead_id);
       console.log("Lead nome:", resultado.lead_nome);
       console.log("Campos atualizados:", resultado.campos_atualizados);
-      alert("✅ Dados sincronizados com a Kommo com sucesso!");
       if (resultado.nao_mapeados?.length) {
         console.warn("Campos não mapeados:", resultado.nao_mapeados);
       }
       console.groupEnd();
+      alert("✅ Dados sincronizados com a Kommo com sucesso!");
     } else {
       console.group("❌ [SYNC] Erro do servidor");
       console.error("HTTP status:", resposta.status);
