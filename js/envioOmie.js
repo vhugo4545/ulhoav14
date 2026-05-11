@@ -7144,5 +7144,68 @@ console.log("lead_atual completo:", resultado.lead_atual);
   }
 }
 
+async function preencherNumeroPedidoKommo() {
+  const idProposta = new URLSearchParams(window.location.search).get("id");
+
+  if (!idProposta) {
+    console.warn("[PEDIDO] ID da proposta não encontrado na URL.");
+    return;
+  }
+
+  // 1. Verifica se o campo já está preenchido
+  const inputPedido = document.getElementById("numeroPedido");
+  const valorAtual  = inputPedido?.value?.trim();
+
+  if (valorAtual) {
+    console.log("[PEDIDO] Campo já preenchido:", valorAtual, "— nenhuma ação necessária.");
+    return;
+  }
+
+  try {
+    // 2. Busca próximo número — GET /pedido gera e incrementa
+    const contadorRes = await fetch("https://contator-ulhoa-3d28d89efa68.herokuapp.com/pedido");
+    if (!contadorRes.ok) throw new Error("Erro ao buscar contador: " + contadorRes.status);
+
+    const contadorData = await contadorRes.json();
+    console.log("[PEDIDO] Resposta contador:", contadorData);
+
+    // O GET retorna o objeto completo — pega pedido_proximo
+    const numeroPedido = String(contadorData.pedido_proximo ?? contadorData.numero ?? contadorData.pedido ?? "");
+
+    if (!numeroPedido) {
+      console.warn("[PEDIDO] Número não encontrado na resposta:", contadorData);
+      return;
+    }
+
+    console.log("[PEDIDO] Próximo número:", numeroPedido);
+
+    // 3. Preenche o campo na tela
+    if (inputPedido) inputPedido.value = numeroPedido;
+
+    // 4. Envia para a Kommo
+    const resposta = await fetch(
+      `https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/kommo`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campos: { kommo_numero_pedido: numeroPedido } })
+      }
+    );
+
+    const resultado = await resposta.json();
+
+    if (resposta.ok) {
+      console.log("[PEDIDO] ✅ Número do pedido atualizado na Kommo:", numeroPedido);
+    } else {
+      console.error("[PEDIDO] ❌ Erro:", resultado?.error);
+    }
+
+    return resultado;
+
+  } catch (err) {
+    console.error("[PEDIDO] ❌ Erro de conexão:", err.message);
+  }
+}
+
 /* Expor global */
 window.enviarOSServico = enviarOSServico;
