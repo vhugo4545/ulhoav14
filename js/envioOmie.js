@@ -6968,8 +6968,31 @@ async function sincronizarPDVparaKommo() {
   if (nomeRazaoSocial) campos.kommo_nome_razao_social = nomeRazaoSocial;
 
   // ── Nº do Pedido ──────────────────────────────────
-  const numeroPedido = document.getElementById("numeroPedido")?.value?.trim()
+  // Se vazio, busca próximo número no contador e preenche o campo
+  let numeroPedido = document.getElementById("numeroPedido")?.value?.trim()
     || document.getElementById("numeroPedido")?.getAttribute("data-valor-original")?.trim();
+
+  if (!numeroPedido) {
+    console.log("[SYNC] numeroPedido vazio — buscando próximo número no contador...");
+    try {
+      const contadorRes = await fetch("https://contator-ulhoa-3d28d89efa68.herokuapp.com/pedido");
+      if (contadorRes.ok) {
+        const contadorData = await contadorRes.json();
+        const proximo = contadorData.pedido_proximo;
+        if (proximo) {
+          numeroPedido = String(proximo);
+          const inputPedido = document.getElementById("numeroPedido");
+          if (inputPedido) inputPedido.value = numeroPedido;
+          console.log("[SYNC] numeroPedido preenchido automaticamente:", numeroPedido);
+        }
+      } else {
+        console.warn("[SYNC] Erro ao buscar contador de pedido:", contadorRes.status);
+      }
+    } catch (err) {
+      console.warn("[SYNC] Falha ao conectar no contador:", err.message);
+    }
+  }
+
   if (numeroPedido) campos.kommo_numero_pedido = numeroPedido;
 
   // ── Número Orçamento ──────────────────────────────
@@ -6991,11 +7014,11 @@ async function sincronizarPDVparaKommo() {
   const bairro      = document.getElementById("bairro")?.value?.trim();
   const cidade      = document.getElementById("cidade")?.value?.trim();
 
-  if (rua)         campos.kommo_rua        = rua;
-  if (numero)      campos.kommo_numero      = numero;
-  if (complemento) campos.kommo_complemento = complemento;
-  if (bairro)      campos.kommo_bairro      = bairro;
-  if (cidade)      campos.kommo_cidade      = cidade;
+  if (rua)         campos.kommo_rua         = rua;
+  if (numero)      campos.kommo_numero       = numero;
+  if (complemento) campos.kommo_complemento  = complemento;
+  if (bairro)      campos.kommo_bairro       = bairro;
+  if (cidade)      campos.kommo_cidade       = cidade;
 
   // ── Endereço de cobrança (#ruaObra etc.) → campos cobrança na Kommo ─
   const ruaObra         = document.getElementById("ruaObra")?.value?.trim();
@@ -7004,22 +7027,22 @@ async function sincronizarPDVparaKommo() {
   const bairroObra      = document.getElementById("bairroObra")?.value?.trim();
   const cidadeObra      = document.getElementById("cidadeObra")?.value?.trim();
 
-  if (ruaObra)         campos.kommo_rua_cobranca        = ruaObra;
-  if (numeroObra)      campos.kommo_numero_cobranca      = numeroObra;
-  if (complementoObra) campos.kommo_complemento_cobranca = complementoObra;
-  if (bairroObra)      campos.kommo_bairro_cobranca      = bairroObra;
-  if (cidadeObra)      campos.kommo_cidade_cobranca      = cidadeObra;
+  if (ruaObra)         campos.kommo_rua_cobranca         = ruaObra;
+  if (numeroObra)      campos.kommo_numero_cobranca       = numeroObra;
+  if (complementoObra) campos.kommo_complemento_cobranca  = complementoObra;
+  if (bairroObra)      campos.kommo_bairro_cobranca       = bairroObra;
+  if (cidadeObra)      campos.kommo_cidade_cobranca       = cidadeObra;
 
-  // ── Financeiro ────────────────────────────────────
+
+ // ── Financeiro ────────────────────────────────────
   const valorNFProduto = vv_parseBRL(document.getElementById("vv-cat-produto")?.textContent || "0");
   const valorNFServico = vv_parseBRL(document.getElementById("vv-cat-servico")?.textContent || "0");
   const valorFatDireto = vv_parseBRL(document.getElementById("vv-cat-vidro")?.textContent   || "0");
 
-  if (valorNFProduto) campos.kommo_valor_nf_produto = valorNFProduto;
-  if (valorNFServico) campos.kommo_valor_nf_servico = valorNFServico;
-  if (valorFatDireto) campos.kommo_valor_fat_direto = valorFatDireto;
-
-  // ── Vencimento Entrada = data da última parcela ✅ ─
+  campos.kommo_valor_nf_produto = valorNFProduto || 0;
+  campos.kommo_valor_nf_servico = valorNFServico || 0;
+  campos.kommo_valor_fat_direto = valorFatDireto || 0;
+  // ── Vencimento Entrada = data da última parcela ───
   const todasDatasParcelas = [...document.querySelectorAll("#listaParcelas .data-parcela")]
     .map(el => el.value?.trim())
     .filter(Boolean);
