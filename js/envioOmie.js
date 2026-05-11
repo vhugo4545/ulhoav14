@@ -7162,14 +7162,15 @@ async function preencherNumeroPedidoKommo() {
   }
 
   try {
-    // 2. Busca próximo número — GET /pedido gera e incrementa
+    // 2. Busca próximo número
     const contadorRes = await fetch("https://contator-ulhoa-3d28d89efa68.herokuapp.com/pedido");
     if (!contadorRes.ok) throw new Error("Erro ao buscar contador: " + contadorRes.status);
 
     const contadorData = await contadorRes.json();
-    console.log("[PEDIDO] Resposta contador:", contadorData);
+    console.group("📊 [PEDIDO] Resposta do contador");
+    console.log("Dados completos:", contadorData);
+    console.groupEnd();
 
-    // O GET retorna o objeto completo — pega pedido_proximo
     const numeroPedido = String(contadorData.pedido_proximo ?? contadorData.numero ?? contadorData.pedido ?? "");
 
     if (!numeroPedido) {
@@ -7195,9 +7196,29 @@ async function preencherNumeroPedidoKommo() {
     const resultado = await resposta.json();
 
     if (resposta.ok) {
-      console.log("[PEDIDO] ✅ Número do pedido atualizado na Kommo:", numeroPedido);
+      const lead = resultado.lead_atual;
+      const cf   = lead?.custom_fields_values ?? [];
+      const getField = (id) => cf.find(f => f.field_id === id)?.values?.[0]?.value ?? null;
+
+      console.group("✅ [PEDIDO] Sucesso — estado atual na Kommo");
+      console.log("Lead ID:          ", resultado.lead_id);
+      console.log("Lead nome:        ", resultado.lead_nome);
+      console.log("Campos atualizados:", resultado.campos_atualizados);
+      console.log("Nº Pedido salvo:  ", getField(1716834));
+      console.log("Nº Orçamento:     ", getField(1710738));
+      console.log("ID PDV:           ", getField(1793228));
+      console.log("Lead atual completo:", lead);
+      if (resultado.nao_mapeados?.length) {
+        console.warn("Campos não mapeados:", resultado.nao_mapeados);
+      }
+      console.groupEnd();
     } else {
-      console.error("[PEDIDO] ❌ Erro:", resultado?.error);
+      console.group("❌ [PEDIDO] Erro do servidor");
+      console.error("HTTP status:", resposta.status);
+      console.error("Erro:", resultado?.error);
+      console.error("Detalhes:", resultado?.details);
+      console.error("Validation errors:", JSON.stringify(resultado?.details?.['validation-errors'], null, 2));
+      console.groupEnd();
     }
 
     return resultado;
