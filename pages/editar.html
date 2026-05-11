@@ -389,8 +389,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     <span class="material-icons-outlined">check_circle</span><br>  Aprovado pelo Cliente
   </button>
 
+   <button id="btn-gerar-pedido" class="sidebar-button" onclick="sincronizarPDVparaKommo()">
+    <span class="material-icons-outlined">receipt_long</span><br> Enviar para Kommo
+  </button>
+
   <button id="btn-gerar-pedido" class="sidebar-button" onclick="atualizarNaOmie()">
-    <span class="material-icons-outlined">receipt_long</span><br> Gerar Pedido de Venda
+    <span class="material-icons-outlined">receipt_long</span><br> Enviar para Omie 
   </button>
 
   <button id="btn-atualizar-precos" class="sidebar-button" onclick="atualizarPrecosOmieNaDOM()">
@@ -398,10 +402,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   </button>
 
 
-  <button id="btn-enviar-cliente" class="sidebar-button" 
-        onclick="openOsPopup({ endpoint: 'https://ulhoa-servico-ec4e1aa95355.herokuapp.com/os' })">
-  <span class="material-icons-outlined">send</span><br> Modulo de Serviços
-</button>
+ 
 
 <style>
   body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#f6f7fb; margin:0; padding:24px; }
