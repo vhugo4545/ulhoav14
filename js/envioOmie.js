@@ -7013,7 +7013,7 @@ async function sincronizarPDVparaKommo() {
   if (numeroOrcamento) campos.kommo_numero_orcamento = numeroOrcamento;
 
   // ── Valor Total da Venda ──────────────────────────
-  const valorFinalTotalEl = document.getElementById("valorFinalTotal");
+  const valorFinalTotalEl    = document.getElementById("valorFinalTotal");
   const valorFinalTotalTexto = (valorFinalTotalEl?.textContent || valorFinalTotalEl?.innerText || "")
     .replace(/\u00A0/g, " ").trim();
   const valorFinalTotal = parseBRL(valorFinalTotalTexto);
@@ -7096,17 +7096,37 @@ async function sincronizarPDVparaKommo() {
       }
     );
 
-    const resultado = await resposta.json();
+   const resultado = await resposta.json();
+console.log("lead_atual completo:", resultado.lead_atual);
 
     if (resposta.ok) {
-      console.group("✅ [SYNC] Sucesso");
-      console.log("Lead ID:", resultado.lead_id);
-      console.log("Lead nome:", resultado.lead_nome);
-      console.log("Campos atualizados:", resultado.campos_atualizados);
+      // ── Loga estado real retornado pelo servidor ──
+      const lead = resultado.lead_atual;
+      const cf   = lead?.custom_fields_values ?? [];
+
+      const getField = (id) => cf.find(f => f.field_id === id)?.values?.[0]?.value ?? null;
+
+      console.group("✅ [SYNC] Sucesso — estado atual na Kommo");
+      console.log("Lead ID:            ", resultado.lead_id);
+      console.log("Lead nome:          ", resultado.lead_nome);
+      console.log("Campos atualizados: ", resultado.campos_atualizados);
+      console.log("Valor venda (price):", lead?.price ?? null);
+      console.log("NF Produto:         ", getField(1790646));
+      console.log("NF Serviço:         ", getField(1790644));
+      console.log("Fat. Direto:        ", getField(1790986));
+      console.log("Nº Pedido:          ", getField(1716834));
+      console.log("Nº Orçamento:       ", getField(1710738));
+      console.log("Nome/Razão Social:  ", getField(1791998));
+      console.log("Rua obra:           ", getField(1725250));
+      console.log("Número obra:        ", getField(1725254));
+      console.log("Bairro obra:        ", getField(1725256));
+      console.log("Cidade obra:        ", getField(1725260));
+      console.log("Vencimento entrada: ", getField(1723710));
       if (resultado.nao_mapeados?.length) {
         console.warn("Campos não mapeados:", resultado.nao_mapeados);
       }
       console.groupEnd();
+
       alert("✅ Dados sincronizados com a Kommo com sucesso!");
     } else {
       console.group("❌ [SYNC] Erro do servidor");
