@@ -118,8 +118,8 @@ function destravarCampos() {
     <span class="material-icons-outlined">edit</span> Editar Proposta ( Atualizar )
   </button>
   
-  <button id="btn-solicitar" class="sidebar-button" onclick="sincronizarPDVparaKommo()">
-    <span class="material-icons-outlined">assignment_turned_in</span><br> Solicitar aprovação da gerência
+  <button id="btn-solicitar" class="sidebar-button" onclick="marcarPendenteAprovacao()">
+    <span class="material-icons-outlined">assignment_turned_in</span><br> Solicitar Aprovação
   </button>
 
   <button id="btn-autorizar" class="sidebar-button" onclick="marcarAprovadoPeloGestor()">
@@ -741,15 +741,19 @@ async function openOsPopup({ endpoint = "https://ulhoa-servico-ec4e1aa95355.hero
                     <label class="form-label">Origem do Cliente</label>
                     <select class="form-select" id="origemCliente" required>
                       <option value="">Selecione</option>
-                      <option>Arquiteto(a)</option>
-                      <option>Construtora</option>
-                      <option>Engenheiro(a)</option>
-                      <option>Google</option>
-                      <option>Instagram</option>
-                      <option>Indicação</option>
-                      <option>Já é cliente</option>
-                      <option>Licitação</option>
-                      <option>Outros</option>
+<option>Arquiteto(a)</option>
+<option>Construtora</option>
+<option>Engenheiro(a)</option>
+<option>Google</option>
+<option>Instagram</option>
+<option>Facebook</option>
+<option>Site</option>
+<option>Indicação</option>
+<option>Indicação (boca a boca)</option>
+<option>Já é cliente</option>
+<option>Licitação</option>
+<option>Outros</option>
+                     
                     </select>
                   </div>
                 </div>
