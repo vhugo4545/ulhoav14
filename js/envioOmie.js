@@ -7091,6 +7091,7 @@ async function sincronizarPDVparaKommo() {
       console.log("Lead ID:", resultado.lead_id);
       console.log("Lead nome:", resultado.lead_nome);
       console.log("Campos atualizados:", resultado.campos_atualizados);
+      alert("✅ Dados sincronizados com a Kommo com sucesso!");
       if (resultado.nao_mapeados?.length) {
         console.warn("Campos não mapeados:", resultado.nao_mapeados);
       }
