@@ -7054,12 +7054,12 @@ async function sincronizarPDVparaKommo() {
   campos.kommo_valor_nf_servico = valorNFServico || 0;
   campos.kommo_valor_fat_direto = valorFatDireto || 0;
 
-  // ── Vencimento Entrada = data da última parcela ───
-  const todasDatasParcelas = [...document.querySelectorAll("#listaParcelas .data-parcela")]
-    .map(el => el.value?.trim())
-    .filter(Boolean);
-  const ultimaDataParcela = todasDatasParcelas[todasDatasParcelas.length - 1] || null;
-  if (ultimaDataParcela) campos.kommo_vencimento_entrada = ultimaDataParcela;
+// ── Vencimento Entrada = data da primeira parcela ───
+const todasDatasParcelas = [...document.querySelectorAll("#listaParcelas .data-parcela")]
+  .map(el => el.value?.trim())
+  .filter(Boolean);
+const primeiraDataParcela = todasDatasParcelas[0] || null;
+if (primeiraDataParcela) campos.kommo_vencimento_entrada = primeiraDataParcela;
 
   // ── Datas ─────────────────────────────────────────
   const dataPedidoEnviado   = document.getElementById("dataPedidoEnviadoCliente")?.value;
