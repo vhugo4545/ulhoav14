@@ -2833,6 +2833,10 @@ itens.forEach(item => {
 
   const $srvPercent  = controls.querySelector('#srvPercent');
 const $srvValor    = controls.querySelector('#srvValor');
+let srvValorEditadoManualmente = false;
+$srvValor.addEventListener('input', () => {
+  srvValorEditadoManualmente = true;
+});
 const $discPercent = controls.querySelector('#discPercent');
 const $discValor   = controls.querySelector('#discValor');
 const $comPercent  = controls.querySelector('#comPercent');
@@ -3014,15 +3018,15 @@ function recalc(){
   console.log('[recalc] valorServicosAutomatic:', valorServicosAutomatic);
 
   // Preenche campo de serviços automaticamente se vazio ou divergente
-  if ($srvValor && valorServicosAutomatic > 0) {
-    const valorAtual = vv_parseBRL($srvValor.value || '0');
-    if (Math.abs(valorAtual - valorServicosAutomatic) > 0.01) {
-      const rValorSrv = controls.querySelector('input[name="srvModo"][value="valor"]');
-      if (rValorSrv) rValorSrv.checked = true;
-      $srvValor.value = vv_fmtBRL(valorServicosAutomatic);
-      $srvValor.dataset.valorOriginal = vv_fmtBRL(valorServicosAutomatic);
-    }
+if ($srvValor && valorServicosAutomatic > 0 && !srvValorEditadoManualmente) {
+  const valorAtual = vv_parseBRL($srvValor.value || '0');
+  if (Math.abs(valorAtual - valorServicosAutomatic) > 0.01) {
+    const rValorSrv = controls.querySelector('input[name="srvModo"][value="valor"]');
+    if (rValorSrv) rValorSrv.checked = true;
+    $srvValor.value = vv_fmtBRL(valorServicosAutomatic);
+    $srvValor.dataset.valorOriginal = vv_fmtBRL(valorServicosAutomatic);
   }
+}
 
   if (nAprov === 0){
     rows.forEach(tr => {
@@ -3073,11 +3077,11 @@ function recalc(){
   });
 
   // ✅ Usa valorServicosAutomatic direto — não lê o campo para evitar loop
-  const servTotal = valorServicosAutomatic > 0
-    ? valorServicosAutomatic
-    : getModoServicos() === 'percent'
-      ? ((Number($srvPercent.value||0)/100) * totalLiquidoGeral)
-      : vv_parseBRL($srvValor.value||'0');
+const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
+  ? valorServicosAutomatic
+  : getModoServicos() === 'percent'
+    ? ((Number($srvPercent.value||0)/100) * totalLiquidoGeral)
+    : vv_parseBRL($srvValor.value||'0');
 
   const servAplicavel = Math.max(0, Math.min(servTotal, totalLiquidoGeral));
 
@@ -3552,7 +3556,7 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
       previsao: _comArq?.prev || '',
       vencimento: _comArq?.venc || '',
       observacao: vv_normalizarObservacaoComissao(_comArq?.obs),
-      codigo_categoria: "2.08.02",
+      codigo_categoria: "2.09.05",
       numero_pedido: vv_getNumeroPedidoComissao() || '',
       id_conta_corrente: 2523861035
     },
@@ -3568,7 +3572,7 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
       previsao: _comVend?.prev || '',
       vencimento: _comVend?.venc || '',
       observacao: vv_normalizarObservacaoComissao(_comVend?.obs),
-      codigo_categoria: "2.07.99",
+      codigo_categoria: "2.07.98",
       numero_pedido: vv_getNumeroPedidoComissao() || '',
       id_conta_corrente: 2523861035
     }
@@ -3672,7 +3676,7 @@ function montarLancamento(tipo, fonte, baseConsiderada, codigoProjeto) {
     .trim().toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-  const codigo_categoria = tipoNorm.includes("arquit") ? "2.09.05" : "2.07.98";
+  const codigo_categoria = tipoNorm.includes("arquit") ? "2.09.05" : "2.07.99";
   const codigoClienteRaw = String(fonte?.codigo || "").trim();
 
   const numero_pedido = String(
@@ -7054,6 +7058,7 @@ async function sincronizarPDVparaKommo() {
   campos.kommo_valor_nf_servico = valorNFServico || 0;
   campos.kommo_valor_fat_direto = valorFatDireto || 0;
 
+// ── Vencimento Entrada = data da primeira parcela ───
 // ── Vencimento Entrada = data da primeira parcela ───
 const todasDatasParcelas = [...document.querySelectorAll("#listaParcelas .data-parcela")]
   .map(el => el.value?.trim())
