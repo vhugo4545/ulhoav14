@@ -123,7 +123,7 @@ function destravarCampos() {
   </button>
 
   <button id="btn-autorizar" class="sidebar-button" onclick="preencherNumeroPedidoKommo() ">
-    <span class="material-icons-outlined">verified_user</span><br> Enviar para pedido ( Kommo )
+    <span class="material-icons-outlined">verified_user</span><br> teste de codigo 
   </button>
 
  <button id="btn-visualizar-proposta" class="sidebar-button" onclick="gerarOrcamentoParaImpressaoCompleta()">
@@ -909,42 +909,41 @@ function criarCamposEnderecoObra() {
 
     <div class="row g-3">
       <div class="col-md-3">
-        <label class="form-label">CEP da Obra</label>
+        <label class="form-label">CEP de Cobrança</label>
         <input type="text" class="form-control" id="cepObra">
       </div>
 
       <div class="col-md-6">
-        <label class="form-label">Rua / Avenida da Obra</label>
+        <label class="form-label">Rua / Avenida de Cobrança</label>
         <input type="text" class="form-control" id="ruaObra">
       </div>
 
       <div class="col-md-3">
-        <label class="form-label">Número da Obra</label>
+        <label class="form-label">Número de Cobrança</label>
         <input type="text" class="form-control" id="numeroObra">
       </div>
 
       <div class="col-md-4">
-        <label class="form-label">Complemento da Obra</label>
+        <label class="form-label">Complemento de Cobrança</label>
         <input type="text" class="form-control" id="complementoObra">
       </div>
 
       <div class="col-md-4">
-        <label class="form-label">Bairro da Obra</label>
+        <label class="form-label">Bairro de Cobrança</label>
         <input type="text" class="form-control" id="bairroObra">
       </div>
 
       <div class="col-md-2">
-        <label class="form-label">Cidade da Obra</label>
+        <label class="form-label">Cidade de Cobrança</label>
         <input type="text" class="form-control" id="cidadeObra">
       </div>
 
       <div class="col-md-2">
-        <label class="form-label">Estado da Obra</label>
+        <label class="form-label">Estado de Cobrança</label>
         <input type="text" class="form-control" id="estadoObra">
       </div>
     </div>
   `;
-
   if (botao) {
     botao.style.display = "none";
   }
@@ -2959,7 +2958,6 @@ document.addEventListener("DOMContentLoaded", function () {
     alternar();
   });
 });
-  
 </script>
 </body>
 <script src="../js/envioOmie.js"></script>
