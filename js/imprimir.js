@@ -566,13 +566,13 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
   let totalizadoresHTML = temDescontoValido
     ? `
       <div class="border p-2 text-end mt-4 bg-light">
-        <div><strong>Total Bruto:</strong> ${formatarReal(totalGeral)}</div>
+        <div><strong>Total líquido: R$:</strong> ${formatarReal(totalGeral)}</div>
         <div><strong>Desconto Aplicado:</strong> ${formatarReal(descontoAplicado)}</div>
         <div class="fw-bold fs-5 text-success"><strong>Total com Desconto:</strong> ${formatarReal(valorFinalComDesconto)}</div>
       </div>`
     : `
       <div class="border p-2 text-end mt-4 bg-light">
-        <div class="fw-bold">Total Geral: ${formatarReal(totalGeral)}</div>
+        <div class="fw-bold">Total líquido: R$: ${formatarReal(totalGeral)}</div>
       </div>`;
 
   // ==========================
