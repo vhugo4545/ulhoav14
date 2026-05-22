@@ -1,3 +1,7 @@
+
+
+
+
 function vvDataPartesSemTimezone(valor) {
   if (!valor) return null;
 
@@ -2669,7 +2673,19 @@ function abrirPopupComissao(){
     const modal    = document.createElement('div'); modal.className    = 'vv-modal';
 
     const header = document.createElement('header');
-    header.innerHTML = `<h3>Selecione os itens (Desconto primeiro → Ignorar → MO → Serviços)</h3>`;
+    header.innerHTML = `
+      <h3 style="flex:1;">Selecione os itens (Desconto primeiro → Ignorar → MO → Serviços)</h3>
+      <label id="vv-label-so-servicos" style="
+        display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+        font-size:13px; font-weight:600; color:#7c3aed;
+        background:#f5f3ff; border:1px solid #c4b5fd;
+        border-radius:8px; padding:6px 12px; white-space:nowrap;
+        user-select:none;
+      ">
+        <input type="checkbox" id="vv-chk-so-servicos" style="accent-color:#7c3aed; width:15px; height:15px; cursor:pointer;">
+        Somente Serviços
+      </label>
+    `;
 
     const body  = document.createElement('div'); body.className = 'vv-body';
 
@@ -3183,6 +3199,53 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
       recalc();
     });
     [...tbody.querySelectorAll('.vv-ignorar')].forEach(c => c.addEventListener('change', recalc));
+
+    // ── Checkbox "Somente Serviços" ───────────────────────────────────────────
+    const chkSoServicos = header.querySelector('#vv-chk-so-servicos');
+    if (chkSoServicos) {
+      chkSoServicos.addEventListener('change', () => {
+        const ativo = chkSoServicos.checked;
+
+        // ── 1) Marca/desmarca produtos na tabela ──
+        [...tbody.querySelectorAll('tr')].forEach(tr => {
+          const ehServico = tr.dataset.kind === 'servico';
+          const chk = tr.querySelector('.vv-ignorar');
+          if (chk) chk.checked = ativo ? !ehServico : false;
+          tr.style.opacity = (ativo && !ehServico) ? '0.4' : '';
+        });
+
+        // ── 2) Destaca o label ──
+        const label = header.querySelector('#vv-label-so-servicos');
+        if (label) {
+          label.style.background  = ativo ? '#7c3aed' : '#f5f3ff';
+          label.style.color       = ativo ? '#fff'    : '#7c3aed';
+          label.style.borderColor = ativo ? '#7c3aed' : '#c4b5fd';
+        }
+
+        // ── 3) Quando ativo: muda para "Valor fixo" e destaca o campo ──
+        // Em modo somente serviços o total aprovado vira 0, então percentual
+        // sempre resultaria em R$ 0. Força valor fixo para o usuário poder
+        // digitar o valor correto.
+        if (ativo) {
+          const radioValor = controls.querySelector('input[name="srvModo"][value="valor"]');
+          if (radioValor) {
+            radioValor.checked = true;
+            radioValor.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          // Destaca o campo de valor de serviço
+          $srvValor.style.outline     = '2px solid #7c3aed';
+          $srvValor.style.borderColor = '#7c3aed';
+          $srvValor.focus();
+          $srvValor.select();
+        } else {
+          $srvValor.style.outline     = '';
+          $srvValor.style.borderColor = '';
+        }
+
+        recalc();
+      });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     footer.querySelector('#vv-comissoes').addEventListener('click', async ()=>{
       await abrirPopupComissao();
@@ -4548,9 +4611,8 @@ async function gerarPayloadOmie() {
       blocosContainer.querySelectorAll("tbody tr:not(.extra-summary-row)").length > 0
     );
 
-  if (!temProdutosNaTela) {
-    pendencias.push("Nenhum produto listado na proposta (blocosProdutosContainer vazio).");
-  }
+  // Nota: pedidos somente de serviços são permitidos — a ausência de produtos
+  // não bloqueia mais o envio. A validação ocorre dentro do popup de seleção.
 
   if (pendencias.length > 0) {
     if (typeof mostrarPopupPendencias === "function") {
@@ -4967,10 +5029,32 @@ async function gerarPayloadOmie() {
 
   const { aprovadosParaOmie, ignorados, totais } = selecao;
 
+  // ── DETECÇÃO: pedido somente de serviços ──────────────────────────────────
+  // Casos cobertos:
+  //   a) aprovados vazio + valorServicos preenchido
+  //      → checkbox "Somente Serviços" marcou todos os produtos como ignorados
+  //   b) aprovados só tem itens do tipo "servico" (MO Hora etc.) + valorServicos > 0
+  //      → nenhum produto/vidro foi aprovado
+  // Em ambos os casos os totais já foram gravados em
+  // window.vvUltimosTotaisSelecaoItensOmie pelo popup (incluindo parcelasServico).
   if (!aprovadosParaOmie.length) {
+    if (Number(totais?.valorServicos || 0) > 0) {
+      console.log("[gerarPayloadOmie] Aprovados vazio + valorServicos > 0 → modo somente serviços.");
+      return { servicosOnly: true };
+    }
     alert("Selecione ao menos um item para enviar à Omie.");
     return null;
   }
+
+  const _aprovadosProdutos = aprovadosParaOmie.filter(item => {
+    const tipo = classificarTipoItem(item);
+    return tipo === "produto" || tipo === "vidro";
+  });
+  if (_aprovadosProdutos.length === 0 && Number(totais?.valorServicos || 0) > 0) {
+    console.log("[gerarPayloadOmie] Nenhum produto aprovado + valorServicos > 0 → modo somente serviços.");
+    return { servicosOnly: true };
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   window.__vvUltimaSelecaoOmie = selecao;
 
@@ -5234,10 +5318,548 @@ async function gerarPayloadOmie() {
 
 
 
+
+/* =========================================================
+   POPUP DE ESCOLHA: Produtos+Serviços  vs  Somente Serviços
+   ========================================================= */
+function abrirPopupEscolhaTipoEnvioOmie() {
+  return new Promise((resolve) => {
+    // backdrop
+    const bd = document.createElement('div');
+    bd.style.cssText = `
+      position:fixed; inset:0; background:rgba(0,0,0,.45);
+      display:flex; align-items:center; justify-content:center; z-index:9999;
+    `;
+
+    // caixa
+    const box = document.createElement('div');
+    box.style.cssText = `
+      background:#fff; border-radius:16px; padding:32px 28px;
+      box-shadow:0 20px 60px rgba(0,0,0,.22); width:min(94vw,480px);
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+      display:flex; flex-direction:column; gap:20px;
+    `;
+
+    // título
+    const titulo = document.createElement('h3');
+    titulo.textContent = 'O que deseja enviar para a Omie?';
+    titulo.style.cssText = 'margin:0; font-size:18px; font-weight:700; color:#1e293b;';
+
+    // subtítulo
+    const sub = document.createElement('p');
+    sub.textContent = 'Escolha o tipo de envio para esta operação.';
+    sub.style.cssText = 'margin:0; font-size:14px; color:#64748b;';
+
+    // botões de opção
+    const btnProdServ = document.createElement('button');
+    btnProdServ.innerHTML = `
+      <span style="font-size:22px;">📦🛠️</span>
+      <div>
+        <div style="font-weight:700; font-size:15px;">Produtos + Serviços</div>
+        <div style="font-size:13px; color:#475569; margin-top:3px;">Envia pedido de produtos e OS de serviços</div>
+      </div>
+    `;
+    btnProdServ.style.cssText = `
+      display:flex; align-items:center; gap:14px; width:100%;
+      padding:16px 18px; border:2px solid #e2e8f0; border-radius:12px;
+      background:#f8fafc; cursor:pointer; text-align:left;
+      transition:border-color .15s, background .15s;
+    `;
+    btnProdServ.onmouseenter = () => {
+      btnProdServ.style.borderColor = '#2563eb';
+      btnProdServ.style.background = '#eff6ff';
+    };
+    btnProdServ.onmouseleave = () => {
+      btnProdServ.style.borderColor = '#e2e8f0';
+      btnProdServ.style.background = '#f8fafc';
+    };
+
+    const btnSoServ = document.createElement('button');
+    btnSoServ.innerHTML = `
+      <span style="font-size:22px;">🛠️</span>
+      <div>
+        <div style="font-weight:700; font-size:15px;">Somente Serviços</div>
+        <div style="font-size:13px; color:#475569; margin-top:3px;">Envia apenas a OS de serviços (sem pedido de produtos)</div>
+      </div>
+    `;
+    btnSoServ.style.cssText = `
+      display:flex; align-items:center; gap:14px; width:100%;
+      padding:16px 18px; border:2px solid #e2e8f0; border-radius:12px;
+      background:#f8fafc; cursor:pointer; text-align:left;
+      transition:border-color .15s, background .15s;
+    `;
+    btnSoServ.onmouseenter = () => {
+      btnSoServ.style.borderColor = '#7c3aed';
+      btnSoServ.style.background = '#f5f3ff';
+    };
+    btnSoServ.onmouseleave = () => {
+      btnSoServ.style.borderColor = '#e2e8f0';
+      btnSoServ.style.background = '#f8fafc';
+    };
+
+    // botão cancelar
+    const btnCancel = document.createElement('button');
+    btnCancel.textContent = 'Cancelar';
+    btnCancel.style.cssText = `
+      align-self:flex-end; padding:8px 20px; border:1px solid #e2e8f0;
+      background:#fff; border-radius:8px; cursor:pointer; font-size:14px;
+      color:#64748b; font-weight:600;
+    `;
+
+    // eventos
+    btnProdServ.addEventListener('click', () => {
+      document.body.removeChild(bd);
+      resolve('produtos_servicos');
+    });
+    btnSoServ.addEventListener('click', () => {
+      document.body.removeChild(bd);
+      resolve('so_servicos');
+    });
+    btnCancel.addEventListener('click', () => {
+      document.body.removeChild(bd);
+      resolve(null);
+    });
+
+    box.appendChild(titulo);
+    box.appendChild(sub);
+    box.appendChild(btnProdServ);
+    box.appendChild(btnSoServ);
+    box.appendChild(btnCancel);
+    bd.appendChild(box);
+    document.body.appendChild(bd);
+  });
+}
+
+
+/* =========================================================
+   FLUXO: Somente Serviços (sem popup de produtos)
+   ========================================================= */
+async function fluxoSomenteServicos() {
+  const abrirStatus = (titulo, mensagem, tipo = 'info') => {
+    if (typeof mostrarPopupCustomizado === 'function') {
+      mostrarPopupCustomizado(titulo, mensagem, tipo);
+    }
+  };
+
+  try {
+    if (typeof mostrarCarregando === 'function') mostrarCarregando();
+
+
+    const numeroPedidoGarantido = await garantirNumeroPedidoPreenchido();
+    await vvCarregarClientesServicoOmie();
+    definirCodigoVendedorServicoSelecionado();
+
+    // ── carrega parcelas existentes ──────────────────────────
+    const parcelasServicoExistentes =
+      (Array.isArray(window.vvParcelasServicoOmie) && window.vvParcelasServicoOmie.length)
+        ? window.vvParcelasServicoOmie
+        : (window.propostaEmEdicao?.camposFormulario?.parcelasServico || []);
+
+    // ── fecha loading ANTES de abrir o popup ─────────────────
+    if (typeof ocultarCarregando === 'function') ocultarCarregando();
+
+    const resultado = await abrirPopupSomenteServicos({
+      parcelasServicoExistentes,
+      numeroPedido: numeroPedidoGarantido
+    });
+
+    if (!resultado) {
+      abrirStatus('ℹ️ Cancelado', 'Envio de serviços cancelado.', 'info');
+      return;
+    }
+
+    const { valorServicos, parcelasServico } = resultado;
+
+    if (!(valorServicos > 0)) {
+      alert('Informe um valor de serviços válido.');
+      return;
+    }
+
+    window.vvParcelasServicoOmie    = parcelasServico;
+    window.vvTotalServicosAplicado  = valorServicos;
+
+    if (typeof mostrarCarregando === 'function') mostrarCarregando();
+    abrirStatus('🛠️ Enviando Serviços', 'Enviando OS de serviços para a Omie.', 'info');
+
+    const osResp = await enviarOSServico({ valorServicos, parcelasServico });
+
+    if (osResp?.ok) {
+      abrirStatus('✅ Serviços enviados', 'OS de serviços criada com sucesso na Omie.', 'success');
+    } else {
+      abrirStatus(
+        '❌ Falha no envio dos serviços',
+        osResp?.error || osResp?.erro || osResp?.message || 'Erro desconhecido.',
+        'error'
+      );
+    }
+
+  } catch (erro) {
+    console.error('❌ fluxoSomenteServicos:', erro);
+    if (typeof mostrarPopupCustomizado === 'function') {
+      mostrarPopupCustomizado('❌ Erro', erro?.message || String(erro), 'error');
+    } else {
+      alert('Erro: ' + (erro?.message || erro));
+    }
+  } finally {
+    if (typeof ocultarCarregando === 'function') ocultarCarregando();
+  }
+}
+
+
+function abrirPopupSomenteServicos({ parcelasServicoExistentes = [], numeroPedido = '' } = {}) {
+  return new Promise((resolve) => {
+
+    // ── lê valor e desconto da tela ──────────────────────────
+    // ── lê valor e desconto da tela ──────────────────────────
+function lerValorTela(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  const txt = (el.textContent || el.innerText || el.value || '')
+    .replace(/\u00A0/g, ' ').trim();
+  return typeof vv_parseBRL === 'function' ? vv_parseBRL(txt) : 0;
+}
+
+// No fluxo "Somente Serviços", o valor dos serviços = Valor Final Total
+const valorServicoInicial = lerValorTela('valorFinalTotal');
+
+// desconto da tela para exibição informativa
+const campoDesc = document.getElementById('campoDescontoFinal');
+const descontoTexto = (
+  campoDesc?.value?.trim() ||
+  campoDesc?.dataset?.valorOriginal?.trim() ||
+  ''
+);
+const valorFinalTela = valorServicoInicial; // são o mesmo valor
+
+    // ── parcelas: usa existentes ou lê do formulário principal ─
+    let parcelasIniciais = parcelasServicoExistentes;
+    if (!parcelasIniciais.length) {
+      // tenta reutilizar as parcelas de produto do formulário como ponto de partida
+      parcelasIniciais = vvLerParcelasFormularioPrincipal()
+        .filter(p => p.valor > 0)
+        .map(p => ({
+          ...p,
+          // mantém tipo e condição, zera valor para o usuário preencher
+          valor: 0
+        }));
+    }
+
+    // ── monta modal ──────────────────────────────────────────
+    const bd = document.createElement('div');
+    bd.className = 'vv-modal-backdrop';
+
+    const md = document.createElement('div');
+    md.className = 'vv-modal';
+    md.style.maxWidth = '780px';
+    md.style.width = '96vw';
+
+    const hd = document.createElement('header');
+    hd.innerHTML = `
+      <div style="display:grid; gap:4px;">
+        <h3>🛠️ Configurar Serviços para a Omie</h3>
+        <div class="vv-help" style="margin:0;">
+          Informe o valor e as parcelas da OS de serviços que será criada na Omie.
+        </div>
+      </div>
+    `;
+
+    const by = document.createElement('div');
+    by.className = 'vv-body';
+    by.innerHTML = `
+      <div style="display:grid; gap:18px;">
+
+        <!-- Resumo informativo da tela -->
+<div style="
+  display:grid; gap:8px;
+  grid-template-columns:repeat(auto-fit, minmax(180px,1fr));
+  padding:12px 14px; border:1px solid #e2e8f0;
+  border-radius:12px; background:#f8fafc;
+  font-size:14px;
+">
+  <div>
+    Valor Final Total:
+    <b id="vv-so-info-final">
+      ${valorFinalTela > 0 ? vv_fmtBRL(valorFinalTela) : '—'}
+    </b>
+  </div>
+  <div>
+    Desconto aplicado:
+    <b id="vv-so-info-desc">
+      ${descontoTexto || '—'}
+    </b>
+  </div>
+</div>
+
+        <!-- Campo de valor -->
+        <div>
+          <label class="form-label" style="font-weight:600;">
+            Valor total dos Serviços (R$)
+          </label>
+          <input
+            id="vv-so-serv-valor"
+            type="text"
+            class="form-control"
+            placeholder="Ex: 1.500,00"
+            value="${valorServicoInicial > 0 ? vv_fmtBRL(valorServicoInicial) : ''}"
+            style="max-width:280px; margin-top:6px;"
+          >
+          <small class="vv-help" style="display:block; margin-top:4px;">
+            Este é o valor que será gerado na OS de serviços da Omie.
+          </small>
+        </div>
+
+        <!-- Parcelas -->
+        <div>
+          <div style="
+            display:flex; justify-content:space-between;
+            align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;
+          ">
+            <label class="form-label" style="font-weight:600; margin:0;">
+              Parcelas de Serviço
+            </label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="vv-btn" id="vv-so-gerar-1x">Gerar 1x</button>
+              <button type="button" class="vv-btn" id="vv-so-gerar-2x">Gerar 2x</button>
+              <button type="button" class="vv-btn" id="vv-so-add-parcela">+ Adicionar</button>
+            </div>
+          </div>
+
+          <!-- resumo soma parcelas -->
+          <div style="
+            font-size:13px; color:#475569; margin-bottom:8px;
+          ">
+            Total parcelado:
+            <b id="vv-so-total-parcelado">${vv_fmtBRL(0)}</b>
+          </div>
+
+          <div id="vv-so-lista-parcelas"
+            style="display:flex; flex-direction:column; gap:10px;">
+          </div>
+        </div>
+
+      </div>
+    `;
+
+    const ft = document.createElement('div');
+    ft.className = 'vv-footer';
+    ft.innerHTML = `
+      <div class="vv-help">
+        Pedido: <b>${numeroPedido || '(não preenchido)'}</b>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="vv-btn" id="vv-so-cancelar">Cancelar</button>
+        <button class="vv-btn primary" id="vv-so-confirmar">Confirmar e Enviar</button>
+      </div>
+    `;
+
+    md.appendChild(hd);
+    md.appendChild(by);
+    md.appendChild(ft);
+    bd.appendChild(md);
+    document.body.appendChild(bd);
+
+    const listaEl       = by.querySelector('#vv-so-lista-parcelas');
+    const valorInput    = by.querySelector('#vv-so-serv-valor');
+    const totalParc     = by.querySelector('#vv-so-total-parcelado');
+
+    // ── atualiza total parcelado ──────────────────────────────
+    function atualizarTotalParcelado() {
+      const linhas = [...listaEl.querySelectorAll('.vv-so-row')];
+      const soma = linhas.reduce((acc, row) => {
+        const v = vv_parseBRL(row.querySelector('.valor-so')?.value || '0');
+        return acc + (isNaN(v) ? 0 : v);
+      }, 0);
+      if (totalParc) totalParc.textContent = vv_fmtBRL(soma);
+    }
+
+    // ── cria linha de parcela ─────────────────────────────────
+    function criarLinhaParcela(parcela = {}) {
+      const norm = vvNormalizarParcelaControle(parcela);
+      const row  = document.createElement('div');
+      row.className = 'vv-so-row';
+      row.style.cssText = `
+        display:grid;
+        grid-template-columns:1fr 1fr 1fr 1fr auto;
+        gap:8px; align-items:end;
+        border:1px solid #e2e8f0; border-radius:10px;
+        padding:10px 12px; background:#fff;
+      `;
+      row.innerHTML = `
+        <div>
+          <label class="form-label mb-0" style="font-size:12px;">Tipo Monetário</label>
+          <select class="form-select form-select-sm tipo-mon-so">
+            <option value="" disabled selected>Selecione...</option>
+            <option value="PIX">Pix</option>
+            <option value="DIN">Dinheiro</option>
+            <option value="CRCP">Cartão Parcelado</option>
+            <option value="CRC">Cartão de Crédito</option>
+            <option value="CRD">Cartão de Débito</option>
+            <option value="BOLR">Boleto Recorrente</option>
+            <option value="BOLV">Boleto à Vista</option>
+            <option value="PER">Permuta</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label mb-0" style="font-size:12px;">Condição de Pagto</label>
+          <div class="cond-wrapper-so"></div>
+        </div>
+        <div>
+          <label class="form-label mb-0" style="font-size:12px;">Valor</label>
+          <input type="text" class="form-control form-control-sm valor-so" placeholder="Ex: 500,00">
+        </div>
+        <div>
+          <label class="form-label mb-0" style="font-size:12px;">Vencimento</label>
+          <input type="date" class="form-control form-control-sm data-so">
+        </div>
+        <div style="padding-bottom:2px;">
+          <button type="button" class="vv-btn danger btn-remover-so"
+            style="padding:6px 10px; font-size:13px;">✕</button>
+        </div>
+      `;
+
+      const tipoSel = row.querySelector('.tipo-mon-so');
+      const valorEl = row.querySelector('.valor-so');
+      const dataEl  = row.querySelector('.data-so');
+      const condWr  = row.querySelector('.cond-wrapper-so');
+
+      if (tipoSel && norm.tipo_monetario) tipoSel.value = norm.tipo_monetario;
+      if (valorEl && norm.valor > 0) valorEl.value = vv_fmtBRL(norm.valor);
+      if (dataEl  && norm.vencimento)  dataEl.value  = norm.vencimento;
+
+      vvMontarCampoCondicaoParcelas(condWr, {
+        className: 'condicao-pagto-so',
+        valor: norm.condicao_pagto || '',
+        onChange: atualizarTotalParcelado
+      });
+
+      valorEl?.addEventListener('input', atualizarTotalParcelado);
+      valorEl?.addEventListener('blur', () => {
+        const v = vv_parseBRL(valorEl.value || '0');
+        valorEl.value = v > 0 ? vv_fmtBRL(v) : '';
+        atualizarTotalParcelado();
+      });
+
+      row.querySelector('.btn-remover-so')?.addEventListener('click', () => {
+        row.remove();
+        atualizarTotalParcelado();
+      });
+
+      return row;
+    }
+
+    function adicionarParcela(parcela = {}) {
+      listaEl.appendChild(criarLinhaParcela(parcela));
+      atualizarTotalParcelado();
+    }
+
+    // ── gerar N parcelas iguais ───────────────────────────────
+    function gerarParcelasIguais(qtd) {
+      const totalServico = vv_parseBRL(valorInput.value || '0');
+      listaEl.innerHTML = '';
+
+      // tenta reutilizar dados da primeira parcela existente como referência
+      const refParcela = parcelasIniciais[0] || {};
+
+      let acumulado = 0;
+      for (let i = 0; i < qtd; i++) {
+        let valor = Math.round((totalServico / qtd) * 100) / 100;
+        if (i === qtd - 1) {
+          valor = Math.round((totalServico - acumulado) * 100) / 100;
+        }
+        acumulado = Math.round((acumulado + valor) * 100) / 100;
+
+        adicionarParcela({
+          tipo_monetario: refParcela.tipo_monetario || '',
+          condicao_pagto: refParcela.condicao_pagto || '',
+          valor,
+          vencimento: i === 0 ? (refParcela.vencimento || '') : ''
+        });
+      }
+    }
+
+    // ── carrega parcelas iniciais ─────────────────────────────
+    if (parcelasIniciais.length) {
+      parcelasIniciais.forEach(p => adicionarParcela(p));
+    } else {
+      adicionarParcela();
+    }
+
+    // ── eventos dos botões ────────────────────────────────────
+    valorInput.addEventListener('blur', () => {
+      const v = vv_parseBRL(valorInput.value || '0');
+      valorInput.value = v > 0 ? vv_fmtBRL(v) : '';
+    });
+
+    by.querySelector('#vv-so-gerar-1x')
+      ?.addEventListener('click', () => gerarParcelasIguais(1));
+
+    by.querySelector('#vv-so-gerar-2x')
+      ?.addEventListener('click', () => gerarParcelasIguais(2));
+
+    by.querySelector('#vv-so-add-parcela')
+      ?.addEventListener('click', () => adicionarParcela());
+
+    ft.querySelector('#vv-so-cancelar')
+      ?.addEventListener('click', () => {
+        document.body.removeChild(bd);
+        resolve(null);
+      });
+
+    ft.querySelector('#vv-so-confirmar')
+      ?.addEventListener('click', () => {
+        const valorServicos = vv_parseBRL(valorInput.value || '0');
+
+        if (!(valorServicos > 0)) {
+          alert('Informe um valor de serviços válido.');
+          return;
+        }
+
+        const parcelas = [...listaEl.querySelectorAll('.vv-so-row')]
+          .map(row => {
+            const condEl = row.querySelector('.condicao-pagto-so');
+            return vvNormalizarParcelaControle({
+              tipo_monetario: row.querySelector('.tipo-mon-so')?.value || '',
+              condicao_pagto: condEl?.value || '',
+              valor:      row.querySelector('.valor-so')?.value || '',
+              vencimento: row.querySelector('.data-so')?.value  || ''
+            });
+          })
+          .filter(p => p.valor > 0);
+
+        if (!parcelas.length) {
+          alert('Adicione ao menos uma parcela com valor.');
+          return;
+        }
+
+        const semData = parcelas.filter(p => !p.vencimento);
+        if (semData.length) {
+          alert(
+            `Preencha a data de vencimento de todas as parcelas.\n` +
+            `${semData.length} parcela(s) sem data.`
+          );
+          return;
+        }
+
+        document.body.removeChild(bd);
+        resolve({
+          valorServicos,
+          parcelasServico: vvSerializarParcelasServicoParaServidor(parcelas)
+        });
+      });
+  });
+}
 /* =======================================
    6) ENVIAR PARA OMIE (botão/onclick)
    ======================================= */
 async function atualizarNaOmie() {
+
+   // ── ESCOLHA DO TIPO DE ENVIO ──────────────────────────────
+  const tipoEnvio = await abrirPopupEscolhaTipoEnvioOmie();
+  if (!tipoEnvio) return; // usuário cancelou
+
+  if (tipoEnvio === 'so_servicos') {
+    return fluxoSomenteServicos();
+  }
 
   const botao =
     document.getElementById("btn-gerar-pedido") ||
@@ -5307,65 +5929,87 @@ async function atualizarNaOmie() {
       throw new Error("Não foi possível gerar o payload para envio.");
     }
 
-    console.log("📦 Payload gerado (produtos):", payload);
+    // Detecta se o popup sinalizou "somente serviços" (sem produtos/vidros)
+    const somenteServicos = payload.servicosOnly === true;
 
-    // =========================================================
-    // 1) ENVIO DE PRODUTOS
-    // =========================================================
-    abrirStatus(
-      "📦 Enviando produtos",
-      "Os produtos estão sendo enviados para a Omie.",
-      "info"
-    );
-
-    const respostaProdutos = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/omie/pedidos", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${localStorage.getItem("accessToken") || ""}`
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const retornoProdutos = await readJsonOrText(respostaProdutos);
-
-    console.log("📥 Resposta /pedidos:", respostaProdutos.status, retornoProdutos.parsed ?? retornoProdutos.raw);
-
-    if (!respostaProdutos.ok) {
-      alertServer(
-        "❌ ERRO AO ENVIAR PRODUTOS",
-        respostaProdutos.status,
-        retornoProdutos.parsed ?? retornoProdutos.raw
-      );
-
-      throw new Error(
-        retornoProdutos?.parsed?.error ||
-        retornoProdutos?.parsed?.erro ||
-        retornoProdutos?.parsed?.message ||
-        retornoProdutos?.raw ||
-        "Erro ao incluir pedido na Omie."
-      );
-    }
-
-    const numeroPedido =
-      retornoProdutos?.parsed?.numeroPedido ||
-      retornoProdutos?.parsed?.pedido?.numeroPedido ||
-      retornoProdutos?.parsed?.nCodPed ||
+    // numeroPedido começa com o valor garantido; será sobrescrito pela resposta
+    // da Omie se houver envio de produtos.
+    let numeroPedido =
       numeroPedidoGarantido ||
       document.getElementById("numeroPedido")?.value ||
       "";
 
-    alertServer(
-      "✅ PRODUTOS ENVIADOS COM SUCESSO",
-      respostaProdutos.status,
-      retornoProdutos.parsed ?? retornoProdutos.raw
-    );
+    if (!somenteServicos) {
+      console.log("📦 Payload gerado (produtos):", payload);
 
-    abrirStatus(
-      "✅ Produtos enviados",
-      `Produtos enviados com sucesso. Pedido nº ${numeroPedido}.`,
-      "success"
-    );
+      // =========================================================
+      // 1) ENVIO DE PRODUTOS
+      // =========================================================
+      abrirStatus(
+        "📦 Enviando produtos",
+        "Os produtos estão sendo enviados para a Omie.",
+        "info"
+      );
+
+      const respostaProdutos = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/omie/pedidos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("accessToken") || ""}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const retornoProdutos = await readJsonOrText(respostaProdutos);
+
+      console.log("📥 Resposta /pedidos:", respostaProdutos.status, retornoProdutos.parsed ?? retornoProdutos.raw);
+
+      if (!respostaProdutos.ok) {
+        alertServer(
+          "❌ ERRO AO ENVIAR PRODUTOS",
+          respostaProdutos.status,
+          retornoProdutos.parsed ?? retornoProdutos.raw
+        );
+
+        throw new Error(
+          retornoProdutos?.parsed?.error ||
+          retornoProdutos?.parsed?.erro ||
+          retornoProdutos?.parsed?.message ||
+          retornoProdutos?.raw ||
+          "Erro ao incluir pedido na Omie."
+        );
+      }
+
+      numeroPedido =
+        retornoProdutos?.parsed?.numeroPedido ||
+        retornoProdutos?.parsed?.pedido?.numeroPedido ||
+        retornoProdutos?.parsed?.nCodPed ||
+        numeroPedidoGarantido ||
+        document.getElementById("numeroPedido")?.value ||
+        "";
+
+      alertServer(
+        "✅ PRODUTOS ENVIADOS COM SUCESSO",
+        respostaProdutos.status,
+        retornoProdutos.parsed ?? retornoProdutos.raw
+      );
+
+      abrirStatus(
+        "✅ Produtos enviados",
+        `Produtos enviados com sucesso. Pedido nº ${numeroPedido}.`,
+        "success"
+      );
+    } else {
+      // =========================================================
+      // 1-B) MODO SOMENTE SERVIÇOS — pula envio de produtos
+      // =========================================================
+      console.log("[atualizarNaOmie] Modo somente-serviços: POST de produtos ignorado.");
+      abrirStatus(
+        "⚙️ Pedido somente de serviços",
+        "Nenhum produto neste pedido — enviando apenas os serviços na OS.",
+        "info"
+      );
+    }
 
     // =========================================================
     // 2) OBTÉM TOTAIS / PARCELAS DE SERVIÇO
@@ -5457,19 +6101,25 @@ async function atualizarNaOmie() {
     if (!houveTentativaDeServico) {
       abrirStatus(
         "✅ Processo concluído",
-        `Produtos enviados com sucesso. Pedido nº ${numeroPedido}.`,
+        somenteServicos
+          ? `Nenhum serviço encontrado para enviar. Pedido nº ${numeroPedido}.`
+          : `Produtos enviados com sucesso. Pedido nº ${numeroPedido}.`,
         "success"
       );
     } else if (servicosEnviadosComSucesso) {
       abrirStatus(
         "✅ Processo concluído",
-        `Produtos e serviços enviados com sucesso. Pedido nº ${numeroPedido}.`,
+        somenteServicos
+          ? `Serviços enviados com sucesso. Pedido nº ${numeroPedido}.`
+          : `Produtos e serviços enviados com sucesso. Pedido nº ${numeroPedido}.`,
         "success"
       );
     } else {
       abrirStatus(
         "⚠️ Processo concluído parcialmente",
-        `Produtos enviados com sucesso no pedido nº ${numeroPedido}, mas houve falha no envio dos serviços.`,
+        somenteServicos
+          ? `Pedido nº ${numeroPedido}: houve falha no envio dos serviços.`
+          : `Produtos enviados com sucesso no pedido nº ${numeroPedido}, mas houve falha no envio dos serviços.`,
         "warning"
       );
     }
@@ -6139,82 +6789,113 @@ function normalizarTextoServico(valor) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-/* =========================================================
-   Aliases de vendedores de serviços
-   ========================================================= */
-const ALIASES_VENDEDORES_SERVICOS_FERREIRA_ULHOA = {
-  "PAULO SERGIO MACHADO DA SILVA": "PAULO SERGIO MACHADO DA SILVA",
-  "DOUGLAS VITOR DA SILVA": "DOUGLAS VITOR DA SILVA",
-  "GABRIEL JUNIOR DO COUTO NEPOMUCENO": "GABRIEL JUNIOR DO COUTO NEPOMUCENO",
-  "FELIPE ULHOA FERREIRA": "FELIPE ULHOA FERREIRA",
-  "JOAO CLEBER MARTINS": "JOAO CLEBER MARTINS",
-  "MARILENA DE ALMEIDA ULHOA": "MARILENA DE ALMEIDA ULHOA",
-  "ANA FLAVIA RODRIGUES PRATES": "ANA FLAVIA RODRIGUES PRATES",
-  "RAFAEL ANGELO ARAUJO DA SILVA": "RAFAEL ANGELO ARAUJO DA SILVA",
-  "LAIS MAGALHAES RABELO": "LAIS MAGALHÃES RABELO",
-  "LAÍS MAGALHÃES RABELO": "LAIS MAGALHÃES RABELO",
-  "VANESSA ULHOA": "VANESSA ULHOA",
-  "MAURO LUCIO": "MAURO FERREIRA"
-};
-
-/* =========================================================
-   Define código do vendedor de serviços selecionado
-   ========================================================= */
 function definirCodigoVendedorServicoSelecionado() {
+  // ── base completa de vendedores de serviço (interna) ──────
+  const cadastroVendedoresServico = [
+    { codigo: 10922409030, inativo: "S", nome: "Paulo Sergio Machado da Silva" },
+    { codigo: 10922409032, inativo: "S", nome: "DOUGLAS VITOR DA SILVA" },
+    { codigo: 10922409035, inativo: "S", nome: "GABRIEL JUNIOR DO COUTO NEPOMUCENO" },
+    { codigo: 10922409037, inativo: "N", nome: "MAURO FERREIRA" },
+    { codigo: 10922409049, inativo: "N", nome: "FELIPE ULHOA FERREIRA" },
+    { codigo: 10922409051, inativo: "N", nome: "JOAO CLEBER MARTINS" },
+    { codigo: 10922409053, inativo: "N", nome: "MARILENA DE ALMEIDA ULHOA" },
+    { codigo: 10922409055, inativo: "N", nome: "ANA FLAVIA RODRIGUES PRATES" },
+    { codigo: 10922409059, inativo: "N", nome: "RAFAEL ANGELO ARAUJO DA SILVA" },
+    { codigo: 10985073333, inativo: "S", nome: "LAIS MAGALHÃES RABELO" },
+    { codigo: 11059840338, inativo: "S", nome: "VANESSA ULHOA" },
+    { codigo: 11060014882, inativo: "S", nome: "Enviado via API" },
+    { codigo: 11158319843, inativo: "N", nome: "MAURO FERREIRA" },
+    { codigo: 11158376229, inativo: "N", nome: "DAVIDSON JUNIO PEREIRA MACIEL" },
+    { codigo: 11158376259, inativo: "N", nome: "FERNANDO PEREIRA DE SOUZA JUNIOR" },
+    { codigo: 11158376263, inativo: "N", nome: "LEONARDO SOUSA OLIVEIRA" },
+    { codigo: 11158376268, inativo: "N", nome: "MATHEUS HENRIQUE SOUZA BRAGA" },
+    { codigo: 11158376278, inativo: "N", nome: "EDNALDO GOMES FILHO" },
+    { codigo: 11158376285, inativo: "N", nome: "DIONATA ALAN SILVA COSTA" },
+    { codigo: 11158376293, inativo: "N", nome: "JOSE CARLOS SOARES DA CRUZ" },
+    { codigo: 11158376335, inativo: "N", nome: "JOSE GILMAR PINHEIRO" },
+    { codigo: 11158376357, inativo: "N", nome: "ERIVALDO AMARO DE ALMEIDA" },
+    { codigo: 11158376364, inativo: "N", nome: "LUIZ FERNANDO LIMA" },
+    { codigo: 11158376367, inativo: "N", nome: "OSVALDO PAURA OLIVEIRA" },
+    { codigo: 11158376374, inativo: "N", nome: "JOSE CARLOS SOARES DA CRUZ" },
+    { codigo: 11158376382, inativo: "N", nome: "RENE GOMES DE OLIVEIRA" },
+    { codigo: 11158376392, inativo: "N", nome: "ROBERTO MARTINS DO NASCIMENTO" },
+    { codigo: 11158376703, inativo: "N", nome: "RONAN GOMES DE SOUZA LIMA" },
+    { codigo: 11158376707, inativo: "N", nome: "SERGIO RICARDO PIO" },
+    { codigo: 11158376710, inativo: "N", nome: "RODRIGO NOBRE DOS SANTOS" },
+    { codigo: 11158376713, inativo: "N", nome: "RODRIGO BRITO CARDOSO" },
+    { codigo: 11158376723, inativo: "N", nome: "SEBASTIAO DOS REIS DE MATOS" }
+  ];
+
+  // ── aliases: nome do select → nome na base ────────────────
+  const aliases = {
+    "MAURO LUCIO":          "MAURO FERREIRA",
+    "LAIS MAGALHAES RABELO": "LAIS MAGALHÃES RABELO"
+  };
+
+  // ── normaliza texto para comparação ──────────────────────
+  function norm(s) {
+    return String(s || "")
+      .trim()
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  // ── lê nome selecionado no select ────────────────────────
   const selectVendedor = document.getElementById("vendedorResponsavel");
 
   if (!selectVendedor) {
-    console.warn("⚠️ Select #vendedorResponsavel não encontrado.");
+    console.warn("⚠️ [vendedor serviço] #vendedorResponsavel não encontrado.");
     NCODVEND_SERVICO_DEFAULT = "";
     NOME_VENDEDOR_SERVICO_DEFAULT = "";
     return;
   }
 
-  const nomeSelecionado =
-    selectVendedor.value?.trim() ||
+  const nomeSelecionado = (
     selectVendedor.options[selectVendedor.selectedIndex]?.text?.trim() ||
+    selectVendedor.value?.trim() ||
     selectVendedor.getAttribute("data-valor-original")?.trim() ||
-    "";
+    ""
+  );
 
   NOME_VENDEDOR_SERVICO_DEFAULT = nomeSelecionado;
 
   if (!nomeSelecionado) {
-    console.warn("⚠️ Nenhum vendedor de serviço selecionado.");
+    console.warn("⚠️ [vendedor serviço] Nenhum vendedor selecionado.");
     NCODVEND_SERVICO_DEFAULT = "";
     return;
   }
 
-  const nomeNormalizado = normalizarTextoServico(nomeSelecionado);
-  const nomeParaBusca =
-    ALIASES_VENDEDORES_SERVICOS_FERREIRA_ULHOA[nomeNormalizado] || nomeSelecionado;
+  // ── resolve alias se necessário ──────────────────────────
+  const nomeNorm      = norm(nomeSelecionado);
+  const nomeResolvido = aliases[nomeNorm] || nomeSelecionado;
 
-  const vendedoresServico = VENDEDORES_SERVICOS_FERREIRA_ULHOA.cadastro || [];
-
-  const encontrados = vendedoresServico.filter(v =>
-    normalizarTextoServico(v.nome) === normalizarTextoServico(nomeParaBusca)
+  // ── busca na base interna ────────────────────────────────
+  const encontrados = cadastroVendedoresServico.filter(
+    v => norm(v.nome) === norm(nomeResolvido)
   );
 
   if (!encontrados.length) {
-    console.warn("⚠️ Vendedor de serviço não encontrado na base Ferreira Ulhoa Serviços:", {
+    console.warn("⚠️ [vendedor serviço] Não encontrado na base:", {
       nomeSelecionado,
-      nomeParaBusca
+      nomeResolvido
     });
     NCODVEND_SERVICO_DEFAULT = "";
     return;
   }
 
-  if (encontrados.length > 1) {
-    console.warn("⚠️ Mais de um vendedor de serviço encontrado com o mesmo nome. Usando o primeiro.", encontrados);
-  }
+  // prefere ativo (inativo === "N"); se todos inativos, usa o primeiro
+  const vendedor =
+    encontrados.find(v => String(v.inativo).toUpperCase() === "N") ||
+    encontrados[0];
 
-  const vendedorServicoEncontrado = encontrados[0];
+  NCODVEND_SERVICO_DEFAULT = Number(vendedor.codigo) || 0;
 
-  NCODVEND_SERVICO_DEFAULT = Number(vendedorServicoEncontrado.codigo) || 0;
-
-  console.log("✅ Vendedor de serviço localizado com sucesso:", {
+  console.log("✅ [vendedor serviço] Resolvido:", {
     nomeSelecionado,
-    nomeEncontrado: vendedorServicoEncontrado.nome,
-    codigo: NCODVEND_SERVICO_DEFAULT
+    nomeResolvido,
+    codigo: NCODVEND_SERVICO_DEFAULT,
+    inativo: vendedor.inativo
   });
 }
 
@@ -6652,75 +7333,123 @@ function montarPayloadOS({
 
   const codigoIntegracaoOS = String(cCodIntOS || gerarCodigoIntegracaoOmie("OS")).trim();
 
-  const cCodParc_form =
-    getVal("#cCodParc") ||
-    "999";
-
-  const cEtapa_form =
-    getVal("#cEtapa") ||
-    "20";
+  const cCodParc_form = getVal("#cCodParc") || "999";
+  const cEtapa_form   = getVal("#cEtapa")   || "20";
 
   const cDadosAdicNF_form =
     vvMontarDadosAdicNFServico(numeroPedidoOS, numeroOrcamentoOS) ||
     getVal("#cDadosAdicNF") ||
     "";
 
-  const vendedorSelect =
-    document.querySelector("#vendedorResponsavel") ||
-    document.querySelector('select[name="vendedorResponsavel"]');
-
-  let nCodVend = undefined;
-  if (vendedorSelect) {
-    nCodVend = Number(
-      vendedorSelect.selectedOptions?.[0]?.dataset?.codigo ||
-      vendedorSelect.value ||
-      0
-    ) || undefined;
-  }
-
-  const CCODCATEG_DEFAULT = "1.01.99";
-  const NCODCC_DEFAULT = 10937506623;
+  const CCODCATEG_DEFAULT  = "1.01.99";
+  const NCODCC_DEFAULT     = 10937506623;
   const CCOD_LC116_DEFAULT = "7.01";
-  const CCOD_MUN_DEFAULT = "0701-0/01-88";
-
-  const Cabecalho = {
-    cCodIntOS: codigoIntegracaoOS,
-    cCodParc: String(cCodParc_form || "999").trim(),
-    cEtapa: String(cEtapa_form || "20").trim(),
-    dDtPrevisao: String(dDtPrevisaoBR || "").trim()
-  };
-
-  if (nCodVend) {
-    Cabecalho.nCodVend = Number(nCodVend);
-  }
-
-  if (nCodCli) {
-    Cabecalho.nCodCli = Number(nCodCli);
-  }
-
-  Cabecalho.nQtdeParc = Number(nQtdeParc || 1);
+  const CCOD_MUN_DEFAULT   = "0701-0/01-88";
 
   const nValUnitFinal = Number(valorServicos);
   if (!(nValUnitFinal > 0)) {
     throw new Error("Valor de Serviços inválido ou zero.");
   }
 
-  const Departamentos = [];
+  // ── resolve vendedor ──────────────────────────────────────
+  const cadastroVendedoresServico = [
+    { codigo: 10922409030, inativo: "S", nome: "Paulo Sergio Machado da Silva" },
+    { codigo: 10922409032, inativo: "S", nome: "DOUGLAS VITOR DA SILVA" },
+    { codigo: 10922409035, inativo: "S", nome: "GABRIEL JUNIOR DO COUTO NEPOMUCENO" },
+    { codigo: 10922409037, inativo: "N", nome: "MAURO FERREIRA" },
+    { codigo: 10922409049, inativo: "N", nome: "FELIPE ULHOA FERREIRA" },
+    { codigo: 10922409051, inativo: "N", nome: "JOAO CLEBER MARTINS" },
+    { codigo: 10922409053, inativo: "N", nome: "MARILENA DE ALMEIDA ULHOA" },
+    { codigo: 10922409055, inativo: "N", nome: "ANA FLAVIA RODRIGUES PRATES" },
+    { codigo: 10922409059, inativo: "N", nome: "RAFAEL ANGELO ARAUJO DA SILVA" },
+    { codigo: 10985073333, inativo: "S", nome: "LAIS MAGALHÃES RABELO" },
+    { codigo: 11059840338, inativo: "S", nome: "VANESSA ULHOA" },
+    { codigo: 11060014882, inativo: "S", nome: "Enviado via API" },
+    { codigo: 11158319843, inativo: "N", nome: "MAURO FERREIRA" },
+    { codigo: 11158376229, inativo: "N", nome: "DAVIDSON JUNIO PEREIRA MACIEL" },
+    { codigo: 11158376259, inativo: "N", nome: "FERNANDO PEREIRA DE SOUZA JUNIOR" },
+    { codigo: 11158376263, inativo: "N", nome: "LEONARDO SOUSA OLIVEIRA" },
+    { codigo: 11158376268, inativo: "N", nome: "MATHEUS HENRIQUE SOUZA BRAGA" },
+    { codigo: 11158376278, inativo: "N", nome: "EDNALDO GOMES FILHO" },
+    { codigo: 11158376285, inativo: "N", nome: "DIONATA ALAN SILVA COSTA" },
+    { codigo: 11158376293, inativo: "N", nome: "JOSE CARLOS SOARES DA CRUZ" },
+    { codigo: 11158376335, inativo: "N", nome: "JOSE GILMAR PINHEIRO" },
+    { codigo: 11158376357, inativo: "N", nome: "ERIVALDO AMARO DE ALMEIDA" },
+    { codigo: 11158376364, inativo: "N", nome: "LUIZ FERNANDO LIMA" },
+    { codigo: 11158376367, inativo: "N", nome: "OSVALDO PAURA OLIVEIRA" },
+    { codigo: 11158376374, inativo: "N", nome: "JOSE CARLOS SOARES DA CRUZ" },
+    { codigo: 11158376382, inativo: "N", nome: "RENE GOMES DE OLIVEIRA" },
+    { codigo: 11158376392, inativo: "N", nome: "ROBERTO MARTINS DO NASCIMENTO" },
+    { codigo: 11158376703, inativo: "N", nome: "RONAN GOMES DE SOUZA LIMA" },
+    { codigo: 11158376707, inativo: "N", nome: "SERGIO RICARDO PIO" },
+    { codigo: 11158376710, inativo: "N", nome: "RODRIGO NOBRE DOS SANTOS" },
+    { codigo: 11158376713, inativo: "N", nome: "RODRIGO BRITO CARDOSO" },
+    { codigo: 11158376723, inativo: "N", nome: "SEBASTIAO DOS REIS DE MATOS" }
+  ];
 
-  const Email = {
-    cEnvBoleto: "S",
-    cEnvLink: "S",
-    cEnviarPara: vvColetarEmailsClientesOS()
+  const aliasesVendedorServico = {
+    "MAURO LUCIO":           "MAURO FERREIRA",
+    "LAIS MAGALHAES RABELO": "LAIS MAGALHÃES RABELO"
   };
 
+  const normV = (s) => String(s || "")
+    .trim().toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const resolverCodVend = (nome) => {
+    if (!nome) return 0;
+    const nomeNorm     = normV(nome);
+    const nomeResolvido = aliasesVendedorServico[nomeNorm] || nome;
+    const encontrados  = cadastroVendedoresServico.filter(
+      v => normV(v.nome) === normV(nomeResolvido)
+    );
+    if (!encontrados.length) return 0;
+    const v = encontrados.find(v => String(v.inativo).toUpperCase() === "N") || encontrados[0];
+    return Number(v.codigo) || 0;
+  };
+
+  const vendedorSelect = document.querySelector("#vendedorResponsavel");
+  const nomeVendedorTela = (
+    vendedorSelect?.options?.[vendedorSelect?.selectedIndex]?.text?.trim() ||
+    vendedorSelect?.value?.trim() ||
+    vendedorSelect?.getAttribute("data-valor-original")?.trim() ||
+    ""
+  );
+
+  const codigoVendedorServico = resolverCodVend(nomeVendedorTela);
+
+  console.log("[montarPayloadOS] vendedor serviço:", {
+    nomeVendedorTela,
+    codigoVendedorServico
+  });
+
+  // ── Cabecalho ─────────────────────────────────────────────
+// ── Cabecalho ─────────────────────────────────────────────
+  const Cabecalho = {
+    cCodIntOS:   codigoIntegracaoOS,
+    cCodParc:    String(cCodParc_form || "999").trim(),
+    cEtapa:      String(cEtapa_form   || "20").trim(),
+    dDtPrevisao: String(dDtPrevisaoBR || "").trim(),
+    nQtdeParc:   Number(nQtdeParc || 1)
+  };
+
+  if (nCodCli) Cabecalho.nCodCli = Number(nCodCli);
+
+  // ✅ nCodVend no Cabecalho
+  if (codigoVendedorServico > 0) {
+    Cabecalho.nCodVend = codigoVendedorServico;
+  }
+
+  // ── InformacoesAdicionais ─────────────────────────────────
   const InformacoesAdicionais = {
-    cCodCateg: CCODCATEG_DEFAULT,
+    cCodCateg:    CCODCATEG_DEFAULT,
     cDadosAdicNF: String(cDadosAdicNF_form || "").trim(),
-    nCodCC: NCODCC_DEFAULT
+    nCodCC:       NCODCC_DEFAULT
   };
 
   if (numeroPedidoOS) {
-    InformacoesAdicionais.cNumPedido = numeroPedidoOS;
+    InformacoesAdicionais.cNumPedido   = numeroPedidoOS;
     InformacoesAdicionais.cNumContrato = numeroPedidoOS;
   }
 
@@ -6728,21 +7457,22 @@ function montarPayloadOS({
   if (codigoProjetoNumero > 0) {
     InformacoesAdicionais.nCodProj = codigoProjetoNumero;
   }
-
+  // ← nCodVend não entra aqui
+  // ── ServicosPrestados ─────────────────────────────────────
   const ServicosPrestados = [
     {
       cCodServLC116: CCOD_LC116_DEFAULT,
-      cCodServMun: CCOD_MUN_DEFAULT,
-      cRetemISS: "N",
-      cTribServ: "01",
+      cCodServMun:   CCOD_MUN_DEFAULT,
+      cRetemISS:     "N",
+      cTribServ:     "01",
       impostos: {
         cRetemIRRF: "N",
-        cRetemPIS: "N",
-        nAliqIRRF: 0,
-        nAliqISS: 0,
-        nAliqPIS: 0
+        cRetemPIS:  "N",
+        nAliqIRRF:  0,
+        nAliqISS:   0,
+        nAliqPIS:   0
       },
-      nQtde: 1,
+      nQtde:    1,
       nValUnit: Number(nValUnitFinal.toFixed(2)),
       cDescServ: vvMontarObservacoesServicoOmie(
         numeroPedidoOS,
@@ -6754,8 +7484,12 @@ function montarPayloadOS({
 
   const payload = {
     Cabecalho,
-    Departamentos,
-    Email,
+    Departamentos: [],
+    Email: {
+      cEnvBoleto: "S",
+      cEnvLink:   "S",
+      cEnviarPara: vvColetarEmailsClientesOS()
+    },
     InformacoesAdicionais,
     ServicosPrestados
   };
@@ -6763,16 +7497,11 @@ function montarPayloadOS({
   window.__vvUltimoPayloadOSOmie = JSON.parse(JSON.stringify(payload));
 
   console.group("📦 [montarPayloadOS] FINAL");
-  console.log("cCodIntOS:", cCodIntOS);
-  console.log("nCodCli recebido de ctxHeaderOS:", nCodCli);
-  console.log("dDtPrevisaoBR recebida:", dDtPrevisaoBR);
-  console.log("dDtPrevisaoISO recebida:", dDtPrevisaoISO);
-  console.log("valorServicos:", valorServicos);
-  console.log("Cabecalho final:", JSON.parse(JSON.stringify(Cabecalho)));
-  console.log("InformacoesAdicionais final:", JSON.parse(JSON.stringify(InformacoesAdicionais)));
-  console.log("Email final:", JSON.parse(JSON.stringify(Email)));
-  console.log("ServicosPrestados final:", JSON.parse(JSON.stringify(ServicosPrestados)));
-  console.log("payload completo:", JSON.parse(JSON.stringify(payload)));
+  console.log("nomeVendedorTela:", nomeVendedorTela);
+  console.log("codigoVendedorServico:", codigoVendedorServico);
+  console.log("Cabecalho:", JSON.parse(JSON.stringify(Cabecalho)));
+  console.log("InformacoesAdicionais:", JSON.parse(JSON.stringify(InformacoesAdicionais)));
+  console.log("ServicosPrestados:", JSON.parse(JSON.stringify(ServicosPrestados)));
   console.log("payload JSON:", JSON.stringify(payload, null, 2));
   console.groupEnd();
 
