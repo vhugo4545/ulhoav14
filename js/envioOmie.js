@@ -801,7 +801,6 @@ const dispararAtualizacaoClientes = () => {
 
 
 async function verificarClienteEAtualizar() {
-  // tenta pelo seletor novo E pelo antigo (.razaoSocial)
   const inp = document.querySelector(
     '#clientesWrapper > div > div.col-md-6.position-relative.d-flex.align-items-end.gap-2 > div > input, ' +
     'input.form-control.razaoSocial'
@@ -816,16 +815,33 @@ async function verificarClienteEAtualizar() {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
+    .replace(/[.\-\/\s]/g, "")
     .trim();
 
-  const alvo = norm(inp.value || inp.dataset.valorOriginal);
-  if (!alvo) {
+  const normNome = s => (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+  const razaoSocialAlvo = normNome(inp.value || inp.dataset.valorOriginal);
+  if (!razaoSocialAlvo) {
     console.warn("⚠️ verificarClienteEAtualizar: razão social vazia.");
     return;
   }
 
-  // Busca nas duas bases
-  const [o, l] = await Promise.all([
+  const cnpjEl = document.querySelector(
+    '#clientesWrapper .cliente-item .cnpjCliente, ' +
+    '#clientesWrapper .cliente-item input[placeholder*="CNPJ"], ' +
+    '#clientesWrapper .cliente-item .cnpj'
+  );
+  const cnpjAlvo = norm(cnpjEl?.value || cnpjEl?.dataset?.valorOriginal || "");
+
+  console.group("🔎 [verificarClienteEAtualizar]");
+  console.log("Razão social buscada:", razaoSocialAlvo);
+  console.log("CNPJ buscado:", cnpjAlvo || "(não encontrado)");
+
+  const [resServico, resLocal] = await Promise.all([
     fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes")
       .then(r => r.ok ? r.json() : null)
       .catch(() => null),
@@ -834,34 +850,89 @@ async function verificarClienteEAtualizar() {
       .catch(() => null)
   ]);
 
-  // API de serviços: { total, ultimaAtualizacao, clientes: [...] }
-  const lo = Array.isArray(o?.clientes) ? o.clientes : (Array.isArray(o) ? o : []);
-  // API local: pode ser { clientes: [...] } ou array direto
-  const ll = Array.isArray(l?.clientes) ? l.clientes : (Array.isArray(l) ? l : []);
+  const listaServico = Array.isArray(resServico?.clientes) ? resServico.clientes
+    : Array.isArray(resServico) ? resServico : [];
 
-  // Atualiza cache global para outras funções (getCodigoClientePorRazao)
-  if (Array.isArray(lo) && lo.length) {
-    window.listaClientesServico = lo;
+  const listaLocal = Array.isArray(resLocal?.clientes) ? resLocal.clientes
+    : Array.isArray(resLocal) ? resLocal : [];
+
+  if (listaServico.length) window.listaClientesServico = listaServico;
+
+  console.group("📋 Estrutura da API de serviços (primeiro cliente)");
+  console.log(listaServico[0] ?? "(lista vazia)");
+  console.groupEnd();
+
+  console.group("📋 Estrutura da API local (primeiro cliente)");
+  console.log(listaLocal[0] ?? "(lista vazia)");
+  console.groupEnd();
+
+  function clienteBate(c) {
+    const nomeCliente = normNome(c.razao_social || c.nome_fantasia || c.nome || "");
+    const cnpjCliente = norm(c.cnpj || c.cpf_cnpj || c.documento || "");
+
+    if (nomeCliente && nomeCliente === razaoSocialAlvo) return true;
+    if (nomeCliente && (nomeCliente.includes(razaoSocialAlvo) || razaoSocialAlvo.includes(nomeCliente))) return true;
+    if (cnpjAlvo && cnpjCliente && cnpjCliente === cnpjAlvo) return true;
+
+    return false;
   }
 
-  // Compatível tanto com nome_fantasia quanto razao_social
-  const existeOmie = lo.some(c =>
-    norm(c.razao_social || c.nome_fantasia) === alvo
-  );
+  const existeServico = listaServico.some(clienteBate);
+  const existeLocal   = listaLocal.some(clienteBate);
 
-  const existeLocal = ll.some(c =>
-    norm(c.razao_social || c.nome_fantasia) === alvo
-  );
+  console.log("Existe na API de serviços?", existeServico);
+  console.log("Existe na API local?", existeLocal);
 
-  if (!existeOmie || !existeLocal) {
+  if (!existeServico) {
+    const candidatos = listaServico
+      .filter(c => {
+        const n = normNome(c.razao_social || c.nome_fantasia || c.nome || "");
+        return n.includes(razaoSocialAlvo.slice(0, 6)) || razaoSocialAlvo.includes(n.slice(0, 6));
+      })
+      .slice(0, 5);
+    console.warn("❌ NÃO encontrado na API serviços. Candidatos próximos:", candidatos);
+  }
+
+  if (!existeLocal) {
+    const candidatos = listaLocal
+      .filter(c => {
+        const n = normNome(c.razao_social || c.nome_fantasia || c.nome || "");
+        return n.includes(razaoSocialAlvo.slice(0, 6)) || razaoSocialAlvo.includes(n.slice(0, 6));
+      })
+      .slice(0, 5);
+    console.warn("❌ NÃO encontrado na API local. Candidatos próximos:", candidatos);
+  }
+
+  console.groupEnd();
+
+  if (!existeServico || !existeLocal) {
     alert("Cliente não encontrado em ambas as bases. Atualizando lista de clientes…");
     if (typeof dispararAtualizacaoClientes === "function") {
       dispararAtualizacaoClientes();
-    } else {
-      console.warn("⚠️ dispararAtualizacaoClientes não está definida.");
     }
   } else {
-    console.log("✅ Cliente encontrado nas duas bases (Omie e sistema local).");
+    const clienteServico = listaServico.find(clienteBate);
+    const clienteLocal   = listaLocal.find(clienteBate);
+
+    console.group("✅ [verificarClienteEAtualizar] Cliente ENCONTRADO nas duas bases");
+    console.log("Razão social buscada:", razaoSocialAlvo);
+    console.log("CNPJ buscado:", cnpjAlvo || "(não informado)");
+
+    console.group("📦 API de Serviços");
+    console.log("razao_social:",       clienteServico?.razao_social    || "—");
+    console.log("nome_fantasia:",      clienteServico?.nome_fantasia   || "—");
+    console.log("cnpj:",               clienteServico?.cnpj            || clienteServico?.cpf_cnpj || clienteServico?.documento || "—");
+    console.log("codigo_cliente_omie:", clienteServico?.codigo_cliente_omie || "—");
+    console.groupEnd();
+
+    console.group("📦 API Local");
+    console.log("razao_social:",       clienteLocal?.razao_social    || "—");
+    console.log("nome_fantasia:",      clienteLocal?.nome_fantasia   || "—");
+    console.log("cnpj:",               clienteLocal?.cnpj            || clienteLocal?.cpf_cnpj || clienteLocal?.documento || "—");
+    console.log("codigo_cliente_omie:", clienteLocal?.codigo_cliente_omie || "—");
+    console.groupEnd();
+
+    console.groupEnd();
   }
 }
 
