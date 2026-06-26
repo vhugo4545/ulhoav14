@@ -67,7 +67,7 @@ function preencherCondicoesGeraisComDiagramacao() {
   }
 
 const linhas = [
-  
+
   "──────────",
   "FERREIRA ULHOA METAIS LTDA, inscrita no CNPJ nº 02.836.048/0001-60, doravante denominada FERREIRA ULHOA METAIS; e",
   "FERREIRA ULHOA SERVIÇOS LTDA, inscrita no CNPJ nº 61.730.562/0001-85, doravante denominada FERREIRA ULHOA SERVIÇOS;",
@@ -83,7 +83,7 @@ const linhas = [
   "5. As medições e instalações inclusas neste contrato serão realizadas somente durante o horário comercial.",
   "   5.1. Se for necessário realizar instalações fora do horário comercial (das 7:00 às 17:00) e/ou em finais de semana/feriados, os custos adicionais serão negociados e repassados ao cliente.",
   "6. Os vidros estão sujeitos a quebras durante o processo de fabricação, transporte e instalação. Caso isso ocorra, a reposição dependerá do prazo estipulado pela distribuidora, com o que o Contratante desde já anui.",
-  "7. Após a assinatura deste instrumento contratual, a Contratante deverá liberar, em até 30 dias corridos, o espaço em que será realizada a instalação para medição técnica. Após este período, poderá haver alteração no valor devido a possíveis aumentos no custo da matéria-prima, como aço inox, aço carbono, vidro, entre outros.",
+  "7. Após a assinatura deste instrumento contratual, a Contratante deverá liberar, em até 30 dias corridos, o espaço em que será realizada a instalação para medição técnica. Após este período, poderá haver alteração no valor devido a possíveis aumentos no custo da matéria-prima, como aço inox, aço carbono, vidro, entre outros, o que será objeto de termo aditivo específico.",
   "8. A contratante tem a responsabilidade de informar à contratada a localização exata das tubulações e manta, além de entregar as plantas de todas tubulações quando da medição ou, no mais tardar, antes da instalação.",
   "9. Fica excluída a responsabilidade da contratada por danos às tubulações elétricas, hidráulicos e manta.",
   "10. Não estão inclusos no orçamento trabalhos extras de serralheria, elétrica, pintura, alvenaria, gesso, marcenaria, andaimes, içamento.",
@@ -92,8 +92,12 @@ const linhas = [
   "12. A contratada não se responsabiliza por contaminações posteriores resultantes da utilização de produtos ácidos aplicados nos pisos ou em estruturas de aço (por exemplo: ácido clorídrico, ácidos clorados).",
   "   12.1. A contratada fornecerá ao contratante orientações e manual de limpeza e conservação dos produtos instalados, contendo a indicação dos produtos permitidos e dos produtos proibidos. O uso de produtos químicos inadequados, corrosivos ou não recomendados pela contratada, especialmente por terceiros (tais como zeladores, empresas de limpeza ou funcionários do condomínio), poderá acarretar danos aos materiais, perda da garantia e isenção de responsabilidade da contratada por tais ocorrências.",
   "13. O contratante autoriza a contratada a realizar o registro fotográfico da instalação realizada descrita no presente contrato, durante ou após a sua conclusão, para finalidades de utilização como material de marketing e propaganda exclusivamente nos canais de comunicação da contratada.",
-  "14. Não é de responsabilidade da contratada a confecção e faturamento dos vidros e calhas, tendo liberalidade do contratante que a empresa faça o pedido e faturamento para ele.",
-  "15. O contratante declara estar ciente de que o faturamento do presente orçamento/pedido poderá ser realizado parte como Produto (NF-e), emitido pela FERREIRA ULHOA METAIS, e parte como Serviço (NFS-e), emitido pela FERREIRA ULHOA SERVIÇOS, conforme a natureza da operação e por razões operacionais, fiscais e tributárias, podendo as notas fiscais serem emitidas em CNPJs distintos, sem que isso implique alteração no valor total contratado, que permanece único e indivisível para fins de pagamento, de acordo com a legislação vigente.",
+  "14. Não é de responsabilidade da contratada a confecção e faturamento dos vidros e calhas, sendo ofertado ao contratante a possibilidade de que a empresa realize a medição correlativa e intermedie o pedido dos produtos e seu faturamento.",
+  "   14.1. Caso o valor total do pedido englobe a entrega de produtos e serviços pela contratada e vidros e calhas de responsabilidade produtiva de terceiros, conforme devidamente especificado na proposta submetida ao contratante, ficam cientes as partes que o valor relativo aos produtos descritos no item 14 constitui mera estimativa.",
+  "   14.2. O valor final estabelecido na forma do item 14.1 permanecerá inalterado, salvo exceções expressamente previstas neste contrato.",
+  "      14.2.1. Caso o valor final pago ao fornecedor seja inferior ao estimado, a diferença apurada será devida à contratada pela intermediação e medição realizados;",
+  "      14.2.2. Caso o valor final a ser pago seja superior ao estimado, a diferença encontrada deverá ser quitada pelo contratante na última parcela do pagamento estabelecido neste contrato.",
+  "15. O contratante declara estar ciente de que o faturamento do presente orçamento/pedido poderá ser realizado parte como Produto (NF-e), emitido pela FERREIRA ULHOA METAIS, e parte como Serviço (NFS-e), emitido pela FERREIRA ULHOA SERVIÇOS, conforme a natureza da operação e por razões operacionais, podendo as notas fiscais serem emitidas em CNPJs distintos, sem que isso implique alteração no valor total contratado, que permanece único e indivisível para fins de pagamento, de acordo com a legislação vigente.",
   "",
 
   "OBRIGAÇÕES DA CONTRATADA",
@@ -112,13 +116,13 @@ const linhas = [
   "   21.2. Informar à contratada sobre quaisquer desnivelamentos de piso nos locais onde a instalação será executada antes da assinatura do contrato; o descumprimento pode acarretar custos adicionais, os quais serão negociados e repassados ao cliente.",
   "22. Fornecer energia elétrica para que a contratada possa utilizar o maquinário necessário.",
   "23. Disponibilizar local seguro para guardar maquinário e matéria-prima.",
-  "24. Entregar as plantas de todas as tubulações, conforme itens 8 e 9 das “Informações Gerais”, quando da medição ou, no mais tardar, antes da instalação.",
+  "24. Entregar as plantas de todas as tubulações, conforme itens 8 e 9 das \"Informações Gerais\", quando da medição ou, no mais tardar, antes da instalação.",
   "25. Fornecer e instalar andaimes, equipamentos de içamento ou outros, caso seja necessário para a execução da instalação contratada.",
   "26. Se for necessário remover um guarda-corpo existente, a Ferreira Ulhoa poderá fazê-lo se estiver parafusado. No caso de estar chumbado, o contratante é responsável por providenciar a retirada.",
   "27. Remover e reinstalar redes de segurança, sempre que necessário para a execução da instalação contratada.",
   "28. Fornecer e executar todos os trabalhos não explicitados no escopo da proposta.",
   "29. Permitir o acesso dos funcionários da contratada às dependências da unidade habitacional para execução da instalação, desde que devidamente identificados, portando crachá e/ou uniforme.",
-  "30. Pagar nas datas acordadas o preço dos produtos conforme cronograma de pagamento localizado no quadro inicial da proposta em “Pagamento”.",
+  "30. Pagar nas datas acordadas o preço dos produtos conforme cronograma de pagamento localizado no quadro inicial da proposta em \"Pagamento\".",
   "31. Receber e verificar os produtos para identificação de vícios visíveis, para que possam ser solucionados imediatamente pela contratada, ressalvando-se a responsabilidade desta por vícios ocultos.",
   "32. Não modificar total ou parcialmente o objeto do contrato, salvo por acordo entre as partes.",
   "33. Cumprir as obrigações contratuais, sob pena de pagamento da multa de 50% (item 4 das Informações Gerais) e ressarcimento, especialmente na confecção dos produtos encomendados.",
@@ -134,7 +138,13 @@ const linhas = [
   "   • Atrasos por parte dos fornecedores de materiais e insumos necessários para a fabricação e instalação dos produtos, desde que informado pela contratada;",
   "   • Atrasos na liberação de todas as áreas da obra por parte do contratante, necessárias para a execução da(s) instalação(ões). Essa liberação só pode ocorrer quando todo acabamento e piso final da obra já tiver sido colocado, especialmente em áreas que contêm inclinação.",
   "37. A contratada não se responsabiliza por quaisquer danos, prejuízos ou custos adicionais decorrentes de atrasos ocasionados pelos fatores mencionados no item 36.",
-  "38. O prazo de entrega é contado apenas a partir do dia útil subsequente à aprovação do projeto pelo contratante, desde que tenha sido feito o pagamento da entrada e a medição definitiva no local."
+  "38. O prazo de entrega é contado apenas a partir do dia útil subsequente à aprovação do projeto pelo contratante, desde que tenha sido feito o pagamento da entrada e a medição definitiva no local.",
+  "39. O orçamento emitido pela contratada, identificado no cabeçalho deste instrumento, é parte integrante do presente contrato, sendo suas condições gerais aplicáveis em conjunto com as cláusulas aqui estabelecidas.",
+  "40. A assinatura eletrônica deste instrumento, realizada por meio de plataforma de assinatura digital certificada em consonância com a Medida Provisória 2.200-2/2001, tem plena validade jurídica nos termos da legislação vigente, equiparando-se à assinatura física para todos os fins de direito.",
+  "41. Fica eleito o foro da Comarca de Belo Horizonte/MG para dirimir quaisquer controvérsias oriundas deste contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja.",
+  "42. Todos os valores constantes neste contrato são líquidos, correspondendo ao montante que a contratada receberá efetivamente. Eventuais retenções de ISS, INSS, IR, PIS, COFINS ou quaisquer outros tributos incidentes sobre os pagamentos são de inteira responsabilidade e ônus do contratante, não podendo ser descontadas do valor contratado nem reduzir o montante devido à contratada.",
+  "43. A contratada não se responsabiliza por características visuais ou físicas inerentes ao processo de fabricação do vidro temperado ou laminado que estejam dentro dos limites estabelecidos pelas normas técnicas vigentes aplicáveis (ABNT e correlatas), não sendo tais características consideradas defeito de fabricação ou de instalação.",
+  "44. É vedado ao contratante reter, descontar ou compensar qualquer valor das parcelas devidas sem prévia concordância expressa e por escrito da contratada, sob pena de caracterização de inadimplemento contratual."
 ];
 
   const texto = linhas.join("\n");
