@@ -453,7 +453,7 @@ window.atualizarPropostaEditavel = async function () {
   dataPedidoEnviadoCliente: document.getElementById("dataPedidoEnviadoCliente")?.value || "",
   meioEnvioPedido: document.getElementById("meioEnvioPedido")?.value || "",
   dataPedidoAssinado: document.getElementById("dataPedidoAssinado")?.value || "",
-
+  prazoPrevisto: document.getElementById("prazoPrevisto")?.value || "",
   dataEntregaProjeto: document.getElementById("dataEntregaProjeto")?.value || "",
   dataInicioProjeto: document.getElementById("dataInicioProjeto")?.value || "",
   dataLiberacaoConferencia: document.getElementById("dataLiberacaoConferencia")?.value || "",
