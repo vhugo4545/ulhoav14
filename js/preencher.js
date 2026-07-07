@@ -212,6 +212,7 @@ async function carregarPropostaEditavel(proposta) {
     setIfExists("dataPedidoAssinado", dados.dataPedidoAssinado);
     setIfExists("dataEntregaProjeto", dados.dataEntregaProjeto);
     setIfExists("dataInicioProjeto", dados.dataInicioProjeto);
+    setIfExists("prazoPrevisto", dados.prazoPrevisto);
     setIfExists("dataLiberacaoConferencia", dados.dataLiberacaoConferencia);
     setIfExists("dataConferencia", dados.dataConferencia);
     setIfExists("obraLiberada", dados.obraLiberada);
