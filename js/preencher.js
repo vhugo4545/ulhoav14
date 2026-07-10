@@ -670,9 +670,6 @@ async function carregarPropostaEditavel(proposta) {
 
       const tbody = bloco.querySelector(`#tabela-${idSuffix} tbody`);
 
-      const tbody = bloco.querySelector(`#tabela-${idSuffix} tbody`);
-      tbody.innerHTML = "";
-
       const resumoEl = document.getElementById(`resumo-${idSuffix}`);
       let resumoPreenchido = false;
 
@@ -691,6 +688,7 @@ async function carregarPropostaEditavel(proposta) {
           resumoPreenchido = true;
           console.log("teste");
         }
+
 
         const tr = document.createElement("tr");
 
