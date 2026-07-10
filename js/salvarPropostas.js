@@ -185,8 +185,7 @@ async function salvarPropostaEditavel() {
         });
       });
 
-      // 📐 Parâmetros dos popups
-      const parametros = {};
+   const parametros = {};
       bloco.querySelectorAll(".tab-pane input[name]").forEach(input => {
         const nome = input.name;
         let valor = input.value?.trim();
@@ -194,19 +193,23 @@ async function salvarPropostaEditavel() {
         parametros[nome] = isNaN(valor) ? valor : parseFloat(valor);
       });
 
-      // 🔁 Campos calculados do popup
+      // [CAMPO NOVO] Informações do Produto (textarea — o seletor "input[name]" acima não pega textarea)
+      const textareaInformacoes = bloco.querySelector(`textarea[name="informacoesProduto"]`);
+      if (textareaInformacoes) parametros.informacoesProduto = textareaInformacoes.value?.trim() || "";
+
+      // [CAMPO NOVO] Previsão de Entrega — já é capturado automaticamente pelo loop acima
+      // (input[name="previsaoEntrega"] é um <input>, então cai no querySelectorAll(".tab-pane input[name]"))
+
       const camposPopupExtras = {};
       bloco.querySelectorAll(".tab-pane .campo-resultado").forEach(el => {
         const nome = el.id?.replace("campo-", "") || "";
-        if (!nome) return;
         const valor = el.textContent?.replace("R$", "").replace(",", ".").trim();
         camposPopupExtras[nome] = parseFloat(valor) || 0;
       });
 
-      // 🔒 Dados do popup salvos em groupPopupsData
       const dadosPopupSalvos = window.groupPopupsData?.[blocoId] || {};
 
-      if (itens.length > 0) {
+       if (itens.length > 0) {
         grupos.push({
           nome: nomeGrupo,
           ambiente,
