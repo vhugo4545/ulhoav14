@@ -515,6 +515,10 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                   <li class="nav-item">
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#${idSuffix}-aba2">Valores R$</button>
                   </li>
+                   <!-- [CAMPO NOVO] Botão da aba Informações -->
+                  <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#${idSuffix}-aba3">Informações</button>
+                  </li>
                 </ul>
                 <div class="tab-content pt-3">
                   <div class="tab-pane fade show active" id="${idSuffix}-aba1">
@@ -538,6 +542,19 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                             ${!estaEditandoModelo ? "readonly style='background:#f3f3f3'" : ""}>
                         </div>
                       `).join("")}
+                    </form>
+                  </div>
+                   <!-- [CAMPO NOVO] Conteúdo da aba Informações -->
+                  <div class="tab-pane fade" id="${idSuffix}-aba3">
+                    <form class="row g-2">
+                      <div class="col-12">
+                        <label class="form-label">Informações do Produto</label>
+                        <textarea name="informacoesProduto" class="form-control form-control-sm" rows="5"></textarea>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label">Previsão de Entrega</label>
+                        <input type="date" name="previsaoEntrega" class="form-control form-control-sm">
+                      </div>
                     </form>
                   </div>
                 </div>
