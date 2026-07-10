@@ -644,6 +644,10 @@ async function carregarPropostaEditavel(proposta) {
       const inputAmbiente = bloco.querySelector(`input[placeholder="Ambientes"]`);
       if (inputAmbiente && nomeAmbiente) inputAmbiente.value = nomeAmbiente;
 
+     
+      const inputAmbiente = bloco.querySelector(`input[placeholder="Ambientes"]`);
+      if (inputAmbiente && nomeAmbiente) inputAmbiente.value = nomeAmbiente;
+
       for (const [chave, valor] of Object.entries(grupo.parametros || {})) {
         const input = bloco.querySelector(`input[name="${chave}"]`);
 
@@ -655,6 +659,16 @@ async function carregarPropostaEditavel(proposta) {
           input.value = deveZerar ? "0" : valor;
         }
       }
+
+      // [CAMPO NOVO] Informações do Produto (textarea, aba3) — preenchido com valor salvo no servidor
+      const inputInformacoes = bloco.querySelector(`textarea[name="informacoesProduto"]`);
+      if (inputInformacoes) inputInformacoes.value = grupo.parametros?.informacoesProduto || "";
+
+      // [CAMPO NOVO] Previsão de Entrega (input date, aba3) — preenchido com valor salvo no servidor
+      const inputPrevisaoEntrega = bloco.querySelector(`input[name="previsaoEntrega"]`);
+      if (inputPrevisaoEntrega) inputPrevisaoEntrega.value = grupo.parametros?.previsaoEntrega || "";
+
+      const tbody = bloco.querySelector(`#tabela-${idSuffix} tbody`);
 
       const tbody = bloco.querySelector(`#tabela-${idSuffix} tbody`);
       tbody.innerHTML = "";
