@@ -641,9 +641,7 @@ async function carregarPropostaEditavel(proposta) {
         }
       }
 
-      const inputAmbiente = bloco.querySelector(`input[placeholder="Ambientes"]`);
-      if (inputAmbiente && nomeAmbiente) inputAmbiente.value = nomeAmbiente;
-
+  
      
       const inputAmbiente = bloco.querySelector(`input[placeholder="Ambientes"]`);
       if (inputAmbiente && nomeAmbiente) inputAmbiente.value = nomeAmbiente;
