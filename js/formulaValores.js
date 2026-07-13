@@ -553,7 +553,7 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                       </div>
                       <div class="col-6">
                         <label class="form-label">Previsão de Entrega</label>
-                        <input type="date" name="previsaoEntrega" class="form-control form-control-sm">
+                      <input type="number" name="previsaoEntrega" class="form-control form-control-sm">
                       </div>
                     </form>
                   </div>
