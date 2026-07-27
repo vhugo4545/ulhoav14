@@ -7843,7 +7843,7 @@ function mostrarPopupSync(texto, tipo = "sucesso") {
 
 async function sincronizarPDVparaKommo() {
   const idProposta = new URLSearchParams(window.location.search).get("id");
-
+  preencherNumeroPedidoKommo()
   if (!idProposta) {
     console.warn("[SYNC] ID da proposta não encontrado na URL.");
     return;
