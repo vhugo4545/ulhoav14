@@ -7756,6 +7756,91 @@ async function enviarOSServico({
   }
 }
 
+// ── Popup visual de retorno (sucesso / erro) ─────────────────────
+// Cria o overlay uma única vez (se ainda não existir na página) e
+// reaproveita nas próximas chamadas.
+function mostrarPopupSync(texto, tipo = "sucesso") {
+  let overlay = document.getElementById("sync-popup-overlay");
+
+  if (!overlay) {
+    const estilo = document.createElement("style");
+    estilo.textContent = `
+      #sync-popup-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15,30,60,.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 100000;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      }
+      #sync-popup-overlay.aberto { display: flex; }
+      .sync-popup {
+        background: #fff;
+        border-radius: 16px;
+        padding: 26px 24px 20px;
+        width: 300px;
+        max-width: 90vw;
+        text-align: center;
+        box-shadow: 0 12px 32px rgba(0,0,0,.2);
+      }
+      .sync-popup-icone {
+        width: 52px;
+        height: 52px;
+        margin: 0 auto 14px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+      }
+      .sync-popup-icone.sucesso { background: #e6f7ee; }
+      .sync-popup-icone.erro { background: #fdecea; }
+      .sync-popup-texto {
+        color: #2c3e50;
+        font-size: .92rem;
+        line-height: 1.45;
+        margin: 0 0 18px;
+        white-space: pre-line;
+      }
+      .sync-popup-fechar {
+        background: #114187;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 9px 22px;
+        font-weight: 600;
+        font-size: .88rem;
+        cursor: pointer;
+      }
+      .sync-popup-fechar:hover { background: #0b305e; }
+    `;
+    document.head.appendChild(estilo);
+
+    overlay = document.createElement("div");
+    overlay.id = "sync-popup-overlay";
+    overlay.innerHTML = `
+      <div class="sync-popup">
+        <div class="sync-popup-icone" id="sync-popup-icone"></div>
+        <p class="sync-popup-texto" id="sync-popup-texto"></p>
+        <button class="sync-popup-fechar" id="sync-popup-fechar">Entendi</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const fechar = () => overlay.classList.remove("aberto");
+    overlay.querySelector("#sync-popup-fechar").addEventListener("click", fechar);
+    overlay.addEventListener("click", e => { if (e.target === overlay) fechar(); });
+  }
+
+  const icone = overlay.querySelector("#sync-popup-icone");
+  icone.className = `sync-popup-icone ${tipo}`;
+  icone.textContent = tipo === "sucesso" ? "\u{2705}" : "\u{274C}";
+  overlay.querySelector("#sync-popup-texto").textContent = texto;
+  overlay.classList.add("aberto");
+}
+
 async function sincronizarPDVparaKommo() {
   const idProposta = new URLSearchParams(window.location.search).get("id");
 
@@ -7768,7 +7853,7 @@ async function sincronizarPDVparaKommo() {
   function parseBRL(texto) {
     if (!texto) return 0;
     const limpo = texto
-      .replace(/\u00A0/g, " ")
+      .replace(/ /g, " ")
       .replace(/R\$\s*/g, "")
       .replace(/\./g, "")
       .replace(",", ".")
@@ -7789,7 +7874,7 @@ async function sincronizarPDVparaKommo() {
     || document.getElementById("numeroPedido")?.getAttribute("data-valor-original")?.trim();
 
   if (!numeroPedido) {
-    console.log("[SYNC] numeroPedido vazio — buscando próximo número no contador...");
+    console.log("[SYNC] numeroPedido vazio, buscando próximo número no contador...");
     try {
       const contadorRes = await fetch("https://contator-ulhoa-3d28d89efa68.herokuapp.com/pedido");
       if (contadorRes.ok) {
@@ -7819,7 +7904,7 @@ async function sincronizarPDVparaKommo() {
   // ── Valor Total da Venda ──────────────────────────
   const valorFinalTotalEl    = document.getElementById("valorFinalTotal");
   const valorFinalTotalTexto = (valorFinalTotalEl?.textContent || valorFinalTotalEl?.innerText || "")
-    .replace(/\u00A0/g, " ").trim();
+    .replace(/ /g, " ").trim();
   const valorFinalTotal = parseBRL(valorFinalTotalTexto);
   if (valorFinalTotal > 0) campos.kommo_valor_venda = valorFinalTotal;
 
@@ -7858,13 +7943,12 @@ async function sincronizarPDVparaKommo() {
   campos.kommo_valor_nf_servico = valorNFServico || 0;
   campos.kommo_valor_fat_direto = valorFatDireto || 0;
 
-// ── Vencimento Entrada = data da primeira parcela ───
-// ── Vencimento Entrada = data da primeira parcela ───
-const todasDatasParcelas = [...document.querySelectorAll("#listaParcelas .data-parcela")]
-  .map(el => el.value?.trim())
-  .filter(Boolean);
-const primeiraDataParcela = todasDatasParcelas[0] || null;
-if (primeiraDataParcela) campos.kommo_vencimento_entrada = primeiraDataParcela;
+  // ── Vencimento Entrada = data da primeira parcela ───
+  const todasDatasParcelas = [...document.querySelectorAll("#listaParcelas .data-parcela")]
+    .map(el => el.value?.trim())
+    .filter(Boolean);
+  const primeiraDataParcela = todasDatasParcelas[0] || null;
+  if (primeiraDataParcela) campos.kommo_vencimento_entrada = primeiraDataParcela;
 
   // ── Datas ─────────────────────────────────────────
   const dataPedidoEnviado   = document.getElementById("dataPedidoEnviadoCliente")?.value;
@@ -7883,6 +7967,7 @@ if (primeiraDataParcela) campos.kommo_vencimento_entrada = primeiraDataParcela;
 
   if (!Object.keys(campos).length) {
     console.warn("[SYNC] Nenhum campo preenchido para sincronizar.");
+    mostrarPopupSync("Nenhum campo preenchido para sincronizar com a Kommo.", "erro");
     return;
   }
 
@@ -7901,8 +7986,8 @@ if (primeiraDataParcela) campos.kommo_vencimento_entrada = primeiraDataParcela;
       }
     );
 
-   const resultado = await resposta.json();
-console.log("lead_atual completo:", resultado.lead_atual);
+    const resultado = await resposta.json();
+    console.log("lead_atual completo:", resultado.lead_atual);
 
     if (resposta.ok) {
       // ── Loga estado real retornado pelo servidor ──
@@ -7911,7 +7996,7 @@ console.log("lead_atual completo:", resultado.lead_atual);
 
       const getField = (id) => cf.find(f => f.field_id === id)?.values?.[0]?.value ?? null;
 
-      console.group("✅ [SYNC] Sucesso — estado atual na Kommo");
+      console.group("✅ [SYNC] Sucesso, estado atual na Kommo");
       console.log("Lead ID:            ", resultado.lead_id);
       console.log("Lead nome:          ", resultado.lead_nome);
       console.log("Campos atualizados: ", resultado.campos_atualizados);
@@ -7932,7 +8017,10 @@ console.log("lead_atual completo:", resultado.lead_atual);
       }
       console.groupEnd();
 
-      alert("✅ Dados sincronizados com a Kommo com sucesso!");
+      mostrarPopupSync(
+        `Dados sincronizados com a Kommo com sucesso!\nLead: ${resultado.lead_nome || resultado.lead_id || ""}`,
+        "sucesso"
+      );
     } else {
       console.group("❌ [SYNC] Erro do servidor");
       console.error("HTTP status:", resposta.status);
@@ -7940,12 +8028,18 @@ console.log("lead_atual completo:", resultado.lead_atual);
       console.error("Detalhes:", resultado?.details);
       console.error("Validation errors:", JSON.stringify(resultado?.details?.['validation-errors'], null, 2));
       console.groupEnd();
+
+      mostrarPopupSync(
+        `Falha ao sincronizar com a Kommo.\n${resultado?.error || "Erro desconhecido no servidor."}`,
+        "erro"
+      );
     }
 
     return resultado;
 
   } catch (err) {
-    console.error("[SYNC] ❌ Erro de conexão:", err.message);
+    console.error("[SYNC] Erro de conexão:", err.message);
+    mostrarPopupSync("Erro de conexão ao sincronizar com a Kommo. Verifique sua internet e tente novamente.", "erro");
   }
 }
 
