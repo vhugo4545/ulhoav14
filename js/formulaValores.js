@@ -544,13 +544,31 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                       `).join("")}
                     </form>
                   </div>
+                  
                    <!-- [CAMPO NOVO] Conteúdo da aba Informações -->
                   <div class="tab-pane fade" id="${idSuffix}-aba3">
                     <form class="row g-2">
-                      <div class="col-12">
-                        <label class="form-label">Informações do Produto</label>
-                        <textarea name="informacoesProduto" class="form-control form-control-sm" rows="5"></textarea>
-                      </div>
+                  <div class="col-12">
+  <label class="form-label">Informações do Produto</label>
+  <input
+    type="text"
+    name="informacoesProduto"
+    class="form-control form-control-sm"
+    list="opcoesInformacoesProduto"
+    autocomplete="off"
+    placeholder="Selecione ou digite as informações do produto"
+  >
+  <datalist id="opcoesInformacoesProduto">
+    <option value="dias úteis após assinatura do cliente no projeto desse respectivo item">
+    <option value="dias úteis após instalação da estrutura desse respectivo item ser finalizada">
+    <option value="dias úteis após pagamento pelo cliente de todo(s) o(s) vidro(s) desse respectivo item">
+    <option value="dias úteis após liberação/entrega do material pelo fornecedor à Ferreira Ulhoa">
+    <option value="dias úteis após assinatura do contrato pelo cliente">
+    <option value="Personalizado">
+  </datalist>
+</div>
+
+
                       <div class="col-6">
                         <label class="form-label">Previsão de Entrega</label>
                       <input type="number" name="previsaoEntrega" class="form-control form-control-sm">
