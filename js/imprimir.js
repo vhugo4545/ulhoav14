@@ -338,7 +338,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
   const dados = {
     numero: getValue("numeroOrcamento"),
     numeroPedido: getValue("numeroPedido"),
-    data: new Date(getValue("dataOrcamento")).toLocaleDateString("pt-BR"),
+    data: formatarDataBR(getValue("dataOrcamento")),
     origem: getValue("origemCliente"),
     nomeOrigem: getValue("nomeOrigem"),
     codigoOrigem: getValue("codigoOrigem"),
