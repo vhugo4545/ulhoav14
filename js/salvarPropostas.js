@@ -97,10 +97,9 @@ async function salvarPropostaEditavel() {
       }
     }
 
-    const numeroOrcamento = await preencherNumeroOrcamento();
-
+    // ⚠️ Número do orçamento NÃO é buscado aqui mais — só depois de passar nas validações
     const camposFormulario = {
-      numeroOrcamento: numeroOrcamento,
+      numeroOrcamento: "",
       dataOrcamento: document.getElementById("dataOrcamento")?.value || "",
       origemCliente: document.getElementById("origemCliente")?.value || "",
       clientes,
@@ -281,6 +280,10 @@ async function salvarPropostaEditavel() {
         detalhes: errosObrigatorios
       };
     }
+
+    // ✅ Só busca/gera (e queima) o número do orçamento depois que passou em TODAS as validações
+    const numeroOrcamento = await preencherNumeroOrcamento();
+    camposFormulario.numeroOrcamento = numeroOrcamento;
 
     const numeroProposta = camposFormulario.numeroOrcamento || Date.now().toString();
     const proposta = {
