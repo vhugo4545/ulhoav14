@@ -169,12 +169,24 @@
   </div>
 
   <script>
-    const BASE_URL = 'http://localhost:3000/contador';
+    const BASE_URL = 'https://contator-ulhoa-3d28d89efa68.herokuapp.com';
     const PROD_ATU_URL = "https://ulhoa-0a02024d350a.herokuapp.com/produtos/atualizar";
     const CLIENTE_ATU_URL = "https://ulhoa-0a02024d350a.herokuapp.com/clientes/atualizar";
     const retornoEl = document.getElementById("retorno-atualizacao");
     const barraProdutos = document.getElementById("barra-produtos");
     const barraClientes = document.getElementById("barra-clientes");
+
+    // Mapeia os nomes internos do painel para os recursos reais da API
+    const MAPA_RECURSOS = {
+      orcamentos: 'orcamento',
+      propostas: 'pedido'
+    };
+
+    // Mapeia para os campos retornados por GET /status (não incrementa)
+    const MAPA_STATUS = {
+      orcamentos: 'orcamento_proximo',
+      propostas: 'pedido_proximo'
+    };
 
     function formatarNumero(numero, digitos = 5) {
       const num = Number(numero);
@@ -182,18 +194,23 @@
     }
 
     async function carregarValores() {
-      for (const nome of ['orcamentos', 'propostas']) {
-        try {
-          const res = await fetch(`${BASE_URL}/valor/${nome}`);
-          if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
+      try {
+        // GET /status não incrementa o contador — usado só para exibir
+        const res = await fetch(`${BASE_URL}/status`);
+        if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
 
-          const data = await res.json();
-          const valor = Number(data.valorAtual) || 1;
+        const data = await res.json();
+
+        for (const nome of ['orcamentos', 'propostas']) {
+          const campoStatus = MAPA_STATUS[nome];
+          const valor = Number(data[campoStatus]) || 1;
 
           document.getElementById(nome).value = valor;
           document.getElementById(`valor-${nome}`).innerText = `Valor atual: ${formatarNumero(valor)}`;
-        } catch (err) {
-          console.error(`❌ Erro ao carregar contador '${nome}':`, err);
+        }
+      } catch (err) {
+        console.error(`❌ Erro ao carregar contadores:`, err);
+        for (const nome of ['orcamentos', 'propostas']) {
           document.getElementById(`valor-${nome}`).innerText = "❌ Erro ao carregar valor atual";
         }
       }
@@ -209,26 +226,22 @@
       }
 
       try {
-        const res = await fetch(`${BASE_URL}/definir/${nome}`, {
+        const recurso = MAPA_RECURSOS[nome];
+        const res = await fetch(`${BASE_URL}/${recurso}/set`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ novoValor })
+          body: JSON.stringify({ numero: novoValor })
         });
 
         const data = await res.json();
 
-        if (!res.ok) {
+        if (!res.ok || !data.ok) {
           console.error("❌ Erro ao salvar:", data);
-          alert(`❌ Erro ao salvar: ${data.erro || 'Resposta inválida'}`);
+          alert(`❌ Erro ao salvar: ${data.error || 'Resposta inválida'}`);
           return;
         }
 
-        if (data.valorDefinido === undefined) {
-          console.warn("⚠️ Resposta sem 'valorDefinido':", data);
-          alert("⚠️ Valor ajustado não foi retornado corretamente.");
-        } else {
-          alert(`✅ Novo valor de ${nome}: ${formatarNumero(data.valorDefinido)}`);
-        }
+        alert(`✅ Novo valor de ${nome}: ${formatarNumero(data.proximo_numero)}`);
         carregarValores();
       } catch (err) {
         console.error("❌ Erro de conexão:", err);
