@@ -425,7 +425,260 @@ document.addEventListener("DOMContentLoaded", async () => {
   .os-title{font:600 16px system-ui;margin:0 0 8px}
   .os-muted{font:12px system-ui;color:#6b7280}
 </style>
+<style>
+  #pdv-float {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 220px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(17,65,135,0.12), 0 2px 6px rgba(17,65,135,0.08);
+    z-index: 99999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    user-select: none;
+    overflow: hidden;
+    transition: width .25s ease, height .25s ease, border-radius .25s ease;
+  }
+  #pdv-float.minimizado {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+  }
+  #pdv-float-header {
+    background: #114187;
+    color: #fff;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: grab;
+    font-weight: 600;
+    font-size: .85rem;
+    letter-spacing: .01em;
+  }
+  #pdv-float-header:active { cursor: grabbing; }
+  #pdv-float.minimizado #pdv-float-header {
+    height: 48px;
+    width: 48px;
+    padding: 0;
+    justify-content: center;
+  }
+  #pdv-float.minimizado #pdv-float-header span,
+  #pdv-float.minimizado #pdv-float-body {
+    display: none;
+  }
+  #pdv-float.minimizado #pdv-float-min {
+    font-size: 1.3rem;
+  }
+  #pdv-float-min {
+    background: transparent;
+    border: none;
+    color: #fff;
+    opacity: .85;
+    font-size: 1rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+    border-radius: 6px;
+    transition: opacity .15s, background .15s;
+  }
+  #pdv-float-min:hover {
+    opacity: 1;
+    background: rgba(255,255,255,.12);
+  }
+  #pdv-float-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .botao-atualizar {
+    background: #f4f7fc;
+    color: #114187;
+    border: 1px solid #e1e8f5;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-weight: 600;
+    font-size: .85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background .15s, border-color .15s, transform .1s;
+  }
+  .botao-atualizar:hover { background: #e9f0fc; border-color: #c9d9f2; }
+  .botao-atualizar:active { transform: scale(.97); }
 
+  /* Popup bonito */
+  #pdv-popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,30,60,.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    animation: pdv-fade .15s ease;
+  }
+  #pdv-popup-overlay.aberto { display: flex; }
+  .pdv-popup {
+    background: #fff;
+    border-radius: 16px;
+    padding: 26px 24px 20px;
+    width: 300px;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: 0 12px 32px rgba(0,0,0,.2);
+    animation: pdv-pop .18s ease;
+  }
+  .pdv-popup-icone {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: #e9f0fc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+  .pdv-popup-texto {
+    color: #2c3e50;
+    font-size: .92rem;
+    line-height: 1.45;
+    margin: 0 0 18px;
+  }
+  .pdv-popup-fechar {
+    background: #114187;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 9px 22px;
+    font-weight: 600;
+    font-size: .88rem;
+    cursor: pointer;
+  }
+  .pdv-popup-fechar:hover { background: #0b305e; }
+  @keyframes pdv-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pdv-pop { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+</style>
+
+<div id="pdv-float">
+  <div id="pdv-float-header">
+    <span>Painel</span>
+    <button id="pdv-float-min" title="Minimizar">&#8722;</button>
+  </div>
+  <div id="pdv-float-body">
+    <button class="botao-atualizar" id="btn-prod">&#128260; Atualizar Produtos</button>
+    <button class="botao-atualizar" id="btn-cli">&#128260; Atualizar Clientes</button>
+  </div>
+</div>
+
+<div id="pdv-popup-overlay">
+  <div class="pdv-popup">
+    <div class="pdv-popup-icone">&#128260;</div>
+    <p class="pdv-popup-texto" id="pdv-popup-texto"></p>
+    <button class="pdv-popup-fechar" id="pdv-popup-fechar">Entendi</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const painel = document.getElementById('pdv-float');
+  const header = document.getElementById('pdv-float-header');
+  const btnMin = document.getElementById('pdv-float-min');
+  const overlay = document.getElementById('pdv-popup-overlay');
+  const popupTexto = document.getElementById('pdv-popup-texto');
+  const popupFechar = document.getElementById('pdv-popup-fechar');
+
+  // Move o painel para dentro do container principal da página (#content
+  // ou .content), que é onde ele deve viver nessa tela de PDV. Se esse
+  // container não existir, cai no <body> como alternativa.
+  const alvo = document.getElementById('content') || document.querySelector('.content') || document.body;
+  alvo.appendChild(painel);
+  document.body.appendChild(overlay);
+
+  function mostrarPopup(texto) {
+    popupTexto.textContent = texto;
+    overlay.classList.add('aberto');
+  }
+  function fecharPopup() { overlay.classList.remove('aberto'); }
+  popupFechar.addEventListener('click', fecharPopup);
+  overlay.addEventListener('click', e => { if (e.target === overlay) fecharPopup(); });
+
+  // ---- Arrastar (mouse e toque) ----
+  let arrastando = false, offX = 0, offY = 0;
+
+  function iniciarArraste(x, y) {
+    arrastando = true;
+    const rect = painel.getBoundingClientRect();
+    offX = x - rect.left;
+    offY = y - rect.top;
+    painel.style.left = rect.left + 'px';
+    painel.style.top = rect.top + 'px';
+    painel.style.right = 'auto';
+    painel.style.bottom = 'auto';
+  }
+  function moverArraste(x, y) {
+    if (!arrastando) return;
+    let left = Math.max(0, Math.min(window.innerWidth - painel.offsetWidth, x - offX));
+    let top = Math.max(0, Math.min(window.innerHeight - painel.offsetHeight, y - offY));
+    painel.style.left = left + 'px';
+    painel.style.top = top + 'px';
+  }
+  function pararArraste() { arrastando = false; }
+
+  header.addEventListener('mousedown', e => iniciarArraste(e.clientX, e.clientY));
+  document.addEventListener('mousemove', e => moverArraste(e.clientX, e.clientY));
+  document.addEventListener('mouseup', pararArraste);
+
+  header.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    iniciarArraste(t.clientX, t.clientY);
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!arrastando) return;
+    const t = e.touches[0];
+    moverArraste(t.clientX, t.clientY);
+  }, { passive: true });
+  document.addEventListener('touchend', pararArraste);
+
+  // ---- Minimizar / restaurar ----
+  btnMin.addEventListener('click', e => {
+    e.stopPropagation();
+    const minimizado = painel.classList.toggle('minimizado');
+    btnMin.innerHTML = minimizado ? '&#128260;' : '&#8722;';
+    btnMin.title = minimizado ? 'Restaurar' : 'Minimizar';
+
+    // Sempre a mesma posição fixa (canto superior direito), tanto ao
+    // minimizar quanto ao restaurar — nada de recalcular com base em
+    // onde o painel estava, pra não "pular" de lugar.
+    painel.style.top = '20px';
+    painel.style.right = '20px';
+    painel.style.left = 'auto';
+    painel.style.bottom = 'auto';
+  });
+
+  // ---- Atualizar produtos / clientes ----
+  // A atualização no servidor demora vários minutos e não retorna nada
+  // útil para o usuário nesse meio tempo. Então: dispara a requisição
+  // em segundo plano (sem aguardar/travar o botão) e só avisa que foi
+  // solicitado, num popup.
+  function solicitarAtualizacao(url, metodo, nome) {
+    mostrarPopup(`Atualização de ${nome} solicitada! Isso pode levar alguns minutos. Você não precisa esperar nesta tela, pode continuar usando o sistema normalmente.`);
+    fetch(url, { method: metodo }).catch(() => {});
+  }
+
+  document.getElementById('btn-prod').onclick = () =>
+    solicitarAtualizacao('https://ulhoa-0a02024d350a.herokuapp.com/produtos/atualizar', 'POST', 'produtos');
+
+  document.getElementById('btn-cli').onclick = () =>
+    solicitarAtualizacao('https://ulhoa-0a02024d350a.herokuapp.com/clientes/atualizar', 'GET', 'clientes');
+})();
+</script>
 <script>
 let CLIENTES_CACHE = [];
 
