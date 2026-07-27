@@ -1249,16 +1249,16 @@ function criarCamposEnderecoObra() {
                     placeholder="Área ___: ___ dias úteis após aprovação..."></textarea>
                 </div>
 
-                <div class="mb-3">
-                  <label class="form-label">Condição de Pagamento</label>
-                  <select class="form-select" id="condicaoPagamento">
-                    <option value="">Selecione</option>
-                    <option value="debito">40% de entrada, 40% após 30 dias e 20% após 60 dias.</option>
-                    <option value="debito">40% de entrada, 30% após 30 dias e 30% após 60 dias.</option>
-                    <option value="debito">60% de entrada, 40% após 30 dias.</option>
-                    <option value="parcelado">Personalizado</option>
-                  </select>
-                </div>
+            <div class="mb-3">
+  <label class="form-label">Condição de Pagamento</label>
+  <select class="form-select" id="condicaoPagamento">
+    <option value="">Selecione</option>
+    <option value="debito_40_40_20">40% de entrada, 40% após 30 dias e 20% após 60 dias.</option>
+    <option value="debito_40_30_30">40% de entrada, 30% após 30 dias e 30% após 60 dias.</option>
+    <option value="debito_60_40">60% de entrada, 40% após 30 dias.</option>
+    <option value="parcelado">Personalizado</option>
+  </select>
+</div>
 
                 <div id="parcelamentoContainer" style="display: none;">
                   <label class="form-label">Parcelas</label>
