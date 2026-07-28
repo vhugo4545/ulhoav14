@@ -544,12 +544,7 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                       `).join("")}
                     </form>
                   </div>
-
-                  
-                   <!-- [CAMPO NOVO] Conteúdo da aba Informações -->
-                  <div class="tab-pane fade" id="${idSuffix}-aba3">
-                    <form class="row g-2">
-                 <div class="col-12 mb-3">
+<div class="col-12 mb-3">
   <label class="form-label">Informações do Produto</label>
 
   <style>
@@ -577,44 +572,49 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
 
   <div class="tags-info-produto">
     <button type="button" class="tag-info-produto" onclick="
-      document.getElementById('${idSuffix}-informacoesProduto').value = this.textContent;
+      const campo = this.closest('.col-12').querySelector('textarea[name=informacoesProduto]');
+      campo.value = this.textContent;
       this.parentElement.querySelectorAll('.tag-info-produto').forEach(b => b.classList.remove('selecionada'));
       this.classList.add('selecionada');
     ">dias úteis após assinatura do cliente no projeto desse respectivo item</button>
 
     <button type="button" class="tag-info-produto" onclick="
-      document.getElementById('${idSuffix}-informacoesProduto').value = this.textContent;
+      const campo = this.closest('.col-12').querySelector('textarea[name=informacoesProduto]');
+      campo.value = this.textContent;
       this.parentElement.querySelectorAll('.tag-info-produto').forEach(b => b.classList.remove('selecionada'));
       this.classList.add('selecionada');
     ">dias úteis após instalação da estrutura desse respectivo item ser finalizada</button>
 
     <button type="button" class="tag-info-produto" onclick="
-      document.getElementById('${idSuffix}-informacoesProduto').value = this.textContent;
+      const campo = this.closest('.col-12').querySelector('textarea[name=informacoesProduto]');
+      campo.value = this.textContent;
       this.parentElement.querySelectorAll('.tag-info-produto').forEach(b => b.classList.remove('selecionada'));
       this.classList.add('selecionada');
     ">dias úteis após pagamento pelo cliente de todo(s) o(s) vidro(s) desse respectivo item</button>
 
     <button type="button" class="tag-info-produto" onclick="
-      document.getElementById('${idSuffix}-informacoesProduto').value = this.textContent;
+      const campo = this.closest('.col-12').querySelector('textarea[name=informacoesProduto]');
+      campo.value = this.textContent;
       this.parentElement.querySelectorAll('.tag-info-produto').forEach(b => b.classList.remove('selecionada'));
       this.classList.add('selecionada');
     ">dias úteis após liberação/entrega do material pelo fornecedor à Ferreira Ulhoa</button>
 
     <button type="button" class="tag-info-produto" onclick="
-      document.getElementById('${idSuffix}-informacoesProduto').value = this.textContent;
+      const campo = this.closest('.col-12').querySelector('textarea[name=informacoesProduto]');
+      campo.value = this.textContent;
       this.parentElement.querySelectorAll('.tag-info-produto').forEach(b => b.classList.remove('selecionada'));
       this.classList.add('selecionada');
     ">dias úteis após assinatura do contrato pelo cliente</button>
 
     <button type="button" class="tag-info-produto" onclick="
-      document.getElementById('${idSuffix}-informacoesProduto').value = this.textContent;
+      const campo = this.closest('.col-12').querySelector('textarea[name=informacoesProduto]');
+      campo.value = this.textContent;
       this.parentElement.querySelectorAll('.tag-info-produto').forEach(b => b.classList.remove('selecionada'));
       this.classList.add('selecionada');
     ">Personalizado</button>
   </div>
 
   <textarea
-    id="${idSuffix}-informacoesProduto"
     name="informacoesProduto"
     class="form-control form-control-sm"
     autocomplete="off"
