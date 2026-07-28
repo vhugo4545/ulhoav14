@@ -532,7 +532,7 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                   </li>
                    <!-- [CAMPO NOVO] Botão da aba Informações -->
                   <li class="nav-item">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#${idSuffix}-aba3">Informações</button>
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#${idSuffix}-aba3">Prazos</button>
                   </li>
                 </ul>
                 <div class="tab-content pt-3">
