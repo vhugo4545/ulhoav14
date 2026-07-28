@@ -1,3 +1,18 @@
+function preencherInformacoesProduto(botao, texto, personalizado = false) {
+  const wrapper = botao.closest('.informacoes-produto-wrapper');
+  const campo = wrapper?.querySelector('textarea[name="informacoesProduto"]');
+  if (!campo) return;
+
+  campo.value = personalizado ? "" : texto;
+  campo.dataset.valorOriginal = campo.value;
+
+  campo.dispatchEvent(new Event("input", { bubbles: true }));
+  campo.dispatchEvent(new Event("change", { bubbles: true }));
+
+  if (personalizado) campo.focus();
+}
+
+
 function preencherValoresFinanceiros(blocoId) {
 
   const bloco = document.getElementById(blocoId);
@@ -517,7 +532,7 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                   </li>
                    <!-- [CAMPO NOVO] Botão da aba Informações -->
                   <li class="nav-item">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#${idSuffix}-aba3">Prazos</button>
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#${idSuffix}-aba3">Informações</button>
                   </li>
                 </ul>
                 <div class="tab-content pt-3">
@@ -544,30 +559,47 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                       `).join("")}
                     </form>
                   </div>
-      <!-- [CAMPO NOVO] Conteúdo da aba Informações -->
-                  <div class="tab-pane fade" id="${idSuffix}-aba3">
-                    <form class="row g-2">
-                  <div class="col-12">
-  <label class="form-label">Informações do Produto</label>
-  <input
-    type="text"
-    name="informacoesProduto"
-    class="form-control form-control-sm"
-    list="opcoesInformacoesProduto"
-    autocomplete="off"
-    placeholder="Selecione ou digite as informações do produto"
-  >
-  <datalist id="opcoesInformacoesProduto">
-    <option value="dias úteis após assinatura do cliente no projeto desse respectivo item">
-    <option value="dias úteis após instalação da estrutura desse respectivo item ser finalizada">
-    <option value="dias úteis após pagamento pelo cliente de todo(s) o(s) vidro(s) desse respectivo item">
-    <option value="dias úteis após liberação/entrega do material pelo fornecedor à Ferreira Ulhoa">
-    <option value="dias úteis após assinatura do contrato pelo cliente">
-    <option value="Personalizado">
-  </datalist>
-</div>
+                  
+               <div class="tab-pane fade" id="${idSuffix}-aba3">
+  <form class="row g-2">
+    <div class="col-12 informacoes-produto-wrapper">
+      <label class="form-label">Informações do Produto</label>
 
+      <div class="d-flex flex-column gap-1 mb-2 opcoes-informacoes-produto">
+        <button type="button" class="btn btn-outline-secondary btn-sm text-start"
+          onclick="preencherInformacoesProduto(this, 'dias úteis após assinatura do cliente no projeto desse respectivo item')">
+          Após assinatura do cliente
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-sm text-start"
+          onclick="preencherInformacoesProduto(this, 'dias úteis após instalação da estrutura desse respectivo item ser finalizada')">
+          Após instalação da estrutura
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-sm text-start"
+          onclick="preencherInformacoesProduto(this, 'dias úteis após pagamento pelo cliente de todo(s) o(s) vidro(s) desse respectivo item')">
+          Após pagamento do(s) vidro(s)
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-sm text-start"
+          onclick="preencherInformacoesProduto(this, 'dias úteis após liberação/entrega do material pelo fornecedor à Ferreira Ulhoa')">
+          Após liberação do fornecedor
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-sm text-start"
+          onclick="preencherInformacoesProduto(this, 'dias úteis após assinatura do contrato pelo cliente')">
+          Após assinatura do contrato
+        </button>
+        <button type="button" class="btn btn-outline-primary btn-sm text-start"
+          onclick="preencherInformacoesProduto(this, '', true)">
+          Personalizado
+        </button>
+      </div>
 
+      <textarea
+        name="informacoesProduto"
+        class="form-control form-control-sm"
+        rows="3"
+        placeholder="Selecione uma opção acima ou digite as informações do produto"
+        data-valor-original=""
+      ></textarea>
+    </div>
 
                       <div class="col-6">
                         <label class="form-label">Previsão de Entrega</label>
