@@ -544,84 +544,27 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                       `).join("")}
                     </form>
                   </div>
-<div class="col-12 mb-3">
+      <!-- [CAMPO NOVO] Conteúdo da aba Informações -->
+                  <div class="tab-pane fade" id="${idSuffix}-aba3">
+                    <form class="row g-2">
+                  <div class="col-12">
   <label class="form-label">Informações do Produto</label>
-
-  <style>
-    .tags-info-produto { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
-    .tag-info-produto {
-      background:#f1f3f5;
-      border:1px solid #dee2e6;
-      border-radius:16px;
-      padding:5px 12px;
-      font-size:0.75rem;
-      line-height:1.3;
-      color:#495057;
-      cursor:pointer;
-      white-space:normal;
-      text-align:left;
-      max-width:220px;
-    }
-    .tag-info-produto:hover { background:#e9ecef; border-color:#adb5bd; }
-    .tag-info-produto.selecionada {
-      background:#495057;
-      border-color:#495057;
-      color:#fff;
-    }
-  </style>
-
-  <div class="tags-info-produto">
-    <button type="button" class="tag-info-produto" onclick="
-      const campo = this.closest('.col-12').querySelector('textarea[name=informacoesProduto]');
-      campo.value = this.textContent;
-      this.parentElement.querySelectorAll('.tag-info-produto').forEach(b => b.classList.remove('selecionada'));
-      this.classList.add('selecionada');
-    ">dias úteis após assinatura do cliente no projeto desse respectivo item</button>
-
-    <button type="button" class="tag-info-produto" onclick="
-      const campo = this.closest('.col-12').querySelector('textarea[name=informacoesProduto]');
-      campo.value = this.textContent;
-      this.parentElement.querySelectorAll('.tag-info-produto').forEach(b => b.classList.remove('selecionada'));
-      this.classList.add('selecionada');
-    ">dias úteis após instalação da estrutura desse respectivo item ser finalizada</button>
-
-    <button type="button" class="tag-info-produto" onclick="
-      const campo = this.closest('.col-12').querySelector('textarea[name=informacoesProduto]');
-      campo.value = this.textContent;
-      this.parentElement.querySelectorAll('.tag-info-produto').forEach(b => b.classList.remove('selecionada'));
-      this.classList.add('selecionada');
-    ">dias úteis após pagamento pelo cliente de todo(s) o(s) vidro(s) desse respectivo item</button>
-
-    <button type="button" class="tag-info-produto" onclick="
-      const campo = this.closest('.col-12').querySelector('textarea[name=informacoesProduto]');
-      campo.value = this.textContent;
-      this.parentElement.querySelectorAll('.tag-info-produto').forEach(b => b.classList.remove('selecionada'));
-      this.classList.add('selecionada');
-    ">dias úteis após liberação/entrega do material pelo fornecedor à Ferreira Ulhoa</button>
-
-    <button type="button" class="tag-info-produto" onclick="
-      const campo = this.closest('.col-12').querySelector('textarea[name=informacoesProduto]');
-      campo.value = this.textContent;
-      this.parentElement.querySelectorAll('.tag-info-produto').forEach(b => b.classList.remove('selecionada'));
-      this.classList.add('selecionada');
-    ">dias úteis após assinatura do contrato pelo cliente</button>
-
-    <button type="button" class="tag-info-produto" onclick="
-      const campo = this.closest('.col-12').querySelector('textarea[name=informacoesProduto]');
-      campo.value = this.textContent;
-      this.parentElement.querySelectorAll('.tag-info-produto').forEach(b => b.classList.remove('selecionada'));
-      this.classList.add('selecionada');
-    ">Personalizado</button>
-  </div>
-
-  <textarea
+  <input
+    type="text"
     name="informacoesProduto"
     class="form-control form-control-sm"
+    list="opcoesInformacoesProduto"
     autocomplete="off"
-    rows="3"
-    style="resize:none"
     placeholder="Selecione ou digite as informações do produto"
-  ></textarea>
+  >
+  <datalist id="opcoesInformacoesProduto">
+    <option value="dias úteis após assinatura do cliente no projeto desse respectivo item">
+    <option value="dias úteis após instalação da estrutura desse respectivo item ser finalizada">
+    <option value="dias úteis após pagamento pelo cliente de todo(s) o(s) vidro(s) desse respectivo item">
+    <option value="dias úteis após liberação/entrega do material pelo fornecedor à Ferreira Ulhoa">
+    <option value="dias úteis após assinatura do contrato pelo cliente">
+    <option value="Personalizado">
+  </datalist>
 </div>
 
 
