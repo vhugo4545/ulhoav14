@@ -18,14 +18,12 @@ function adicionarParcela() {
     <label class="form-label mb-0">Tipo Monetário</label>
     <select class="form-select tipo-monetario" id="selectTipoMonetario">
       <option value="" disabled selected>Selecione…</option>
-      <option value="PIX">Pix</option>
-      <option value="DIN">Dinheiro</option>
-      <option value="CRCP">Cartão Parcelado</option>
       <option value="CRC">Cartão de Crédito</option>
-      <option value="CRD">Cartão de Débito</option>
-      <option value="BOLR">Boleto Recorrente</option>
-      <option value="BOLV">Boleto à Vista</option>
-      <option value="PER">Permuta</option>
+      <option value="DIN">Dinheiro</option>
+      <option value="BOLV">Boleto Bancario</option>
+      <option value="PIX">Pix</option>
+      <option value="TED">TED (Tranferência Eletrônica Disponível)</option>
+      <option value="PER">Outros</option>
     </select>
   </div>
 
