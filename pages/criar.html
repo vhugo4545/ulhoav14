@@ -134,9 +134,21 @@
                       <input type="text" class="form-control nomeContato">
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label">Função</label>
-                      <input type="text" class="form-control funcaoCliente">
-                    </div>
+  <label class="form-label">Função / Cargo</label>
+  <input type="text" class="form-control funcaoCliente" list="funcaoOptions" placeholder="Selecione ou digite">
+  <datalist id="funcaoOptions">
+    <option value="Arquiteto(a)">
+    <option value="Compras">
+    <option value="Construtora">
+    <option value="Engenheiro(a)">
+    <option value="Esposa / Marido">
+    <option value="Financeiro">
+    <option value="Gerenciadora de Obra">
+    <option value="Mestre de Obra">
+    <option value="Proprietário(a)">
+    <option value="Síndico/Administradora">
+  </datalist>
+</div>
                     <div class="col-md-6">
                       <label class="form-label">Telefone</label>
                       <input type="text" class="form-control telefoneCliente">
