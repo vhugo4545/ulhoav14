@@ -185,7 +185,8 @@ async function carregarPropostaEditavel(proposta) {
 
     console.log(proposta.numeroPedido, dados.numeroPedido);
 
-    setIfExists("dataOrcamento", dados.dataOrcamento);
+   setIfExists("dataOrcamento", proposta.criado_em?.split("T")[0] ?? ""); document.getElementById("dataOrcamento").readOnly = true;
+    
     setIfExists("origemCliente", dados.origemCliente);
 
     // Endereço de cobrança / principal
