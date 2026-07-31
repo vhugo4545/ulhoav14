@@ -126,7 +126,7 @@ const dados = {
   corpoHTML += `
     <div class="border p-2 text-end fw-bold mt-4 bg-light">Total Geral: R$ ${totalGeral.toFixed(2).replace('.', ',')}</div>
     <div class="border p-2 mt-3">
-      <strong>Prazo:</strong><br>${dados.prazos}<br><br>
+      <strong>PRAZO PREVISTO:</strong><br>${dados.prazos}<br><br>
       <strong>Condições de Pagamento:</strong><br>${dados.condicao}<br><br>
       <strong>Condições Gerais:</strong><br>${dados.condicoesGerais}
     </div>
