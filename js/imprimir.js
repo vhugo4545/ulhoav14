@@ -258,28 +258,73 @@ function mostrarPopupSelecaoGruposEstetico(grupos, valorFinal, onConfirmar) {
 // Função auxiliar para formatar valores em Real
 function formatarReal(valor) {
   return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}// ==========================
+// VALIDAÇÃO: INSUMOS COM VALOR OU QUANTIDADE ZERADOS
+// (ignora a linha 1 de cada tabela = Produto Acabado / máscara)
+// ==========================
+function validarInsumosZerados() {
+  const parseBRLLocal = (valor) => {
+    if (valor == null || valor === "") return 0;
+    const str = String(valor).replace(/\u00A0/g, " ").trim();
+    if (str.includes(",")) {
+      const limpo = str.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+      const n = Number(limpo);
+      return isNaN(n) ? 0 : n;
+    }
+    const limpo = str.replace(/[^\d.-]/g, "");
+    const n = Number(limpo);
+    return isNaN(n) ? 0 : n;
+  };
+  const problemas = [];
+  document.querySelectorAll("table[id^='tabela-bloco-']").forEach(tabela => {
+    const grupoId = tabela.id.replace("tabela-", "").trim();
+    const inputAmbiente = document.querySelector(`input[data-id-grupo='${grupoId}'][placeholder='Ambiente']`);
+    const nomeAmbiente = inputAmbiente?.value?.trim() || "Sem Ambiente";
+    const linhas = Array.from(tabela.querySelectorAll("tbody tr"));
+    linhas.forEach((linha, idx) => {
+      if (idx === 0) return; // linha 1 = Produto Acabado (máscara), não valida
+      const descricao = linha.querySelectorAll("td")?.[1]?.textContent.trim() || "(sem descrição)";
+      const custoFinal = parseBRLLocal(linha.querySelector("td.custo-unitario")?.textContent);
+      const qtdInput = linha.querySelector("input.quantidade");
+      const quantidade = qtdInput ? parseFloat(qtdInput.value) : 0;
+      if (custoFinal === 0) {
+        problemas.push(`${nomeAmbiente} → ${descricao}: Valor de Custo Final zerado`);
+      }
+      if (!quantidade || quantidade === 0) {
+        problemas.push(`${nomeAmbiente} → ${descricao}: Quantidade zerada`);
+      }
+    });
+  });
+  return problemas;
 }
 
 function gerarHTMLParaImpressao(gruposOcultarProduto) {
+  // ==========================
+  // VALIDAÇÃO ANTES DE IMPRIMIR
+  // ==========================
+  const problemas = validarInsumosZerados();
+  if (problemas.length > 0) {
+    const continuar = confirm(
+      "Atenção! Os seguintes insumos estão com Valor de Custo Final ou Quantidade zerados:\n\n" +
+      problemas.map(p => `• ${p}`).join("\n") +
+      "\n\nDeseja continuar mesmo assim?"
+    );
+    if (!continuar) return;
+  }
   const getValue = id => document.getElementById(id)?.value || "-";
-
   const getTextOrValue = (el) => {
     if (!el) return "";
     if (typeof el.value === "string" && el.value.trim()) return el.value.trim();
     if (typeof el.textContent === "string" && el.textContent.trim()) return el.textContent.trim();
     return "";
   };
-
   // ==========================
   // HELPERS MONETÁRIOS AJUSTADOS
   // ==========================
   const parseBRL = (valor) => {
     if (valor == null || valor === "") return 0;
-
     if (typeof valor === "number") return valor;
-
     const str = String(valor).replace(/\u00A0/g, " ").trim();
-
     // formato BR: 162.782,72
     if (str.includes(",")) {
       const limpo = str
@@ -289,13 +334,11 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       const n = Number(limpo);
       return isNaN(n) ? 0 : n;
     }
-
     // formato numérico JS: 162782.72
     const limpo = str.replace(/[^\d.-]/g, "");
     const n = Number(limpo);
     return isNaN(n) ? 0 : n;
   };
-
   const fmtBRL = (n) => {
     const numero = typeof n === "number" ? n : parseBRL(n);
     return numero.toLocaleString("pt-BR", {
@@ -303,27 +346,23 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       currency: "BRL"
     });
   };
-
   const formatarDataBR = (iso) => {
     if (!iso) return "-";
     const [y, m, d] = String(iso).split("-");
     if (!y || !m || !d) return "-";
     return `${d.padStart(2, "0")}/${m.padStart(2, "0")}/${y}`;
   };
-
   const normalizarCondicao = (txt) => {
     const t = String(txt || "").trim();
     if (!t) return "";
     if (/^selecione/i.test(t)) return "";
     return t;
   };
-
   const multilineToBR = (txt) => {
     const t = String(txt || "").trim();
     if (!t) return "";
     return t.replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
   };
-
   const formatarReal = (n) => {
     try {
       return fmtBRL(n);
@@ -331,7 +370,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       return `R$ ${(Number(n) || 0).toFixed(2)}`;
     }
   };
-
   // ==========================
   // DADOS GERAIS
   // ==========================
@@ -352,9 +390,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     condicoesGerais: getValue("condicoesGerais"),
     vendedor: document.getElementById("vendedorResponsavel")?.selectedOptions[0]?.textContent || "-"
   };
-
   dados.prazos = (dados.prazos && dados.prazos !== "-") ? multilineToBR(dados.prazos) : "-";
-
   // ==========================
   // CLIENTES / CONTATOS
   // ==========================
@@ -368,12 +404,10 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       telefone: getTextOrValue(row.querySelector(".telefoneCliente")),
     }))
     .filter(c => c.nomeCliente || c.nomeContato || c.telefone || c.cpfCnpj);
-
   const principal = clientes[0] || {};
   dados.nomeCliente = principal.nomeCliente || "-";
   dados.cpfCnpj = principal.cpfCnpj || "-";
   dados.telefoneCliente = principal.telefone || "-";
-
   dados.contatos = clientes.map((c, idx) => ({
     cliente: idx === 0 ? `${c.nomeCliente || "-"} (Responsável)` : (c.nomeCliente || "-"),
     cpfCnpj: c.cpfCnpj || "-",
@@ -381,32 +415,24 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     funcao: c.funcao || "-",
     telefone: c.telefone || "-",
   }));
-
   // ==========================
   // GRUPOS
   // ==========================
   let gruposDados = [];
-
   document.querySelectorAll("table[id^='tabela-bloco-']").forEach(tabela => {
     const grupoId = tabela.id.replace("tabela-", "").trim();
     const inputAmbiente = document.querySelector(`input[data-id-grupo='${grupoId}'][placeholder='Ambiente']`);
     const nomeAmbiente = inputAmbiente?.value.trim() || "Sem Ambiente";
     const linhaProduto = tabela.querySelector("tbody tr");
-
     let resumoGrupo = document.getElementById(`resumo-${grupoId}`)?.value?.trim() || "";
     resumoGrupo = resumoGrupo.replace(/\n/g, "<br>");
-
     const totalGrupoTexto =
       tabela.querySelector("tfoot td[colspan='6'] strong")?.textContent || "R$ 0,00";
-
     const totalGrupo = parseBRL(totalGrupoTexto);
-
     let colunas = linhaProduto?.querySelectorAll("td");
     let descricao = colunas?.[1]?.textContent.trim() || "-";
     let qtd = linhaProduto?.querySelector("input.quantidade")?.value || "1";
-
     const ocultar = !!(gruposOcultarProduto && gruposOcultarProduto[grupoId]);
-
     gruposDados.push({
       grupoId,
       nomeAmbiente,
@@ -417,7 +443,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       ocultar
     });
   });
-
   // ==========================
   // AGRUPA POR AMBIENTE
   // ==========================
@@ -426,17 +451,13 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
     if (!ambientes[g.nomeAmbiente]) ambientes[g.nomeAmbiente] = [];
     ambientes[g.nomeAmbiente].push(g);
   });
-
   let totalGeral = 0;
   let corpoHTML = "";
   let contadorGlobal = 1;
-
   Object.entries(ambientes).forEach(([nomeAmbiente, grupos]) => {
     const valorTotalAmbiente = grupos.reduce((soma, x) => soma + x.totalGrupo, 0);
     totalGeral += valorTotalAmbiente;
-
     const gruposVisiveis = grupos.filter(g => !g.ocultar);
-
     gruposVisiveis.forEach(g => {
       corpoHTML += `
         <div class="mt-4 border">
@@ -462,7 +483,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
           </table>
         </div>`;
     });
-
     corpoHTML += `
       <div class="border p-2 mt-2 text-end bg-light">
         <strong>Total do Ambiente ${nomeAmbiente.toUpperCase()}:</strong> 
@@ -470,7 +490,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       </div>
     `;
   });
-
   // ==========================
   // PARCELAS
   // ==========================
@@ -480,11 +499,9 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       const tipo = selTipo?.selectedOptions?.[0]?.textContent?.trim()
                 || selTipo?.value?.trim()
                 || "-";
-
       const wrapCond = row.querySelector(".condicao-wrapper");
       const selCond = wrapCond?.querySelector("select.condicao-pagto");
       const inputCond = wrapCond?.querySelector("input, textarea");
-
       let condicaoRaw = "";
       if (inputCond && getTextOrValue(inputCond)) {
         condicaoRaw = getTextOrValue(inputCond);
@@ -493,27 +510,20 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
                   || selCond?.value?.trim()
                   || "";
       }
-
       const condicao = normalizarCondicao(condicaoRaw);
-
       const valorRaw = (row.querySelector("input.valor-parcela")?.value || "").trim();
       let valorExib = valorRaw || "-";
-
       if (valorRaw && !valorRaw.includes("%")) {
         const num = parseBRL(valorRaw);
         valorExib = fmtBRL(num);
       }
-
       const vencISO = (row.querySelector("input.data-parcela")?.value || "").trim();
       const venc = vencISO ? formatarDataBR(vencISO) : "-";
-
       const temAlgo = (tipo !== "-" || condicao !== "" || valorExib !== "-" || venc !== "-");
       if (!temAlgo) return null;
-
       return { idx: idx + 1, tipo, condicao, valorExib, venc };
     })
     .filter(Boolean);
-
   const parcelasHTML = parcelas.length
     ? `
       <div class="mt-4">
@@ -543,26 +553,20 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       </div>
     `
     : "";
-
   // ==========================
   // TOTAIS GERAIS
   // ==========================
   const valorFinalComDescontoStr =
     document.getElementById("valorFinalTotal")?.textContent || "R$ 0,00";
-
   const valorFinalComDesconto = parseBRL(valorFinalComDescontoStr);
-
   const campoDesconto = document.getElementById("campoDescontoFinal")?.value?.trim();
-
   const temDescontoValido =
     campoDesconto &&
     valorFinalComDesconto > 0 &&
     valorFinalComDesconto < totalGeral;
-
   const descontoAplicado = temDescontoValido
     ? (totalGeral - valorFinalComDesconto)
     : 0;
-
   let totalizadoresHTML = temDescontoValido
     ? `
       <div class="border p-2 text-end mt-4 bg-light">
@@ -574,7 +578,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       <div class="border p-2 text-end mt-4 bg-light">
         <div class="fw-bold">Total líquido: R$: ${formatarReal(totalGeral)}</div>
       </div>`;
-
   // ==========================
   // TABELA DE CONTATOS
   // ==========================
@@ -601,12 +604,10 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       </table>
     `
     : "";
-
   // ==========================
   // HTML COMPLETO
   // ==========================
   const condicoesGeraisFormatada = multilineToBR(dados.condicoesGerais || "");
-
   const htmlCompleto = `
     <html>
       <head>
@@ -635,7 +636,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
               </td>
             </tr>
           </table>
-
           <table class="table table-bordered table-sm w-100 mt-2">
             <tr>
               <td><strong>Cliente (Responsável):</strong></td>
@@ -645,29 +645,22 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
             <tr><td><strong>Endereço da Obra:</strong></td><td>${dados.enderecoObra}</td></tr>
             <tr><td><strong>Vendedor:</strong></td><td>${dados.vendedor}</td></tr>
           </table>
-
           ${tabelaContatosHTML}
         </div>
-
         ${corpoHTML}
-
         ${parcelasHTML}
-
         ${totalizadoresHTML}
-
         <div class="border p-2 mt-3">
           <strong>PRAZO PREVISTO:</strong><br>${dados.prazos}<br><br>
           <strong>Condições de Pagamento:</strong><br>${dados.condicao}<br><br>
           <strong>Condições Gerais:</strong><br>${condicoesGeraisFormatada}
         </div>
-
         <br><br>
         <center>
           Assinatura Contratante:
           <br><br>
           _______________________________________________________________
         </center>
-
         <br><br>
         <center>
           Assinatura Contratada:
@@ -676,7 +669,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
         </center>
       </body>
     </html>`;
-
   // ==========================
   // IMPRESSÃO
   // ==========================
@@ -692,11 +684,8 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
       printWindow.print();
     };
   }
-
   abrirJanelaParaImpressao(htmlCompleto);
 }
-
-
 function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
