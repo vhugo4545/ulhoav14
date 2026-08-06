@@ -1,7 +1,7 @@
 let contadorGlobal = 1;
 
 // 1. Função principal: chamada pelo botão "Visualizar Proposta"
-// 1. Função principal: chamada pelo botão "Visualizar Proposta"
+
 
 function gerarOrcamentoParaImpressaoCompleta() {
   function moedaBRParaNumero(valor) {
