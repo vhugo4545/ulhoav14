@@ -253,91 +253,10 @@ function mostrarPopupSelecaoGruposEstetico(grupos, valorFinal, onConfirmar) {
 
 }
 
-
-
 // Função auxiliar para formatar valores em Real
 function formatarReal(valor) {
   return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}// ==========================
-// VALIDAÇÃO: INSUMOS COM VALOR OU QUANTIDADE ZERADOS
-// (ignora a linha 1 de cada tabela = Produto Acabado / máscara)
-// ==========================
-function validarInsumosZerados() {
-  const parseBRLLocal = (valor) => {
-    if (valor == null || valor === "") return 0;
-    const str = String(valor).replace(/\u00A0/g, " ").trim();
-    if (str.includes(",")) {
-      const limpo = str.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
-      const n = Number(limpo);
-      return isNaN(n) ? 0 : n;
-    }
-    const limpo = str.replace(/[^\d.-]/g, "");
-    const n = Number(limpo);
-    return isNaN(n) ? 0 : n;
-  };
-  const problemas = [];
-  document.querySelectorAll("table[id^='tabela-bloco-']").forEach(tabela => {
-    const grupoId = tabela.id.replace("tabela-", "").trim();
-    const inputAmbiente = document.querySelector(`input[data-id-grupo='${grupoId}'][placeholder='Ambiente']`);
-    const nomeAmbiente = inputAmbiente?.value?.trim() || "Sem Ambiente";
-    const linhas = Array.from(tabela.querySelectorAll("tbody tr"));
-    linhas.forEach((linha, idx) => {
-      if (idx === 0) return; // linha 1 = Produto Acabado (máscara), não valida
-      const descricao = linha.querySelectorAll("td")?.[1]?.textContent.trim() || "(sem descrição)";
-      const custoFinal = parseBRLLocal(linha.querySelector("td.custo-unitario")?.textContent);
-      const qtdInput = linha.querySelector("input.quantidade");
-      const quantidade = qtdInput ? parseFloat(qtdInput.value) : 0;
-      if (custoFinal === 0) {
-        problemas.push(`${nomeAmbiente} → ${descricao}: Valor de Custo Final zerado`);
-      }
-      if (!quantidade || quantidade === 0) {
-        problemas.push(`${nomeAmbiente} → ${descricao}: Quantidade zerada`);
-      }
-    });
-  });
-  return problemas;
 }
-
-// ==========================
-// VALIDAÇÃO: INSUMOS COM VALOR OU QUANTIDADE ZERADOS
-// (ignora a linha 1 de cada tabela = Produto Acabado / máscara)
-// ==========================
-function validarInsumosZerados() {
-  const parseBRLLocal = (valor) => {
-    if (valor == null || valor === "") return 0;
-    const str = String(valor).replace(/\u00A0/g, " ").trim();
-    if (str.includes(",")) {
-      const limpo = str.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
-      const n = Number(limpo);
-      return isNaN(n) ? 0 : n;
-    }
-    const limpo = str.replace(/[^\d.-]/g, "");
-    const n = Number(limpo);
-    return isNaN(n) ? 0 : n;
-  };
-  const problemas = [];
-  document.querySelectorAll("table[id^='tabela-bloco-']").forEach(tabela => {
-    const grupoId = tabela.id.replace("tabela-", "").trim();
-    const inputAmbiente = document.querySelector(`input[data-id-grupo='${grupoId}'][placeholder='Ambiente']`);
-    const nomeAmbiente = inputAmbiente?.value?.trim() || "Sem Ambiente";
-    const linhas = Array.from(tabela.querySelectorAll("tbody tr"));
-    linhas.forEach((linha, idx) => {
-      if (idx === 0) return; // linha 1 = Produto Acabado (máscara), não valida
-      const descricao = linha.querySelectorAll("td")?.[1]?.textContent.trim() || "(sem descrição)";
-      const custoFinal = parseBRLLocal(linha.querySelector("td.custo-unitario")?.textContent);
-      const qtdInput = linha.querySelector("input.quantidade");
-      const quantidade = qtdInput ? parseFloat(qtdInput.value) : 0;
-      if (custoFinal === 0) {
-        problemas.push(`${nomeAmbiente} → ${descricao}: Valor de Custo Final zerado`);
-      }
-      if (!quantidade || quantidade === 0) {
-        problemas.push(`${nomeAmbiente} → ${descricao}: Quantidade zerada`);
-      }
-    });
-  });
-  return problemas;
-}
-
 // ==========================
 // VALIDAÇÃO: INSUMOS COM VALOR OU QUANTIDADE ZERADOS
 // (ignora a linha 1 de cada tabela = Produto Acabado / máscara)
@@ -766,6 +685,8 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
   }
   abrirJanelaParaImpressao(htmlCompleto);
 }
+
+
 function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
@@ -1930,8 +1851,6 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   printWindow.document.write(htmlCompleto);
   printWindow.document.close();
 }
-
-
 
 
 function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
@@ -3880,8 +3799,6 @@ function gerarFolha4RelatorioEntrega() {
   printWindow.document.close();
 }
 
-
-
 function gerarHistoricoDeProducaoParaImpressao() {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
@@ -4565,7 +4482,6 @@ function gerarHistoricoDeProducaoParaImpressao() {
   printWindow.document.write(htmlCompleto);
   printWindow.document.close();
 }
-
 
 function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
