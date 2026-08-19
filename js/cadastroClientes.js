@@ -176,6 +176,9 @@ async function enviarClienteParaAPI() {
   const contato = (document.getElementById("popupCliente_contato")?.value || "").trim();
   const inscricao_municipal = (document.getElementById("popupCliente_inscricao_municipal")?.value || "").trim();
   const inscricao_estadual = (document.getElementById("popupCliente_inscricao_estadual")?.value || "").trim();
+  const telefone1_numero = (document.getElementById("popupCliente_telefone1_numero")?.value || "").trim();
+  const chave_pix = (document.getElementById("popupCliente_chave_pix")?.value || "").trim();
+  const observacao = (document.getElementById("popupCliente_observacao")?.value || "").trim();
 
   // Validações extras
 
@@ -218,14 +221,17 @@ async function enviarClienteParaAPI() {
     cnpj_cpf,
     contato,
     endereco,
-    endereco_numero: "",   // você pode separar depois em outro campo se quiser
+    endereco_numero: "",
     bairro,
     complemento: "",
     estado,
     cidade,
     cep,
     inscricao_municipal,
-    inscricao_estadual
+    inscricao_estadual,
+    telefone1_numero,
+    ...(chave_pix ? { cChavePix: chave_pix } : {}),
+    ...(observacao ? { observacao } : {})
   };
 
   console.log("➡️ Enviando cliente para o servidor:", cliente);
@@ -244,30 +250,17 @@ async function enviarClienteParaAPI() {
     const resultado = await resposta.json().catch(() => null);
     console.log("📨 Resposta do servidor:", resultado);
 
-    if (!resposta.ok || !resultado) {
-      const msg = resultado?.mensagem || "Erro ao incluir cliente.";
-      console.error("❌ Erro HTTP ao incluir cliente:", msg);
-      if (typeof mostrarPopupCustomizado === "function") {
-        mostrarPopupCustomizado("❌ Erro ao incluir cliente", msg, "danger");
-      } else {
-        alert(msg);
-      }
-      // if (typeof ocultarCarregando === "function") ocultarCarregando();
-      return;
-    }
-
-    if (!resultado.sucesso) {
+    if (!resultado || !resultado.sucesso) {
       const detalhe =
         resultado?.omieErro?.faultstring ||
         resultado?.mensagem ||
         "Erro ao incluir cliente na Omie.";
-      console.error("❌ Erro de negócio ao incluir cliente:", detalhe);
+      console.error("❌ Erro ao incluir cliente:", detalhe);
       if (typeof mostrarPopupCustomizado === "function") {
         mostrarPopupCustomizado("❌ Erro ao incluir cliente", detalhe, "danger");
       } else {
         alert(detalhe);
       }
-      // if (typeof ocultarCarregando === "function") ocultarCarregando();
       return;
     }
 
