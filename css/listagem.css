@@ -111,6 +111,20 @@ input.form-control[placeholder="Ambiente"] {
     background: #f0f0f0;
     transform: scale(1.05);
 }
+.sidebar-button.btn-bloqueado {
+  opacity: 0.55;
+  position: relative;
+}
+.sidebar-button.btn-bloqueado::after {
+  content: "🚫";
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 11px;
+  line-height: 1;
+  pointer-events: none;
+}
+
 /* CONTEÚDO PRINCIPAL */
 .content {
     flex: 1;
