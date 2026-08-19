@@ -1046,6 +1046,27 @@ const VV_CONDICOES_PAGTO_PARCELAS = [
   { value: "personalizado", label: "Personalizado" }
 ];
 
+/* Converte códigos antigos do sistema para os códigos Omie (tipo_documento_cadastro).
+   Aceita tanto o valor antigo quanto o novo — idempotente. */
+const _VV_MEIO_PAG_MAP = {
+  CRC:  "03", CRCP: "03",          // Cartão de Crédito / Parcelado
+  CRD:  "04",                      // Cartão de Débito
+  DIN:  "01",                      // Dinheiro
+  BOLV: "15", BOLR: "15",          // Boleto
+  PIX:  "17",                      // PIX Dinâmico
+  TED:  "18",                      // TED
+  PER:  "99"                       // Outros / Permuta
+};
+
+function vvNormalizarCodigoMeioPagamento(codigo) {
+  const s = String(codigo || "").trim();
+  if (!s) return "";
+  // já é código Omie numérico → devolve como está
+  if (/^\d+$/.test(s)) return s;
+  // código antigo → converte
+  return _VV_MEIO_PAG_MAP[s.toUpperCase()] || s;
+}
+
 function vvParseBRLControleParcelas(valor) {
   if (typeof vv_parseBRL === "function") return vv_parseBRL(valor || "0");
   return Number(
@@ -1155,7 +1176,7 @@ function vvNormalizarParcelaControle(parcela = {}) {
     0;
 
   return {
-    tipo_monetario: String(parcela?.tipo_monetario ?? parcela?.tipo ?? "").trim(),
+    tipo_monetario: vvNormalizarCodigoMeioPagamento(parcela?.tipo_monetario ?? parcela?.tipo ?? ""),
     condicao_pagto: String(parcela?.condicao_pagto ?? parcela?.condicao ?? "").trim(),
     valor: vvRound2ControleParcelas(vvParseBRLControleParcelas(valorBruto)),
     vencimento: String(parcela?.vencimento ?? parcela?.data ?? parcela?.previsao ?? "").trim(),
@@ -1253,14 +1274,19 @@ function vvMontarParcelasProdutoPayloadOmie(parcelasProduto = []) {
     parcelasValidas.reduce((acc, parcela) => acc + Number(parcela.valor || 0), 0)
   );
 
-  return parcelasValidas.map((parcela, index) => ({
-    numero_parcela: index + 1,
-    percentual: totalParcelas > 0
-      ? Number(((Number(parcela.valor || 0) / totalParcelas) * 100).toFixed(2))
-      : 0,
-    data_vencimento: formatarDataBR(parcela.vencimento),
-    valor: vvRound2ControleParcelas(parcela.valor)
-  }));
+  return parcelasValidas.map((parcela, index) => {
+    const obj = {
+      numero_parcela: index + 1,
+      percentual: totalParcelas > 0
+        ? Number(((Number(parcela.valor || 0) / totalParcelas) * 100).toFixed(2))
+        : 0,
+      data_vencimento: formatarDataBR(parcela.vencimento),
+      valor: vvRound2ControleParcelas(parcela.valor)
+    };
+    const meio = String(parcela.tipo_monetario || "").trim();
+    if (meio) obj.meio_pagamento = meio;
+    return obj;
+  });
 }
 
 function vvCriarLinhaParcelaFormularioFallback() {
@@ -1271,14 +1297,14 @@ function vvCriarLinhaParcelaFormularioFallback() {
       <label class="form-label mb-0">Tipo Monetario</label>
       <select class="form-select tipo-monetario">
         <option value="" disabled selected>Selecione...</option>
-        <option value="PIX">Pix</option>
-        <option value="DIN">Dinheiro</option>
-        <option value="CRCP">Cartao Parcelado</option>
-        <option value="CRC">Cartao de Credito</option>
-        <option value="CRD">Cartao de Debito</option>
-        <option value="BOLR">Boleto Recorrente</option>
-        <option value="BOLV">Boleto a Vista</option>
-        <option value="PER">Permuta</option>
+        <option value="17">Pix</option>
+        <option value="01">Dinheiro</option>
+        <option value="03">Cartao Parcelado</option>
+        <option value="03">Cartao de Credito</option>
+        <option value="04">Cartao de Debito</option>
+        <option value="15">Boleto Recorrente</option>
+        <option value="15">Boleto a Vista</option>
+        <option value="99">Permuta</option>
       </select>
     </div>
     <div class="col-4 col-lg-3">
@@ -1659,14 +1685,14 @@ function abrirPopupParcelamentoProdutosServicos({
             <label class="form-label mb-0">Tipo Monetario</label>
             <select class="form-select tipo-monetario-transfer">
               <option value="" disabled selected>Selecione...</option>
-              <option value="PIX">Pix</option>
-              <option value="DIN">Dinheiro</option>
-              <option value="CRCP">Cartao Parcelado</option>
-              <option value="CRC">Cartao de Credito</option>
-              <option value="CRD">Cartao de Debito</option>
-              <option value="BOLR">Boleto Recorrente</option>
-              <option value="BOLV">Boleto a Vista</option>
-              <option value="PER">Permuta</option>
+              <option value="17">Pix</option>
+              <option value="01">Dinheiro</option>
+              <option value="03">Cartao Parcelado</option>
+              <option value="03">Cartao de Credito</option>
+              <option value="04">Cartao de Debito</option>
+              <option value="15">Boleto Recorrente</option>
+              <option value="15">Boleto a Vista</option>
+              <option value="99">Permuta</option>
             </select>
           </div>
           <div class="col-12 col-xl-4">
@@ -5760,14 +5786,14 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
           <label class="form-label mb-0" style="font-size:12px;">Tipo Monetário</label>
           <select class="form-select form-select-sm tipo-mon-so">
             <option value="" disabled selected>Selecione...</option>
-            <option value="PIX">Pix</option>
-            <option value="DIN">Dinheiro</option>
-            <option value="CRCP">Cartão Parcelado</option>
-            <option value="CRC">Cartão de Crédito</option>
-            <option value="CRD">Cartão de Débito</option>
-            <option value="BOLR">Boleto Recorrente</option>
-            <option value="BOLV">Boleto à Vista</option>
-            <option value="PER">Permuta</option>
+            <option value="17">Pix</option>
+            <option value="01">Dinheiro</option>
+            <option value="03">Cartão Parcelado</option>
+            <option value="03">Cartão de Crédito</option>
+            <option value="04">Cartão de Débito</option>
+            <option value="15">Boleto Recorrente</option>
+            <option value="15">Boleto à Vista</option>
+            <option value="99">Permuta</option>
           </select>
         </div>
         <div>
@@ -7553,6 +7579,24 @@ function montarPayloadOS({
     }
   ];
 
+  // ── Parcelas da OS ────────────────────────────────────────
+  const parcelasOsValidas = (parcelasServico || []).filter(p => Number(p?.valor || 0) > 0);
+  const totalParcelasOs = parcelasOsValidas.reduce((s, p) => s + Number(p.valor || 0), 0);
+
+  const Parcelas = parcelasOsValidas.map((p, i) => {
+    const parc = {
+      nOrdem:       i + 1,
+      dDtVenc:      String(p.vencimento || p.previsao || p.data || "").trim(),
+      nValParc:     Number((Number(p.valor || 0)).toFixed(2)),
+      nPercParc:    totalParcelasOs > 0
+        ? Number(((Number(p.valor || 0) / totalParcelasOs) * 100).toFixed(2))
+        : 0
+    };
+    const meio = String(p.tipo_monetario || "").trim();
+    if (meio) parc.cMeioPagamento = meio;
+    return parc;
+  });
+
   const payload = {
     Cabecalho,
     Departamentos: [],
@@ -7564,6 +7608,10 @@ function montarPayloadOS({
     InformacoesAdicionais,
     ServicosPrestados
   };
+
+  if (Parcelas.length > 0) {
+    payload.Parcelas = Parcelas;
+  }
 
   window.__vvUltimoPayloadOSOmie = JSON.parse(JSON.stringify(payload));
 
