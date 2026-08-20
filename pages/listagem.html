@@ -13,6 +13,12 @@
    
   <!-- Menu lateral -->
   <aside class="sidebar">
+    <div class="sidebar-header">
+      <button class="sidebar-button" onclick="logout()" title="Sair">
+        <span class="material-icons-outlined">logout</span> Sair
+      </button>
+    </div>
+
     <ul></ul>
 
     <div class="sidebar-footer">
@@ -372,10 +378,43 @@ document.addEventListener('DOMContentLoaded', () => {
     </script>
   </main>
 
+  <script src="../js/utils.js" defer></script>
   <script src="../js/validarToken.js" defer></script>
   <script src="../js/carregamento.js" defer></script>
   <script src="../js/list.js" defer></script>
   <script src="../js/auth.js" defer></script>
   <script src="../js/notificacoesGestor.js" defer></script>
+
+  <!-- Botão voltar ao topo -->
+  <button id="btn-topo" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Voltar ao topo" style="
+    display: none;
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 999;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: #0f766e;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.25);
+    align-items: center;
+    justify-content: center;
+    transition: background .2s, transform .15s;
+  ">
+    <span class="material-icons-outlined" style="font-size:22px;">arrow_upward</span>
+  </button>
+  <script>
+    (function () {
+      const btn = document.getElementById('btn-topo');
+      window.addEventListener('scroll', function () {
+        btn.style.display = window.scrollY > 300 ? 'flex' : 'none';
+      });
+      btn.addEventListener('mouseenter', function () { btn.style.background = '#0d6560'; });
+      btn.addEventListener('mouseleave', function () { btn.style.background = '#0f766e'; });
+    })();
+  </script>
 </body>
 </html>

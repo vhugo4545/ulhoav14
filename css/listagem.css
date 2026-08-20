@@ -82,6 +82,15 @@ body {
   color: #fff;
 }
 
+.sidebar-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
 .sidebar-footer {
   display: flex;
   flex-direction: column;
