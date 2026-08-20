@@ -344,6 +344,43 @@ function extrairNumeroMoeda(texto) {
 }
 
 window.atualizarPropostaEditavel = async function () {
+  // ── Validação: itens com custo zero (exceto o 1º de cada grupo) ──────────
+  const itensZerados = [];
+  document.querySelectorAll("tbody").forEach(tbody => {
+    const linhas = tbody.querySelectorAll("tr");
+    linhas.forEach((tr, idx) => {
+      if (idx === 0) return; // primeiro item de cada grupo é isento
+      const custoTd = tr.querySelector("td.custo-unitario");
+      if (!custoTd) return;
+      const texto = custoTd.textContent.replace(/[^\d,\.]/g, "").replace(",", ".");
+      const valor = parseFloat(texto) || 0;
+      if (valor === 0) {
+        const nomeTd = tr.querySelectorAll("td")[1];
+        itensZerados.push(nomeTd?.textContent?.trim() || `Linha ${idx + 1}`);
+      }
+    });
+  });
+
+  if (itensZerados.length > 0) {
+    await new Promise(resolve => {
+      const ov = document.createElement("div");
+      ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;";
+      const lista = itensZerados.map(n => `<li style="margin-bottom:4px;">${n}</li>`).join("");
+      ov.innerHTML = `
+        <div style="background:#fff;border-radius:14px;padding:28px;width:min(480px,92vw);box-shadow:0 16px 48px rgba(0,0,0,.25);max-height:80vh;overflow-y:auto;">
+          <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px;">⚠️ Produtos com custo zero</div>
+          <div style="font-size:13px;color:#64748b;margin-bottom:16px;">Os seguintes produtos estão com custo zerado. Corrija os valores antes de salvar:</div>
+          <ul style="font-size:13px;color:#ef4444;font-weight:600;padding-left:18px;margin-bottom:24px;">${lista}</ul>
+          <div style="display:flex;justify-content:flex-end;">
+            <button id="_zero_ok" style="padding:9px 24px;border:none;border-radius:8px;background:#475569;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Entendido</button>
+          </div>
+        </div>`;
+      document.body.appendChild(ov);
+      document.getElementById("_zero_ok").onclick = () => { document.body.removeChild(ov); resolve(); };
+    });
+    return;
+  }
+
   try {
     //abrirTodasSanfonas();
     mostrarCarregando();
@@ -799,10 +836,14 @@ async function marcarPendenteAprovacao() {
 
 // 3️⃣ Aprovado Pelo Gestor
 async function marcarAprovadoPeloGestor() {
-    mostrarCarregando()
-  await marcarPrecosDivergentesOmie()
+  const tipoUsuario = localStorage.getItem("usuarioTipo") || "usuario";
+  if (tipoUsuario !== "admin") {
+    alert("❌ Apenas administradores podem aprovar propostas.");
+    return;
+  }
+  mostrarCarregando();
   await atualizarStatus("Aprovado Pelo Gestor");
- ocultarCarregando() 
+  ocultarCarregando();
 }
 
 // 4️⃣ Enviado Para o Cliente

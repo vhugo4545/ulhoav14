@@ -565,26 +565,17 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
     <div class="col-12 informacoes-produto-wrapper">
       <label class="form-label">Informações do Produto</label>
 
-<div class="d-flex flex-column gap-1 mb-2 opcoes-informacoes-produto">
-    <button type="button" class="btn btn-outline-secondary btn-sm text-start" onclick="preencherInformacoesProduto(this, 'dias úteis após assinatura do cliente no projeto desse respectivo item.')">
-        Após assinatura do cliente
-    </button>
-    <button type="button" class="btn btn-outline-secondary btn-sm text-start" onclick="preencherInformacoesProduto(this, 'dias úteis após instalação da estrutura desse respectivo item ser finalizada.')">
-        Após instalação da estrutura
-    </button>
-    <button type="button" class="btn btn-outline-secondary btn-sm text-start" onclick="preencherInformacoesProduto(this, 'dias úteis após pagamento pelo cliente de todo(s) o(s) vidro(s) desse respectivo item.')">
-        Após pagamento do(s) vidro(s)
-    </button>
-    <button type="button" class="btn btn-outline-secondary btn-sm text-start" onclick="preencherInformacoesProduto(this, 'dias úteis após liberação/entrega do material pelo fornecedor à Ferreira Ulhoa.')">
-        Após liberação do fornecedor
-    </button>
-    <button type="button" class="btn btn-outline-secondary btn-sm text-start" onclick="preencherInformacoesProduto(this, 'dias úteis após assinatura do contrato pelo cliente.')">
-        Após assinatura do contrato
-    </button>
-    <button type="button" class="btn btn-outline-primary btn-sm text-start" onclick="preencherInformacoesProduto(this, '', true)">
-        Personalizado
-    </button>
-</div>
+${typeof window.gerarBotoesOpcoesProduto === "function"
+  ? window.gerarBotoesOpcoesProduto()
+  : `<div class="d-flex flex-column gap-1 mb-2 opcoes-informacoes-produto">
+    <button type="button" class="btn btn-outline-secondary btn-sm text-start" onclick="preencherInformacoesProduto(this, 'dias úteis após assinatura do cliente no projeto desse respectivo item.')">Após assinatura do cliente</button>
+    <button type="button" class="btn btn-outline-secondary btn-sm text-start" onclick="preencherInformacoesProduto(this, 'dias úteis após instalação da estrutura desse respectivo item ser finalizada.')">Após instalação da estrutura</button>
+    <button type="button" class="btn btn-outline-secondary btn-sm text-start" onclick="preencherInformacoesProduto(this, 'dias úteis após pagamento pelo cliente de todo(s) o(s) vidro(s) desse respectivo item.')">Após pagamento do(s) vidro(s)</button>
+    <button type="button" class="btn btn-outline-secondary btn-sm text-start" onclick="preencherInformacoesProduto(this, 'dias úteis após liberação/entrega do material pelo fornecedor à Ferreira Ulhoa.')">Após liberação do fornecedor</button>
+    <button type="button" class="btn btn-outline-secondary btn-sm text-start" onclick="preencherInformacoesProduto(this, 'dias úteis após assinatura do contrato pelo cliente.')">Após assinatura do contrato</button>
+    <button type="button" class="btn btn-outline-primary btn-sm text-start" onclick="preencherInformacoesProduto(this, '', true)">Personalizado</button>
+  </div>`
+}
 
       <textarea
         name="informacoesProduto"

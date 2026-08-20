@@ -24,14 +24,12 @@
         <span class="material-icons-outlined">edit_note</span>Editar Modelo
       </button>
 
-      <a id="btn-editar-formulas" href="modelo.html" class="sidebar-button" style="text-decoration: none; flex-direction: column;">
-        <span class="material-icons-outlined">functions</span>
-        Editar Fórmulas
+      <a id="btn-editar-formulas" href="modelo.html" class="sidebar-button" style="text-decoration: none;">
+        <span class="material-icons-outlined">functions</span> Editar Fórmulas
       </a>
 
-      <a id="btn-editar-ajustes" href="ajustes.html" class="sidebar-button" style="text-decoration: none; flex-direction: column;">
-        <span class="material-icons-outlined">functions</span>
-        Ajustes
+      <a id="btn-editar-ajustes" href="ajustes.html" class="sidebar-button" style="text-decoration: none;">
+        <span class="material-icons-outlined">tune</span> Ajustes
       </a>
     </div>
   </aside>
@@ -58,7 +56,41 @@
         </select>
       </div>
 
-      <img src="logo-redonda.png" alt="Logo" class="logo-round" />
+      <div id="usuario-info" style="
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #374151;
+        background: #f3f4f6;
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-weight: 600;
+        white-space: nowrap;
+      ">
+        <span class="material-icons-outlined" style="font-size:18px; color:#6b7280;">account_circle</span>
+        <span id="usuario-nome">—</span>
+        <span id="usuario-tipo" style="
+          background: #dbeafe;
+          color: #1e40af;
+          font-size: 11px;
+          border-radius: 999px;
+          padding: 2px 8px;
+          font-weight: 700;
+          text-transform: uppercase;
+        "></span>
+      </div>
+
+
+      <script>
+        (function () {
+          const nome = localStorage.getItem("usuarioNome") || localStorage.getItem("usuarioEmail") || "Usuário";
+          const tipo = localStorage.getItem("usuarioTipo") || "";
+          document.getElementById("usuario-nome").textContent = nome;
+          const tipoEl = document.getElementById("usuario-tipo");
+          if (tipo) tipoEl.textContent = tipo;
+        })();
+      </script>
     </header>
 
     <!-- Indicador de carregamento -->
@@ -344,5 +376,6 @@ document.addEventListener('DOMContentLoaded', () => {
   <script src="../js/carregamento.js" defer></script>
   <script src="../js/list.js" defer></script>
   <script src="../js/auth.js" defer></script>
+  <script src="../js/notificacoesGestor.js" defer></script>
 </body>
 </html>

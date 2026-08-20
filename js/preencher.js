@@ -146,6 +146,8 @@ async function carregarPropostaEditavel(proposta) {
   window.propostaEmEdicao = proposta;
   window.propostaAtual = proposta;
 
+  if (typeof controlarBotoesSidebar === "function") controlarBotoesSidebar();
+
   try {
     if (!proposta || typeof proposta !== "object") throw new Error("Proposta inválida.");
 

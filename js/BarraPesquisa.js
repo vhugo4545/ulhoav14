@@ -178,7 +178,7 @@ if (resumoTextarea) {
       }
     });
 
-  grupoList.style.display = grupoList.children.length > 0 ? "block" : "none";
+  grupoList.style.display = (filtro.trim() && grupoList.children.length > 0) ? "block" : "none";
 }
 
 

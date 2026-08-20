@@ -119,6 +119,70 @@ async function aplicarAutocompleteCliente(container) {
       sugestoes.style.display = "none";
     }
   });
+
+  // ── Busca por CPF/CNPJ ao sair do campo ──────────────────────────────────
+  if (cpfInput) {
+    cpfInput.addEventListener("blur", async () => {
+      const raw = (cpfInput.value || "").replace(/\D/g, "");
+      if (raw.length !== 11 && raw.length !== 14) return;
+
+      // Se razão social já está preenchida, o cliente já foi selecionado — não sobrescrever
+      if ((input.value || "").trim()) return;
+
+      // Primeiro tenta no cache local (já carregado pelo autocomplete)
+      let encontrado = clientesAtivos.find(c => (c.cnpj_cpf || "").replace(/\D/g, "") === raw);
+
+      // Se não encontrou, consulta servidor
+      if (!encontrado) {
+        try {
+          const resp = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/clientes/buscar?cnpj_cpf=${raw}`);
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.encontrado && data.clientes?.length > 0) encontrado = data.clientes[0];
+          }
+        } catch { /* silencioso */ }
+      }
+
+      if (!encontrado) return;
+
+      const nome = encontrado.razao_social || encontrado.nome_fantasia || "Cliente";
+
+      const confirmou = await new Promise(resolve => {
+        const ov = document.createElement("div");
+        ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;";
+        ov.innerHTML = `
+          <div style="background:#fff;border-radius:14px;padding:28px;width:min(400px,92vw);box-shadow:0 16px 48px rgba(0,0,0,.25);">
+            <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px;">Cliente encontrado</div>
+            <div style="font-size:13px;color:#64748b;margin-bottom:6px;">Este CPF/CNPJ pertence a:</div>
+            <div style="font-size:14px;font-weight:600;color:#0f172a;background:#f1f5f9;border-radius:8px;padding:10px 14px;margin-bottom:20px;">${nome}</div>
+            <div style="font-size:13px;color:#64748b;margin-bottom:24px;">Deseja incluir este cliente no orçamento?</div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+              <button id="_cpf_nao" style="padding:9px 20px;border:1px solid #e2e8f0;border-radius:8px;background:#f1f5f9;font-family:inherit;font-size:13px;font-weight:600;color:#475569;cursor:pointer;">Não</button>
+              <button id="_cpf_sim" style="padding:9px 20px;border:none;border-radius:8px;background:#475569;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Sim, incluir</button>
+            </div>
+          </div>`;
+        document.body.appendChild(ov);
+        document.getElementById("_cpf_nao").onclick  = () => { document.body.removeChild(ov); resolve(false); };
+        document.getElementById("_cpf_sim").onclick  = () => { document.body.removeChild(ov); resolve(true); };
+      });
+
+      if (!confirmou) return;
+
+      // Preenche todos os campos do container
+      input.value = encontrado.razao_social || encontrado.nome_fantasia || "";
+      codigoInput.value = encontrado.codigo_cliente_omie || "";
+      cpfInput.value = encontrado.cnpj_cpf || raw;
+      if (telefoneInput) {
+        const ddd = encontrado.telefone1_ddd || "";
+        const tel = encontrado.telefone1_numero || "";
+        telefoneInput.value = ddd ? `(${ddd}) ${tel}` : tel;
+      }
+      if (emailInput) emailInput.value = encontrado.email || "";
+
+      input.dispatchEvent(new Event("input"));
+      console.log("✅ Cliente preenchido via CPF/CNPJ:", nome);
+    });
+  }
 }
 
 /**

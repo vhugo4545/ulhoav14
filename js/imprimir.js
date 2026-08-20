@@ -1,9 +1,65 @@
-let contadorGlobal = 1;
+﻿let contadorGlobal = 1;
+
+// ── Validação compartilhada: itens com custo zero ────────────────────────────
+async function validarItensZeradosParaImpressao() {
+  const itensZerados = [];
+  document.querySelectorAll("tbody").forEach(tbody => {
+    tbody.querySelectorAll("tr").forEach((tr, idx) => {
+      if (idx === 0) return; // primeiro item de cada grupo isento
+      const custoTd = tr.querySelector("td.custo-unitario");
+      if (!custoTd) return;
+      const valor = parseFloat(custoTd.textContent.replace(/[^\d,\.]/g, "").replace(",", ".")) || 0;
+      if (valor === 0) {
+        const nome = tr.querySelectorAll("td")[1]?.textContent?.trim() || `Linha ${idx + 1}`;
+        itensZerados.push(nome);
+      }
+    });
+  });
+
+  if (itensZerados.length === 0) return true;
+
+  return new Promise(resolve => {
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;";
+    const lista = itensZerados.map(n => `<li style="margin-bottom:4px;">${n}</li>`).join("");
+    ov.innerHTML = `
+      <div style="background:#fff;border-radius:14px;padding:28px;width:min(480px,92vw);box-shadow:0 16px 48px rgba(0,0,0,.25);max-height:80vh;overflow-y:auto;">
+        <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px;">⚠️ Produtos com custo zero</div>
+        <div style="font-size:13px;color:#64748b;margin-bottom:16px;">Os seguintes produtos estão com custo zerado:</div>
+        <ul style="font-size:13px;color:#ef4444;font-weight:600;padding-left:18px;margin-bottom:24px;">${lista}</ul>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button id="_imp_bloquear" style="padding:9px 24px;border:none;border-radius:8px;background:#475569;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Entendido</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    document.getElementById("_imp_bloquear").onclick = () => { document.body.removeChild(ov); resolve(false); };
+  });
+}
 
 // 1. Função principal: chamada pelo botão "Visualizar Proposta"
 
+async function carregarLogoBase64(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = function () {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext("2d").drawImage(img, 0, 0);
+        resolve(canvas.toDataURL("image/jpeg"));
+      } catch (e) {
+        resolve("");
+      }
+    };
+    img.onerror = () => resolve("");
+    img.src = src;
+  });
+}
 
-function gerarOrcamentoParaImpressaoCompleta() {
+async function gerarOrcamentoParaImpressaoCompleta() {
+  if (!await validarItensZeradosParaImpressao()) return;
+  const logoBase64 = await carregarLogoBase64("../js/logo.jpg");
   function moedaBRParaNumero(valor) {
     if (valor == null || valor === "") return 0;
 
@@ -139,7 +195,8 @@ function gerarOrcamentoParaImpressaoCompleta() {
         totalComDesconto,
         totalBrutoFormatado: numeroParaMoedaBR(totalBruto),
         descontoFormatado: numeroParaMoedaBR(desconto),
-        totalComDescontoFormatado: numeroParaMoedaBR(totalComDesconto)
+        totalComDescontoFormatado: numeroParaMoedaBR(totalComDesconto),
+        logoBase64
       });
     }
   );
@@ -338,7 +395,8 @@ function validarInsumosZerados() {
   return problemas;
 }
 
-function gerarHTMLParaImpressao(gruposOcultarProduto) {
+function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
+  const logoSrc = totais.logoBase64 || "../js/logo.jpg";
   // ==========================
   // VALIDAÇÃO ANTES DE IMPRIMIR
   // ==========================
@@ -648,65 +706,166 @@ function gerarHTMLParaImpressao(gruposOcultarProduto) {
   // HTML COMPLETO
   // ==========================
   const condicoesGeraisFormatada = multilineToBR(dados.condicoesGerais || "");
+  const dataHoje = (() => { const h = new Date(); return `${String(h.getDate()).padStart(2,"0")}/${String(h.getMonth()+1).padStart(2,"0")}/${h.getFullYear()}`; })();
+  const nomeCliente = document.querySelector("input.razaoSocial")?.value || document.querySelector("input.razaoSocial")?.dataset?.valorOriginal || "-";
+
+  /* ── HTML do cabeçalho (interpolado aqui, clonado em cada página pelo JS) ── */
+  const cabHTML = `
+    <div style="border-bottom:3px solid #1e293b;padding-bottom:6px;margin-bottom:10px;">
+      <table class="table table-bordered table-sm w-100" style="margin-bottom:4px;font-size:12px;">
+        <tr>
+          <td style="width:40%;text-align:center;vertical-align:middle;">
+            <img src="${logoSrc}" style="max-height:55px;"><br>
+            (31) 98457-7573
+          </td>
+          <td style="width:60%;">
+            <table class="table table-sm w-100 mb-0">
+              <tr><td><strong>Orçamento:</strong></td><td>${dados.numero}</td></tr>
+              <tr><td><strong>Pedido:</strong></td><td>${dados.numeroPedido}</td></tr>
+              <tr><td><strong>Data:</strong></td><td>${dataHoje}</td></tr>
+              <tr><td colspan="2"><strong>Proposta válida por 7 dias úteis</strong></td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+      <table class="table table-bordered table-sm w-100" style="margin-bottom:0;font-size:12px;">
+        <tr><td style="width:35%;"><strong>Cliente (Responsável):</strong></td><td>${nomeCliente}</td></tr>
+        <tr><td><strong>CPF/CNPJ:</strong></td><td>${dados.cpfCnpj}</td></tr>
+        <tr><td><strong>Endereço da Obra:</strong></td><td>${dados.enderecoObra}</td></tr>
+        <tr><td><strong>Vendedor:</strong></td><td>${dados.vendedor}</td></tr>
+      </table>
+    </div>`;
+
+  /* Escapa backticks/$ para embed seguro no <script> inline */
+  const cabHTMLEsc = cabHTML.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+
   const htmlCompleto = `
     <html>
       <head>
         <title>Orçamento ${dados.numero}</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <style>
-          body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
+          @page { size: A4; margin: 10mm; }
+
+          body { margin: 0; padding: 0; font-family: Arial, sans-serif; font-size: 12px; }
+
+          /* Cada página é um bloco explícito */
+          .pagina {
+            width: 100%;
+            box-sizing: border-box;
+            page-break-after: always;
+          }
+          .pagina:last-child { page-break-after: avoid; }
+
+          /* Número de página */
+          .pg-num {
+            text-align: left;
+            margin: 0 0 10px 0;
+            padding: 0;
+            clear: both;
+            font-size: 16px;
+            font-weight: 900;
+            font-family: Arial, sans-serif;
+            color: #111;
+            letter-spacing: 0.5px;
+          }
+
+          /* Quebra de página livre dentro das tabelas de conteúdo */
+          .pagina table { page-break-inside: auto; }
+          .pagina thead { display: table-header-group; }
+          .pagina tr { page-break-inside: avoid; page-break-after: auto; }
+          img { page-break-inside: avoid; }
           em { color: #444; font-style: italic; }
+
+          /* Conteúdo bruto fica fora da tela para medição */
+          #raw { position: absolute; top: -9999px; left: 0; width: 754px; visibility: hidden; }
         </style>
       </head>
       <body>
-        <div style="margin-bottom:40px;">
-          <table class="table table-bordered table-sm w-100">
-            <tr>
-              <td style="width:40%;text-align:center;vertical-align:middle;">
-                <img src="../js/logo.jpg" style="max-height:65px;"><br>
-                <br> (31) 98457-7573<br>
-              </td>
-              <td style="width:40%;">
-                <table class="table table-sm w-100">
-                  <tr><td><strong>Orçamento:</strong></td><td>${dados.numero}</td></tr>
-                    <tr><td><strong>Pedido:</strong></td><td>${dados.numeroPedido}</td></tr>
-                 <tr><td><strong>Data:</strong></td><td>${(() => { const h = new Date(); return `${String(h.getDate()).padStart(2,"0")}/${String(h.getMonth()+1).padStart(2,"0")}/${h.getFullYear()}`; })()}</td></tr>
-                  <tr><td colspan="2"><strong>Proposta válida por 7 dias úteis</strong></td></tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-          <table class="table table-bordered table-sm w-100 mt-2">
-            <tr>
-              <td><strong>Cliente (Responsável):</strong></td>
-              <td>${(document.querySelector("input.razaoSocial")?.value || document.querySelector("input.razaoSocial")?.dataset?.valorOriginal || "-")}</td>
-            </tr>
-            <tr><td><strong>CPF/CNPJ:</strong></td><td>${dados.cpfCnpj}</td></tr>
-            <tr><td><strong>Endereço da Obra:</strong></td><td>${dados.enderecoObra}</td></tr>
-            <tr><td><strong>Vendedor:</strong></td><td>${dados.vendedor}</td></tr>
-          </table>
-          ${tabelaContatosHTML}
+
+        <!-- Conteúdo bruto: medido e depois repartido em páginas pelo script -->
+        <div id="raw">
+          ${corpoHTML}
+          ${parcelasHTML}
+          ${totalizadoresHTML}
+          <div style="border:1px solid #dee2e6;padding:10px;margin-top:14px;font-size:12px;">
+            <strong>PRAZO PREVISTO:</strong><br>${dados.prazos}<br><br>
+            <strong>Condições de Pagamento:</strong><br>${dados.condicao}<br><br>
+            <strong>Condições Gerais:</strong><br>${condicoesGeraisFormatada}
+          </div>
+          <br>
+          <center>Assinatura Contratante:<br><br>_______________________________________________________________</center>
+          <br>
+          <center>Assinatura Contratada:<br><br>_______________________________________________________________</center>
         </div>
-        ${corpoHTML}
-        ${parcelasHTML}
-        ${totalizadoresHTML}
-        <div class="border p-2 mt-3">
-          <strong>PRAZO PREVISTO:</strong><br>${dados.prazos}<br><br>
-          <strong>Condições de Pagamento:</strong><br>${dados.condicao}<br><br>
-          <strong>Condições Gerais:</strong><br>${condicoesGeraisFormatada}
-        </div>
-        <br><br>
-        <center>
-          Assinatura Contratante:
-          <br><br>
-          _______________________________________________________________
-        </center>
-        <br><br>
-        <center>
-          Assinatura Contratada:
-          <br><br>
-          _______________________________________________________________
-        </center>
+
+        <script>
+        (function () {
+          var CAB_HTML = \`${cabHTMLEsc}\`;
+
+          /* A4 px @ 96dpi = 1122px; margens 10mm × 2 ≈ 76px; útil = 1046px.
+             Cabeçalho ocupa ~250px + pg-num ~30px; sobra ≈ 650px p/ conteúdo. */
+          var ALTURA_PAGINA = 650;
+
+          window.addEventListener('load', function () {
+            setTimeout(function () {
+              construirPaginas();
+              window.print();
+            }, 1800);
+          });
+
+          function construirPaginas() {
+            var raw = document.getElementById('raw');
+            var filhos = Array.from(raw.children);
+
+            /* Torna visível para medir corretamente */
+            raw.style.visibility = 'visible';
+
+            var paginas = [[]];
+            var alturas  = [0];
+
+            filhos.forEach(function (el) {
+              var h = el.getBoundingClientRect().height || el.offsetHeight || 40;
+              var idx = paginas.length - 1;
+              if (alturas[idx] + h > ALTURA_PAGINA && paginas[idx].length > 0) {
+                paginas.push([el]);
+                alturas.push(h);
+              } else {
+                paginas[idx].push(el);
+                alturas[idx] += h;
+              }
+            });
+
+            var total = paginas.length;
+            raw.remove();
+
+            paginas.forEach(function (els, i) {
+              var pDiv = document.createElement('div');
+              pDiv.className = 'pagina';
+
+              /* Número de página */
+              var numDiv = document.createElement('div');
+              numDiv.className = 'pg-num';
+              numDiv.textContent = 'Pág. ' + (i + 1) + ' / ' + total;
+              pDiv.appendChild(numDiv);
+
+              /* Cabeçalho */
+              var cabDiv = document.createElement('div');
+              cabDiv.innerHTML = CAB_HTML;
+              pDiv.appendChild(cabDiv);
+
+              /* Elementos de conteúdo */
+              els.forEach(function (el) {
+                el.style.visibility = 'visible';
+                pDiv.appendChild(el);
+              });
+
+              document.body.appendChild(pDiv);
+            });
+          }
+        })();
+        </script>
+
       </body>
     </html>`;
   // ==========================
@@ -3120,7 +3279,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   printWindow.document.close();
 }
 
-function gerarFolha4RelatorioEntrega() {
+async function gerarFolha4RelatorioEntrega() {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
   const getTextOrValue = (el) => {
@@ -3163,6 +3322,9 @@ function gerarFolha4RelatorioEntrega() {
     if (!t) return "-";
     return escapeHtml(t).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
   };
+
+  const logoBase64 = await carregarLogoBase64("../js/logo.jpg");
+  const logoSrc = logoBase64 || "../js/logo.jpg";
 
   // ================== VARIÁVEIS VISUAIS ==================
   const TOTAL_PAGINAS = 2;
@@ -3311,9 +3473,9 @@ function gerarFolha4RelatorioEntrega() {
   });
 
   // ================== CABEÇALHOS ==================
-  const cabecalhoCompletoHTML = (titulo, paginaAtual, totalPaginas) => `
+  const cabecalhoCompletoHTML = (titulo) => `
     <div class="topbar">
-      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
+      <div class="logoBox"><img src="${logoSrc}" alt="Logo"></div>
       <div class="opBox">
         <div class="opTitle">${titulo}</div>
         <div class="opRow">
@@ -3328,8 +3490,6 @@ function gerarFolha4RelatorioEntrega() {
         </div>
       </div>
     </div>
-
-    <div class="pageIndicator">ETAPAS DO PROCESSO ${paginaAtual}/${totalPaginas}</div>
 
     <table class="tblInfo">
       <tr>
@@ -3351,9 +3511,9 @@ function gerarFolha4RelatorioEntrega() {
     </div>
   `;
 
-  const cabecalhoBasicoHTML = (titulo, paginaAtual, totalPaginas) => `
+  const cabecalhoBasicoHTML = (titulo) => `
     <div class="topbar">
-      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
+      <div class="logoBox"><img src="${logoSrc}" alt="Logo"></div>
       <div class="opBox">
         <div class="opTitle">${titulo}</div>
         <div class="opRow">
@@ -3368,51 +3528,50 @@ function gerarFolha4RelatorioEntrega() {
         </div>
       </div>
     </div>
-
-    <div class="pageIndicator">ETAPAS DO PROCESSO ${paginaAtual}/${totalPaginas}</div>
   `;
 
-  // ================== TABELA RESUMO (PÁGINA 1) ==================
-  const tabelaProdutosResumoHTML = `
-    <div class="fullBox" style="margin-top: 10px;">
-      <div class="gridTitle">Produtos / Descritivos</div>
-      <table class="bigTbl resumoProdutosTbl">
-        <thead>
-          <tr>
-            <th style="width:${LARGURA_COL_ITEM_RESUMO}px;">Item</th>
-            <th style="width:${LARGURA_COL_PRODUTO}px;">Produto</th>
-            <th style="width:${LARGURA_COL_QTD}px;">Quantidade</th>
-            <th>Descrição</th>
-          </tr>
-        </thead>
+  // ================== ROWS INDIVIDUAIS (medição dinâmica) ==================
+  const COLGROUP_HTML = `<colgroup>
+    <col style="width:${LARGURA_COL_ITEM_RESUMO}px">
+    <col style="width:${LARGURA_COL_PRODUTO}px">
+    <col style="width:${LARGURA_COL_QTD}px">
+    <col>
+  </colgroup>`;
+
+  const THEAD_HTML = `<thead>
+    <tr>
+      <th style="width:${LARGURA_COL_ITEM_RESUMO}px;">Item</th>
+      <th style="width:${LARGURA_COL_PRODUTO}px;">Produto</th>
+      <th style="width:${LARGURA_COL_QTD}px;">Quantidade</th>
+      <th>Descrição</th>
+    </tr>
+  </thead>`;
+
+  const produtoRowsHTML = (produtosResumo.length
+    ? produtosResumo.map((item, index) => `
+      <table class="bigTbl resumoProdutosTbl mrow" style="table-layout:fixed;width:100%;border-top:none;">
+        ${COLGROUP_HTML}
         <tbody>
-          ${
-            produtosResumo.length
-              ? produtosResumo
-                  .map(
-                    (item, index) => `
-                  <tr>
-                    <td class="cItem">${index + 1}</td>
-                    <td>${escapeHtml(item.titulo)}</td>
-                    <td class="cQtd">${escapeHtml(item.quantidade)}</td>
-                    <td class="descCell">${multilineToBR(item.descricao)}</td>
-                  </tr>
-                `
-                  )
-                  .join("")
-              : `
-                <tr>
-                  <td class="cItem">1</td>
-                  <td>-</td>
-                  <td class="cQtd">-</td>
-                  <td class="descCell">-</td>
-                </tr>
-              `
-          }
+          <tr>
+            <td class="cItem">${index + 1}</td>
+            <td>${escapeHtml(item.titulo)}</td>
+            <td class="cQtd">${escapeHtml(item.quantidade)}</td>
+            <td class="descCell">${multilineToBR(item.descricao)}</td>
+          </tr>
         </tbody>
-      </table>
-    </div>
-  `;
+      </table>`)
+    : [`<table class="bigTbl resumoProdutosTbl mrow" style="table-layout:fixed;width:100%;border-top:none;">
+        ${COLGROUP_HTML}
+        <tbody>
+          <tr>
+            <td class="cItem">1</td>
+            <td>-</td>
+            <td class="cQtd">-</td>
+            <td class="descCell">-</td>
+          </tr>
+        </tbody>
+      </table>`]
+  ).join("");
 
   // ================== TABELAS DE PROCESSO ==================
   const gerarLinhasFixasProcesso = () => {
@@ -3449,31 +3608,13 @@ function gerarFolha4RelatorioEntrega() {
     </div>
   `;
 
-  // ================== PÁGINAS ==================
-  const pagina1HTML = `
-    <div class="page">
-      ${cabecalhoCompletoHTML("ETAPAS DO PROCESSO", 1, TOTAL_PAGINAS)}
-      ${tabelaProdutosResumoHTML}
-    </div>
-  `;
-
-  const pagina2HTML = `
-    <div class="page-break"></div>
-    <div class="page">
-      ${cabecalhoBasicoHTML("ETAPAS DO PROCESSO", 2, TOTAL_PAGINAS)}
-
-      <div class="procGridFull">
-        ${tabelaProcessoHTML("Desenho")}
-        ${tabelaProcessoHTML("Corte")}
-        ${tabelaProcessoHTML("Pré-Solda")}
-        ${tabelaProcessoHTML("Acabamento")}
-        ${tabelaProcessoHTML("Montagem")}
-        ${tabelaProcessoHTML("Finalização do Acabamento")}
-        ${tabelaProcessoHTML("Estrutura")}
-        ${tabelaProcessoHTML("Vidro")}
-      </div>
-    </div>
-  `;
+  // ================== PRÉ-RENDERIZA CABEÇALHOS PARA O SCRIPT ==================
+  const cabCompletoStr = cabecalhoCompletoHTML("ETAPAS DO PROCESSO");
+  const cabBasicoStr   = cabecalhoBasicoHTML("ETAPAS DO PROCESSO");
+  const cabCompletoEsc = cabCompletoStr.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+  const cabBasicoEsc   = cabBasicoStr.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+  const colgroupEsc    = COLGROUP_HTML.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+  const theadEsc       = THEAD_HTML.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
 
   // ================== HTML FINAL ==================
   const htmlCompleto = `
@@ -3482,362 +3623,211 @@ function gerarFolha4RelatorioEntrega() {
         <meta charset="utf-8" />
         <title>Etapas do Processo</title>
         <style>
-          @page {
-            size: A4;
-            margin: 10mm;
-            margin-bottom: 10mm;
-          }
-
+          @page { size: A4; margin: 10mm; }
           body {
             margin: 0;
             padding: 12px;
-            padding-bottom: 12mm;
             font-family: Arial, sans-serif;
             font-size: ${FONT_SIZE_BASE}px;
             color: #111;
           }
-
-          .page {
-            min-height: auto;
-          }
-
-          .page-break {
-            page-break-before: always;
-            break-before: page;
-          }
-
-          .topbar {
-            display: flex;
-            align-items: stretch;
-            gap: 10px;
-            margin-bottom: 8px;
-          }
-
-          .logoBox {
-            flex: 1;
-            border: 2px solid #111;
-            padding: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 56px;
-          }
-
-          .logoBox img {
-            max-height: 46px;
-          }
-
-          .opBox {
-            width: 520px;
-            border: 2px solid #111;
-            padding: 8px 10px;
-          }
-
-          .opTitle {
+          #raw { position: absolute; top: -9999px; left: 0; width: 760px; visibility: hidden; }
+          #processes-page { display: none; }
+          .pagina { page-break-after: always; break-after: page; }
+          .pagina:last-child { page-break-after: auto; break-after: auto; }
+          .pg-num {
+            text-align: left;
+            margin: 0 0 10px 0;
+            padding: 0;
+            clear: both;
+            font-size: 16px;
             font-weight: 900;
-            font-size: ${FONT_SIZE_TITULO_DOC}px;
-            text-align: center;
-            margin-bottom: 4px;
-          }
-
-          .opRow {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            font-weight: 700;
-            align-items: flex-start;
-          }
-
-          .metaRight {
-            text-align: right;
-            line-height: 1.2;
-          }
-
-          .numeroPedidoGigante {
-            font-size: ${FONT_SIZE_NUMERO_PEDIDO}px;
-            font-weight: 900;
-            margin: 2px 0 0;
-            line-height: .95;
-            letter-spacing: 1px;
-          }
-
-          .numeroPedidoGigante span {
-            font-weight: 900;
-          }
-
-          .muted {
+            font-family: Arial, sans-serif;
             color: #111;
-            font-weight: 900;
+            letter-spacing: 0.5px;
           }
-
-          .muted-meta {
-            color: #333;
-            font-weight: 400;
+          .topbar { display: flex; align-items: stretch; gap: 10px; margin-bottom: 8px; }
+          .logoBox {
+            flex: 1; border: 2px solid #111; padding: 8px;
+            display: flex; align-items: center; justify-content: center; min-height: 56px;
           }
-
-          .pageIndicator {
-            margin: 2px 0 8px;
-            padding: 4px 8px;
-            border: 1px solid #111;
-            font-weight: 700;
-            text-align: center;
-            background: #f8f8f8;
+          .logoBox img { max-height: 46px; }
+          .opBox { width: 520px; border: 2px solid #111; padding: 8px 10px; }
+          .opTitle { font-weight: 900; font-size: ${FONT_SIZE_TITULO_DOC}px; text-align: center; margin-bottom: 4px; }
+          .opRow { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; align-items: flex-start; }
+          .metaRight { text-align: right; line-height: 1.2; }
+          .numeroPedidoGigante { font-size: ${FONT_SIZE_NUMERO_PEDIDO}px; font-weight: 900; margin: 2px 0 0; line-height: .95; letter-spacing: 1px; }
+          .numeroPedidoGigante span { font-weight: 900; }
+          .muted { color: #111; font-weight: 900; }
+          .muted-meta { color: #333; font-weight: 400; }
+          .tblInfo { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+          .tblInfo td { border: 1px solid #111; padding: 5px 7px; vertical-align: top; font-size: ${FONT_SIZE_BASE}px; }
+          .k { width: 160px; font-weight: 700; white-space: nowrap; }
+          .v { min-width: 220px; }
+          .vSmall { min-width: 160px; }
+          .line2col { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0 8px; }
+          .miniBox { border: 1px solid #111; padding: 6px 8px; font-weight: 700; font-size: ${FONT_SIZE_BASE}px; }
+          .fullBox, .procBox { border: 1px solid #111; break-inside: avoid; page-break-inside: avoid; }
+          .gridTitle, .procTitle {
+            font-weight: 900; text-align: center;
+            padding: ${PADDING_TITULO_BOX}px; border-bottom: 1px solid #111;
+            background: #f2f2f2; font-size: ${FONT_SIZE_TITULO_SECAO}px;
           }
-
-          .tblInfo {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 6px;
-          }
-
-          .tblInfo td {
-            border: 1px solid #111;
-            padding: 5px 7px;
-            vertical-align: top;
-            font-size: ${FONT_SIZE_BASE}px;
-          }
-
-          .k {
-            width: 160px;
-            font-weight: 700;
-            white-space: nowrap;
-          }
-
-          .v {
-            min-width: 220px;
-          }
-
-          .vSmall {
-            min-width: 160px;
-          }
-
-          .line2col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-            margin: 6px 0 8px;
-          }
-
-          .miniBox {
-            border: 1px solid #111;
-            padding: 6px 8px;
-            font-weight: 700;
-            font-size: ${FONT_SIZE_BASE}px;
-          }
-
-          .fullBox,
-          .procBox {
-            border: 1px solid #111;
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-
-          .gridTitle,
-          .procTitle {
-            font-weight: 900;
-            text-align: center;
-            padding: ${PADDING_TITULO_BOX}px;
-            border-bottom: 1px solid #111;
-            background: #f2f2f2;
-            font-size: ${FONT_SIZE_TITULO_SECAO}px;
-          }
-
-          .bigTbl,
-          .gridTbl {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-          }
-
-          .bigTbl {
-            font-size: ${FONT_SIZE_TABELA}px;
-          }
-
-          .gridTbl {
-            font-size: ${FONT_SIZE_TABELA}px;
-          }
-
-          .bigTbl th,
-          .bigTbl td {
-            border: 1px solid #111;
-            padding: ${PADDING_CELULA_RESUMO_Y}px ${PADDING_CELULA_RESUMO_X}px;
-            line-height: 1.15;
-            box-sizing: border-box;
-          }
-
-          .gridTbl th,
-          .gridTbl td {
-            border: 1px solid #111;
-            padding: ${PADDING_CELULA_PROCESSO_Y}px ${PADDING_CELULA_PROCESSO_X}px;
-            line-height: 1.1;
-            vertical-align: middle;
-            box-sizing: border-box;
-          }
-
-          .bigTbl thead th,
-          .gridTbl thead th {
-            background: #fafafa;
-            font-weight: 900;
-            font-size: ${FONT_SIZE_HEADER_TABELA}px;
-          }
-
-          .resumoProdutosTbl th,
-          .resumoProdutosTbl td {
-            vertical-align: middle;
-          }
-
-          .resumoProdutosTbl tbody tr {
-            height: ${ALTURA_LINHA_RESUMO}px;
-          }
-
-          .resumoProdutosTbl td {
-            height: ${ALTURA_LINHA_RESUMO}px;
-          }
-
-          .resumoProdutosTbl .cItem,
-          .resumoProdutosTbl .cQtd {
-            text-align: center;
-            vertical-align: middle;
-            font-weight: 700;
-          }
-
-          .resumoProdutosTbl .descCell {
-            vertical-align: middle;
-            white-space: normal;
-            word-break: break-word;
-          }
-
-          .gridTbl tbody tr {
-            height: ${ALTURA_LINHA_PROCESSO}px;
-          }
-
-          .cItemEtapa,
-          .cData,
-          .cResp {
-            font-size: ${FONT_SIZE_TABELA}px;
-          }
-
-          .cItemEtapa,
-          .cData {
-            text-align: center;
-          }
-
-          .procGridFull {
-            margin-top: ${MARGEM_TOPO_TABELAS}px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: ${GAP_GRID_PROCESSO}px;
-          }
-
-          .rodape-fixo {
-            position: fixed;
-            left: 10mm;
-            right: 10mm;
-            bottom: 0mm;
-            height: 10mm;
-            padding-top: 2px;
-            border-top: 2px solid #111;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 14px;
-            background: #fff;
-            z-index: 9999;
-          }
-
-          .rodape-fixo .docNome {
-            font-weight: 900;
-            font-size: 12px;
-            letter-spacing: .5px;
-          }
-
-          .rodape-fixo .bigMeta {
-            display: flex;
-            align-items: baseline;
-            gap: 14px;
-            font-weight: 900;
-          }
-
-          .rodape-fixo .bigMeta .lbl {
-            font-size: 11px;
-            font-weight: 700;
-            color: #333;
-            margin-right: 4px;
-          }
-
-          .rodape-fixo .bigMeta .val {
-            font-size: 18px;
-            font-weight: 900;
-          }
-
-          .rodape-fixo .sep {
-            width: 2px;
-            height: 18px;
-            background: #111;
-            opacity: .35;
-          }
-
+          .bigTbl, .gridTbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          .bigTbl { font-size: ${FONT_SIZE_TABELA}px; }
+          .gridTbl { font-size: ${FONT_SIZE_TABELA}px; }
+          .bigTbl th, .bigTbl td { border: 1px solid #111; padding: ${PADDING_CELULA_RESUMO_Y}px ${PADDING_CELULA_RESUMO_X}px; line-height: 1.15; box-sizing: border-box; }
+          .gridTbl th, .gridTbl td { border: 1px solid #111; padding: ${PADDING_CELULA_PROCESSO_Y}px ${PADDING_CELULA_PROCESSO_X}px; line-height: 1.1; vertical-align: middle; box-sizing: border-box; }
+          .bigTbl thead th, .gridTbl thead th { background: #fafafa; font-weight: 900; font-size: ${FONT_SIZE_HEADER_TABELA}px; }
+          .resumoProdutosTbl th, .resumoProdutosTbl td { vertical-align: middle; }
+          .resumoProdutosTbl tbody tr { height: ${ALTURA_LINHA_RESUMO}px; }
+          .resumoProdutosTbl td { height: ${ALTURA_LINHA_RESUMO}px; }
+          .resumoProdutosTbl .cItem, .resumoProdutosTbl .cQtd { text-align: center; vertical-align: middle; font-weight: 700; }
+          .resumoProdutosTbl .descCell { vertical-align: middle; white-space: normal; word-break: break-word; }
+          .mrow { margin: 0; }
+          .mrow td { border-top: none; }
+          .gridTbl tbody tr { height: ${ALTURA_LINHA_PROCESSO}px; }
+          .cItemEtapa, .cData, .cResp { font-size: ${FONT_SIZE_TABELA}px; }
+          .cItemEtapa, .cData { text-align: center; }
+          .procGridFull { margin-top: ${MARGEM_TOPO_TABELAS}px; display: grid; grid-template-columns: 1fr 1fr; gap: ${GAP_GRID_PROCESSO}px; }
           @media print {
-            body {
-              padding: 12px;
-              padding-bottom: 12mm;
-            }
-
-            table {
-              page-break-inside: avoid;
-              break-inside: avoid;
-            }
-
-            tr,
-            td,
-            th {
-              page-break-inside: avoid;
-              break-inside: avoid;
-            }
-
-            .fullBox,
-            .procBox,
-            .procGridFull {
-              page-break-inside: avoid;
-              break-inside: avoid;
-            }
-
-            .rodape-fixo {
-              position: fixed;
-            }
+            body { padding: 12px; }
+            table { page-break-inside: avoid; break-inside: avoid; }
+            tr, td, th { page-break-inside: avoid; break-inside: avoid; }
+            .fullBox, .procBox, .procGridFull { page-break-inside: avoid; break-inside: avoid; }
           }
         </style>
       </head>
       <body>
 
-        <div class="rodape-fixo">
-          <div class="docNome">ETAPAS DO PROCESSO</div>
-          <div class="sep"></div>
-          <div class="bigMeta">
-            <div><span class="lbl">Nº do Pedido</span> <span class="val">${escapeHtml(numeroPedido)}</span></div>
-            <div class="sep"></div>
-            <div><span class="lbl">Data</span> <span class="val">${escapeHtml(data)}</span></div>
+        <!-- Itens para medição off-screen -->
+        <div id="raw">
+          ${produtoRowsHTML}
+        </div>
+
+        <!-- Grade de processos (inserida como última página pelo script) -->
+        <div id="processes-page">
+          <div class="procGridFull">
+            ${tabelaProcessoHTML("Desenho")}
+            ${tabelaProcessoHTML("Corte")}
+            ${tabelaProcessoHTML("Pré-Solda")}
+            ${tabelaProcessoHTML("Acabamento")}
+            ${tabelaProcessoHTML("Montagem")}
+            ${tabelaProcessoHTML("Finalização do Acabamento")}
+            ${tabelaProcessoHTML("Estrutura")}
+            ${tabelaProcessoHTML("Vidro")}
           </div>
         </div>
 
-        ${pagina1HTML}
-        ${pagina2HTML}
-
         <script>
-          window.onload = function () {
+        (function () {
+          var CAB_COMPLETO = \`${cabCompletoEsc}\`;
+          var CAB_BASICO   = \`${cabBasicoEsc}\`;
+          var COLGROUP     = \`${colgroupEsc}\`;
+          var THEAD        = \`${theadEsc}\`;
+          var ALTURA_PAGINA = 580;
+
+          window.addEventListener('load', function () {
             setTimeout(function () {
-              window.focus();
+              construirPaginas();
               window.print();
-            }, 250);
-          };
+            }, 1800);
+          });
+
+          function construirPaginas() {
+            var raw = document.getElementById('raw');
+            raw.style.visibility = 'visible';
+            var chunks = Array.from(raw.children);
+
+            var pages = [[]];
+            var alturas = [0];
+
+            chunks.forEach(function (chunk) {
+              var h = chunk.getBoundingClientRect().height || 40;
+              var idx = pages.length - 1;
+              if (alturas[idx] + h > ALTURA_PAGINA && pages[idx].length > 0) {
+                pages.push([chunk]);
+                alturas.push(h);
+              } else {
+                pages[idx].push(chunk);
+                alturas[idx] += h;
+              }
+            });
+
+            raw.remove();
+
+            var procPage = document.getElementById('processes-page');
+            procPage.parentNode.removeChild(procPage);
+
+            var totalPags = pages.length + 1;
+
+            pages.forEach(function (chks, i) {
+              var pDiv = document.createElement('div');
+              pDiv.className = 'pagina';
+
+              var pgNum = document.createElement('div');
+              pgNum.className = 'pg-num';
+              pgNum.textContent = 'Pág. ' + (i + 1) + ' / ' + totalPags;
+              pDiv.appendChild(pgNum);
+
+              var cabDiv = document.createElement('div');
+              cabDiv.innerHTML = i === 0 ? CAB_COMPLETO : CAB_BASICO;
+              pDiv.appendChild(cabDiv);
+
+              var tableWrap = document.createElement('div');
+              tableWrap.className = 'fullBox';
+              tableWrap.style.marginTop = '10px';
+
+              var titleDiv = document.createElement('div');
+              titleDiv.className = 'gridTitle';
+              titleDiv.textContent = 'Produtos / Descritivos';
+              tableWrap.appendChild(titleDiv);
+
+              var table = document.createElement('table');
+              table.className = 'bigTbl resumoProdutosTbl';
+              table.style.tableLayout = 'fixed';
+              table.style.width = '100%';
+              table.innerHTML = COLGROUP + THEAD + '<tbody></tbody>';
+              var tbody = table.querySelector('tbody');
+
+              chks.forEach(function (chunk) {
+                var tr = chunk.querySelector('tr');
+                if (tr) tbody.appendChild(tr);
+              });
+
+              tableWrap.appendChild(table);
+              pDiv.appendChild(tableWrap);
+              document.body.appendChild(pDiv);
+            });
+
+            // Página de processos — sempre a última
+            var procDiv = document.createElement('div');
+            procDiv.className = 'pagina';
+
+            var pgNumProc = document.createElement('div');
+            pgNumProc.className = 'pg-num';
+            pgNumProc.textContent = 'Pág. ' + (pages.length + 1) + ' / ' + totalPags;
+            procDiv.appendChild(pgNumProc);
+
+            var cabProcDiv = document.createElement('div');
+            cabProcDiv.innerHTML = CAB_BASICO;
+            procDiv.appendChild(cabProcDiv);
+
+            while (procPage.firstChild) {
+              procDiv.appendChild(procPage.firstChild);
+            }
+
+            document.body.appendChild(procDiv);
+          }
+        })();
         </script>
+
       </body>
     </html>
   `;
 
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
-
   printWindow.document.open();
   printWindow.document.write(htmlCompleto);
   printWindow.document.close();
@@ -3845,7 +3835,7 @@ function gerarFolha4RelatorioEntrega() {
 
 
 
-function gerarHistoricoDeProducaoParaImpressao() {
+async function gerarHistoricoDeProducaoParaImpressao() {
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
   const getTextOrValue = (el) => {
@@ -3888,6 +3878,9 @@ function gerarHistoricoDeProducaoParaImpressao() {
     if (!t) return "-";
     return escapeHtml(t).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
   };
+
+  const logoBase64 = await carregarLogoBase64("../js/logo.jpg");
+  const logoSrc = logoBase64 || "../js/logo.jpg";
 
   // ================== CONFIG VISUAL ==================
   const TITULO_DOCUMENTO = "RELATÓRIO DE ENTREGA / INSTALAÇÃO";
@@ -4034,9 +4027,9 @@ function gerarHistoricoDeProducaoParaImpressao() {
   const totalPaginas = 2;
 
   // ================== CABEÇALHOS ==================
-  const cabecalhoCompletoHTML = (titulo, paginaAtual, totalPaginas) => `
+  const cabecalhoCompletoHTML = (titulo) => `
     <div class="topbar">
-      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
+      <div class="logoBox"><img src="${logoSrc}" alt="Logo"></div>
       <div class="opBox">
         <div class="opTitle">${titulo}</div>
         <div class="opRow">
@@ -4051,8 +4044,6 @@ function gerarHistoricoDeProducaoParaImpressao() {
         </div>
       </div>
     </div>
-
-    <div class="pageIndicator">${titulo} — Página ${paginaAtual}/${totalPaginas}</div>
 
     <table class="tblInfo">
       <tr>
@@ -4074,9 +4065,9 @@ function gerarHistoricoDeProducaoParaImpressao() {
     </div>
   `;
 
-  const cabecalhoBasicoHTML = (titulo, paginaAtual, totalPaginas) => `
+  const cabecalhoBasicoHTML = (titulo) => `
     <div class="topbar">
-      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
+      <div class="logoBox"><img src="${logoSrc}" alt="Logo"></div>
       <div class="opBox">
         <div class="opTitle">${titulo}</div>
         <div class="opRow">
@@ -4091,51 +4082,50 @@ function gerarHistoricoDeProducaoParaImpressao() {
         </div>
       </div>
     </div>
-
-    <div class="pageIndicator">${titulo} — Página ${paginaAtual}/${totalPaginas}</div>
   `;
 
-  // ================== RESUMO PRODUTOS (SÓ PÁGINA 1) ==================
-  const tabelaProdutosResumoHTML = `
-    <div class="fullBox" style="margin-top: 10px;">
-      <div class="gridTitle">Resumo dos Produtos</div>
-      <table class="bigTbl resumoProdutosTbl">
-        <thead>
-          <tr>
-            <th style="width:70px;">Itens</th>
-            <th style="width:220px;">Produto</th>
-            <th style="width:110px;">Quantidade</th>
-            <th>Descrição</th>
-          </tr>
-        </thead>
+  // ================== ROWS INDIVIDUAIS (medição dinâmica) ==================
+  const COLGROUP_HTML = `<colgroup>
+    <col style="width:70px">
+    <col style="width:220px">
+    <col style="width:110px">
+    <col>
+  </colgroup>`;
+
+  const THEAD_HTML = `<thead>
+    <tr>
+      <th style="width:70px;">Itens</th>
+      <th style="width:220px;">Produto</th>
+      <th style="width:110px;">Quantidade</th>
+      <th>Descrição</th>
+    </tr>
+  </thead>`;
+
+  const produtoRowsHTML = (produtosResumo.length
+    ? produtosResumo.map((item) => `
+      <table class="bigTbl resumoProdutosTbl mrow" style="table-layout:fixed;width:100%;border-top:none;">
+        ${COLGROUP_HTML}
         <tbody>
-          ${
-            produtosResumo.length
-              ? produtosResumo
-                  .map(
-                    (item) => `
-                  <tr>
-                    <td class="cItem">${item.sequencia}</td>
-                    <td>${escapeHtml(item.titulo)}</td>
-                    <td class="cQtd">${escapeHtml(item.quantidade)}</td>
-                    <td class="descCell">${multilineToBR(item.descricao)}</td>
-                  </tr>
-                `
-                  )
-                  .join("")
-              : `
-                <tr>
-                  <td class="cItem">1</td>
-                  <td>-</td>
-                  <td class="cQtd">-</td>
-                  <td>-</td>
-                </tr>
-              `
-          }
+          <tr>
+            <td class="cItem">${item.sequencia}</td>
+            <td>${escapeHtml(item.titulo)}</td>
+            <td class="cQtd">${escapeHtml(item.quantidade)}</td>
+            <td class="descCell">${multilineToBR(item.descricao)}</td>
+          </tr>
         </tbody>
-      </table>
-    </div>
-  `;
+      </table>`)
+    : [`<table class="bigTbl resumoProdutosTbl mrow" style="table-layout:fixed;width:100%;border-top:none;">
+        ${COLGROUP_HTML}
+        <tbody>
+          <tr>
+            <td class="cItem">1</td>
+            <td>-</td>
+            <td class="cQtd">-</td>
+            <td>-</td>
+          </tr>
+        </tbody>
+      </table>`]
+  ).join("");
 
   const tabelaHistoricoHTML = (linhasPagina) => `
     <div class="historicoBox">
@@ -4163,22 +4153,13 @@ function gerarHistoricoDeProducaoParaImpressao() {
     </div>
   `;
 
-  // ================== PÁGINA 1 ==================
-  const pagina1HTML = `
-    <div class="page">
-      ${cabecalhoCompletoHTML(TITULO_DOCUMENTO, 1, totalPaginas)}
-      ${tabelaProdutosResumoHTML}
-    </div>
-  `;
-
-  // ================== PÁGINA 2 ==================
-  const pagina2HTML = `
-    <div class="page-break"></div>
-    <div class="page">
-      ${cabecalhoBasicoHTML(TITULO_DOCUMENTO, 2, totalPaginas)}
-      ${tabelaHistoricoHTML(linhasHistorico)}
-    </div>
-  `;
+  // ================== PRÉ-RENDERIZA CABEÇALHOS PARA O SCRIPT ==================
+  const cabCompletoStr = cabecalhoCompletoHTML(TITULO_DOCUMENTO);
+  const cabBasicoStr   = cabecalhoBasicoHTML(TITULO_DOCUMENTO);
+  const cabCompletoEsc = cabCompletoStr.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+  const cabBasicoEsc   = cabBasicoStr.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+  const colgroupEsc    = COLGROUP_HTML.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+  const theadEsc       = THEAD_HTML.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
 
   // ================== HTML FINAL ==================
   const htmlCompleto = `
@@ -4187,350 +4168,201 @@ function gerarHistoricoDeProducaoParaImpressao() {
         <meta charset="utf-8" />
         <title>${TITULO_DOCUMENTO}</title>
         <style>
-          @page {
-            size: A4;
-            margin: 10mm;
-            margin-bottom: 22mm;
-          }
-
+          @page { size: A4; margin: 10mm; }
           body {
             margin: 0;
             padding: 18px;
-            padding-bottom: 28mm;
             font-family: Arial, sans-serif;
             font-size: ${FONT_SIZE_BASE}px;
             color: #111;
           }
-
-          .page {
-            min-height: auto;
-          }
-
-          .page-break {
-            page-break-before: always;
-            break-before: page;
-          }
-
-          .topbar {
-            display: flex;
-            align-items: stretch;
-            gap: 10px;
-            margin-bottom: 8px;
-          }
-
-          .logoBox {
-            flex: 1;
-            border: 2px solid #111;
-            padding: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 56px;
-          }
-
-          .logoBox img {
-            max-height: 46px;
-          }
-
-          .opBox {
-            width: 520px;
-            border: 2px solid #111;
-            padding: 8px 10px;
-          }
-
-          .opTitle {
+          #raw { position: absolute; top: -9999px; left: 0; width: 760px; visibility: hidden; }
+          #historico-page { display: none; }
+          .pagina { page-break-after: always; break-after: page; }
+          .pagina:last-child { page-break-after: auto; break-after: auto; }
+          .pg-num {
+            text-align: left;
+            margin: 0 0 10px 0;
+            padding: 0;
+            clear: both;
+            font-size: 16px;
             font-weight: 900;
-            font-size: ${FONT_SIZE_TITULO}px;
-            text-align: center;
-            margin-bottom: 4px;
-          }
-
-          .opRow {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            font-weight: 700;
-            align-items: flex-start;
-          }
-
-          .metaRight {
-            text-align: right;
-            line-height: 1.2;
-          }
-
-          .numeroPedidoGigante {
-            font-size: ${FONT_SIZE_NUMERO_PEDIDO}px;
-            font-weight: 900;
-            margin: 2px 0 0;
-            line-height: 0.95;
-            letter-spacing: 1px;
-          }
-
-          .numeroPedidoGigante span {
-            font-weight: 900;
-          }
-
-          .muted {
+            font-family: Arial, sans-serif;
             color: #111;
-            font-weight: 900;
+            letter-spacing: 0.5px;
           }
-
-          .muted-meta {
-            color: #333;
-            font-weight: 400;
-          }
-
-          .pageIndicator {
-            margin: 4px 0 8px;
-            padding: 5px 8px;
-            border: 1px solid #111;
-            font-weight: 700;
-            text-align: center;
-            background: #f8f8f8;
-          }
-
-          .tblInfo {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 6px;
-          }
-
-          .tblInfo td {
-            border: 1px solid #111;
-            padding: ${PADDING_TABELA_Y}px ${PADDING_TABELA_X}px;
-            vertical-align: top;
-          }
-
-          .k {
-            width: 160px;
-            font-weight: 700;
-            white-space: nowrap;
-          }
-
-          .v {
-            min-width: 220px;
-          }
-
-          .vSmall {
-            min-width: 160px;
-          }
-
-          .line2col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-            margin: 6px 0;
-          }
-
-          .miniBox {
-            border: 1px solid #111;
-            padding: 6px 8px;
-            font-weight: 700;
-          }
-
-          .fullBox,
-          .historicoBox {
-            border: 1px solid #111;
-            margin-top: 10px;
-          }
-
-          .gridTitle {
-            font-weight: 900;
-            text-align: center;
-            padding: 5px;
-            border-bottom: 1px solid #111;
-            background: #f2f2f2;
-          }
-
-          .bigTbl,
-          .historicoTbl {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-          }
-
-          .bigTbl {
-            font-size: ${FONT_SIZE_TABELA}px;
-          }
-
-          .historicoTbl {
-            font-size: ${FONT_SIZE_TABELA}px;
-          }
-
-          .bigTbl th,
-          .bigTbl td,
-          .historicoTbl th,
-          .historicoTbl td {
-            border: 1px solid #111;
-            box-sizing: border-box;
-          }
-
-          .bigTbl th,
-          .bigTbl td {
-            padding: ${PADDING_TABELA_Y}px ${PADDING_TABELA_X}px;
-          }
-
-          .historicoTbl th,
-          .historicoTbl td {
-            padding: ${PADDING_HISTORICO_Y}px ${PADDING_HISTORICO_X}px;
-          }
-
-          .bigTbl tbody tr {
-            height: ${ALTURA_LINHA_RESUMO}px;
-          }
-
-          .bigTbl td {
-            height: ${ALTURA_LINHA_RESUMO}px;
-            vertical-align: middle;
-          }
-
-          .historicoTbl td {
-            height: ${ALTURA_LINHA_HISTORICO}px;
-            vertical-align: top;
-          }
-
-          .bigTbl thead th,
-          .historicoTbl thead th {
-            background: #fafafa;
-            font-weight: 900;
-            font-size: ${FONT_SIZE_HEADER}px;
-          }
-
-          .resumoProdutosTbl .descCell {
-            white-space: normal;
-            word-break: break-word;
-            vertical-align: middle;
-          }
-
-          .cItem {
-            text-align: center;
-            vertical-align: middle !important;
-            font-weight: 700;
-          }
-
-          .cQtd {
-            text-align: center;
-            vertical-align: middle !important;
-          }
-
-          .cData {
-            text-align: center;
-            white-space: nowrap;
-          }
-
-          .rodape-fixo {
-            position: fixed;
-            left: 10mm;
-            right: 10mm;
-            bottom: 8mm;
-            height: 14mm;
-            border-top: 2px solid #111;
-            padding-top: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 18px;
-            background: #fff;
-            z-index: 9999;
-          }
-
-          .rodape-fixo .docNome {
-            font-weight: 900;
-            font-size: 12px;
-            letter-spacing: .5px;
-          }
-
-          .rodape-fixo .bigMeta {
-            display: flex;
-            align-items: baseline;
-            gap: 14px;
-            font-weight: 900;
-          }
-
-          .rodape-fixo .bigMeta .lbl {
-            font-size: ${FONT_SIZE_RODAPE_LABEL}px;
-            font-weight: 700;
-            color: #333;
-            margin-right: 4px;
-          }
-
-          .rodape-fixo .bigMeta .val {
-            font-size: ${FONT_SIZE_RODAPE_VALOR}px;
-            font-weight: 900;
-            letter-spacing: .4px;
-          }
-
-          .rodape-fixo .sep {
-            width: 2px;
-            height: 18px;
-            background: #111;
-            opacity: .35;
-          }
-
+          .topbar { display: flex; align-items: stretch; gap: 10px; margin-bottom: 8px; }
+          .logoBox { flex: 1; border: 2px solid #111; padding: 8px; display: flex; align-items: center; justify-content: center; min-height: 56px; }
+          .logoBox img { max-height: 46px; }
+          .opBox { width: 520px; border: 2px solid #111; padding: 8px 10px; }
+          .opTitle { font-weight: 900; font-size: ${FONT_SIZE_TITULO}px; text-align: center; margin-bottom: 4px; }
+          .opRow { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; align-items: flex-start; }
+          .metaRight { text-align: right; line-height: 1.2; }
+          .numeroPedidoGigante { font-size: ${FONT_SIZE_NUMERO_PEDIDO}px; font-weight: 900; margin: 2px 0 0; line-height: 0.95; letter-spacing: 1px; }
+          .numeroPedidoGigante span { font-weight: 900; }
+          .muted { color: #111; font-weight: 900; }
+          .muted-meta { color: #333; font-weight: 400; }
+          .tblInfo { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+          .tblInfo td { border: 1px solid #111; padding: ${PADDING_TABELA_Y}px ${PADDING_TABELA_X}px; vertical-align: top; }
+          .k { width: 160px; font-weight: 700; white-space: nowrap; }
+          .v { min-width: 220px; }
+          .vSmall { min-width: 160px; }
+          .line2col { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0; }
+          .miniBox { border: 1px solid #111; padding: 6px 8px; font-weight: 700; }
+          .fullBox, .historicoBox { border: 1px solid #111; margin-top: 10px; }
+          .gridTitle { font-weight: 900; text-align: center; padding: 5px; border-bottom: 1px solid #111; background: #f2f2f2; }
+          .bigTbl, .historicoTbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          .bigTbl { font-size: ${FONT_SIZE_TABELA}px; }
+          .historicoTbl { font-size: ${FONT_SIZE_TABELA}px; }
+          .bigTbl th, .bigTbl td, .historicoTbl th, .historicoTbl td { border: 1px solid #111; box-sizing: border-box; }
+          .bigTbl th, .bigTbl td { padding: ${PADDING_TABELA_Y}px ${PADDING_TABELA_X}px; }
+          .historicoTbl th, .historicoTbl td { padding: ${PADDING_HISTORICO_Y}px ${PADDING_HISTORICO_X}px; }
+          .bigTbl tbody tr { height: ${ALTURA_LINHA_RESUMO}px; }
+          .bigTbl td { height: ${ALTURA_LINHA_RESUMO}px; vertical-align: middle; }
+          .historicoTbl td { height: ${ALTURA_LINHA_HISTORICO}px; vertical-align: top; }
+          .bigTbl thead th, .historicoTbl thead th { background: #fafafa; font-weight: 900; font-size: ${FONT_SIZE_HEADER}px; }
+          .resumoProdutosTbl .descCell { white-space: normal; word-break: break-word; vertical-align: middle; }
+          .mrow { margin: 0; }
+          .mrow td { border-top: none; }
+          .cItem { text-align: center; vertical-align: middle !important; font-weight: 700; }
+          .cQtd { text-align: center; vertical-align: middle !important; }
+          .cData { text-align: center; white-space: nowrap; }
           @media print {
-            body {
-              padding: 18px;
-              padding-bottom: 28mm;
-            }
-
-            thead {
-              display: table-header-group;
-            }
-
-            tfoot {
-              display: table-footer-group;
-            }
-
-            tr,
-            td,
-            th {
-              page-break-inside: avoid;
-              break-inside: avoid;
-            }
-
-            .rodape-fixo {
-              position: fixed;
-            }
+            body { padding: 18px; }
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+            tr, td, th { page-break-inside: avoid; break-inside: avoid; }
           }
         </style>
       </head>
       <body>
 
-        <div class="rodape-fixo">
-          <div class="docNome">${TITULO_DOCUMENTO}</div>
-          <div class="sep"></div>
-          <div class="bigMeta">
-            <div><span class="lbl">Nº do Pedido</span> <span class="val">${escapeHtml(numeroPedido)}</span></div>
-            <div class="sep"></div>
-            <div><span class="lbl">Data</span> <span class="val">${escapeHtml(data)}</span></div>
-          </div>
+        <!-- Itens para medição off-screen -->
+        <div id="raw">
+          ${produtoRowsHTML}
         </div>
 
-        ${pagina1HTML}
-        ${pagina2HTML}
+        <!-- Histórico (inserido como última página pelo script) -->
+        <div id="historico-page">
+          ${tabelaHistoricoHTML(linhasHistorico)}
+        </div>
 
         <script>
-          window.onload = function () {
+        (function () {
+          var CAB_COMPLETO = \`${cabCompletoEsc}\`;
+          var CAB_BASICO   = \`${cabBasicoEsc}\`;
+          var COLGROUP     = \`${colgroupEsc}\`;
+          var THEAD        = \`${theadEsc}\`;
+          var ALTURA_PAGINA = 650;
+
+          window.addEventListener('load', function () {
             setTimeout(function () {
-              window.focus();
+              construirPaginas();
               window.print();
-            }, 250);
-          };
+            }, 1800);
+          });
+
+          function construirPaginas() {
+            var raw = document.getElementById('raw');
+            raw.style.visibility = 'visible';
+            var chunks = Array.from(raw.children);
+
+            var pages = [[]];
+            var alturas = [0];
+
+            chunks.forEach(function (chunk) {
+              var h = chunk.getBoundingClientRect().height || 40;
+              var idx = pages.length - 1;
+              if (alturas[idx] + h > ALTURA_PAGINA && pages[idx].length > 0) {
+                pages.push([chunk]);
+                alturas.push(h);
+              } else {
+                pages[idx].push(chunk);
+                alturas[idx] += h;
+              }
+            });
+
+            raw.remove();
+
+            var histPage = document.getElementById('historico-page');
+            histPage.parentNode.removeChild(histPage);
+
+            var totalPags = pages.length + 1;
+
+            pages.forEach(function (chks, i) {
+              var pDiv = document.createElement('div');
+              pDiv.className = 'pagina';
+
+              var pgNum = document.createElement('div');
+              pgNum.className = 'pg-num';
+              pgNum.textContent = 'Pág. ' + (i + 1) + ' / ' + totalPags;
+              pDiv.appendChild(pgNum);
+
+              var cabDiv = document.createElement('div');
+              cabDiv.innerHTML = i === 0 ? CAB_COMPLETO : CAB_BASICO;
+              pDiv.appendChild(cabDiv);
+
+              var tableWrap = document.createElement('div');
+              tableWrap.className = 'fullBox';
+
+              var titleDiv = document.createElement('div');
+              titleDiv.className = 'gridTitle';
+              titleDiv.textContent = 'Resumo dos Produtos';
+              tableWrap.appendChild(titleDiv);
+
+              var table = document.createElement('table');
+              table.className = 'bigTbl resumoProdutosTbl';
+              table.style.tableLayout = 'fixed';
+              table.style.width = '100%';
+              table.innerHTML = COLGROUP + THEAD + '<tbody></tbody>';
+              var tbody = table.querySelector('tbody');
+
+              chks.forEach(function (chunk) {
+                var tr = chunk.querySelector('tr');
+                if (tr) tbody.appendChild(tr);
+              });
+
+              tableWrap.appendChild(table);
+              pDiv.appendChild(tableWrap);
+              document.body.appendChild(pDiv);
+            });
+
+            // Página de histórico — sempre a última
+            var histDiv = document.createElement('div');
+            histDiv.className = 'pagina';
+
+            var pgNumHist = document.createElement('div');
+            pgNumHist.className = 'pg-num';
+            pgNumHist.textContent = 'Pág. ' + (pages.length + 1) + ' / ' + totalPags;
+            histDiv.appendChild(pgNumHist);
+
+            var cabHistDiv = document.createElement('div');
+            cabHistDiv.innerHTML = CAB_BASICO;
+            histDiv.appendChild(cabHistDiv);
+
+            while (histPage.firstChild) {
+              histDiv.appendChild(histPage.firstChild);
+            }
+
+            document.body.appendChild(histDiv);
+          }
+        })();
         </script>
+
       </body>
     </html>
   `;
 
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
-
   printWindow.document.open();
   printWindow.document.write(htmlCompleto);
   printWindow.document.close();
 }
 
 
-function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
+async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
+  const logoSrc = await carregarLogoBase64("../js/logo.jpg");
   const getValue = (id) => document.getElementById(id)?.value?.trim() || "-";
 
   const getTextOrValue = (el) => {
@@ -4783,7 +4615,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   // ================== CABEÇALHOS ==================
   const cabecalhoCompletoHTML = (titulo, paginaAtual, totalPaginas) => `
     <div class="topbar">
-      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
+      <div class="logoBox"><img src="${logoSrc}" alt="Logo"></div>
       <div class="opBox">
         <div class="opTitle">${titulo}</div>
         <div class="opRow">
@@ -4830,7 +4662,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
 
   const cabecalhoBasicoHTML = (titulo, paginaAtual, totalPaginas) => `
     <div class="topbar topbar-basico">
-      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
+      <div class="logoBox"><img src="${logoSrc}" alt="Logo"></div>
       <div class="opBox">
         <div class="opTitle">${titulo}</div>
         <div class="opRow">
@@ -5021,18 +4853,14 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   `;
 
   // ================== PÁGINAS ==================
-  const pagina1HTML = `
-    <div class="pagina">
-      ${cabecalhoCompletoHTML("ORDEM DE SERVIÇO / PRODUÇÃO", 1, TOTAL_PAGINAS)}
-      ${etapasDoProcessoHTML}
-      ${itensHTML_ComQtd || `<div class="item" style="padding:10px;"><strong>Nenhum item encontrado para impressão.</strong></div>`}
-    </div>
-  `;
+  // Cabeçalho pré-renderizado para embutir no script de paginação
+  const cabHTML = cabecalhoCompletoHTML("ORDEM DE SERVIÇO / PRODUÇÃO", 1, 1);
+  const cabHTMLEsc = cabHTML.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
 
   const pagina2HTML = `
-    <div class="page-break"></div>
+    <div class="page-break pagina2-break"></div>
     <div class="pagina pagina-secundaria">
-      ${cabecalhoBasicoHTML("ORDEM DE SERVIÇO / PRODUÇÃO", 2, TOTAL_PAGINAS)}
+      ${cabecalhoBasicoHTML("ORDEM DE SERVIÇO / PRODUÇÃO", 2, 2)}
       ${faturamentoDiretoHTML}
       ${servicosTerceirosHTML}
     </div>
@@ -5056,7 +4884,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             padding: 18px;
             padding-bottom: 28mm;
             font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-size: 14px;
             color: #111;
           }
 
@@ -5220,11 +5048,11 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           }
 
           .item-title {
-            font-size: 14px;
+            font-size: 16px;
           }
 
           .item-sub {
-            font-size: 12px;
+            font-size: 14px;
           }
 
           .tbl {
@@ -5288,7 +5116,7 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           .bigTbl {
             width: 100%;
             border-collapse: collapse;
-            font-size: 10.5px;
+            font-size: 12px;
           }
 
           .bigTbl th,
@@ -5402,97 +5230,168 @@ function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             border-top: 1px solid #000;
           }
 
-          .rodape-fixo {
-            position: fixed;
-            left: 10mm;
-            right: 10mm;
-            bottom: 8mm;
-            height: 14mm;
-            border-top: 2px solid #111;
-            padding-top: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 18px;
-            background: #fff;
-            z-index: 9999;
-          }
-
-          .rodape-fixo .docNome {
-            font-weight: 900;
-            font-size: 12px;
-            letter-spacing: .5px;
-          }
-
-          .rodape-fixo .bigMeta {
-            display: flex;
-            align-items: baseline;
-            gap: 14px;
-            font-weight: 900;
-          }
-
-          .rodape-fixo .bigMeta .lbl {
-            font-size: 11px;
-            font-weight: 700;
-            color: #333;
-            margin-right: 4px;
-          }
-
-          .rodape-fixo .bigMeta .val {
-            font-size: 20px;
-            font-weight: 900;
-            letter-spacing: .4px;
-          }
-
-          .rodape-fixo .sep {
-            width: 2px;
-            height: 18px;
-            background: #111;
-            opacity: .35;
-          }
-
           @media print {
-            body {
-              padding: 18px;
-              padding-bottom: 28mm;
-            }
-
-            .pagina,
-            .item,
-            .fullBox,
-            .vv-etapas {
+            body { padding: 18px; }
+            .pagina, .item, .fullBox, .vv-etapas {
               page-break-inside: avoid;
               break-inside: avoid;
             }
+          }
 
-            .rodape-fixo {
-              position: fixed;
-            }
+          #raw {
+            position: absolute;
+            top: -9999px;
+            left: 0;
+            width: 754px;
+            visibility: hidden;
+          }
+
+          .pg-num {
+            text-align: left;
+            margin: 0 0 10px 0;
+            padding: 0;
+            clear: both;
+            font-size: 16px;
+            font-weight: 900;
+            font-family: Arial, sans-serif;
+            color: #111;
+            letter-spacing: 0.5px;
           }
         </style>
       </head>
       <body>
 
-        <div class="rodape-fixo">
-          <div class="docNome">ORDEM DE SERVIÇO / PRODUÇÃO</div>
-          <div class="sep"></div>
-          <div class="bigMeta">
-            <div><span class="lbl">Nº do Pedido</span> <span class="val">${escapeHtml(numeroPedido)}</span></div>
-            <div class="sep"></div>
-            <div><span class="lbl">Data</span> <span class="val">${escapeHtml(data)}</span></div>
-          </div>
+        <!-- Conteúdo bruto: medido e distribuído em páginas pelo script -->
+        <div id="raw">
+          ${etapasDoProcessoHTML}
+          ${itensHTML_ComQtd || `<div class="item" style="padding:10px;"><strong>Nenhum item encontrado para impressão.</strong></div>`}
         </div>
 
-        ${pagina1HTML}
         ${pagina2HTML}
 
         <script>
-          window.onload = function () {
+        (function () {
+          var CAB_HTML = \`${cabHTMLEsc}\`;
+          var ALTURA_PAGINA = 700;
+
+          window.addEventListener('load', function () {
             setTimeout(function () {
-              window.focus();
+              construirPaginas();
               window.print();
-            }, 250);
-          };
+            }, 1800);
+          });
+
+          function construirPaginas() {
+            var raw = document.getElementById('raw');
+            if (!raw) return;
+            var filhos = Array.from(raw.children);
+
+            raw.style.visibility = 'visible';
+
+            // 1) Medir alturas brutas de todos os filhos
+            var hBrutos = filhos.map(function (el) {
+              return el.getBoundingClientRect().height || el.offsetHeight || 40;
+            });
+
+            // 2) filhos[0]=etapas, filhos[1]=item1 — forçar juntos na página 1
+            //    Calcular escala necessária (máx. -15%)
+            var escala = 1.0;
+            var h0 = hBrutos[0] || 0;
+            var h1 = hBrutos[1] || 0;
+            if (h0 + h1 > ALTURA_PAGINA) {
+              escala = Math.max(0.85, ALTURA_PAGINA / (h0 + h1));
+            }
+
+            // 3) Página 1: etapas + item1 (fixo)
+            //    Espaço restante na pág 1 (em unidades escaladas)
+            var restantePag1 = (ALTURA_PAGINA / escala) - h0 - h1;
+
+            var pag1Els    = filhos.slice(0, Math.min(2, filhos.length));
+            var altPag1    = h0 + h1;
+
+            // Absorver itens extras que ainda caibam na página 1
+            var inicio = pag1Els.length;
+            for (var k = inicio; k < filhos.length; k++) {
+              if (altPag1 + hBrutos[k] <= ALTURA_PAGINA / escala) {
+                pag1Els.push(filhos[k]);
+                altPag1 += hBrutos[k];
+              } else {
+                break;
+              }
+            }
+
+            // 4) Distribuir itens restantes em páginas normais
+            var todasPaginas = [pag1Els];
+            var restantes    = filhos.slice(pag1Els.length);
+            if (restantes.length > 0) {
+              var pAtual  = [];
+              var altAtual = 0;
+              restantes.forEach(function (el, idx) {
+                var h = hBrutos[pag1Els.length + idx];
+                if (altAtual + h > ALTURA_PAGINA && pAtual.length > 0) {
+                  todasPaginas.push(pAtual);
+                  pAtual  = [el];
+                  altAtual = h;
+                } else {
+                  pAtual.push(el);
+                  altAtual += h;
+                }
+              });
+              if (pAtual.length > 0) todasPaginas.push(pAtual);
+            }
+
+            raw.remove();
+
+            var total  = todasPaginas.length + 1; // +1 página 2 estática
+            var anchor = document.querySelector('.pagina2-break');
+
+            todasPaginas.forEach(function (els, i) {
+              if (i > 0) {
+                var br = document.createElement('div');
+                br.className = 'page-break';
+                document.body.insertBefore(br, anchor);
+              }
+
+              var pDiv = document.createElement('div');
+              pDiv.className = 'pagina';
+
+              // Número de página — primeiro elemento, canto esquerdo
+              var numDiv = document.createElement('div');
+              numDiv.className = 'pg-num';
+              numDiv.innerHTML = 'Pág. ' + (i + 1) + ' / ' + total;
+              pDiv.appendChild(numDiv);
+
+              // Cabeçalho
+              var cabDiv = document.createElement('div');
+              cabDiv.innerHTML = CAB_HTML;
+              pDiv.appendChild(cabDiv);
+
+              // Conteúdo — página 1 com wrapper escalado se necessário
+              if (i === 0 && escala < 1.0) {
+                var wrapper = document.createElement('div');
+                wrapper.style.cssText = 'transform:scale(' + escala.toFixed(3) + ');transform-origin:top left;width:' + Math.round(100 / escala) + '%;';
+                els.forEach(function (el) { el.style.visibility = 'visible'; wrapper.appendChild(el); });
+                pDiv.appendChild(wrapper);
+              } else {
+                els.forEach(function (el) { el.style.visibility = 'visible'; pDiv.appendChild(el); });
+              }
+
+              document.body.insertBefore(pDiv, anchor);
+            });
+
+            // Numerar a página 2 estática
+            var pag2 = document.querySelector('.pagina-secundaria');
+            if (pag2) {
+              var cab2 = pag2.querySelector('.topbar');
+              if (cab2) {
+                var num2 = document.createElement('div');
+                num2.className = 'pg-num';
+                num2.innerHTML = 'Pág. ' + total + ' / ' + total;
+                cab2.insertAdjacentElement('beforebegin', num2);
+              }
+            }
+          }
+        })();
         </script>
       </body>
     </html>

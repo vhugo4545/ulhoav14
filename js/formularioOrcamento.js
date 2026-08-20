@@ -11,54 +11,50 @@ function adicionarParcela() {
   const lista = document.getElementById("listaParcelas");
 
   const div = document.createElement("div");
-  div.className = "row g-2 align-items-end mb-2";
+  div.style.cssText = "background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:1fr 1.5fr 0.8fr 0.8fr auto;gap:10px;align-items:end;font-family:'Poppins',sans-serif;";
+  div.className = "";
+
+  const labelStyle = "display:block;font-size:11px;font-weight:600;color:#64748b;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;";
+  const inputStyle = "border-radius:8px;border:1px solid #e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;padding:7px 10px;width:100%;background:#fff;";
+  const selectStyle = inputStyle + "appearance:auto;";
 
   div.innerHTML = `
- <div class="col-3 col-lg-2">
-    <label class="form-label mb-0">Tipo Monetário</label>
-    <select class="form-select tipo-monetario" id="selectTipoMonetario">
-      <option value="" disabled selected>Selecione…</option>
-      <option value="CRC">Cartão de Crédito</option>
-      <option value="DIN">Dinheiro</option>
-      <option value="BOLV">Boleto Bancario</option>
-      <option value="PIX">Pix</option>
-      <option value="TED">TED (Tranferência Eletrônica Disponível)</option>
-      <option value="PER">Outros</option>
-    </select>
-  </div>
-
-    
-
-    <div class="col-4 col-lg-3">
-      <label class="form-label mb-0">Condição de Pagto</label>
-      <div class="condicao-wrapper">
-        <select class="form-select condicao-pagto" onchange="verificarCondicaoPersonalizada(this)">
-          <option value="" disabled selected>Selecione…</option>
-          <option value="avista">3 dias após finalizar instalação completa.</option>
-          <option value="na-retirada">3 dias após finalizar instalação da estrutura.</option>
-          <option value="30-dias">3 dias após finalizar instalação dos vidros.</option>
-          <option value="entrada+30">Na retirada/entrega do produto.</option>
-          <option value="personalizado">Personalizado</option>
-        </select>
-      </div>
+    <div>
+      <label style="${labelStyle}">Tipo Monetário</label>
+      <select class="tipo-monetario" style="${selectStyle}">
+        <option value="" disabled selected>Selecione…</option>
+        <option value="03">Cartão de Crédito</option>
+        <option value="01">Dinheiro</option>
+        <option value="15">Boleto Bancário</option>
+        <option value="17">Pix</option>
+        <option value="18">TED</option>
+        <option value="99">Outros</option>
+      </select>
     </div>
-
-    <div class="col-3 col-lg-2">
-      <label class="form-label mb-0">Valor</label>
-      <input type="text" class="form-control valor-parcela" placeholder="Ex: 1000 ou 30%">
+    <div class="condicao-wrapper">
+      <label style="${labelStyle}">Condição de Pagto</label>
+      <select class="condicao-pagto" style="${selectStyle}" onchange="verificarCondicaoPersonalizada(this)">
+        <option value="" disabled selected>Selecione…</option>
+        <option value="avista">3 dias após finalizar instalação completa.</option>
+        <option value="na-retirada">3 dias após finalizar instalação da estrutura.</option>
+        <option value="30-dias">3 dias após finalizar instalação dos vidros.</option>
+        <option value="entrada+30">Na retirada/entrega do produto.</option>
+        <option value="personalizado">Personalizado</option>
+      </select>
     </div>
-
-    <div class="col-2 col-lg-3">
-      <label class="form-label mb-0">Vencimento</label>
-      <input type="date" class="form-control data-parcela">
+    <div>
+      <label style="${labelStyle}">Valor</label>
+      <input type="text" class="valor-parcela" placeholder="Ex: 1000 ou 30%" style="${inputStyle}">
     </div>
-
-    <div class="col-12 col-lg-2">
-      <button type="button" class="btn btn-outline-danger w-100" onclick="this.closest('.row').remove(); atualizarValoresParcelas()">
-        Remover
-      </button>
+    <div>
+      <label style="${labelStyle}">Vencimento</label>
+      <input type="date" class="data-parcela" style="${inputStyle}">
+    </div>
+    <div style="display:flex;align-items:flex-end;">
+      <button type="button" onclick="this.closest('[data-parcela-row]').remove(); atualizarValoresParcelas()" style="padding:7px 12px;border:1px solid #fecaca;border-radius:8px;background:#fff;color:#ef4444;font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Remover</button>
     </div>
   `;
+  div.dataset.parcelaRow = "1";
 
   lista.appendChild(div);
   setTimeout(() => aplicarEventosParcela(div), 200);
@@ -114,14 +110,15 @@ function recalcularParcelasComPercentual() {
 
 
 function calcularTotalDosGrupos() {
-  const texto = document.querySelector("#valorFinalTotal").textContent.trim();
-
-  // Remove "R$" e espaços extras
-  const valorLimpo = texto.replace("R$", "").trim();
-
-  // Converte direto para número com parseFloat (mantém ponto decimal)
-  const numero = parseFloat(valorLimpo);
-
+  const texto = (document.querySelector("#valorFinalTotal")?.textContent || "").trim();
+  // Parse formato BR (ex: R$ 162.782,72 → 162782.72)
+  const limpo = texto
+    .replace(/R\$\s?/g, "")
+    .replace(/ /g, "")
+    .trim()
+    .replace(/\./g, "")   // remove separador de milhar
+    .replace(",", ".");   // vírgula decimal → ponto
+  const numero = parseFloat(limpo);
   return isNaN(numero) ? 0 : numero;
 }
 
@@ -169,7 +166,7 @@ function verificarCondicaoPersonalizada(select) {
 
 /* troca o placeholder quando muda de Valor ↔ Percentual */
 function atualizarPlaceholder(selectEl) {
-  const input = selectEl.closest(".row").querySelector(".valor-parcela");
+  const input = (selectEl.closest("[data-parcela-row]") || selectEl.closest(".row"))?.querySelector(".valor-parcela");
   input.placeholder = selectEl.value === "percentual" ? "% 0,00" : "R$ 0,00";
 }
 

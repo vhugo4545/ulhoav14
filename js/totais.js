@@ -192,79 +192,35 @@ function calcularValoresFinanceirosDiretoDaTabela(blocoId) {
 // =========================
 function gerarHtmlTotalizador(nomeAmbiente, valores) {
   const base = Number(valores.campoValorMinimo) || 1;
+  function pct(v) { return `${((Number(v||0)/base)*100).toFixed(1)}%`; }
 
-  function porcentagem(valor) {
-    return `${((Number(valor || 0) / base) * 100).toFixed(1)}%`;
-  }
-
-  const comissaoArquiteta = Number(valores.comissao_arquiteta) || 0;
+  const comissaoArquiteta  = Number(valores.comissao_arquiteta) || 0;
   const custoTotalMaterial = Number(valores.custoTotalMaterial) || 0;
-  const margemSeguranca = Number(valores.margem_seguranca) || 0;
-  const campoNegociacao = Number(valores.campoNegociacao) || 0;
+  const margemSeguranca    = Number(valores.margem_seguranca) || 0;
+  const campoNegociacao    = Number(valores.campoNegociacao) || 0;
+
+  const col = (label, value, badge, extra = '') => `
+    <div class="col">
+      <div class="tot-card${extra ? ' ' + extra : ''}">
+        <div class="text-muted small tot-label">${label}</div>
+        <div class="fw-bold tot-value">${value}</div>
+        <div class="text-secondary small">${badge}</div>
+      </div>
+    </div>`;
 
   return `
-    <div class="row text-center gx-4 gy-3">
-      <div class="col">
-        <div class="text-muted small">Miudezas</div>
-        <div class="fw-bold">${formatarMoedaBR(valores.campoValorMiudezas)}</div>
-        <div class="text-secondary small">${porcentagem(valores.campoValorMiudezas)}</div>
-      </div>
-
-      <div class="col">
-        <div class="text-muted small">Gastos <br>Operacionais</div>
-        <div class="fw-bold">${formatarMoedaBR(valores.campoValorGastosOperacionais)}</div>
-        <div class="text-secondary small">${porcentagem(valores.campoValorGastosOperacionais)}</div>
-      </div>
-
-      <div class="col">
-        <div class="text-muted small">Impostos</div>
-        <div class="fw-bold">${formatarMoedaBR(valores.campoValorImpostos)}</div>
-        <div class="text-secondary small">${porcentagem(valores.campoValorImpostos)}</div>
-      </div>
-
-      <div class="col">
-        <div class="text-muted small">Margem de <br>Segurança</div>
-        <div class="fw-bold">${formatarMoedaBR(margemSeguranca)}</div>
-        <div class="text-secondary small">${porcentagem(margemSeguranca)}</div>
-      </div>
-
-      <div class="col">
-        <div class="text-muted small">Comissão <br>Arquiteta</div>
-        <div class="fw-bold">${formatarMoedaBR(comissaoArquiteta)}</div>
-        <div class="text-secondary small">${porcentagem(comissaoArquiteta)}</div>
-      </div>
-
-      <div class="col">
-        <div class="text-muted small">Margem de <br>Negociação</div>
-        <div class="fw-bold">${formatarMoedaBR(campoNegociacao)}</div>
-        <div class="text-secondary small">${porcentagem(campoNegociacao)}</div>
-      </div>
-
-      <div class="col">
-        <div class="text-muted small">Custo Total <br>de Material</div>
-        <div class="fw-bold">${formatarMoedaBR(custoTotalMaterial)}</div>
-        <div class="text-secondary small">–</div>
-      </div>
-
-      <div class="col">
-        <div class="text-muted small">Valor <br>Mínimo</div>
-        <div class="fw-bold">${formatarMoedaBR(valores.campoValorMinimo)}</div>
-        <div class="text-secondary small">100%</div>
-      </div>
-
-      <div class="col">
-        <div class="text-muted small">Valor <br>Sugerido</div>
-        <div class="fw-bold">${formatarMoedaBR(valores.campoValorFinal)}</div>
-        <div class="text-secondary small">${porcentagem(valores.campoValorFinal)}</div>
-      </div>
-
-      <div class="col">
-        <div class="text-muted small">Margem de <br>Lucro</div>
-        <div class="fw-bold">${formatarMoedaBR(valores.campoValorMargemLucro)}</div>
-        <div class="text-secondary small">${porcentagem(valores.campoValorMargemLucro)}</div>
-      </div>
-    </div>
-  `;
+    <div class="row text-center gx-3 gy-3">
+      ${col('Miudezas',            formatarMoedaBR(valores.campoValorMiudezas),           pct(valores.campoValorMiudezas))}
+      ${col('Gastos Operacionais', formatarMoedaBR(valores.campoValorGastosOperacionais), pct(valores.campoValorGastosOperacionais))}
+      ${col('Impostos',            formatarMoedaBR(valores.campoValorImpostos),           pct(valores.campoValorImpostos))}
+      ${col('Mg. Segurança',       formatarMoedaBR(margemSeguranca),                     pct(margemSeguranca))}
+      ${col('Comissão Arquiteta',  formatarMoedaBR(comissaoArquiteta),                   pct(comissaoArquiteta))}
+      ${col('Negociação',          formatarMoedaBR(campoNegociacao),                     pct(campoNegociacao))}
+      ${col('Custo Material',      formatarMoedaBR(custoTotalMaterial),                  '—')}
+      ${col('Valor Mínimo',        formatarMoedaBR(valores.campoValorMinimo),            '100%',                        'tot-card--min')}
+      ${col('Valor Sugerido',      formatarMoedaBR(valores.campoValorFinal),             pct(valores.campoValorFinal),  'tot-card--key')}
+      ${col('Margem de Lucro',     formatarMoedaBR(valores.campoValorMargemLucro),       pct(valores.campoValorMargemLucro))}
+    </div>`;
 }
 
 
@@ -329,9 +285,9 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
     bloco.querySelectorAll(".resumo-totalizador-interno").forEach(el => el.remove());
 
     const divInterna = document.createElement("div");
-    divInterna.className = "resumo-totalizador resumo-totalizador-interno mt-4 p-4 border-top";
+    divInterna.className = "resumo-totalizador resumo-totalizador-interno tot-bloco-interno mt-3";
     divInterna.innerHTML = `
-      <div class="fw-semibold mb-3">Resumo do grupo: ${nomeExibicao}</div>
+      <div class="tot-bloco-nome mb-3">Resumo: ${nomeExibicao}</div>
       ${gerarHtmlTotalizador(nomeExibicao, valores)}
     `;
 
@@ -342,8 +298,12 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
 
   const containerResumo = document.createElement("div");
   containerResumo.id = "totalizadoresExternosPorAmbiente";
-  containerResumo.className = "mt-5";
-  containerResumo.innerHTML = `<h4 class="mb-4">Totais Consolidados por Ambiente</h4>`;
+  containerResumo.className = "tot-secao mt-5";
+  containerResumo.innerHTML = `
+    <div class="tot-secao-titulo">
+      <span class="material-icons-outlined">summarize</span>
+      Totais Consolidados por Ambiente
+    </div>`;
 
   const checkboxes = {};
 
@@ -354,18 +314,19 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
     const valoresSomados = somarValores(grupo.valores);
 
     const divResumo = document.createElement("div");
-    divResumo.className = "resumo-totalizador mb-4 p-4 border rounded bg-light";
+    divResumo.className = "tot-bloco mb-3";
     divResumo.innerHTML = `
-      <div class="form-check mb-3">
-        <input
-          class="form-check-input ambiente-toggle"
-          type="checkbox"
-          id="toggle-${ambienteId}"
-          checked
-          data-ambiente="${ambienteId}"
-        >
-        <label class="form-check-label fw-semibold" for="toggle-${ambienteId}">
-          Incluir "${ambiente}" no valor final
+      <div class="tot-bloco-header">
+        <span class="tot-bloco-nome">${ambiente}</span>
+        <label class="tot-toggle-label">
+          <input
+            class="form-check-input ambiente-toggle"
+            type="checkbox"
+            id="toggle-${ambienteId}"
+            checked
+            data-ambiente="${ambienteId}"
+          >
+          Incluir no total
         </label>
       </div>
       ${gerarHtmlTotalizador(ambiente, valoresSomados)}
@@ -380,9 +341,12 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
     const valoresGerais = somarValores(listaAmbientes);
 
     const blocoGeral = document.createElement("div");
-    blocoGeral.className = "resumo-totalizador mb-4 p-4 border rounded bg-light";
+    blocoGeral.className = "tot-bloco tot-bloco--total mb-3";
     blocoGeral.innerHTML = `
-      <div class="fw-semibold mb-3">Total da Proposta (soma de todos os ambientes)</div>
+      <div class="tot-bloco-header">
+        <span class="tot-bloco-nome">Total da Proposta</span>
+        <span class="tot-bloco-badge">Soma de todos os ambientes</span>
+      </div>
       ${gerarHtmlTotalizador("Proposta", valoresGerais)}
     `;
 
@@ -391,18 +355,21 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
 
   const inputDesconto = document.createElement("input");
   inputDesconto.type = "text";
-  inputDesconto.className = "form-control w-auto mx-auto mb-3 text-center";
+  inputDesconto.className = "form-control tot-desconto-input text-center";
   inputDesconto.placeholder = "Desconto (R$ ou %)";
   inputDesconto.id = "campoDescontoFinal";
   inputDesconto.value = "";
-  containerResumo.appendChild(inputDesconto);
 
   const final = document.createElement("div");
-  final.className = "bg-white border border-2 rounded p-4 mb-5 text-center";
+  final.className = "tot-valor-final-box mb-5";
   final.innerHTML = `
-    <h5 class="fw-bold mb-3">Valor Final do Pedido</h5>
-    <div class="fs-4 fw-bold text-success" id="valorFinalTotal">R$ 0,00</div>
+    <div class="tot-desconto-wrap">
+      <label class="tot-desconto-label">Desconto</label>
+    </div>
+    <div class="tot-valor-final-label">Valor Final do Pedido</div>
+    <div class="fw-bold tot-valor-final-number" id="valorFinalTotal">R$ 0,00</div>
   `;
+  final.querySelector(".tot-desconto-wrap").appendChild(inputDesconto);
   containerResumo.appendChild(final);
 
   const finalValor = final.querySelector("#valorFinalTotal");
@@ -440,6 +407,26 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
   };
 
   inputDesconto.addEventListener("input", calcularTotalFinal);
+
+  // Máscara de moeda BR ao sair do campo (se não for %)
+  inputDesconto.addEventListener("blur", () => {
+    const raw = inputDesconto.value.trim();
+    if (!raw || raw.endsWith("%")) return;
+    const num = parseNumeroFlex(raw);
+    if (!isNaN(num) && num > 0) {
+      inputDesconto.value = num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+  });
+
+  // Limpa formatação ao focar para facilitar edição
+  inputDesconto.addEventListener("focus", () => {
+    const raw = inputDesconto.value.trim();
+    if (!raw || raw.endsWith("%")) return;
+    const num = parseNumeroFlex(raw);
+    if (!isNaN(num) && num > 0) {
+      inputDesconto.value = String(num).replace(".", ",");
+    }
+  });
   containerResumo.querySelectorAll(".ambiente-toggle").forEach(cb => {
     cb.addEventListener("change", calcularTotalFinal);
   });

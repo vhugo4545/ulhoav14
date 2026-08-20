@@ -1046,6 +1046,27 @@ const VV_CONDICOES_PAGTO_PARCELAS = [
   { value: "personalizado", label: "Personalizado" }
 ];
 
+/* Converte códigos antigos do sistema para os códigos Omie (tipo_documento_cadastro).
+   Aceita tanto o valor antigo quanto o novo — idempotente. */
+const _VV_MEIO_PAG_MAP = {
+  CRC:  "03", CRCP: "03",          // Cartão de Crédito / Parcelado
+  CRD:  "04",                      // Cartão de Débito
+  DIN:  "01",                      // Dinheiro
+  BOLV: "15", BOLR: "15",          // Boleto
+  PIX:  "17",                      // PIX Dinâmico
+  TED:  "18",                      // TED
+  PER:  "99"                       // Outros / Permuta
+};
+
+function vvNormalizarCodigoMeioPagamento(codigo) {
+  const s = String(codigo || "").trim();
+  if (!s) return "";
+  // já é código Omie numérico → devolve como está
+  if (/^\d+$/.test(s)) return s;
+  // código antigo → converte
+  return _VV_MEIO_PAG_MAP[s.toUpperCase()] || s;
+}
+
 function vvParseBRLControleParcelas(valor) {
   if (typeof vv_parseBRL === "function") return vv_parseBRL(valor || "0");
   return Number(
@@ -1155,7 +1176,7 @@ function vvNormalizarParcelaControle(parcela = {}) {
     0;
 
   return {
-    tipo_monetario: String(parcela?.tipo_monetario ?? parcela?.tipo ?? "").trim(),
+    tipo_monetario: vvNormalizarCodigoMeioPagamento(parcela?.tipo_monetario ?? parcela?.tipo ?? ""),
     condicao_pagto: String(parcela?.condicao_pagto ?? parcela?.condicao ?? "").trim(),
     valor: vvRound2ControleParcelas(vvParseBRLControleParcelas(valorBruto)),
     vencimento: String(parcela?.vencimento ?? parcela?.data ?? parcela?.previsao ?? "").trim(),
@@ -1253,14 +1274,19 @@ function vvMontarParcelasProdutoPayloadOmie(parcelasProduto = []) {
     parcelasValidas.reduce((acc, parcela) => acc + Number(parcela.valor || 0), 0)
   );
 
-  return parcelasValidas.map((parcela, index) => ({
-    numero_parcela: index + 1,
-    percentual: totalParcelas > 0
-      ? Number(((Number(parcela.valor || 0) / totalParcelas) * 100).toFixed(2))
-      : 0,
-    data_vencimento: formatarDataBR(parcela.vencimento),
-    valor: vvRound2ControleParcelas(parcela.valor)
-  }));
+  return parcelasValidas.map((parcela, index) => {
+    const obj = {
+      numero_parcela: index + 1,
+      percentual: totalParcelas > 0
+        ? Number(((Number(parcela.valor || 0) / totalParcelas) * 100).toFixed(2))
+        : 0,
+      data_vencimento: formatarDataBR(parcela.vencimento),
+      valor: vvRound2ControleParcelas(parcela.valor)
+    };
+    const meio = String(parcela.tipo_monetario || "").trim();
+    if (meio) obj.meio_pagamento = meio;
+    return obj;
+  });
 }
 
 function vvCriarLinhaParcelaFormularioFallback() {
@@ -1271,14 +1297,14 @@ function vvCriarLinhaParcelaFormularioFallback() {
       <label class="form-label mb-0">Tipo Monetario</label>
       <select class="form-select tipo-monetario">
         <option value="" disabled selected>Selecione...</option>
-        <option value="PIX">Pix</option>
-        <option value="DIN">Dinheiro</option>
-        <option value="CRCP">Cartao Parcelado</option>
-        <option value="CRC">Cartao de Credito</option>
-        <option value="CRD">Cartao de Debito</option>
-        <option value="BOLR">Boleto Recorrente</option>
-        <option value="BOLV">Boleto a Vista</option>
-        <option value="PER">Permuta</option>
+        <option value="17">Pix</option>
+        <option value="01">Dinheiro</option>
+        <option value="03">Cartao Parcelado</option>
+        <option value="03">Cartao de Credito</option>
+        <option value="04">Cartao de Debito</option>
+        <option value="15">Boleto Recorrente</option>
+        <option value="15">Boleto a Vista</option>
+        <option value="99">Permuta</option>
       </select>
     </div>
     <div class="col-4 col-lg-3">
@@ -1659,14 +1685,14 @@ function abrirPopupParcelamentoProdutosServicos({
             <label class="form-label mb-0">Tipo Monetario</label>
             <select class="form-select tipo-monetario-transfer">
               <option value="" disabled selected>Selecione...</option>
-              <option value="PIX">Pix</option>
-              <option value="DIN">Dinheiro</option>
-              <option value="CRCP">Cartao Parcelado</option>
-              <option value="CRC">Cartao de Credito</option>
-              <option value="CRD">Cartao de Debito</option>
-              <option value="BOLR">Boleto Recorrente</option>
-              <option value="BOLV">Boleto a Vista</option>
-              <option value="PER">Permuta</option>
+              <option value="17">Pix</option>
+              <option value="01">Dinheiro</option>
+              <option value="03">Cartao Parcelado</option>
+              <option value="03">Cartao de Credito</option>
+              <option value="04">Cartao de Debito</option>
+              <option value="15">Boleto Recorrente</option>
+              <option value="15">Boleto a Vista</option>
+              <option value="99">Permuta</option>
             </select>
           </div>
           <div class="col-12 col-xl-4">
@@ -5760,14 +5786,14 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
           <label class="form-label mb-0" style="font-size:12px;">Tipo Monetário</label>
           <select class="form-select form-select-sm tipo-mon-so">
             <option value="" disabled selected>Selecione...</option>
-            <option value="PIX">Pix</option>
-            <option value="DIN">Dinheiro</option>
-            <option value="CRCP">Cartão Parcelado</option>
-            <option value="CRC">Cartão de Crédito</option>
-            <option value="CRD">Cartão de Débito</option>
-            <option value="BOLR">Boleto Recorrente</option>
-            <option value="BOLV">Boleto à Vista</option>
-            <option value="PER">Permuta</option>
+            <option value="17">Pix</option>
+            <option value="01">Dinheiro</option>
+            <option value="03">Cartão Parcelado</option>
+            <option value="03">Cartão de Crédito</option>
+            <option value="04">Cartão de Débito</option>
+            <option value="15">Boleto Recorrente</option>
+            <option value="15">Boleto à Vista</option>
+            <option value="99">Permuta</option>
           </select>
         </div>
         <div>
@@ -5920,11 +5946,193 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
   });
 }
 /* =======================================
+   VALIDAÇÃO DE ESTADO DO CLIENTE
+   ======================================= */
+function _encontrarClienteNaLista(nomeAlvo) {
+  const lista = window.listaClientesServico;
+  if (!Array.isArray(lista) || !lista.length) return null;
+  const alvo = (nomeAlvo || "").toLowerCase().trim();
+  return lista.find(c => {
+    const n = (c.razao_social || c.nome_fantasia || c.nome || "").toLowerCase().trim();
+    return n === alvo || n.includes(alvo) || alvo.includes(n);
+  }) || null;
+}
+
+function abrirPopupAtualizacaoCliente(cliente) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;";
+
+    const codigoOmie = cliente?.codigo_cliente_omie || "";
+    const f = (v) => String(v || "").replace(/"/g, "&quot;");
+
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:14px;width:min(520px,95vw);max-height:90vh;overflow-y:auto;padding:28px 28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <span style="font-size:22px;">⚠️</span>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#0f172a;">Cliente sem UF cadastrada</div>
+            <div style="font-size:12px;color:#64748b;margin-top:2px;">Atualize os dados antes de enviar para a Omie</div>
+          </div>
+        </div>
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div style="grid-column:1/-1;">
+            <label style="font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Nome fantasia</label>
+            <input id="_auc_nome" value="${f(cliente?.nome_fantasia)}" placeholder="Nome fantasia"
+              style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Telefone</label>
+            <input id="_auc_tel" value="${f(cliente?.telefone1_numero)}" placeholder="31999999999"
+              style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">UF <span style="color:#ef4444;">*</span></label>
+            <select id="_auc_estado" style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;background:#fff;color:#0f172a;">
+              <option value="">Selecione o estado...</option>
+              ${["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"].map(uf => `<option value="${uf}" ${f(cliente?.estado) === uf ? 'selected' : ''}>${uf}</option>`).join("")}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Cidade</label>
+            <input id="_auc_cidade" value="${f(cliente?.cidade)}" placeholder="Belo Horizonte"
+              style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+          </div>
+          <div style="grid-column:1/-1;">
+            <label style="font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Endereço</label>
+            <input id="_auc_end" value="${f(cliente?.endereco)}" placeholder="Rua, número"
+              style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">CEP</label>
+            <input id="_auc_cep" value="${f(cliente?.cep)}" placeholder="30000000"
+              style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Bairro</label>
+            <input id="_auc_bairro" value="${f(cliente?.bairro)}" placeholder="Centro"
+              style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+          </div>
+        </div>
+        <div id="_auc_msg" style="min-height:18px;font-size:12px;margin-top:12px;"></div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button id="_auc_salvar" style="padding:10px 24px;border:none;border-radius:8px;background:#475569;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Salvar e continuar</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById("_auc_salvar").onclick = async () => {
+      const estado = document.getElementById("_auc_estado").value.trim().toUpperCase();
+      if (!estado) {
+        const msg = document.getElementById("_auc_msg");
+        msg.style.color = "#ef4444"; msg.textContent = "UF é obrigatória.";
+        return;
+      }
+
+      const btn = document.getElementById("_auc_salvar");
+      btn.disabled = true; btn.textContent = "Salvando…";
+
+      const body = {};
+      const nome  = document.getElementById("_auc_nome").value.trim();
+      const tel   = document.getElementById("_auc_tel").value.trim();
+      const end   = document.getElementById("_auc_end").value.trim();
+      const cidade = document.getElementById("_auc_cidade").value.trim();
+      const cep   = document.getElementById("_auc_cep").value.trim();
+      const bairro = document.getElementById("_auc_bairro").value.trim();
+
+      if (nome)   body.nome_fantasia   = nome;
+      if (tel)    body.telefone1_numero = tel;
+      if (end)    body.endereco        = end;
+      if (cidade) body.cidade          = cidade;
+      if (cep)    body.cep             = cep;
+      if (bairro) body.bairro          = bairro;
+      body.estado = estado;
+      if (codigoOmie) body.codigo_cliente_omie = Number(codigoOmie);
+
+      try {
+        const id = codigoOmie || (cliente?.codigo_cliente_integracao || "0");
+        const res = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/clientes/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || "Erro ao salvar");
+
+        // Atualiza cache local
+        if (window.listaClientesServico) {
+          const idx = window.listaClientesServico.findIndex(c => c.codigo_cliente_omie == codigoOmie);
+          if (idx !== -1) Object.assign(window.listaClientesServico[idx], body);
+        }
+
+        document.body.removeChild(overlay);
+        resolve(true);
+      } catch (err) {
+        const msg = document.getElementById("_auc_msg");
+        msg.style.color = "#ef4444"; msg.textContent = "Erro ao salvar: " + err.message;
+        btn.disabled = false; btn.textContent = "Salvar e continuar";
+      }
+    };
+  });
+}
+
+async function validarEstadoClienteAntesDaOmie() {
+  // 1. Tenta pegar o codigo_cliente_omie direto da DOM
+  const codigoInput = document.querySelector('#clientesWrapper .codigoCliente')
+    || document.querySelector('.cliente-item .codigoCliente')
+    || document.querySelector('.codigoCliente');
+  let codigoOmie = codigoInput?.value?.trim() || "";
+
+  const nomeCliente = vv_getClienteNome();
+  console.log("[validarEstado] nome:", nomeCliente, "| código DOM:", codigoOmie || "(vazio)");
+
+  // 2. Fallback: busca pelo nome na lista
+  if (!codigoOmie) {
+    try {
+      codigoOmie = await vvBuscarCodigoClienteOmiePorNome(nomeCliente) || "";
+    } catch (e) {
+      console.warn("[validarEstado] erro ao buscar código pelo nome:", e.message);
+    }
+    console.log("[validarEstado] código via lista:", codigoOmie || "(não encontrado)");
+  }
+
+  if (!codigoOmie) {
+    console.warn("[validarEstado] cliente sem código Omie identificado, pulando validação.");
+    return true; // não bloqueia se não conseguir identificar
+  }
+
+  // 3. Consulta direto na Omie via servidor (fonte da verdade)
+  let cliente = { codigo_cliente_omie: codigoOmie };
+  try {
+    const res = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/clientes/${codigoOmie}`);
+    const data = await res.json();
+    if (res.ok && data && !data.message) {
+      cliente = data;
+    }
+  } catch (e) {
+    console.warn("[validarEstado] falha ao consultar API:", e.message);
+  }
+
+  console.log("[validarEstado] estado:", cliente.estado || "(vazio)");
+
+  if (cliente.estado && cliente.estado.trim()) return true;
+
+  console.log("[validarEstado] abrindo popup de atualização.");
+  return await abrirPopupAtualizacaoCliente(cliente);
+}
+
+/* =======================================
    6) ENVIAR PARA OMIE (botão/onclick)
    ======================================= */
 async function atualizarNaOmie() {
 
-   // ── ESCOLHA DO TIPO DE ENVIO ──────────────────────────────
+  // ── VALIDAÇÃO DE CLIENTE (UF) ANTES DE QUALQUER COISA ────────
+  const clienteOk = await validarEstadoClienteAntesDaOmie();
+  if (!clienteOk) return;
+
+  // ── ESCOLHA DO TIPO DE ENVIO ──────────────────────────────
   const tipoEnvio = await abrirPopupEscolhaTipoEnvioOmie();
   if (!tipoEnvio) return; // usuário cancelou
 
@@ -7553,6 +7761,24 @@ function montarPayloadOS({
     }
   ];
 
+  // ── Parcelas da OS ────────────────────────────────────────
+  const parcelasOsValidas = (parcelasServico || []).filter(p => Number(p?.valor || 0) > 0);
+  const totalParcelasOs = parcelasOsValidas.reduce((s, p) => s + Number(p.valor || 0), 0);
+
+  const Parcelas = parcelasOsValidas.map((p, i) => {
+    const parc = {
+      nOrdem:       i + 1,
+      dDtVenc:      String(p.vencimento || p.previsao || p.data || "").trim(),
+      nValParc:     Number((Number(p.valor || 0)).toFixed(2)),
+      nPercParc:    totalParcelasOs > 0
+        ? Number(((Number(p.valor || 0) / totalParcelasOs) * 100).toFixed(2))
+        : 0
+    };
+    const meio = String(p.tipo_monetario || "").trim();
+    if (meio) parc.cMeioPagamento = meio;
+    return parc;
+  });
+
   const payload = {
     Cabecalho,
     Departamentos: [],
@@ -7564,6 +7790,10 @@ function montarPayloadOS({
     InformacoesAdicionais,
     ServicosPrestados
   };
+
+  if (Parcelas.length > 0) {
+    payload.Parcelas = Parcelas;
+  }
 
   window.__vvUltimoPayloadOSOmie = JSON.parse(JSON.stringify(payload));
 

@@ -2,191 +2,398 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Painel Administrativo - Contadores e Atualização</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ajustes</title>
+  <link rel="stylesheet" href="../css/listagem.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
   <style>
-    body {
-      font-family: 'Inter', Arial, sans-serif;
-      max-width: 520px;
-      margin: 40px auto;
-      padding: 24px;
-      background: linear-gradient(120deg, #f5f7fa 0%, #e9effd 100%);
-    }
-    h1 {
-      color: #114187;
-      text-align: center;
-      font-size: 2.1rem;
-      font-weight: 700;
-      margin-bottom: 24px;
-      letter-spacing: -1px;
-    }
-    .botoes-atu {
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-      margin-bottom: 32px;
-    }
-    .botao-atualizar {
-      background: #114187;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 12px 20px;
-      font-weight: 600;
-      font-size: 1rem;
-      box-shadow: 0 1px 6px rgba(0,20,60,0.05);
-      cursor: pointer;
-      transition: background 0.2s, box-shadow 0.2s;
+    .content { margin-left: 220px; padding: 32px 36px; min-height: 100vh; background: var(--bg); }
+
+    .topbar {
       display: flex;
       align-items: center;
-      gap: 7px;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+    .topbar h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* ── Grid de cards ── */
+    .ajustes-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      width: 100%;
+    }
+    @media (max-width: 680px) {
+      .ajustes-grid { grid-template-columns: 1fr; }
+      .content { padding: 20px 16px; margin-left: 0; }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      padding: 24px;
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .material-icons-outlined { font-size: 16px; }
+
+    /* ── Botões de sincronização ── */
+    .sync-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 11px 16px;
+      background: var(--primary-light);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .18s, border-color .18s;
       position: relative;
       overflow: hidden;
+      margin-bottom: 10px;
     }
-    .botao-atualizar:active {
-      background: #0b305e;
-    }
-    .botao-atualizar.success {
-      background: #1db954;
-    }
-    .botao-atualizar.error {
-      background: #c0392b;
-    }
-    .msg-retorno {
-      text-align: center;
-      min-height: 28px;
-      font-size: 1rem;
-      margin-bottom: 18px;
-      color: #155724;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-    .msg-retorno.error {
-      color: #c0392b;
-    }
-    .painel-campos {
-      background: #fff;
-      border: 1px solid #d8e0ed;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(30,60,120,0.07);
-      padding: 22px 18px;
-      margin-top: 15px;
-    }
-    .campo {
-      margin-bottom: 30px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #f0f4f9;
-    }
-    .campo:last-child {
-      margin-bottom: 0;
-      border-bottom: none;
-    }
-    label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: #2c3e50;
-      font-size: 1.04rem;
-      letter-spacing: 0.01em;
-    }
-    input[type="number"] {
-      width: 100%;
-      padding: 9px;
-      font-size: 1rem;
-      box-sizing: border-box;
-      border: 1px solid #c6d0e1;
-      border-radius: 4px;
-      margin-bottom: 2px;
-      background: #fafdff;
-      color: #114187;
-    }
-    button {
-      margin-top: 9px;
-      padding: 9px 18px;
-      background-color: #0d6efd;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    button:hover {
-      background-color: #1853c0;
-    }
-    .valor-atual {
-      font-size: 0.98rem;
-      color: #444;
-      margin-top: 5px;
-      font-family: 'JetBrains Mono', monospace, monospace;
-      letter-spacing: 0.04em;
-    }
+    .sync-btn:last-of-type { margin-bottom: 0; }
+    .sync-btn:hover { background: #e2e8f0; border-color: #cbd5e1; }
+    .sync-btn:disabled { opacity: .55; cursor: not-allowed; }
+    .sync-btn.success { background: #dcfce7; border-color: #86efac; color: #15803d; }
+    .sync-btn.error   { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
+    .sync-btn .material-icons-outlined { font-size: 18px; color: var(--primary); flex-shrink: 0; }
+    .sync-btn.success .material-icons-outlined { color: #15803d; }
+    .sync-btn.error   .material-icons-outlined { color: #b91c1c; }
+
     .barra-carregamento {
       position: absolute;
       left: 0; bottom: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #2994f0, #29a5e6, #114187 80%);
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary-hover), var(--primary));
       width: 0;
-      transition: width 0.2s;
-      z-index: 1;
+      transition: width .2s;
       pointer-events: none;
+      display: none;
     }
-    @media (max-width: 550px) {
-      body { max-width: 99vw; padding: 8px; }
-      .painel-campos { padding: 10px 5px; }
+
+    .msg-retorno {
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      min-height: 18px;
     }
+    .msg-retorno.error { color: #b91c1c; }
+
+    /* ── Campos de contador ── */
+    .contador-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .contador-valor-atual {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .contador-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .contador-input {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--surface);
+      transition: border-color .18s;
+      outline: none;
+    }
+    .contador-input:focus { border-color: var(--primary); }
+    .contador-save {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 14px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .18s;
+      white-space: nowrap;
+    }
+    .contador-save:hover { background: var(--primary-hover); }
+    .contador-save .material-icons-outlined { font-size: 16px; }
+
+    .divisor {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+    /* ── Config de campos ── */
+    .cfg-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .cfg-tab-btn {
+      padding: 7px 16px; border-radius: 999px; border: 1px solid var(--border);
+      background: transparent; font-family: var(--font); font-size: 12px; font-weight: 600;
+      color: var(--text-muted); cursor: pointer; transition: all .18s;
+    }
+    .cfg-tab-btn.ativo { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .cfg-lista { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; min-height: 40px; }
+    .cfg-item {
+      display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px;
+      background: var(--primary-light); border: 1px solid var(--border); border-radius: 8px;
+    }
+    .cfg-item-textos { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .cfg-item-label {
+      font-size: 13px; font-weight: 600; color: var(--text);
+      background: transparent; border: none; outline: none; width: 100%; padding: 0;
+    }
+    .cfg-item-value {
+      font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;
+      background: transparent; border: none; outline: none; width: 100%; padding: 0;
+      resize: vertical; overflow: hidden; min-height: 36px; line-height: 1.5;
+    }
+    .cfg-item-label:focus, .cfg-item-value:focus {
+      border-bottom: 1px dashed var(--primary);
+    }
+    .cfg-del-btn {
+      background: transparent; border: none; cursor: pointer; color: #94a3b8;
+      padding: 2px; display: flex; align-items: center; transition: color .18s;
+      flex-shrink: 0;
+    }
+    .cfg-del-btn:hover { color: var(--danger); }
+    .cfg-del-btn .material-icons-outlined { font-size: 18px; }
+
+    .cfg-add-area {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;
+    }
+    .cfg-add-area.single { grid-template-columns: 1fr; }
+    .cfg-add-input {
+      padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 13px; font-family: var(--font); color: var(--text);
+      background: var(--surface); outline: none; transition: border-color .18s;
+    }
+    .cfg-add-input:focus { border-color: var(--primary); }
+    .cfg-add-btn {
+      display: flex; align-items: center; gap: 6px; padding: 9px 16px;
+      background: transparent; border: 1px dashed var(--border); border-radius: 8px;
+      font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--text-muted);
+      cursor: pointer; transition: all .18s;
+    }
+    .cfg-add-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .cfg-add-btn .material-icons-outlined { font-size: 16px; }
+
+    .cfg-actions { display: flex; gap: 10px; align-items: center; }
+    .cfg-save-btn {
+      display: flex; align-items: center; gap: 6px; padding: 10px 20px;
+      background: var(--primary); color: #fff; border: none; border-radius: 8px;
+      font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background .18s;
+    }
+    .cfg-save-btn:hover { background: var(--primary-hover); }
+    .cfg-save-btn .material-icons-outlined { font-size: 16px; }
+    .cfg-reset-btn {
+      background: transparent; border: 1px solid var(--border); border-radius: 8px;
+      padding: 9px 14px; font-family: var(--font); font-size: 12px; font-weight: 600;
+      color: var(--text-muted); cursor: pointer; transition: all .18s;
+    }
+    .cfg-reset-btn:hover { border-color: var(--danger); color: var(--danger); }
+    .cfg-status { font-size: 12px; color: var(--text-muted); }
+    .cfg-status.ok  { color: #15803d; }
+    .cfg-status.err { color: #b91c1c; }
+
+    /* full-width card */
+    .ajustes-grid .card-full { grid-column: 1 / -1; }
   </style>
 </head>
 <body>
-  <h1>Painel Administrativo</h1>
 
-  <div class="botoes-atu">
-    <button class="botao-atualizar" id="btn-atualizar-produtos">
-      🔄 Atualizar Produtos
-      <div class="barra-carregamento" id="barra-produtos"></div>
-    </button>
-    <button class="botao-atualizar" id="btn-atualizar-clientes">
-      🔄 Atualizar Clientes
-      <div class="barra-carregamento" id="barra-clientes"></div>
-    </button>
-  </div>
-  <div class="msg-retorno" id="retorno-atualizacao"></div>
+  <aside class="sidebar">
+    <a href="../pages/listagem.html" class="sidebar-button" style="text-decoration:none;">
+      <span class="material-icons-outlined">arrow_back</span> Listagem
+    </a>
+    <ul></ul>
+    <div class="sidebar-footer">
+      <a href="modelo.html" class="sidebar-button" style="text-decoration:none;">
+        <span class="material-icons-outlined">functions</span> Editar Fórmulas
+      </a>
+      <a href="ajustes.html" class="sidebar-button" style="text-decoration:none; background:rgba(255,255,255,.12); color:#fff;">
+        <span class="material-icons-outlined">tune</span> Ajustes
+      </a>
+    </div>
+  </aside>
 
-  <div class="painel-campos">
-    <div class="campo">
-      <label for="orcamentos">Orçamentos</label>
-      <input type="number" id="orcamentos" min="0" />
-      <div class="valor-atual" id="valor-orcamentos">Carregando...</div>
-      <button onclick="ajustar('orcamentos')">Salvar Orçamentos</button>
+  <main class="content">
+    <div class="topbar">
+      <h2>Painel de Ajustes</h2>
     </div>
 
-    <div class="campo">
-      <label for="propostas">Propostas</label>
-      <input type="number" id="propostas" min="0" />
-      <div class="valor-atual" id="valor-propostas">Carregando...</div>
-      <button onclick="ajustar('propostas')">Salvar Propostas</button>
-    </div>
-  </div>
+    <div class="ajustes-grid">
 
+      <!-- Card: Sincronização -->
+      <div class="card">
+        <div class="card-title">
+          <span class="material-icons-outlined">sync</span>
+          Sincronização
+        </div>
+
+        <button class="sync-btn" id="btn-atualizar-produtos">
+          <span class="material-icons-outlined">inventory_2</span>
+          Atualizar Produtos
+          <div class="barra-carregamento" id="barra-produtos"></div>
+        </button>
+
+        <button class="sync-btn" id="btn-atualizar-clientes">
+          <span class="material-icons-outlined">people</span>
+          Atualizar Clientes
+          <div class="barra-carregamento" id="barra-clientes"></div>
+        </button>
+
+        <div class="msg-retorno" id="retorno-atualizacao"></div>
+      </div>
+
+      <!-- Card: Contadores -->
+      <div class="card">
+        <div class="card-title">
+          <span class="material-icons-outlined">tag</span>
+          Contadores
+        </div>
+
+        <label class="contador-label" for="orcamentos">Orçamentos</label>
+        <div class="contador-valor-atual" id="valor-orcamentos">Carregando…</div>
+        <div class="contador-row">
+          <input class="contador-input" type="number" id="orcamentos" min="0" />
+          <button class="contador-save" onclick="ajustar('orcamentos')">
+            <span class="material-icons-outlined">save</span> Salvar
+          </button>
+        </div>
+
+        <hr class="divisor" />
+
+        <label class="contador-label" for="propostas">Propostas</label>
+        <div class="contador-valor-atual" id="valor-propostas">Carregando…</div>
+        <div class="contador-row">
+          <input class="contador-input" type="number" id="propostas" min="0" />
+          <button class="contador-save" onclick="ajustar('propostas')">
+            <span class="material-icons-outlined">save</span> Salvar
+          </button>
+        </div>
+      </div>
+
+      <!-- Card: Informações do Produto -->
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="card-title">
+          <span class="material-icons-outlined">schedule</span>
+          Informações do Produto — Opções de Prazo
+        </div>
+        <div id="cfg-panel-produto">
+          <div class="cfg-lista" id="cfg-lista-produto"></div>
+          <div class="cfg-add-area">
+            <input class="cfg-add-input" id="cfg-np-label" placeholder="Nome do botão (ex: Após entrega)" />
+            <input class="cfg-add-input" id="cfg-np-value" placeholder="Texto que preenche o campo" />
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; margin-top:12px;">
+            <button class="cfg-add-btn" onclick="cfgAdicionarProduto()">
+              <span class="material-icons-outlined">add</span> Adicionar opção
+            </button>
+            <button class="cfg-save-btn" onclick="cfgSalvarSecao('opcoesProduto', 'cfg-status-produto')">
+              <span class="material-icons-outlined">cloud_upload</span> Salvar
+            </button>
+            <span class="cfg-status" id="cfg-status-produto"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card: Condições de Pagamento -->
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="card-title">
+          <span class="material-icons-outlined">payments</span>
+          Condições de Pagamento
+        </div>
+        <div id="cfg-panel-pagamento">
+          <div class="cfg-lista" id="cfg-lista-pagamento"></div>
+          <div class="cfg-add-area">
+            <input class="cfg-add-input" id="cfg-pp-label" placeholder="Texto exibido (ex: 50% entrada, 50% na entrega)" />
+            <input class="cfg-add-input" id="cfg-pp-value" placeholder="Chave interna (ex: debito_50_50)" />
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; margin-top:12px;">
+            <button class="cfg-add-btn" onclick="cfgAdicionarPagamento()">
+              <span class="material-icons-outlined">add</span> Adicionar opção
+            </button>
+            <button class="cfg-save-btn" onclick="cfgSalvarSecao('condicoesPagamento', 'cfg-status-pagamento')">
+              <span class="material-icons-outlined">cloud_upload</span> Salvar
+            </button>
+            <span class="cfg-status" id="cfg-status-pagamento"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card: Condições Gerais -->
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="card-title">
+          <span class="material-icons-outlined">description</span>
+          Condições Gerais
+        </div>
+        <div id="cfg-panel-condicoes">
+          <div class="cfg-lista" id="cfg-lista-condicoes"></div>
+          <div style="display:flex; gap:10px; align-items:center; margin-top:12px;">
+            <button class="cfg-save-btn" onclick="cfgSalvarSecao('condicoesGerais', 'cfg-status-condicoes')">
+              <span class="material-icons-outlined">cloud_upload</span> Salvar
+            </button>
+            <span class="cfg-status" id="cfg-status-condicoes"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Restaurar padrão -->
+      <div style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center;">
+        <button class="cfg-reset-btn" onclick="cfgResetar()">Restaurar padrão</button>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="../js/configuracoes.js"></script>
   <script>
-    const BASE_URL = 'https://contator-ulhoa-3d28d89efa68.herokuapp.com';
-    const PROD_ATU_URL = "https://ulhoa-0a02024d350a.herokuapp.com/produtos/atualizar";
+    const BASE_URL        = 'https://contator-ulhoa-3d28d89efa68.herokuapp.com';
+    const PROD_ATU_URL    = "https://ulhoa-0a02024d350a.herokuapp.com/produtos/atualizar";
     const CLIENTE_ATU_URL = "https://ulhoa-0a02024d350a.herokuapp.com/clientes/atualizar";
-    const retornoEl = document.getElementById("retorno-atualizacao");
+
+    const retornoEl    = document.getElementById("retorno-atualizacao");
     const barraProdutos = document.getElementById("barra-produtos");
     const barraClientes = document.getElementById("barra-clientes");
 
-    // Mapeia os nomes internos do painel para os recursos reais da API
-    const MAPA_RECURSOS = {
-      orcamentos: 'orcamento',
-      propostas: 'pedido'
-    };
-
-    // Mapeia para os campos retornados por GET /status (não incrementa)
-    const MAPA_STATUS = {
-      orcamentos: 'orcamento_proximo',
-      propostas: 'pedido_proximo'
-    };
+    const MAPA_RECURSOS = { orcamentos: 'orcamento', propostas: 'pedido' };
+    const MAPA_STATUS   = { orcamentos: 'orcamento_proximo', propostas: 'pedido_proximo' };
 
     function formatarNumero(numero, digitos = 5) {
       const num = Number(numero);
@@ -195,153 +402,248 @@
 
     async function carregarValores() {
       try {
-        // GET /status não incrementa o contador — usado só para exibir
-        const res = await fetch(`${BASE_URL}/status`);
-        if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
-
+        const res  = await fetch(`${BASE_URL}/status`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-
         for (const nome of ['orcamentos', 'propostas']) {
-          const campoStatus = MAPA_STATUS[nome];
-          const valor = Number(data[campoStatus]) || 1;
-
+          const valor = Number(data[MAPA_STATUS[nome]]) || 1;
           document.getElementById(nome).value = valor;
-          document.getElementById(`valor-${nome}`).innerText = `Valor atual: ${formatarNumero(valor)}`;
+          document.getElementById(`valor-${nome}`).textContent = `Valor atual: ${formatarNumero(valor)}`;
         }
       } catch (err) {
-        console.error(`❌ Erro ao carregar contadores:`, err);
-        for (const nome of ['orcamentos', 'propostas']) {
-          document.getElementById(`valor-${nome}`).innerText = "❌ Erro ao carregar valor atual";
-        }
+        for (const nome of ['orcamentos', 'propostas'])
+          document.getElementById(`valor-${nome}`).textContent = "Erro ao carregar";
       }
     }
 
     async function ajustar(nome) {
-      const input = document.getElementById(nome);
+      const input     = document.getElementById(nome);
       const novoValor = Number(input.value);
-
-      if (isNaN(novoValor) || novoValor < 0) {
-        alert("❌ Digite um número válido e positivo.");
-        return;
-      }
-
+      if (isNaN(novoValor) || novoValor < 0) { alert("Digite um número válido e positivo."); return; }
       try {
         const recurso = MAPA_RECURSOS[nome];
-        const res = await fetch(`${BASE_URL}/${recurso}/set`, {
+        const res  = await fetch(`${BASE_URL}/${recurso}/set`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ numero: novoValor })
         });
-
         const data = await res.json();
-
-        if (!res.ok || !data.ok) {
-          console.error("❌ Erro ao salvar:", data);
-          alert(`❌ Erro ao salvar: ${data.error || 'Resposta inválida'}`);
-          return;
-        }
-
-        alert(`✅ Novo valor de ${nome}: ${formatarNumero(data.proximo_numero)}`);
+        if (!res.ok || !data.ok) { alert(`Erro ao salvar: ${data.error || 'Resposta inválida'}`); return; }
+        alert(`Novo valor de ${nome}: ${formatarNumero(data.proximo_numero)}`);
         carregarValores();
-      } catch (err) {
-        console.error("❌ Erro de conexão:", err);
-        alert("❌ Erro de conexão com o servidor.");
-      }
+      } catch { alert("Erro de conexão com o servidor."); }
     }
 
-    // Barra animada de carregamento (2 minutos)
     function iniciarBarra(barra) {
       barra.style.width = "0";
       barra.style.display = "block";
-      let inicio = Date.now();
-      const duracao = 2 * 60 * 1000; // 2 minutos em ms
-
+      const inicio = Date.now(), duracao = 2 * 60 * 1000;
       function atualizar() {
-        let decorrido = Date.now() - inicio;
-        let progresso = Math.min(decorrido / duracao, 1);
+        const progresso = Math.min((Date.now() - inicio) / duracao, 1);
         barra.style.width = `${progresso * 100}%`;
-        if (progresso < 1) {
-          barra._timeout = setTimeout(atualizar, 150);
-        }
+        if (progresso < 1) barra._timeout = setTimeout(atualizar, 150);
       }
       atualizar();
     }
 
     function encerrarBarra(barra) {
       barra.style.width = "100%";
-      setTimeout(() => {
-        barra.style.width = "0";
-        barra.style.display = "none";
-      }, 900);
+      setTimeout(() => { barra.style.width = "0"; barra.style.display = "none"; }, 900);
       if (barra._timeout) clearTimeout(barra._timeout);
     }
 
-    // Função para atualizar produtos ou clientes
     async function atualizarDados(tipo) {
-      let url, texto, metodo = "POST", barra;
-      if (tipo === "produtos") {
-        url = PROD_ATU_URL;
-        texto = "produtos";
-        metodo = "POST";
-        barra = barraProdutos;
-      } else {
-        url = CLIENTE_ATU_URL;
-        texto = "clientes";
-        metodo = "GET";
-        barra = barraClientes;
-      }
-      const botao = document.getElementById(
-        tipo === "produtos" ? "btn-atualizar-produtos" : "btn-atualizar-clientes"
-      );
+      const isProd  = tipo === "produtos";
+      const url     = isProd ? PROD_ATU_URL : CLIENTE_ATU_URL;
+      const metodo  = isProd ? "POST" : "GET";
+      const texto   = isProd ? "Produtos" : "Clientes";
+      const barra   = isProd ? barraProdutos : barraClientes;
+      const btnId   = isProd ? "btn-atualizar-produtos" : "btn-atualizar-clientes";
+      const botao   = document.getElementById(btnId);
+
       botao.disabled = true;
-      retornoEl.textContent = `Atualizando ${texto}...`;
-      retornoEl.classList.remove("error");
       botao.classList.remove("success", "error");
+      retornoEl.textContent = `Atualizando ${texto}…`;
+      retornoEl.classList.remove("error");
       iniciarBarra(barra);
 
       let terminou = false;
-      let timeoutFinal = setTimeout(() => {
-        if (!terminou) {
-          retornoEl.textContent = `⏳ Aguardando resposta... Processo pode demorar até 2 minutos.`;
-        }
+      const timeout = setTimeout(() => {
+        if (!terminou) retornoEl.textContent = "Aguardando resposta… pode demorar até 2 minutos.";
       }, 11000);
 
       try {
-        const res = await fetch(url, { method: metodo });
+        const res  = await fetch(url, { method: metodo });
         const data = await res.json();
         terminou = true;
-        clearTimeout(timeoutFinal);
+        clearTimeout(timeout);
         encerrarBarra(barra);
         if (res.ok) {
           botao.classList.add("success");
-          retornoEl.textContent = `✅ ${texto.charAt(0).toUpperCase() + texto.slice(1)} atualizados com sucesso!`;
+          retornoEl.textContent = `${texto} atualizados com sucesso.`;
         } else {
           botao.classList.add("error");
-          retornoEl.textContent = `❌ Erro ao atualizar ${texto}: ${data.erro || "Erro desconhecido"}`;
+          retornoEl.textContent = `Erro ao atualizar ${texto}: ${data.erro || "Erro desconhecido"}`;
           retornoEl.classList.add("error");
         }
-      } catch (err) {
+      } catch {
         terminou = true;
-        clearTimeout(timeoutFinal);
+        clearTimeout(timeout);
         encerrarBarra(barra);
         botao.classList.add("error");
-        retornoEl.textContent = `❌ Erro de conexão ao atualizar ${texto}`;
+        retornoEl.textContent = `Erro de conexão ao atualizar ${texto}.`;
         retornoEl.classList.add("error");
       } finally {
         botao.disabled = false;
         setTimeout(() => {
           retornoEl.textContent = "";
           botao.classList.remove("success", "error");
-        }, 3300);
+        }, 3500);
       }
     }
 
-    document.getElementById("btn-atualizar-produtos")
-      .addEventListener("click", () => atualizarDados("produtos"));
-    document.getElementById("btn-atualizar-clientes")
-      .addEventListener("click", () => atualizarDados("clientes"));
+    document.getElementById("btn-atualizar-produtos").addEventListener("click", () => atualizarDados("produtos"));
+    document.getElementById("btn-atualizar-clientes").addEventListener("click", () => atualizarDados("clientes"));
 
     carregarValores();
+  </script>
+
+  <script>
+  // ── UI de gerenciamento de configurações ──────────────────────────────────
+  let _cfgEstado = { opcoesProduto: [], condicoesPagamento: [] };
+
+  function cfgInit() {
+    const cfg = window.CFgAPI?.obter() || { opcoesProduto: [], condicoesPagamento: [] };
+    _cfgEstado = JSON.parse(JSON.stringify(cfg));
+    cfgRenderProduto();
+    cfgRenderPagamento();
+    cfgRenderCondicoes();
+  }
+
+  function _autoResize(el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }
+
+  function cfgRenderProduto() {
+    const lista = document.getElementById("cfg-lista-produto");
+    if (!lista) return;
+    lista.innerHTML = "";
+    (_cfgEstado.opcoesProduto || []).forEach((op, i) => {
+      const item = document.createElement("div");
+      item.className = "cfg-item";
+      item.innerHTML = `
+        <div class="cfg-item-textos">
+          <input class="cfg-item-label" value="${_esc(op.label)}" placeholder="Nome do botão"
+            oninput="_cfgEstado.opcoesProduto[${i}].label = this.value" />
+          <textarea class="cfg-item-value" placeholder="Texto que preenche o campo"
+            oninput="_cfgEstado.opcoesProduto[${i}].value = this.value; _autoResize(this)"
+            >${_esc(op.value)}</textarea>
+        </div>
+        <button class="cfg-del-btn" onclick="cfgRemoverProduto(${i})" title="Remover">
+          <span class="material-icons-outlined">delete_outline</span>
+        </button>`;
+      lista.appendChild(item);
+    });
+    // auto-resize em todos após render
+    lista.querySelectorAll("textarea.cfg-item-value").forEach(_autoResize);
+  }
+
+  function cfgRenderCondicoes() {
+    const lista = document.getElementById("cfg-lista-condicoes");
+    if (!lista) return;
+    lista.innerHTML = "";
+    (_cfgEstado.condicoesGerais || []).forEach((op, i) => {
+      const item = document.createElement("div");
+      item.className = "cfg-item";
+      item.style.flexDirection = "column";
+      item.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px;margin-bottom:8px;">
+          <input class="cfg-item-label" value="${_esc(op.label)}" placeholder="Nome do botão"
+            oninput="_cfgEstado.condicoesGerais[${i}].label = this.value" style="font-size:13px;font-weight:600;" />
+        </div>
+        <textarea class="cfg-item-value" placeholder="Texto da condição"
+          style="font-size:11px;font-family:monospace;resize:vertical;width:100%;min-height:80px;border:1px solid var(--border);border-radius:6px;padding:8px;background:#f8fafc;color:var(--text);outline:none;"
+          oninput="_cfgEstado.condicoesGerais[${i}].texto = this.value; _autoResize(this)"
+          >${_esc(op.texto || "")}</textarea>`;
+      lista.appendChild(item);
+      lista.querySelectorAll("textarea").forEach(_autoResize);
+    });
+  }
+
+  function cfgRenderPagamento() {
+    const lista = document.getElementById("cfg-lista-pagamento");
+    if (!lista) return;
+    lista.innerHTML = "";
+    (_cfgEstado.condicoesPagamento || []).forEach((op, i) => {
+      const item = document.createElement("div");
+      item.className = "cfg-item";
+      item.innerHTML = `
+        <div class="cfg-item-textos">
+          <input class="cfg-item-label" value="${_esc(op.label)}" placeholder="Texto exibido"
+            oninput="_cfgEstado.condicoesPagamento[${i}].label = this.value" />
+          <input class="cfg-item-value" value="${_esc(op.value)}" placeholder="Chave interna"
+            oninput="_cfgEstado.condicoesPagamento[${i}].value = this.value" />
+        </div>
+        <button class="cfg-del-btn" onclick="cfgRemoverPagamento(${i})" title="Remover">
+          <span class="material-icons-outlined">delete_outline</span>
+        </button>`;
+      lista.appendChild(item);
+    });
+  }
+
+  function cfgAdicionarProduto() {
+    const label = document.getElementById("cfg-np-label").value.trim();
+    const value = document.getElementById("cfg-np-value").value.trim();
+    if (!label) { document.getElementById("cfg-np-label").focus(); return; }
+    _cfgEstado.opcoesProduto.push({ label, value });
+    document.getElementById("cfg-np-label").value = "";
+    document.getElementById("cfg-np-value").value = "";
+    cfgRenderProduto();
+  }
+
+  function cfgAdicionarPagamento() {
+    const label = document.getElementById("cfg-pp-label").value.trim();
+    const value = document.getElementById("cfg-pp-value").value.trim();
+    if (!label || !value) { document.getElementById(!label ? "cfg-pp-label" : "cfg-pp-value").focus(); return; }
+    _cfgEstado.condicoesPagamento.push({ label, value });
+    document.getElementById("cfg-pp-label").value = "";
+    document.getElementById("cfg-pp-value").value = "";
+    cfgRenderPagamento();
+  }
+
+  function cfgRemoverProduto(i)   { _cfgEstado.opcoesProduto.splice(i, 1);      cfgRenderProduto();   }
+  function cfgRemoverPagamento(i) { _cfgEstado.condicoesPagamento.splice(i, 1); cfgRenderPagamento(); }
+
+  async function cfgSalvarSecao(chave, statusId) {
+    const st = document.getElementById(statusId);
+    st.className = "cfg-status"; st.textContent = "Salvando…";
+    const cfgParcial = Object.assign({}, window.CFgAPI?.obter() || {}, { [chave]: _cfgEstado[chave] });
+    const ok = await window.CFgAPI?.salvar(cfgParcial);
+    if (ok === false) {
+      st.className = "cfg-status err";
+      st.textContent = "Salvo localmente (servidor indisponível).";
+    } else {
+      st.className = "cfg-status ok";
+      st.textContent = "✓ Salvo";
+    }
+    setTimeout(() => { st.textContent = ""; }, 3000);
+  }
+
+  async function cfgResetar() {
+    if (!confirm("Restaurar todas as opções para o padrão original?")) return;
+    await window.CFgAPI?.resetar();
+    _cfgEstado = JSON.parse(JSON.stringify(window.CFgAPI?.obter() || { opcoesProduto: [], condicoesPagamento: [], condicoesGerais: [] }));
+    cfgRenderProduto();
+    cfgRenderPagamento();
+    cfgRenderCondicoes();
+  }
+
+
+  function _esc(str) {
+    return String(str || "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+  }
+
+  // Aguarda configuracoes.js estar pronto
+  if (window.CFgAPI) { cfgInit(); }
+  else { document.addEventListener("DOMContentLoaded", cfgInit); }
   </script>
 </body>
 </html>
