@@ -591,7 +591,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
   // ==========================
   // PARCELAS
   // ==========================
-  const parcelas = Array.from(document.querySelectorAll("#listaParcelas .row"))
+  const parcelas = Array.from(document.querySelectorAll("#listaParcelas .parcela-row"))
     .map((row, idx) => {
       const selTipo = row.querySelector("select.tipo-monetario");
       const tipo = selTipo?.selectedOptions?.[0]?.textContent?.trim()

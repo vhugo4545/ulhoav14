@@ -1,4 +1,4 @@
-// formularioOrcamento.js
+﻿// formularioOrcamento.js
 
 
 // Chame após o DOM estar carregado
@@ -12,7 +12,7 @@ function adicionarParcela() {
 
   const div = document.createElement("div");
   div.style.cssText = "background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:1fr 1.5fr 0.8fr 0.8fr auto;gap:10px;align-items:end;font-family:'Poppins',sans-serif;";
-  div.className = "";
+  div.className = "parcela-row";
 
   const labelStyle = "display:block;font-size:11px;font-weight:600;color:#64748b;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;";
   const inputStyle = "border-radius:8px;border:1px solid #e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;padding:7px 10px;width:100%;background:#fff;";
@@ -96,7 +96,7 @@ function aplicarEventosParcela(div) {
 
 function recalcularParcelasComPercentual() {
   const totalGrupos = calcularTotalDosGrupos();
-  const linhas = document.querySelectorAll("#listaParcelas .row");
+  const linhas = document.querySelectorAll("#listaParcelas .parcela-row");
 
   linhas.forEach(linha => {
     const input = linha.querySelector(".valor-parcela");
@@ -183,7 +183,7 @@ function atualizarValoresParcelas() {
   const totalProdutos = valorTotalProdutos();
   let totalParcelas   = 0;
 
-  document.querySelectorAll("#listaParcelas .row").forEach(row => {
+  document.querySelectorAll("#listaParcelas .parcela-row").forEach(row => {
     const tipo   = row.querySelector(".tipo-parcela").value;
     const entrada = row.querySelector(".valor-parcela").value.trim();
 

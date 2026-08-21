@@ -1,4 +1,4 @@
-
+﻿
 
 
 
@@ -1224,7 +1224,7 @@ function vvSerializarParcelasServicoParaServidor(parcelasServico = []) {
 }
 
 function vvLerParcelasFormularioPrincipal() {
-  const linhas = [...document.querySelectorAll("#listaParcelas .row")];
+  const linhas = [...document.querySelectorAll("#listaParcelas .parcela-row")];
   return linhas
     .map(row => {
       const condSelect = row.querySelector("select.condicao-pagto");
@@ -1376,7 +1376,7 @@ function vvAtualizarListaParcelasFormulario(parcelasProduto = []) {
 
     if (typeof adicionarParcela === "function") {
       adicionarParcela();
-      const linhas = document.querySelectorAll("#listaParcelas .row");
+      const linhas = document.querySelectorAll("#listaParcelas .parcela-row");
       row = linhas[linhas.length - 1] || null;
     }
 
@@ -4698,7 +4698,7 @@ async function gerarPayloadOmie() {
     : "";
 
 
-  let linhasParcelas = document.querySelectorAll("#listaParcelas .row");
+  let linhasParcelas = document.querySelectorAll("#listaParcelas .parcela-row");
 
   const blocosContainer = document.getElementById("blocosProdutosContainer");
   const temProdutosNaTela =

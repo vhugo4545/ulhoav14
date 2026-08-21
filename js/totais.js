@@ -1,4 +1,4 @@
-// =========================
+﻿// =========================
 // UTILITÁRIOS
 // =========================
 function slugify(text) {
@@ -463,7 +463,7 @@ function atualizarValoresDasParcelas() {
 
     const total = parseNumeroFlex(textoTotal);
 
-    const linhas = document.querySelectorAll("#listaParcelas .row");
+    const linhas = document.querySelectorAll("#listaParcelas .parcela-row");
     const totalParcelasSpan = document.getElementById("totalParcelas");
 
     if (linhas.length === 0) {

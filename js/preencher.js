@@ -1,4 +1,4 @@
-let blocoIndex = 0;
+﻿let blocoIndex = 0;
 
 // 🕓 Aguarda até que um elemento exista no DOM
 function esperarElemento(seletor, tentativas = 20, intervalo = 300) {
@@ -559,7 +559,7 @@ async function carregarPropostaEditavel(proposta) {
         try {
           adicionarParcela();
 
-          const todas = document.querySelectorAll("#listaParcelas .row");
+          const todas = document.querySelectorAll("#listaParcelas .parcela-row");
           const ultima = todas[todas.length - 1];
 
           if (!ultima) return;
