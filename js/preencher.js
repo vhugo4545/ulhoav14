@@ -578,22 +578,32 @@ async function carregarPropostaEditavel(proposta) {
           if (!condWrapper) return;
 
           if (OPCOES_CONDICAO_VALIDAS.has(condicaoSalva)) {
+            // opção padrão: seta o select normalmente
             const sel = condWrapper.querySelector("select.condicao-pagto");
-
             if (sel) {
               sel.value = condicaoSalva;
               sel.dataset.valorOriginal = condicaoSalva;
             }
+          } else if (condicaoSalva === "personalizado") {
+            // usuário escolheu "Personalizado" mas não digitou texto: aciona a conversão
+            const sel = condWrapper.querySelector("select.condicao-pagto");
+            if (sel) {
+              sel.value = "personalizado";
+              if (typeof verificarCondicaoPersonalizada === "function") {
+                verificarCondicaoPersonalizada(sel);
+              }
+            }
           } else if (condicaoSalva) {
+            // texto personalizado salvo (ex: "Personalizado – minha condição")
             condWrapper.innerHTML = "";
-
+            const inputStyle = "border-radius:8px;border:1px solid #e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;padding:7px 10px;width:100%;background:#fff;";
             const input = document.createElement("input");
             input.type = "text";
             input.className = "form-control condicao-pagto";
             input.placeholder = "Descreva a condição de pagamento...";
+            input.style.cssText = inputStyle;
             input.value = condicaoSalva;
             input.dataset.valorOriginal = condicaoSalva;
-
             condWrapper.appendChild(input);
           }
         } catch (e) {
