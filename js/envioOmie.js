@@ -5950,44 +5950,86 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
    ======================================= */
 async function atualizarNaOmie() {
 
-  // ── VALIDAÇÃO: cliente precisa ter UF preenchida ──────────
-  const _estadoEl = document.getElementById("estado");
-  const _ufAtual = (_estadoEl?.value || "").trim().toUpperCase();
-  if (!_ufAtual || _ufAtual.length !== 2) {
-    const _ufInformada = await new Promise(resolve => {
-      const _overlay = document.createElement("div");
-      _overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;";
-      _overlay.innerHTML = `
-        <div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);font-family:'Poppins',sans-serif;">
-          <h5 style="margin:0 0 10px;color:#b45309;">⚠️ UF do cliente não preenchida</h5>
-          <p style="margin:0 0 16px;font-size:14px;color:#374151;">O cliente não possui UF (estado) cadastrada. Informe para continuar o envio:</p>
-          <input id="_uf_input" type="text" maxlength="2" placeholder="Ex: MG, SP, RJ..."
-            style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:15px;text-transform:uppercase;margin-bottom:18px;box-sizing:border-box;font-family:'Poppins',sans-serif;">
-          <div style="display:flex;gap:10px;justify-content:flex-end;">
-            <button id="_uf_cancel" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:8px;background:#f9fafb;cursor:pointer;font-family:'Poppins',sans-serif;">Cancelar</button>
-            <button id="_uf_ok" style="padding:8px 18px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-family:'Poppins',sans-serif;">Confirmar</button>
-          </div>
-        </div>`;
-      document.body.appendChild(_overlay);
-      const _input = _overlay.querySelector("#_uf_input");
-      _input.focus();
-      _input.addEventListener("input", () => { _input.value = _input.value.toUpperCase(); });
-      _overlay.querySelector("#_uf_ok").onclick = () => {
-        const v = _input.value.trim().toUpperCase();
-        document.body.removeChild(_overlay);
-        resolve(v);
-      };
-      _overlay.querySelector("#_uf_cancel").onclick = () => {
-        document.body.removeChild(_overlay);
-        resolve("");
-      };
-      _input.addEventListener("keydown", e => {
-        if (e.key === "Enter") _overlay.querySelector("#_uf_ok").click();
-        if (e.key === "Escape") _overlay.querySelector("#_uf_cancel").click();
-      });
-    });
-    if (!_ufInformada || _ufInformada.length !== 2) return; // cancelou ou UF inválida
-    if (_estadoEl) _estadoEl.value = _ufInformada; // salva no campo do formulário
+  // ── VALIDAÇÃO: cliente precisa ter UF cadastrada na Omie ──────────
+  try {
+    const _cnpjCpfEl = document.querySelector(".cliente-item .cpfCnpj");
+    const _cnpjCpf = (_cnpjCpfEl?.value || "").replace(/\D/g, "").trim();
+
+    if (_cnpjCpf) {
+      const _buscaResp = await fetch(
+        `https://ulhoa-0a02024d350a.herokuapp.com/clientes/buscar?cnpj_cpf=${_cnpjCpf}`
+      );
+      if (_buscaResp.ok) {
+        const _buscaData = await _buscaResp.json();
+        if (_buscaData.encontrado && _buscaData.clientes?.length > 0) {
+          const _clienteOmie = _buscaData.clientes[0];
+          const _ufOmie = (_clienteOmie.estado || "").trim().toUpperCase();
+
+          if (!_ufOmie || _ufOmie.length !== 2) {
+            // UF ausente na Omie — pede ao usuário para informar e atualiza
+            const _ufInformada = await new Promise(resolve => {
+              const _ov = document.createElement("div");
+              _ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;";
+              const _nomeCliente = _clienteOmie.razao_social || _clienteOmie.nome_fantasia || "cliente";
+              _ov.innerHTML = `
+                <div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.22);">
+                  <h5 style="margin:0 0 8px;color:#b45309;font-size:15px;">⚠️ UF não cadastrada na Omie</h5>
+                  <p style="margin:0 0 6px;font-size:13px;color:#374151;">O cliente <b>${_nomeCliente}</b> não possui UF (estado) registrada na Omie.</p>
+                  <p style="margin:0 0 14px;font-size:13px;color:#374151;">Informe a UF para continuar:</p>
+                  <input id="_uf_omie_input" type="text" maxlength="2" placeholder="Ex: MG, SP, RJ..."
+                    style="width:100%;padding:10px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:16px;text-transform:uppercase;margin-bottom:18px;box-sizing:border-box;font-family:'Poppins',sans-serif;letter-spacing:2px;">
+                  <div id="_uf_status" style="font-size:12px;color:#ef4444;min-height:18px;margin-bottom:10px;"></div>
+                  <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button id="_uf_omie_cancel" style="padding:9px 20px;border:1px solid #d1d5db;border-radius:8px;background:#f9fafb;cursor:pointer;font-family:'Poppins',sans-serif;font-size:13px;">Cancelar</button>
+                    <button id="_uf_omie_ok" style="padding:9px 20px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;">Salvar e continuar</button>
+                  </div>
+                </div>`;
+              document.body.appendChild(_ov);
+              const _inp = _ov.querySelector("#_uf_omie_input");
+              const _status = _ov.querySelector("#_uf_status");
+              _inp.focus();
+              _inp.addEventListener("input", () => { _inp.value = _inp.value.toUpperCase(); _status.textContent = ""; });
+              _ov.querySelector("#_uf_omie_ok").onclick = () => {
+                const v = _inp.value.trim().toUpperCase();
+                if (!v || v.length !== 2) { _status.textContent = "⚠️ Informe uma UF válida com 2 letras (ex: MG)."; return; }
+                document.body.removeChild(_ov);
+                resolve(v);
+              };
+              _ov.querySelector("#_uf_omie_cancel").onclick = () => { document.body.removeChild(_ov); resolve(""); };
+              _inp.addEventListener("keydown", ev => {
+                if (ev.key === "Enter") _ov.querySelector("#_uf_omie_ok").click();
+                if (ev.key === "Escape") _ov.querySelector("#_uf_omie_cancel").click();
+              });
+            });
+
+            if (!_ufInformada) return; // usuário cancelou
+
+            // Atualiza a UF na Omie via alterar
+            try {
+              const _payload = { ..._clienteOmie, estado: _ufInformada };
+              const _alterarResp = await fetch("https://utils-b488312867a6.herokuapp.com/omie/clientes/alterar", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(_payload)
+              });
+              if (!_alterarResp.ok) {
+                const _err = await _alterarResp.text().catch(() => "");
+                console.warn("⚠️ Não foi possível atualizar UF na Omie:", _err);
+                // prossegue mesmo assim — UF foi informada
+              } else {
+                console.log("✅ UF atualizada na Omie:", _ufInformada);
+              }
+            } catch (_eAlt) {
+              console.warn("⚠️ Erro ao alterar cliente na Omie:", _eAlt.message);
+              // prossegue mesmo assim
+            }
+          }
+        }
+      }
+    }
+  } catch (_eUF) {
+    console.warn("⚠️ Erro na validação de UF:", _eUF.message);
+    // em caso de falha na consulta, não bloqueia o envio
   }
 
    // ── ESCOLHA DO TIPO DE ENVIO ──────────────────────────────
