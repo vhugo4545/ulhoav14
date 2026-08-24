@@ -8191,7 +8191,10 @@ async function sincronizarPDVparaKommo() {
   if (dataProjetoEnviado)  campos.kommo_projeto_enviado    = dataProjetoEnviado;
   if (dataProjetoAssinado) campos.kommo_assinatura_projeto = dataProjetoAssinado;
 
-  if (!Object.keys(campos).length) {
+  // Sempre envia o ID da proposta para vincular/manter o lead correto na Kommo
+  campos.kommo_id_pdv = idProposta;
+
+  if (Object.keys(campos).length <= 1) {
     console.warn("[SYNC] Nenhum campo preenchido para sincronizar com a Kommo.");
     return;
   }
@@ -8247,12 +8250,19 @@ async function sincronizarPDVparaKommo() {
         "sucesso"
       );
     } else {
-      console.group("❌ [SYNC] Erro do servidor Kommo (silenciado — não interfere no envio)");
+      console.group("❌ [SYNC] Erro do servidor Kommo");
       console.warn("HTTP status:", resposta.status);
       console.warn("Erro:", resultado?.error);
       console.warn("Detalhes:", resultado?.details);
       console.warn("Validation errors:", JSON.stringify(resultado?.details?.['validation-errors'], null, 2));
       console.groupEnd();
+
+      mostrarPopupSync(
+        resultado?.error === "Nenhum lead encontrado pelo ID PDV" || resultado?.error?.includes("lead")
+          ? `Lead não encontrado na Kommo para esta proposta.\nVerifique se o lead foi vinculado (campo ID PDV).`
+          : `Falha ao sincronizar com a Kommo:\n${resultado?.error || "Erro desconhecido"}`,
+        "erro"
+      );
     }
 
     return resultado;
