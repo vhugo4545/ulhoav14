@@ -89,9 +89,10 @@ function aplicarEventosParcela(div) {
       if (percentual > 100) return;
       valorNumerico = (percentual / 100) * totalGrupos;
       input.dataset.percentual = percentual;
-      input.value = `R$ ${valorNumerico.toFixed(2).replace(".", ",")}`;
+      input.value = valorNumerico.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     } else {
-      valorNumerico = parseFloat(raw.replace("R$", "").replace(/\./g, "").replace(",", ".")) || 0;
+      valorNumerico = parseFloat(raw.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
+      input.value = valorNumerico.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
       delete input.dataset.percentual;
     }
   });
@@ -107,7 +108,7 @@ function recalcularParcelasComPercentual() {
     const percentual = parseFloat(input.dataset.percentual);
     if (!isNaN(percentual)) {
       const novoValor = (percentual / 100) * totalGrupos;
-      input.value = `R$ ${novoValor.toFixed(2).replace(".", ",")}`;
+      input.value = novoValor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     }
   });
 }
@@ -115,13 +116,9 @@ function recalcularParcelasComPercentual() {
 
 function calcularTotalDosGrupos() {
   const texto = document.querySelector("#valorFinalTotal").textContent.trim();
-
-  // Remove "R$" e espaços extras
-  const valorLimpo = texto.replace("R$", "").trim();
-
-  // Converte direto para número com parseFloat (mantém ponto decimal)
+  // Formato BR: "R$ 162.782,72" → remove tudo exceto dígitos, vírgula e sinal
+  const valorLimpo = texto.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
   const numero = parseFloat(valorLimpo);
-
   return isNaN(numero) ? 0 : numero;
 }
 
