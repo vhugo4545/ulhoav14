@@ -1043,7 +1043,12 @@ const VV_CONDICOES_PAGTO_PARCELAS = [
   { value: "na-retirada", label: "3 dias apos finalizar instalacao da estrutura." },
   { value: "30-dias", label: "3 dias apos finalizar instalacao dos vidros." },
   { value: "entrada+30", label: "Na retirada/entrega do produto." },
-  { value: "personalizado", label: "Personalizado" }
+  { value: "personalizado", label: "Personalizado" },
+  // Retrocompatibilidade: valores do select #condicaoPagamento antigo
+  { value: "debito_40_40_20", label: "40% de entrada, 40% após 30 dias e 20% após 60 dias." },
+  { value: "debito_40_30_30", label: "40% de entrada, 30% após 30 dias e 30% após 60 dias." },
+  { value: "debito_60_40",    label: "60% de entrada, 40% após 30 dias." },
+  { value: "parcelado",       label: "Personalizado" }
 ];
 
 /* Converte códigos antigos do sistema para os códigos Omie (tipo_documento_cadastro).
@@ -1177,7 +1182,7 @@ function vvNormalizarParcelaControle(parcela = {}) {
 
   return {
     tipo_monetario: vvNormalizarCodigoMeioPagamento(parcela?.tipo_monetario ?? parcela?.tipo ?? ""),
-    condicao_pagto: String(parcela?.condicao_pagto ?? parcela?.condicao ?? "").trim(),
+    condicao_pagto: String(parcela?.condicao_pagto ?? parcela?.condicao ?? parcela?.condicaoPagamento ?? "").trim(),
     valor: vvRound2ControleParcelas(vvParseBRLControleParcelas(valorBruto)),
     vencimento: String(parcela?.vencimento ?? parcela?.data ?? parcela?.previsao ?? "").trim(),
     ignorar: parcela?.ignorar === true || parcela?.ignorar === "true",
@@ -1524,9 +1529,11 @@ function vvEscolherParcelasIniciaisProdutosServicos({
 
   // Só cria parcela inicial de produto se não houver nenhuma salva
   if (!parcelasProdutoIniciais.length && valorTotalProdutos > 0) {
+    // Retrocompatibilidade: usa o select global #condicaoPagamento se existir
+    const _condGlobal = document.getElementById("condicaoPagamento")?.value || "";
     parcelasProdutoIniciais.push({
       tipo_monetario: "",
-      condicao_pagto: "",
+      condicao_pagto: _condGlobal,
       valor: vvRound2ControleParcelas(valorTotalProdutos),
       vencimento: "",
       ignorar: false
