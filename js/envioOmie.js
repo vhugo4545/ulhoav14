@@ -6189,7 +6189,8 @@ async function atualizarNaOmie() {
     const payload = await gerarPayloadOmie();
 
     if (!payload) {
-      // Cancelamento intencional pelo usuário — sem mensagem de erro
+      // Cancelamento intencional pelo usuário — fecha o status e sai sem erro
+      document.getElementById("popup-status-omie")?.remove();
       return;
     }
 
