@@ -718,17 +718,24 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
       valorTotalGrupo = vv_parseBRL(textoTotal);
     }
 
-    // ✅ NOVO: lê Custo Total de Material do resumo do bloco
+    // Lê Valor Sugerido e Custo Total de Material do resumo do bloco
     let valorCustoMaterial = 0;
-    const cards = bloco.querySelectorAll(".resumo-totalizador-interno .col");
-    for (const col of cards) {
-      const titulo = col.querySelector(".text-muted")?.textContent?.replace(/\s+/g, " ")?.trim() || "";
-      const valorTexto = col.querySelector(".fw-bold")?.textContent?.trim() || "";
-      if (titulo.toLowerCase().includes("custo total") && titulo.toLowerCase().includes("material")) {
-        valorCustoMaterial = vv_parseBRL(valorTexto);
-        break;
+    let valorSugerido = 0;
+    const resumoEl = bloco.querySelector(".resumo-totalizador-interno");
+    if (resumoEl) {
+      const cols = resumoEl.querySelectorAll(".row > .col, .col");
+      for (const col of cols) {
+        const titulo = col.querySelector(".text-muted")?.textContent?.replace(/\s+/g, " ")?.trim()?.toLowerCase() || "";
+        const valorTexto = (col.querySelector(".fw-bold")?.textContent || "").trim();
+        if (titulo.includes("custo total") && titulo.includes("material")) {
+          valorCustoMaterial = vv_parseBRL(valorTexto);
+        } else if (titulo.includes("valor sugerido")) {
+          valorSugerido = vv_parseBRL(valorTexto);
+        }
       }
     }
+    // Usa Valor Sugerido como base quando disponível; caso contrário mantém o total do tfoot
+    if (valorSugerido > 0) valorTotalGrupo = valorSugerido;
 
     const primeiraLinha = linhas[0];
     const td2 = primeiraLinha.querySelector("td:nth-child(2)");
@@ -762,6 +769,7 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
       codigo,
       descricao,
       valorTotalGrupo,
+      valorSugerido,
       valorCustoMaterial,
     });
   });
