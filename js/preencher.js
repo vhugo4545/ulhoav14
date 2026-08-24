@@ -559,7 +559,7 @@ async function carregarPropostaEditavel(proposta) {
         try {
           adicionarParcela();
 
-          const todas = document.querySelectorAll("#listaParcelas .parcela-row");
+          const todas = document.querySelectorAll("#listaParcelas .row");
           const ultima = todas[todas.length - 1];
 
           if (!ultima) return;

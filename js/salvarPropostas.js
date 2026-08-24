@@ -49,7 +49,7 @@
     let parcelas = [];
 
     if (condicaoPagamento === "parcelado") {
-      const linhas = document.querySelectorAll("#listaParcelas .parcela-row");
+      const linhas = document.querySelectorAll("#listaParcelas .row");
       parcelas = Array.from(linhas).map(row => {
         const data = row.querySelector(".data-parcela")?.value || "";
         const valor = row.querySelector(".valor-parcela")?.value || "";
@@ -440,7 +440,7 @@ window.atualizarPropostaEditavel = async function () {
 }));
 
     const condicaoPagamento = document.getElementById("condicaoPagamento")?.value?.trim() || "";
-    const linhas = document.querySelectorAll("#listaParcelas .parcela-row");
+    const linhas = document.querySelectorAll("#listaParcelas .row");
     const parcelas = Array.from(linhas).map(row => {
       const tipo = row.querySelector(".tipo-monetario")?.value || "";
       const condicao = row.querySelector(".condicao-pagto")?.value || "";
@@ -664,7 +664,7 @@ async function atualizarPropostaModelo() {
     let parcelas = [];
 
     if (condicaoPagamento === "parcelado") {
-      const linhas = document.querySelectorAll("#listaParcelas .parcela-row");
+      const linhas = document.querySelectorAll("#listaParcelas .row");
       parcelas = Array.from(linhas).map(row => {
         const data = row.querySelector(".data-parcela")?.value || "";
         const valor = row.querySelector(".valor-parcela")?.value || "";
