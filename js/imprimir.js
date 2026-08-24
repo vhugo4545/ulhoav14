@@ -1252,8 +1252,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
 
   const cabecalhoBasicoHTML = (titulo) => `
     <div class="topbar">
-      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
-      <div class="opBox">
+      <div class="opBox" style="width:100%;">
         <div class="opTitle">${titulo}</div>
         <div class="opRow">
           <div>
@@ -1622,7 +1621,7 @@ const pagina3HTML = `
   <!-- ======================= PAGINA 3 ======================= -->
   <div class="page-break"></div>
 
-  ${cabecalhoCompletoSemPrazosHTML("RELATÓRIO DE ENTREGA / INSTALAÇÃO")}
+  ${cabecalhoBasicoHTML("RELATÓRIO DE ENTREGA / INSTALAÇÃO")}
 
 
   ${observacoesPorItemHTML}
@@ -2418,8 +2417,7 @@ const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
 
   const cabecalhoBasicoHTML = (titulo) => `
     <div class="topbar">
-      <div class="logoBox"><img src="../js/logo.jpg" alt="Logo"></div>
-      <div class="opBox">
+      <div class="opBox" style="width:100%;">
         <div class="opTitle">${titulo}</div>
         <div class="opRow">
           <div>
@@ -2788,7 +2786,7 @@ const pagina3HTML = `
   <!-- ======================= PAGINA 3 ======================= -->
   <div class="page-break"></div>
 
-  ${cabecalhoCompletoSemPrazosHTML("RELATÓRIO DE ENTREGA / INSTALAÇÃO")}
+  ${cabecalhoBasicoHTML("RELATÓRIO DE ENTREGA / INSTALAÇÃO")}
 
 
   ${observacoesPorItemHTML}
