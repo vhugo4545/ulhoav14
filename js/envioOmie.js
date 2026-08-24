@@ -7758,8 +7758,6 @@ function montarPayloadOS({
         ? Number(((Number(p.valor || 0) / totalParcelasOs) * 100).toFixed(2))
         : 0
     };
-    const meio = String(p.tipo_monetario || "").trim();
-    if (meio) parc.cMeioPagamento = meio;
     return parc;
   });
 
