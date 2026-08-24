@@ -8302,50 +8302,101 @@ window.testarIntegracaoKommo = async function () {
     return;
   }
 
-  // 2. Busca do lead
-  let leadId = null;
+  // Lê identificadores do DOM
+  const numOrcamento = document.getElementById("numeroOrcamento")?.value?.trim() || "";
+  const numPedido    = document.getElementById("numeroPedido")?.value?.trim() || "";
+
+  // Busca lead por texto via servidor (usa GET /kommo/leads?query=)
+  async function buscarPorTexto(termo, rotulo) {
+    if (!termo) { console.warn(`   [${rotulo}] vazio, pulando`); return null; }
+    try {
+      const r = await fetch(`${BASE}/kommo/leads?query=${encodeURIComponent(termo)}&limit=10`);
+      if (!r.ok) return null;
+      const d = await r.json();
+      const leads = d?.leads || d?._embedded?.leads || [];
+      if (leads.length) {
+        console.log(`   ✅ [${rotulo}] encontrou ${leads.length} lead(s) — usando: ID ${leads[0].id} — "${leads[0].name}"`);
+        return leads[0];
+      }
+      console.warn(`   ❌ [${rotulo}] nenhum lead`);
+      return null;
+    } catch (e) {
+      console.warn(`   ❌ [${rotulo}] erro:`, e.message);
+      return null;
+    }
+  }
+
+  // 2. Busca do lead — tenta 3 estratégias em sequência
+  let leadId   = null;
+  let leadNome = null;
+  let metodo   = null;
+
+  console.group("🔎 Buscando lead...");
+
+  // 2a. Por campo kommo_id_pdv (mais preciso)
   try {
     const r = await fetch(`${BASE}/proposta/${idProposta}/lead`);
     const d = await r.json();
     if (r.ok) {
-      leadId = d.lead_id;
-      console.log("✅ Lead encontrado:");
-      console.log("   ID:        ", d.lead_id);
-      console.log("   Nome:      ", d.nome);
-      console.log("   Pipeline:  ", d.pipeline_id);
-      console.log("   Etapa:     ", d.status_id);
+      leadId = d.lead_id; leadNome = d.nome; metodo = "campo ID PDV";
+      console.log(`✅ Por ID PDV: lead ${d.lead_id} — "${d.nome}" | pipeline ${d.pipeline_id} | etapa ${d.status_id}`);
     } else {
-      console.error("❌ Lead NÃO encontrado:", d.error);
-      console.warn("   → Causa provável: campo 'ID PDV' (kommo_id_pdv) não preenchido neste lead.");
-      console.warn("   → Solução: rode sincronizarPDVparaKommo() uma vez com o lead correto aberto na Kommo, ou preencha o campo manualmente.");
+      console.warn("❌ Por ID PDV: não encontrado");
     }
   } catch (e) {
-    console.error("❌ Erro ao buscar lead:", e.message);
+    console.warn("❌ Por ID PDV: erro:", e.message);
+  }
+
+  // 2b. Por número do orçamento
+  if (!leadId) {
+    const l = await buscarPorTexto(numOrcamento, `Nº Orçamento "${numOrcamento}"`);
+    if (l) { leadId = l.id; leadNome = l.name; metodo = `Nº Orçamento "${numOrcamento}"`; }
+  }
+
+  // 2c. Por número do pedido
+  if (!leadId) {
+    const l = await buscarPorTexto(numPedido, `Nº Pedido "${numPedido}"`);
+    if (l) { leadId = l.id; leadNome = l.name; metodo = `Nº Pedido "${numPedido}"`; }
+  }
+
+  console.groupEnd();
+
+  if (!leadId) {
+    console.error("❌ LEAD NÃO ENCONTRADO por nenhum método:");
+    console.error(`   • campo ID PDV (${idProposta}) — não cadastrado no lead`);
+    console.error(`   • Nº Orçamento: "${numOrcamento || "(vazio)"}"`);
+    console.error(`   • Nº Pedido:    "${numPedido    || "(vazio)"}"`);
+    console.error("   → Abra o lead correto na Kommo e preencha o campo 'ID PDV' com: " + idProposta);
+    console.groupEnd();
+    return;
+  }
+
+  console.log(`✅ Lead localizado via: ${metodo}`);
+  console.log(`   ID: ${leadId} — "${leadNome}"`);
+
+  if (metodo !== "campo ID PDV") {
+    console.warn(`⚠️  Lead encontrado por texto, mas campo ID PDV não está preenchido.`);
+    console.warn(`   → Para fixar o vínculo permanentemente, preencha o campo 'ID PDV' do lead ${leadId} com: ${idProposta}`);
   }
 
   // 3. Simula payload sem enviar (lê campos do DOM)
   const vals = {
-    "Razão Social":    document.querySelector(".razaoSocial")?.value?.trim(),
-    "Nº Pedido":       document.getElementById("numeroPedido")?.value?.trim(),
-    "Nº Orçamento":    document.getElementById("numeroOrcamento")?.value?.trim(),
-    "Valor Venda":     (document.getElementById("valorFinalTotal")?.textContent || "").trim(),
-    "NF Produto":      document.getElementById("vv-cat-produto")?.textContent?.trim(),
-    "NF Serviço":      document.getElementById("vv-cat-servico")?.textContent?.trim(),
-    "Fat. Direto":     document.getElementById("vv-cat-vidro")?.textContent?.trim(),
-    "Rua obra":        document.getElementById("rua")?.value?.trim(),
-    "Cidade obra":     document.getElementById("cidade")?.value?.trim(),
+    "Razão Social": document.querySelector(".razaoSocial")?.value?.trim(),
+    "Nº Pedido":    numPedido,
+    "Nº Orçamento": numOrcamento,
+    "Valor Venda":  (document.getElementById("valorFinalTotal")?.textContent || "").trim(),
+    "NF Produto":   document.getElementById("vv-cat-produto")?.textContent?.trim(),
+    "NF Serviço":   document.getElementById("vv-cat-servico")?.textContent?.trim(),
+    "Fat. Direto":  document.getElementById("vv-cat-vidro")?.textContent?.trim(),
+    "Rua obra":     document.getElementById("rua")?.value?.trim(),
+    "Cidade obra":  document.getElementById("cidade")?.value?.trim(),
   };
   console.log("📋 Campos que seriam enviados:");
   for (const [k, v] of Object.entries(vals)) {
-    console.log(`   ${k.padEnd(15)}: ${v || "(vazio)"}`);
+    console.log(`   ${k.padEnd(14)}: ${v || "(vazio)"}`);
   }
 
-  if (leadId) {
-    console.log("🟢 Integração pronta — lead vinculado e campos detectados.");
-  } else {
-    console.warn("🟡 Lead não vinculado — o envio vai falhar até o campo ID PDV ser preenchido.");
-  }
-
+  console.log("🟢 Integração pronta — lead vinculado e campos detectados.");
   console.groupEnd();
 };
 
