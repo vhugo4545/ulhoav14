@@ -8272,6 +8272,83 @@ async function sincronizarPDVparaKommo() {
   }
 }
 
+window.testarIntegracaoKommo = async function () {
+  const BASE = "https://kommo-server-9f1243cbe450.herokuapp.com";
+  const idProposta = new URLSearchParams(window.location.search).get("id");
+
+  console.group("🔍 [TESTE KOMMO]");
+
+  if (!idProposta) {
+    console.error("❌ ID da proposta não encontrado na URL. Abra uma proposta antes de testar.");
+    console.groupEnd();
+    return;
+  }
+  console.log("ID da proposta:", idProposta);
+
+  // 1. Health
+  try {
+    const h = await fetch(`${BASE}/health`);
+    const hd = await h.json();
+    if (hd.kommo_configurado) {
+      console.log("✅ Servidor OK — Kommo configurado:", hd.kommo_domain || "(domínio ok)");
+    } else {
+      console.error("❌ Servidor sem credenciais Kommo:", hd);
+      console.groupEnd();
+      return;
+    }
+  } catch (e) {
+    console.error("❌ Servidor offline:", e.message);
+    console.groupEnd();
+    return;
+  }
+
+  // 2. Busca do lead
+  let leadId = null;
+  try {
+    const r = await fetch(`${BASE}/proposta/${idProposta}/lead`);
+    const d = await r.json();
+    if (r.ok) {
+      leadId = d.lead_id;
+      console.log("✅ Lead encontrado:");
+      console.log("   ID:        ", d.lead_id);
+      console.log("   Nome:      ", d.nome);
+      console.log("   Pipeline:  ", d.pipeline_id);
+      console.log("   Etapa:     ", d.status_id);
+    } else {
+      console.error("❌ Lead NÃO encontrado:", d.error);
+      console.warn("   → Causa provável: campo 'ID PDV' (kommo_id_pdv) não preenchido neste lead.");
+      console.warn("   → Solução: rode sincronizarPDVparaKommo() uma vez com o lead correto aberto na Kommo, ou preencha o campo manualmente.");
+    }
+  } catch (e) {
+    console.error("❌ Erro ao buscar lead:", e.message);
+  }
+
+  // 3. Simula payload sem enviar (lê campos do DOM)
+  const vals = {
+    "Razão Social":    document.querySelector(".razaoSocial")?.value?.trim(),
+    "Nº Pedido":       document.getElementById("numeroPedido")?.value?.trim(),
+    "Nº Orçamento":    document.getElementById("numeroOrcamento")?.value?.trim(),
+    "Valor Venda":     (document.getElementById("valorFinalTotal")?.textContent || "").trim(),
+    "NF Produto":      document.getElementById("vv-cat-produto")?.textContent?.trim(),
+    "NF Serviço":      document.getElementById("vv-cat-servico")?.textContent?.trim(),
+    "Fat. Direto":     document.getElementById("vv-cat-vidro")?.textContent?.trim(),
+    "Rua obra":        document.getElementById("rua")?.value?.trim(),
+    "Cidade obra":     document.getElementById("cidade")?.value?.trim(),
+  };
+  console.log("📋 Campos que seriam enviados:");
+  for (const [k, v] of Object.entries(vals)) {
+    console.log(`   ${k.padEnd(15)}: ${v || "(vazio)"}`);
+  }
+
+  if (leadId) {
+    console.log("🟢 Integração pronta — lead vinculado e campos detectados.");
+  } else {
+    console.warn("🟡 Lead não vinculado — o envio vai falhar até o campo ID PDV ser preenchido.");
+  }
+
+  console.groupEnd();
+};
+
 async function preencherNumeroPedidoKommo() {
   const idProposta = new URLSearchParams(window.location.search).get("id");
 
