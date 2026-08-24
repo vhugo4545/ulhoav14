@@ -713,7 +713,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
   const dataHoje = (() => { const h = new Date(); return `${String(h.getDate()).padStart(2,"0")}/${String(h.getMonth()+1).padStart(2,"0")}/${h.getFullYear()}`; })();
   const nomeCliente = document.querySelector("input.razaoSocial")?.value || document.querySelector("input.razaoSocial")?.dataset?.valorOriginal || "-";
 
-  /* ── HTML do cabeçalho (interpolado aqui, clonado em cada página pelo JS) ── */
+  /* ── Cabeçalho página 1: logo + dados do orçamento + dados do cliente ── */
   const cabHTML = `
     <div style="border-bottom:3px solid #1e293b;padding-bottom:6px;margin-bottom:10px;">
       <table class="table table-bordered table-sm w-100" style="margin-bottom:4px;font-size:12px;">
@@ -740,8 +740,22 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
       </table>
     </div>`;
 
+  /* ── Cabeçalho páginas 2+: só dados do orçamento, sem logo, sem cliente ── */
+  const cabHTMLSimples = `
+    <div style="border-bottom:3px solid #1e293b;padding-bottom:6px;margin-bottom:10px;">
+      <table class="table table-sm w-100 mb-0" style="font-size:12px;">
+        <tr>
+          <td><strong>Orçamento:</strong></td><td>${dados.numero}</td>
+          <td><strong>Pedido:</strong></td><td>${dados.numeroPedido}</td>
+          <td><strong>Data:</strong></td><td>${dataHoje}</td>
+          <td><strong>Proposta válida por 7 dias úteis</strong></td>
+        </tr>
+      </table>
+    </div>`;
+
   /* Escapa backticks/$ para embed seguro no <script> inline */
   const cabHTMLEsc = cabHTML.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+  const cabHTMLSimplesEsc = cabHTMLSimples.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
 
   const htmlCompleto = `
     <html>
@@ -806,6 +820,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
         <script>
         (function () {
           var CAB_HTML = \`${cabHTMLEsc}\`;
+          var CAB_HTML_SIMPLES = \`${cabHTMLSimplesEsc}\`;
 
           /* A4 px @ 96dpi = 1122px; margens 10mm × 2 ≈ 76px; útil = 1046px.
              Cabeçalho ocupa ~250px + pg-num ~30px; sobra ≈ 650px p/ conteúdo. */
@@ -853,9 +868,9 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
               numDiv.textContent = 'Pág. ' + (i + 1) + ' / ' + total;
               pDiv.appendChild(numDiv);
 
-              /* Cabeçalho */
+              /* Cabeçalho: completo só na pág. 1, simplificado nas demais */
               var cabDiv = document.createElement('div');
-              cabDiv.innerHTML = CAB_HTML;
+              cabDiv.innerHTML = i === 0 ? CAB_HTML : CAB_HTML_SIMPLES;
               pDiv.appendChild(cabDiv);
 
               /* Elementos de conteúdo */
