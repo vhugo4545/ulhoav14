@@ -7753,7 +7753,16 @@ function montarPayloadOS({
   const Parcelas = parcelasOsValidas.map((p, i) => {
     const parc = {
       nParcela:    i + 1,
-      dDtVenc:     String(p.vencimento || p.previsao || p.data || "").trim(),
+      dDtVenc:     (() => {
+        const raw = String(p.vencimento || p.previsao || p.data || "").trim();
+        if (!raw) return "";
+        // ISO YYYY-MM-DD → DD/MM/YYYY
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+          const [y, m, d] = raw.split("-");
+          return `${d}/${m}/${y}`;
+        }
+        return raw; // já no formato correto
+      })(),
       nValor:      Number((Number(p.valor || 0)).toFixed(2)),
       nPercentual: totalParcelasOs > 0
         ? Number(((Number(p.valor || 0) / totalParcelasOs) * 100).toFixed(2))
