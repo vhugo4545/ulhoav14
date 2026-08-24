@@ -6011,23 +6011,33 @@ async function atualizarNaOmie() {
           const _ufInformada = await new Promise(resolve => {
             const _ov = document.createElement("div");
             _ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;";
-            _ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.22);"><h5 style="margin:0 0 10px;color:#b45309;font-size:15px;font-weight:700;">UF nao cadastrada na Omie</h5><p style="margin:0 0 4px;font-size:13px;color:#374151;">O cliente <b id="_uf_nome_cli"></b> nao possui estado (UF) registrado na Omie.</p><p style="margin:0 0 14px;font-size:13px;color:#374151;">Informe a UF para salvar e continuar:</p><input id="_uf_omie_inp" type="text" maxlength="2" placeholder="Ex: MG, SP..." style="width:100%;padding:11px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:18px;text-transform:uppercase;letter-spacing:4px;text-align:center;margin-bottom:8px;box-sizing:border-box;"><div id="_uf_omie_err" style="font-size:12px;color:#ef4444;min-height:18px;margin-bottom:14px;"></div><div style="display:flex;gap:10px;justify-content:flex-end;"><button id="_uf_omie_cancel" style="padding:9px 20px;border:1px solid #d1d5db;border-radius:8px;background:#f9fafb;cursor:pointer;font-size:13px;font-weight:600;">Cancelar</button><button id="_uf_omie_ok" style="padding:9px 22px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:700;">Salvar e continuar</button></div></div>';
+            const _ufsOpts = ["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"].map(u => `<option value="${u}">${u}</option>`).join("");
+            _ov.innerHTML = `<div style="background:#fff;border-radius:14px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.22);">
+              <h5 style="margin:0 0 10px;color:#b45309;font-size:15px;font-weight:700;">UF não cadastrada na Omie</h5>
+              <p style="margin:0 0 4px;font-size:13px;color:#374151;">O cliente <b id="_uf_nome_cli"></b> não possui estado (UF) registrado na Omie.</p>
+              <p style="margin:0 0 14px;font-size:13px;color:#374151;">Selecione o estado para salvar e continuar:</p>
+              <select id="_uf_omie_inp" style="width:100%;padding:11px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;margin-bottom:8px;box-sizing:border-box;font-family:'Poppins',sans-serif;cursor:pointer;">
+                <option value="">Selecione o estado...</option>
+                ${_ufsOpts}
+              </select>
+              <div id="_uf_omie_err" style="font-size:12px;color:#ef4444;min-height:18px;margin-bottom:14px;"></div>
+              <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button id="_uf_omie_cancel" style="padding:9px 20px;border:1px solid #d1d5db;border-radius:8px;background:#f9fafb;cursor:pointer;font-size:13px;font-weight:600;">Cancelar</button>
+                <button id="_uf_omie_ok" style="padding:9px 22px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:700;">Salvar e continuar</button>
+              </div>
+            </div>`;
             document.body.appendChild(_ov);
             _ov.querySelector("#_uf_nome_cli").textContent = _nomeCliente;
             const _inp = _ov.querySelector("#_uf_omie_inp");
             const _err = _ov.querySelector("#_uf_omie_err");
             _inp.focus();
-            _inp.addEventListener("input", () => { _inp.value = _inp.value.toUpperCase().replace(/[^A-Z]/g, ""); _err.textContent = ""; });
+            _inp.addEventListener("change", () => { _err.textContent = ""; });
             _ov.querySelector("#_uf_omie_ok").onclick = () => {
               const v = _inp.value.trim().toUpperCase();
-              if (!v || v.length !== 2) { _err.textContent = "Informe exatamente 2 letras (ex: MG)."; return; }
+              if (!v) { _err.textContent = "Selecione um estado."; return; }
               document.body.removeChild(_ov); resolve(v);
             };
             _ov.querySelector("#_uf_omie_cancel").onclick = () => { document.body.removeChild(_ov); resolve(""); };
-            _inp.addEventListener("keydown", ev => {
-              if (ev.key === "Enter") _ov.querySelector("#_uf_omie_ok").click();
-              if (ev.key === "Escape") _ov.querySelector("#_uf_omie_cancel").click();
-            });
           });
           if (!_ufInformada) return;
           try {
