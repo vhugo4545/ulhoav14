@@ -5950,6 +5950,46 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
    ======================================= */
 async function atualizarNaOmie() {
 
+  // ── VALIDAÇÃO: cliente precisa ter UF preenchida ──────────
+  const _estadoEl = document.getElementById("estado");
+  const _ufAtual = (_estadoEl?.value || "").trim().toUpperCase();
+  if (!_ufAtual || _ufAtual.length !== 2) {
+    const _ufInformada = await new Promise(resolve => {
+      const _overlay = document.createElement("div");
+      _overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;";
+      _overlay.innerHTML = `
+        <div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);font-family:'Poppins',sans-serif;">
+          <h5 style="margin:0 0 10px;color:#b45309;">⚠️ UF do cliente não preenchida</h5>
+          <p style="margin:0 0 16px;font-size:14px;color:#374151;">O cliente não possui UF (estado) cadastrada. Informe para continuar o envio:</p>
+          <input id="_uf_input" type="text" maxlength="2" placeholder="Ex: MG, SP, RJ..."
+            style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:15px;text-transform:uppercase;margin-bottom:18px;box-sizing:border-box;font-family:'Poppins',sans-serif;">
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button id="_uf_cancel" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:8px;background:#f9fafb;cursor:pointer;font-family:'Poppins',sans-serif;">Cancelar</button>
+            <button id="_uf_ok" style="padding:8px 18px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-family:'Poppins',sans-serif;">Confirmar</button>
+          </div>
+        </div>`;
+      document.body.appendChild(_overlay);
+      const _input = _overlay.querySelector("#_uf_input");
+      _input.focus();
+      _input.addEventListener("input", () => { _input.value = _input.value.toUpperCase(); });
+      _overlay.querySelector("#_uf_ok").onclick = () => {
+        const v = _input.value.trim().toUpperCase();
+        document.body.removeChild(_overlay);
+        resolve(v);
+      };
+      _overlay.querySelector("#_uf_cancel").onclick = () => {
+        document.body.removeChild(_overlay);
+        resolve("");
+      };
+      _input.addEventListener("keydown", e => {
+        if (e.key === "Enter") _overlay.querySelector("#_uf_ok").click();
+        if (e.key === "Escape") _overlay.querySelector("#_uf_cancel").click();
+      });
+    });
+    if (!_ufInformada || _ufInformada.length !== 2) return; // cancelou ou UF inválida
+    if (_estadoEl) _estadoEl.value = _ufInformada; // salva no campo do formulário
+  }
+
    // ── ESCOLHA DO TIPO DE ENVIO ──────────────────────────────
   const tipoEnvio = await abrirPopupEscolhaTipoEnvioOmie();
   if (!tipoEnvio) return; // usuário cancelou
