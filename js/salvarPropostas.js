@@ -345,6 +345,10 @@ function extrairNumeroMoeda(texto) {
 
 window.atualizarPropostaEditavel = async function () {
   // ── Validação: itens com custo zero (exceto o 1º de cada grupo) ──────────
+  const _idAtual = new URLSearchParams(window.location.search).get("id");
+  if (_idAtual === "68746e305b9691a7ed3b3f97") { // modelo — pula validação
+    // vai direto para o try abaixo
+  } else {
   const itensZerados = [];
   document.querySelectorAll("tbody").forEach(tbody => {
     const linhas = tbody.querySelectorAll("tr");
@@ -380,6 +384,7 @@ window.atualizarPropostaEditavel = async function () {
     });
     return;
   }
+  } // fim else (não é modelo)
 
   try {
     //abrirTodasSanfonas();
