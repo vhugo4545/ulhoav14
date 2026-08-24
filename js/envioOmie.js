@@ -1,4 +1,4 @@
-
+﻿
 
 
 
@@ -297,7 +297,7 @@ async function vvGarantirProjetoOmiePorPedidoBase(numeroPedido, {
 
   const codint = `PROJ-${Date.now()}`.slice(0, 20);
 
-  console.group(`🚀 [CRIAR PROJETO OMIE ${origem.toUpperCase()}]`);
+  console.group(`ðŸš€ [CRIAR PROJETO OMIE ${origem.toUpperCase()}]`);
   console.log("numeroPedido:", nomeProjeto);
   console.log("codint:", codint);
   console.log("endpoint:", endpoint);
@@ -315,7 +315,7 @@ async function vvGarantirProjetoOmiePorPedidoBase(numeroPedido, {
 
   const json = await resposta.json().catch(() => ({}));
 
-  console.group(`📥 [CRIAR PROJETO OMIE ${origem.toUpperCase()}] Resposta`);
+  console.group(`ðŸ“¥ [CRIAR PROJETO OMIE ${origem.toUpperCase()}] Resposta`);
   console.log("HTTP status:", resposta.status);
   console.log("ok:", resposta.ok);
   console.log("Resposta completa:", json);
@@ -395,13 +395,13 @@ window.criarProjetoServicoTeste = async function criarProjetoServicoTeste() {
 
 
 // ============================================================================
-//  BLOCO ÚNICO — ENVIO PARA OMIE (COMPLETO E AJUSTADO)
+//  BLOCO ÃšNICO â€” ENVIO PARA OMIE (COMPLETO E AJUSTADO)
 //  - Helpers (formatos, BRL, data, UI stubs)
-//  - Coleta (1º item por grupo)
-//  - Popup de seleção (rateia Serviços %/R$)
-//  - Geração do payload (mantendo estrutura antiga)
+//  - Coleta (1Âº item por grupo)
+//  - Popup de seleÃ§Ã£o (rateia ServiÃ§os %/R$)
+//  - GeraÃ§Ã£o do payload (mantendo estrutura antiga)
 //  - Envio (atualizarNaOmie)
-//  - Stubs defensivos p/ funções externas ausentes
+//  - Stubs defensivos p/ funÃ§Ãµes externas ausentes
 //  - Tudo exposto no window.*
 // ============================================================================
 
@@ -409,7 +409,7 @@ window.criarProjetoServicoTeste = async function criarProjetoServicoTeste() {
    0) SHIMS / HELPERS GLOBAIS
    ========================= */
 (function ensureHelpers(){
-  // Visual (stubs para não quebrar se não existirem)
+  // Visual (stubs para nÃ£o quebrar se nÃ£o existirem)
   window.mostrarCarregando      ||= function(){ /* opcional: mostrar overlay */ };
   window.ocultarCarregando      ||= function(){ /* opcional: esconder overlay */ };
   window.mostrarPopupCustomizado ||= function(titulo, msg, tipo){
@@ -417,10 +417,10 @@ window.criarProjetoServicoTeste = async function criarProjetoServicoTeste() {
     alert((tipo ? `[${tipo.toUpperCase()}] ` : "") + titulo + "\n" + (msg || ""));
   };
   window.mostrarPopupPendencias ||= function(pendencias){
-    alert("Pendências:\n- " + pendencias.join("\n- "));
+    alert("PendÃªncias:\n- " + pendencias.join("\n- "));
   };
 
-  // Formatação de datas
+  // FormataÃ§Ã£o de datas
   window.formatarDataBR ||= function(iso){
     if (!iso) return "";
     const v = String(iso).trim();
@@ -443,7 +443,7 @@ window.criarProjetoServicoTeste = async function criarProjetoServicoTeste() {
     return `${dd}/${mm}/${d.getUTCFullYear()}`;
   };
 
-  // Números / dinheiro
+  // NÃºmeros / dinheiro
   window.vv_round2 ||= (n) => Math.round((Number(n)||0) * 100) / 100;
 
   window.vv_parseBRL ||= function(str){
@@ -469,7 +469,7 @@ window.criarProjetoServicoTeste = async function criarProjetoServicoTeste() {
     return (Number(n)||0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
   };
 
-  // Número de pedido (fallback)
+  // NÃºmero de pedido (fallback)
   window.gerarNumeroPedidoUnico ||= function(){ return 'PED-' + Date.now(); };
 
   // Ambientes marcados (fallback)
@@ -485,7 +485,7 @@ window.criarProjetoServicoTeste = async function criarProjetoServicoTeste() {
 })();
 
 /* =======================================
-   1) CSS do MODAL (injeção, uma única vez)
+   1) CSS do MODAL (injeÃ§Ã£o, uma Ãºnica vez)
    ======================================= */
 (function ensureModalStyles(){
   if (document.getElementById('selecao-omie-styles')) return;
@@ -662,7 +662,7 @@ window.criarProjetoServicoTeste = async function criarProjetoServicoTeste() {
 })();
 
 /* =========================================================
-   2) COLETAR ITENS (1º produto por grupo + total por grupo)
+   2) COLETAR ITENS (1Âº produto por grupo + total por grupo)
    ========================================================= */
 function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
   const itens = [];
@@ -672,20 +672,20 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
     ? ambientesMarcados.map(a => normalizarAmbienteOmie(a)).filter(Boolean)
     : [];
 
-  console.log("✅ Ambientes marcados (originais):", ambientesMarcados);
-  console.log("✅ Ambientes marcados (normalizados):", ambientesMarcadosNormalizados);
+  console.log("âœ… Ambientes marcados (originais):", ambientesMarcados);
+  console.log("âœ… Ambientes marcados (normalizados):", ambientesMarcadosNormalizados);
 
   blocos.forEach((bloco) => {
     const grupoId = bloco.id || "(sem-id)";
     const inputAmb = bloco.querySelector("input[placeholder='Ambiente'][data-id-grupo]");
-    const nomeAmbiente = (inputAmb?.value || inputAmb?.getAttribute("value") || "").trim() || "Ambiente não identificado";
+    const nomeAmbiente = (inputAmb?.value || inputAmb?.getAttribute("value") || "").trim() || "Ambiente nÃ£o identificado";
     const nomeAmbienteNormalizado = normalizarAmbienteOmie(nomeAmbiente);
 
-    console.log("➡️ Bloco:", grupoId, "| Ambiente bruto:", nomeAmbiente, "| Ambiente normalizado:", nomeAmbienteNormalizado);
+    console.log("âž¡ï¸ Bloco:", grupoId, "| Ambiente bruto:", nomeAmbiente, "| Ambiente normalizado:", nomeAmbienteNormalizado);
 
     if (ambientesMarcadosNormalizados.length > 0) {
       if (!ambientesMarcadosNormalizados.includes(nomeAmbienteNormalizado)) {
-        console.log("⛔ Bloco ignorado por ambiente não marcado:", grupoId, nomeAmbiente);
+        console.log("â›” Bloco ignorado por ambiente nÃ£o marcado:", grupoId, nomeAmbiente);
         return;
       }
     }
@@ -696,13 +696,13 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
       bloco.querySelector(".table");
 
     if (!tabela) {
-      console.log("⛔ Bloco sem tabela:", grupoId);
+      console.log("â›” Bloco sem tabela:", grupoId);
       return;
     }
 
     const linhas = tabela.querySelectorAll("tbody tr");
     if (!linhas || !linhas.length) {
-      console.log("⛔ Bloco sem linhas:", grupoId);
+      console.log("â›” Bloco sem linhas:", grupoId);
       return;
     }
 
@@ -718,7 +718,7 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
       valorTotalGrupo = vv_parseBRL(textoTotal);
     }
 
-    // ✅ NOVO: lê Custo Total de Material do resumo do bloco
+    // âœ… NOVO: lÃª Custo Total de Material do resumo do bloco
     let valorCustoMaterial = 0;
     const cards = bloco.querySelectorAll(".resumo-totalizador-interno .col");
     for (const col of cards) {
@@ -737,7 +737,7 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
     const descricao =
       (td2?.textContent || td2?.querySelector("input,textarea")?.value || "").trim() ||
       (primeiraLinha.querySelector(".descricao, .nome, .produto-descricao")?.textContent || "").trim() ||
-      "Item sem descrição";
+      "Item sem descriÃ§Ã£o";
 
     const codigo =
       (td5?.textContent || td5?.querySelector("input")?.value || "").trim() ||
@@ -753,10 +753,10 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
       codigo,
       descricao,
       valorTotalGrupo: Number(valorTotalGrupo) || 0,
-      valorCustoMaterial: Number(valorCustoMaterial) || 0, // ✅ NOVO
+      valorCustoMaterial: Number(valorCustoMaterial) || 0, // âœ… NOVO
     });
 
-    console.log("✅ Item elegível adicionado:", {
+    console.log("âœ… Item elegÃ­vel adicionado:", {
       grupoId,
       ambiente: nomeAmbiente,
       codigo,
@@ -766,31 +766,31 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
     });
   });
 
-  console.log("📦 Itens coletados para Omie:", itens);
+  console.log("ðŸ“¦ Itens coletados para Omie:", itens);
   return itens;
 }
 
 /* ============================================
-   3) POPUP DE SELEÇÃO + RATEIO DE SERVIÇOS
+   3) POPUP DE SELEÃ‡ÃƒO + RATEIO DE SERVIÃ‡OS
    ============================================ */
 /* =========================================================
-   1) COMISSÕES → OMIE (função global usada pelo popup)
+   1) COMISSÃ•ES â†’ OMIE (funÃ§Ã£o global usada pelo popup)
    ---------------------------------------------------------
-   - Mantém a assinatura: window.enviarComissoes(payload)
+   - MantÃ©m a assinatura: window.enviarComissoes(payload)
    - Envia arquiteto e vendedor em paralelo para sua rota
     https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com/api/omie/comissao
    - Dispara eventos:
        vv:comissoes:prontas    (antes do POST)
-       vv:comissoes:enviadas   (após POST, com resultados)
+       vv:comissoes:enviadas   (apÃ³s POST, com resultados)
    ========================================================= */
 
 
 
 /* =========================================================
-   2) POPUP DE SELEÇÃO + RATEIO + ENVIO DE COMISSÕES
+   2) POPUP DE SELEÃ‡ÃƒO + RATEIO + ENVIO DE COMISSÃ•ES
    ---------------------------------------------------------
-   - NÃO altera nada além do que você pediu
-   - Inclui previsão/vencimento/observação para Arquiteto e Vendedor
+   - NÃƒO altera nada alÃ©m do que vocÃª pediu
+   - Inclui previsÃ£o/vencimento/observaÃ§Ã£o para Arquiteto e Vendedor
    - Chama window.enviarComissoes(...) no confirmar
    ========================================================= */
 
@@ -807,7 +807,7 @@ async function verificarClienteEAtualizar() {
   );
 
   if (!inp) {
-    console.warn("⚠️ verificarClienteEAtualizar: input de razão social não encontrado.");
+    console.warn("âš ï¸ verificarClienteEAtualizar: input de razÃ£o social nÃ£o encontrado.");
     return;
   }
 
@@ -826,7 +826,7 @@ async function verificarClienteEAtualizar() {
 
   const razaoSocialAlvo = normNome(inp.value || inp.dataset.valorOriginal);
   if (!razaoSocialAlvo) {
-    console.warn("⚠️ verificarClienteEAtualizar: razão social vazia.");
+    console.warn("âš ï¸ verificarClienteEAtualizar: razÃ£o social vazia.");
     return;
   }
 
@@ -837,9 +837,9 @@ async function verificarClienteEAtualizar() {
   );
   const cnpjAlvo = norm(cnpjEl?.value || cnpjEl?.dataset?.valorOriginal || "");
 
-  console.group("🔎 [verificarClienteEAtualizar]");
-  console.log("Razão social buscada:", razaoSocialAlvo);
-  console.log("CNPJ buscado:", cnpjAlvo || "(não encontrado)");
+  console.group("ðŸ”Ž [verificarClienteEAtualizar]");
+  console.log("RazÃ£o social buscada:", razaoSocialAlvo);
+  console.log("CNPJ buscado:", cnpjAlvo || "(nÃ£o encontrado)");
 
   const [resServico, resLocal] = await Promise.all([
     fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes")
@@ -858,11 +858,11 @@ async function verificarClienteEAtualizar() {
 
   if (listaServico.length) window.listaClientesServico = listaServico;
 
-  console.group("📋 Estrutura da API de serviços (primeiro cliente)");
+  console.group("ðŸ“‹ Estrutura da API de serviÃ§os (primeiro cliente)");
   console.log(listaServico[0] ?? "(lista vazia)");
   console.groupEnd();
 
-  console.group("📋 Estrutura da API local (primeiro cliente)");
+  console.group("ðŸ“‹ Estrutura da API local (primeiro cliente)");
   console.log(listaLocal[0] ?? "(lista vazia)");
   console.groupEnd();
 
@@ -880,7 +880,7 @@ async function verificarClienteEAtualizar() {
   const existeServico = listaServico.some(clienteBate);
   const existeLocal   = listaLocal.some(clienteBate);
 
-  console.log("Existe na API de serviços?", existeServico);
+  console.log("Existe na API de serviÃ§os?", existeServico);
   console.log("Existe na API local?", existeLocal);
 
   if (!existeServico) {
@@ -890,7 +890,7 @@ async function verificarClienteEAtualizar() {
         return n.includes(razaoSocialAlvo.slice(0, 6)) || razaoSocialAlvo.includes(n.slice(0, 6));
       })
       .slice(0, 5);
-    console.warn("❌ NÃO encontrado na API serviços. Candidatos próximos:", candidatos);
+    console.warn("âŒ NÃƒO encontrado na API serviÃ§os. Candidatos prÃ³ximos:", candidatos);
   }
 
   if (!existeLocal) {
@@ -900,13 +900,13 @@ async function verificarClienteEAtualizar() {
         return n.includes(razaoSocialAlvo.slice(0, 6)) || razaoSocialAlvo.includes(n.slice(0, 6));
       })
       .slice(0, 5);
-    console.warn("❌ NÃO encontrado na API local. Candidatos próximos:", candidatos);
+    console.warn("âŒ NÃƒO encontrado na API local. Candidatos prÃ³ximos:", candidatos);
   }
 
   console.groupEnd();
 
   if (!existeServico || !existeLocal) {
-    alert("Cliente não encontrado em ambas as bases. Atualizando lista de clientes…");
+    alert("Cliente nÃ£o encontrado em ambas as bases. Atualizando lista de clientesâ€¦");
     if (typeof dispararAtualizacaoClientes === "function") {
       dispararAtualizacaoClientes();
     }
@@ -914,22 +914,22 @@ async function verificarClienteEAtualizar() {
     const clienteServico = listaServico.find(clienteBate);
     const clienteLocal   = listaLocal.find(clienteBate);
 
-    console.group("✅ [verificarClienteEAtualizar] Cliente ENCONTRADO nas duas bases");
-    console.log("Razão social buscada:", razaoSocialAlvo);
-    console.log("CNPJ buscado:", cnpjAlvo || "(não informado)");
+    console.group("âœ… [verificarClienteEAtualizar] Cliente ENCONTRADO nas duas bases");
+    console.log("RazÃ£o social buscada:", razaoSocialAlvo);
+    console.log("CNPJ buscado:", cnpjAlvo || "(nÃ£o informado)");
 
-    console.group("📦 API de Serviços");
-    console.log("razao_social:",       clienteServico?.razao_social    || "—");
-    console.log("nome_fantasia:",      clienteServico?.nome_fantasia   || "—");
-    console.log("cnpj:",               clienteServico?.cnpj            || clienteServico?.cpf_cnpj || clienteServico?.documento || "—");
-    console.log("codigo_cliente_omie:", clienteServico?.codigo_cliente_omie || "—");
+    console.group("ðŸ“¦ API de ServiÃ§os");
+    console.log("razao_social:",       clienteServico?.razao_social    || "â€”");
+    console.log("nome_fantasia:",      clienteServico?.nome_fantasia   || "â€”");
+    console.log("cnpj:",               clienteServico?.cnpj            || clienteServico?.cpf_cnpj || clienteServico?.documento || "â€”");
+    console.log("codigo_cliente_omie:", clienteServico?.codigo_cliente_omie || "â€”");
     console.groupEnd();
 
-    console.group("📦 API Local");
-    console.log("razao_social:",       clienteLocal?.razao_social    || "—");
-    console.log("nome_fantasia:",      clienteLocal?.nome_fantasia   || "—");
-    console.log("cnpj:",               clienteLocal?.cnpj            || clienteLocal?.cpf_cnpj || clienteLocal?.documento || "—");
-    console.log("codigo_cliente_omie:", clienteLocal?.codigo_cliente_omie || "—");
+    console.group("ðŸ“¦ API Local");
+    console.log("razao_social:",       clienteLocal?.razao_social    || "â€”");
+    console.log("nome_fantasia:",      clienteLocal?.nome_fantasia   || "â€”");
+    console.log("cnpj:",               clienteLocal?.cnpj            || clienteLocal?.cpf_cnpj || clienteLocal?.documento || "â€”");
+    console.log("codigo_cliente_omie:", clienteLocal?.codigo_cliente_omie || "â€”");
     console.groupEnd();
 
     console.groupEnd();
@@ -1046,14 +1046,14 @@ const VV_CONDICOES_PAGTO_PARCELAS = [
   { value: "personalizado", label: "Personalizado" }
 ];
 
-/* Converte códigos antigos do sistema para os códigos Omie (tipo_documento_cadastro).
-   Aceita tanto o valor antigo quanto o novo — idempotente. */
+/* Converte cÃ³digos antigos do sistema para os cÃ³digos Omie (tipo_documento_cadastro).
+   Aceita tanto o valor antigo quanto o novo â€” idempotente. */
 const _VV_MEIO_PAG_MAP = {
-  CRC:  "03", CRCP: "03",          // Cartão de Crédito / Parcelado
-  CRD:  "04",                      // Cartão de Débito
+  CRC:  "03", CRCP: "03",          // CartÃ£o de CrÃ©dito / Parcelado
+  CRD:  "04",                      // CartÃ£o de DÃ©bito
   DIN:  "01",                      // Dinheiro
   BOLV: "15", BOLR: "15",          // Boleto
-  PIX:  "17",                      // PIX Dinâmico
+  PIX:  "17",                      // PIX DinÃ¢mico
   TED:  "18",                      // TED
   PER:  "99"                       // Outros / Permuta
 };
@@ -1061,9 +1061,9 @@ const _VV_MEIO_PAG_MAP = {
 function vvNormalizarCodigoMeioPagamento(codigo) {
   const s = String(codigo || "").trim();
   if (!s) return "";
-  // já é código Omie numérico → devolve como está
+  // jÃ¡ Ã© cÃ³digo Omie numÃ©rico â†’ devolve como estÃ¡
   if (/^\d+$/.test(s)) return s;
-  // código antigo → converte
+  // cÃ³digo antigo â†’ converte
   return _VV_MEIO_PAG_MAP[s.toUpperCase()] || s;
 }
 
@@ -1522,7 +1522,7 @@ function vvEscolherParcelasIniciaisProdutosServicos({
     .map(vvNormalizarParcelaControle)
     .filter(parcela => parcela.valor > 0);
 
-  // Só cria parcela inicial de produto se não houver nenhuma salva
+  // SÃ³ cria parcela inicial de produto se nÃ£o houver nenhuma salva
   if (!parcelasProdutoIniciais.length && valorTotalProdutos > 0) {
     parcelasProdutoIniciais.push({
       tipo_monetario: "",
@@ -1533,7 +1533,7 @@ function vvEscolherParcelasIniciaisProdutosServicos({
     });
   }
 
-  // Serviços: nunca cria automaticamente — o usuário adiciona se quiser
+  // ServiÃ§os: nunca cria automaticamente â€” o usuÃ¡rio adiciona se quiser
 
   return {
     origem: "persistido",
@@ -1674,7 +1674,7 @@ function abrirPopupParcelamentoProdutosServicos({
         <div class="vv-parcela-head">
           <span class="vv-drag-handle">Arraste para transferir</span>
           <div style="display:flex;gap:8px;align-items:center;">
-            <label class="vv-ignorar-label" title="Faturamento direto — esta parcela nao sera enviada para a Omie">
+            <label class="vv-ignorar-label" title="Faturamento direto â€” esta parcela nao sera enviada para a Omie">
               <input type="checkbox" class="vv-ignorar-parcela"> Ignorar (fat. direto)
             </label>
             <button type="button" class="vv-btn danger vv-remover-parcela-transfer">Remover</button>
@@ -1716,7 +1716,7 @@ function abrirPopupParcelamentoProdutosServicos({
           </div>
           <div class="col-12">
             <label class="form-label mb-0">Descritivo</label>
-            <input type="text" class="form-control descritivo-parcela-transfer" placeholder="Ex: Entrada, 1ª parcela...">
+            <input type="text" class="form-control descritivo-parcela-transfer" placeholder="Ex: Entrada, 1Âª parcela...">
           </div>
         </div>
       `;
@@ -2074,7 +2074,7 @@ verificarClienteEAtualizar()
     setTimeout(()=>{ cont.removeChild(el); }, tempo);
   }
 
-  // ---- helpers de normalização/identificação ----
+  // ---- helpers de normalizaÃ§Ã£o/identificaÃ§Ã£o ----
   const normalize = (s) => (s || '')
     .toString()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -2097,7 +2097,7 @@ verificarClienteEAtualizar()
     return "produto";
   };
 
-  // ✅ AJUSTE: comissão do vendedor = 1% do #valorFinalTotal
+  // âœ… AJUSTE: comissÃ£o do vendedor = 1% do #valorFinalTotal
   function lerValorFinalTotal(){
     const el = document.getElementById('valorFinalTotal');
     let txt = (el?.textContent || '').trim();
@@ -2116,14 +2116,14 @@ verificarClienteEAtualizar()
     const s = txt.replace(/[^\d,\.]/g,'');
     if (!s) return 0;
 
-    // se tiver vírgula, assume decimal BR; se não, assume ponto decimal
+    // se tiver vÃ­rgula, assume decimal BR; se nÃ£o, assume ponto decimal
     if (s.includes(',')){
       return Number(s.replace(/\./g,'').replace(',','.')) || 0;
     }
     return Number(s) || 0;
   }
 
-  // ========== ESTADO DE COMISSÕES (só informativo) ==========
+  // ========== ESTADO DE COMISSÃ•ES (sÃ³ informativo) ==========
   const vendedorDefault =
     document.querySelector('#vendedorResponsavel')?.value?.trim() ||
     document.querySelector('#vendedorResponsavel')?.textContent?.trim() ||
@@ -2171,8 +2171,8 @@ verificarClienteEAtualizar()
     if (el && window.vv_fmtBRL) el.textContent = vv_fmtBRL(Number(valor)||0);
   }
 
-  // ===== SUB-POPUP: COMISSÕES =====
- // ===== SUB-POPUP: COMISSÕES =====
+  // ===== SUB-POPUP: COMISSÃ•ES =====
+ // ===== SUB-POPUP: COMISSÃ•ES =====
 function abrirPopupComissao(){
   return new Promise((resolveC)=>{
     const ARQUITETOS = coletarArquitetosCadastrados();
@@ -2228,7 +2228,7 @@ function abrirPopupComissao(){
       const cards = [...document.querySelectorAll('.col')];
       for (const card of cards) {
         const titulo = card.querySelector('.text-muted.small')?.textContent || '';
-        if (/Comissão\s*Arquiteta/i.test(titulo.replace(/\s+/g, ' '))) {
+        if (/ComissÃ£o\s*Arquiteta/i.test(titulo.replace(/\s+/g, ' '))) {
           const bold = card.querySelector('.fw-bold')?.textContent || '0';
           return parseBRL(bold);
         }
@@ -2250,18 +2250,18 @@ function abrirPopupComissao(){
     if (!_comVend.prev) _comVend.prev = defaultVend;
     if (!_comVend.venc) _comVend.venc = defaultVend;
 
-    // ================== OBS PADRÃO ==================
+    // ================== OBS PADRÃƒO ==================
     const elOrc = document.getElementById("numeroOrcamento");
     const numeroOrcamento =
       (elOrc?.value || "").trim() ||
       (elOrc?.dataset?.valorOriginal || "").trim();
 
-    const obsPadrao = numeroOrcamento ? `Orçamento: ${numeroOrcamento}` : "";
+    const obsPadrao = numeroOrcamento ? `OrÃ§amento: ${numeroOrcamento}` : "";
 
     if (!_comArq.obs)  _comArq.obs  = obsPadrao;
     if (!_comVend.obs) _comVend.obs = obsPadrao;
 
-    // ================== DEFAULTS DE COMISSÃO ==================
+    // ================== DEFAULTS DE COMISSÃƒO ==================
     if (!_comArq.modo) _comArq.modo = 'valor';
 
     const valorArquitetoResumo = lerComissaoArquitetoResumoVisual();
@@ -2303,15 +2303,15 @@ function abrirPopupComissao(){
 
     const hd = document.createElement('header');
     hd.innerHTML = `
-      <h3>Comissões</h3>
+      <h3>ComissÃµes</h3>
       <div class="vv-help" style="margin-top:4px;">
-        <b>Arquiteto:</b> valor exibido no resumo “Comissão Arquiteta” ·
+        <b>Arquiteto:</b> valor exibido no resumo â€œComissÃ£o Arquitetaâ€ Â·
         <b>Vendedor:</b> <u>1% fixo do Total (Produto)</u>
       </div>
     `;
 
     const optsArq = ARQUITETOS.map(a=>{
-      const txt = a.codigo ? `${a.nome} — ${a.codigo}` : a.nome;
+      const txt = a.codigo ? `${a.nome} â€” ${a.codigo}` : a.nome;
       const sel = (a.nome && a.nome === (_comArq?.nome||'')) ? 'selected' : '';
       return `<option value="${a.nome.replace(/"/g,'&quot;')}" data-codigo="${(a.codigo||'').replace(/"/g,'&quot;')}" ${sel}>${txt}</option>`;
     }).join('');
@@ -2324,7 +2324,7 @@ function abrirPopupComissao(){
           <div class="vv-help">
             Base atual (Arquiteto):
             <b id="vv-com-base-arq">${fmtBRL(valorArquitetoResumo || 0)}</b>
-            <span class="vv-help" style="margin-left:8px;">(vem do resumo “Comissão Arquiteta”)</span>
+            <span class="vv-help" style="margin-left:8px;">(vem do resumo â€œComissÃ£o Arquitetaâ€)</span>
           </div>
           <div class="vv-help">
             Base fixa (Vendedor = 1%):
@@ -2340,7 +2340,7 @@ function abrirPopupComissao(){
 
             <label class="form-label">Selecionar arquiteto cadastrado</label>
             <select id="comArqSelect" class="form-select" style="margin-bottom:8px;">
-              <option value="">— escolher —</option>
+              <option value="">â€” escolher â€”</option>
               ${optsArq}
             </select>
 
@@ -2350,8 +2350,8 @@ function abrirPopupComissao(){
                 <input id="comArqNome" class="form-control" placeholder="Nome do arquiteto" value="${_comArq?.nome||''}">
               </div>
               <div class="col-4">
-                <label class="form-label">Código cliente/fornecedor</label>
-                <input id="comArqCodigo" class="form-control" placeholder="Código cliente/fornecedor" value="${_comArq?.codigo||''}">
+                <label class="form-label">CÃ³digo cliente/fornecedor</label>
+                <input id="comArqCodigo" class="form-control" placeholder="CÃ³digo cliente/fornecedor" value="${_comArq?.codigo||''}">
               </div>
             </div>
 
@@ -2368,7 +2368,7 @@ function abrirPopupComissao(){
 
             <div class="row g-2" style="margin-top:8px;">
               <div class="col-6">
-                <label class="form-label">Previsão</label>
+                <label class="form-label">PrevisÃ£o</label>
                 <input type="date" id="arqPrev" class="form-control" value="${_comArq?.prev||''}">
               </div>
               <div class="col-6">
@@ -2378,8 +2378,8 @@ function abrirPopupComissao(){
             </div>
 
             <div style="margin-top:8px;">
-              <label class="form-label">Observação (opcional)</label>
-              <textarea id="arqObs" rows="2" class="form-control" placeholder="Ex: Comissão arquiteto">${_comArq?.obs||''}</textarea>
+              <label class="form-label">ObservaÃ§Ã£o (opcional)</label>
+              <textarea id="arqObs" rows="2" class="form-control" placeholder="Ex: ComissÃ£o arquiteto">${_comArq?.obs||''}</textarea>
             </div>
 
             <div class="vv-help" style="margin-top:6px;">Calculado: <b id="comArqCalc">R$ 0,00</b></div>
@@ -2395,12 +2395,12 @@ function abrirPopupComissao(){
                 <input id="comVendNome" class="form-control" placeholder="Nome do vendedor" value="${_comVend?.nome|| (document.getElementById('vendedorResponsavel')?.value||'')}">
               </div>
               <div class="col-3">
-                <label class="form-label">Código do vendedor</label>
-                <input id="comVendCodigo" class="form-control" placeholder="Código do vendedor" value="${codigoVendedorPopupInicial}" data-valor-original="${codigoVendedorPopupInicial}">
+                <label class="form-label">CÃ³digo do vendedor</label>
+                <input id="comVendCodigo" class="form-control" placeholder="CÃ³digo do vendedor" value="${codigoVendedorPopupInicial}" data-valor-original="${codigoVendedorPopupInicial}">
               </div>
               <div class="col-3">
-                <label class="form-label">Código cliente/fornecedor</label>
-                <input id="comVendCodigoFornecedor" class="form-control" placeholder="Código cliente/fornecedor" value="${codigoClienteFornecedorVendedorPopupInicial}" data-valor-original="${codigoClienteFornecedorVendedorPopupInicial}">
+                <label class="form-label">CÃ³digo cliente/fornecedor</label>
+                <input id="comVendCodigoFornecedor" class="form-control" placeholder="CÃ³digo cliente/fornecedor" value="${codigoClienteFornecedorVendedorPopupInicial}" data-valor-original="${codigoClienteFornecedorVendedorPopupInicial}">
               </div>
             </div>
 
@@ -2417,7 +2417,7 @@ function abrirPopupComissao(){
 
             <div class="row g-2" style="margin-top:8px;">
               <div class="col-6">
-                <label class="form-label">Previsão</label>
+                <label class="form-label">PrevisÃ£o</label>
                 <input type="date" id="vendPrev" class="form-control" value="${_comVend?.prev||''}">
               </div>
               <div class="col-6">
@@ -2427,8 +2427,8 @@ function abrirPopupComissao(){
             </div>
 
             <div style="margin-top:8px;">
-              <label class="form-label">Observação (opcional)</label>
-              <textarea id="vendObs" rows="2" class="form-control" placeholder="Ex: Comissão consultor">${_comVend?.obs||''}</textarea>
+              <label class="form-label">ObservaÃ§Ã£o (opcional)</label>
+              <textarea id="vendObs" rows="2" class="form-control" placeholder="Ex: ComissÃ£o consultor">${_comVend?.obs||''}</textarea>
             </div>
 
             <div class="vv-help" style="margin-top:6px;">Calculado: <b id="comVendCalc">R$ 0,00</b></div>
@@ -2448,7 +2448,7 @@ function abrirPopupComissao(){
     const ft = document.createElement('div');
     ft.className = 'vv-footer';
     ft.innerHTML = `
-      <div class="vv-help">Informativo — não altera valores enviados à Omie.</div>
+      <div class="vv-help">Informativo â€” nÃ£o altera valores enviados Ã  Omie.</div>
       <div style="display:flex; gap:8px;">
         <button class="vv-btn" id="commCancel">Cancelar</button>
         <button class="vv-btn primary" id="commSave">Salvar</button>
@@ -2688,7 +2688,7 @@ function abrirPopupComissao(){
 }
 
 
-  // === Normalização nome->código vendedor ===
+  // === NormalizaÃ§Ã£o nome->cÃ³digo vendedor ===
   function _vv_normNome(s){
     return (s || "")
       .toString()
@@ -2699,7 +2699,7 @@ function abrirPopupComissao(){
   }
  const VENDEDORES_CODIGO = [
     { nome:"FELIPE ULHOA FERREIRA", codigo:"2452905682", aliases:["FELIPE ULHOA","FELIPE U","FELIPE F","FELIPE FERREIRA"] },
-    { nome:"JOAO CLEBER MARTINS",   codigo:"2452905334", aliases:["JOAO CLEBER","JOÃO CLEBER","JOAO C MARTINS","J C MARTINS","JOAO MARTINS"] },
+    { nome:"JOAO CLEBER MARTINS",   codigo:"2452905334", aliases:["JOAO CLEBER","JOÃƒO CLEBER","JOAO C MARTINS","J C MARTINS","JOAO MARTINS"] },
     { nome:"RAFAEL ANGELO ARAUJO DA SILVA", codigo:"2452905445", aliases:["RAFAEL ANGELO","RAFAEL A A SILVA","RAFAEL ARAUJO","RAFAEL SILVA"] }
   ];
 
@@ -2750,7 +2750,7 @@ function abrirPopupComissao(){
       cod.type = "text";
       cod.id = "codigoVendedor";
       cod.className = "form-control";
-      cod.placeholder = "Código do vendedor";
+      cod.placeholder = "CÃ³digo do vendedor";
       cod.style.maxWidth = "220px";
       sel.parentElement?.appendChild(cod);
     }
@@ -2771,7 +2771,7 @@ function abrirPopupComissao(){
 
     const header = document.createElement('header');
     header.innerHTML = `
-      <h3 style="flex:1;">Selecione os itens (Desconto primeiro → Ignorar → MO → Serviços)</h3>
+      <h3 style="flex:1;">Selecione os itens (Desconto primeiro â†’ Ignorar â†’ MO â†’ ServiÃ§os)</h3>
       <label id="vv-label-so-servicos" style="
         display:inline-flex; align-items:center; gap:6px; cursor:pointer;
         font-size:13px; font-weight:600; color:#7c3aed;
@@ -2780,7 +2780,7 @@ function abrirPopupComissao(){
         user-select:none;
       ">
         <input type="checkbox" id="vv-chk-so-servicos" style="accent-color:#7c3aed; width:15px; height:15px; cursor:pointer;">
-        Somente Serviços
+        Somente ServiÃ§os
       </label>
     `;
 
@@ -2790,9 +2790,9 @@ function abrirPopupComissao(){
     const controls = document.createElement('div');
     controls.style.cssText = "display:grid; gap:8px; margin-bottom:12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items:end;";
     controls.innerHTML = `
-      <!-- Serviços -->
+      <!-- ServiÃ§os -->
       <div style="display:flex; flex-direction:column; gap:6px;">
-        <label style="font-weight:600;">Serviços (aplicado nos aprovados)</label>
+        <label style="font-weight:600;">ServiÃ§os (aplicado nos aprovados)</label>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
           <label><input type="radio" name="srvModo" value="percent" checked> % do total aprovado</label>
           <label><input type="radio" name="srvModo" value="valor"> Valor fixo (R$)</label>
@@ -2801,7 +2801,7 @@ function abrirPopupComissao(){
           <input id="srvPercent" type="number" min="0" step="0.01" value="0" class="vv-input" style="width:120px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
           <input id="srvValor"   type="text"   value="R$ 0,00" class="vv-input" style="width:160px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
         </div>
-        <small class="vv-help">Ignorados não entram no rateio de Serviços.</small>
+        <small class="vv-help">Ignorados nÃ£o entram no rateio de ServiÃ§os.</small>
       </div>
 
       <!-- Desconto -->
@@ -2815,12 +2815,12 @@ function abrirPopupComissao(){
           <input id="discPercent" type="number" min="0" step="0.01" value="0" class="vv-input" style="width:120px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
           <input id="discValor"   type="text"   value="R$ 0,00" class="vv-input" style="width:160px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
         </div>
-        <small class="vv-help">Depois o desconto é <b>dividido igualmente</b> entre os aprovados.</small>
+        <small class="vv-help">Depois o desconto Ã© <b>dividido igualmente</b> entre os aprovados.</small>
       </div>
 
-      <!-- Comissão (display) -->
+      <!-- ComissÃ£o (display) -->
       <div style="display:flex; flex-direction:column; gap:6px;">
-        <label style="font-weight:600;">Comissão (informativa — não vai para a Omie)</label>
+        <label style="font-weight:600;">ComissÃ£o (informativa â€” nÃ£o vai para a Omie)</label>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
           <label><input type="radio" name="comModo" value="percent" checked> % do total aprovado</label>
           <label><input type="radio" name="comModo" value="valor"> Valor fixo (R$)</label>
@@ -2829,7 +2829,7 @@ function abrirPopupComissao(){
           <input id="comPercent" type="number" min="0" step="0.01" value="0" class="vv-input" style="width:120px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
           <input id="comValor"   type="text"   value="R$ 0,00" class="vv-input" style="width:160px; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
         </div>
-        <small class="vv-help">Use o botão "Comissão…" para cadastrar nomes e confirmar.</small>
+        <small class="vv-help">Use o botÃ£o "ComissÃ£oâ€¦" para cadastrar nomes e confirmar.</small>
       </div>
     `;
 
@@ -2842,7 +2842,7 @@ function abrirPopupComissao(){
           <th style="width:44px;">Ignorar</th>
           <th>Ambiente</th>
           <th>Produto</th>
-          <th>Código</th>
+          <th>CÃ³digo</th>
           <th class="vv-right">% part.</th>
           <th class="vv-right">Valor original</th>
           <th class="vv-right">Valor ajustado (base+MO)</th>
@@ -2853,33 +2853,33 @@ function abrirPopupComissao(){
     `;
     const tbody = table.querySelector('tbody');
 
-    // --------- rodapé ---------
+    // --------- rodapÃ© ---------
     const footer = document.createElement('div');
     footer.className = 'vv-footer';
     footer.innerHTML = `
       <div class="totais">
         <div>Total aprovado (base + MO): <b id="vv-total-aprovado">R$ 0,00</b></div>
-        <div>Serviços aplicado: <b id="vv-total-servicos">R$ 0,00</b></div>
+        <div>ServiÃ§os aplicado: <b id="vv-total-servicos">R$ 0,00</b></div>
         <div>Desconto total (sobre TODOS): <b id="vv-total-desconto">R$ 0,00</b></div>
-        <div>Comissão (info): <b id="vv-total-comissao">R$ 0,00</b></div>
-        <div>Total produtos após ajuste: <b id="vv-total-ajustado">R$ 0,00</b></div>
+        <div>ComissÃ£o (info): <b id="vv-total-comissao">R$ 0,00</b></div>
+        <div>Total produtos apÃ³s ajuste: <b id="vv-total-ajustado">R$ 0,00</b></div>
 
         <div style="margin-top:10px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; padding-top:8px; border-top:1px dashed #e5e7eb;">
-          <div>🔹 Total (Produto): <b id="vv-cat-produto">R$ 0,00</b></div>
-          <div>🔹 Total (Serviço): <b id="vv-cat-servico">R$ 0,00</b></div>
-          <div>🔹 Produtos faturados diretos: <b id="vv-cat-vidro">R$ 0,00</b></div>
+          <div>ðŸ”¹ Total (Produto): <b id="vv-cat-produto">R$ 0,00</b></div>
+          <div>ðŸ”¹ Total (ServiÃ§o): <b id="vv-cat-servico">R$ 0,00</b></div>
+          <div>ðŸ”¹ Produtos faturados diretos: <b id="vv-cat-vidro">R$ 0,00</b></div>
         </div>
 
         <small class="vv-help" style="display:block; margin-top:6px;">
-          <b>Regra especial:</b> se "Mão de Obra de Instalação (por Hora)" for <i>ignorado</i>, seu valor é dividido em partes iguais entre os itens não ignorados.
+          <b>Regra especial:</b> se "MÃ£o de Obra de InstalaÃ§Ã£o (por Hora)" for <i>ignorado</i>, seu valor Ã© dividido em partes iguais entre os itens nÃ£o ignorados.
         </small>
       </div>
       <div class="acoes" style="display:flex; gap:8px;">
-        <button class="vv-btn" id="vv-comissoes">Comissão…</button>
+        <button class="vv-btn" id="vv-comissoes">ComissÃ£oâ€¦</button>
         <button class="vv-btn" id="vv-marcar-todos">Marcar todos como ignorados</button>
-        <button class="vv-btn" id="vv-desmarcar-todos">Limpar marcações</button>
+        <button class="vv-btn" id="vv-desmarcar-todos">Limpar marcaÃ§Ãµes</button>
         <button class="vv-btn" id="vv-cancelar">Cancelar</button>
-        <button class="vv-btn primary" id="vv-confirmar">Confirmar seleção</button>
+        <button class="vv-btn primary" id="vv-confirmar">Confirmar seleÃ§Ã£o</button>
       </div>
     `;
 
@@ -2887,7 +2887,7 @@ function abrirPopupComissao(){
     const help = document.createElement('div');
     help.className = 'vv-help';
     help.innerHTML = `
-      Ordem: <b>Desconto</b> sobre TODOS → <b>Ignorar</b> → <b>MO</b> redistribuida entre aprovados → <b>Servicos</b> abatidos do total final de produtos. Arredonda so no final.
+      Ordem: <b>Desconto</b> sobre TODOS â†’ <b>Ignorar</b> â†’ <b>MO</b> redistribuida entre aprovados â†’ <b>Servicos</b> abatidos do total final de produtos. Arredonda so no final.
     `;
 
     const filtros = document.createElement('div');
@@ -2897,8 +2897,8 @@ function abrirPopupComissao(){
         style="padding:8px 12px; border:1px solid #ccc; border-radius:8px; width:220px;" />
       <button class="vv-btn" id="filtroTodos">Todos</button>
       <button class="vv-btn" id="filtroVidros">Somente Vidros</button>
-      <button class="vv-btn" id="filtroServicos">Somente Serviços</button>
-      <small class="vv-help">Filtros são visuais; não alteram os cálculos.</small>
+      <button class="vv-btn" id="filtroServicos">Somente ServiÃ§os</button>
+      <small class="vv-help">Filtros sÃ£o visuais; nÃ£o alteram os cÃ¡lculos.</small>
     `;
 
     // monta
@@ -2919,7 +2919,7 @@ itens.forEach(item => {
   tr.innerHTML = `
     <td><input type="checkbox" class="vv-ignorar" data-key="${item.key}"></td>
     <td>${item.ambiente || '-'}</td>
-    <td>${item.descricao ? item.descricao : '<small>Sem descrição</small>'}${ehMOHora ? ' <small style="color:#2563eb;font-weight:600;">(MO Hora)</small>' : ''}</td>
+    <td>${item.descricao ? item.descricao : '<small>Sem descriÃ§Ã£o</small>'}${ehMOHora ? ' <small style="color:#2563eb;font-weight:600;">(MO Hora)</small>' : ''}</td>
     <td><span class="vv-mono">${item.codigo || '-'}</span></td>
     <td class="vv-right vv-mono" data-col="part">0%</td>
     <td class="vv-right vv-mono" data-col="original">${vv_fmtBRL(Number(item.valorTotalGrupo)||0)}</td>
@@ -2928,7 +2928,7 @@ itens.forEach(item => {
   `;
   tr.dataset.key      = item.key;
   tr.dataset.valor    = String(Number(item.valorTotalGrupo) || 0);
-  tr.dataset.custo    = String(Number(item.valorCustoMaterial) || 0); // ✅ NOVO
+  tr.dataset.custo    = String(Number(item.valorCustoMaterial) || 0); // âœ… NOVO
   tr.dataset.islabor  = ehMOHora ? '1' : '0';
   tr.dataset.kind     = kind;
   tbody.appendChild(tr);
@@ -2963,7 +2963,7 @@ const $campoDescontoFinal = document.getElementById('campoDescontoFinal');
 function syncDescontoFromCampoFinal(){
   if (!$campoDescontoFinal) return;
 
-  // pega primeiro o que o usuário digitou; se vazio, usa o data-valor-original
+  // pega primeiro o que o usuÃ¡rio digitou; se vazio, usa o data-valor-original
   let raw = String(
     ($campoDescontoFinal.value ?? '').trim() ||
     ($campoDescontoFinal.dataset?.valorOriginal ?? '').trim() ||
@@ -2983,20 +2983,20 @@ function syncDescontoFromCampoFinal(){
     const num = Number(raw.replace(',', '.').replace(/[^\d.]/g,'')) || 0;
     $discPercent.value = String(num);
 
-    // ✅ AJUSTE: manter data-valor-original alinhado com #campoDescontoFinal
+    // âœ… AJUSTE: manter data-valor-original alinhado com #campoDescontoFinal
     $discPercent.dataset.valorOriginal = String(num);
-    // (limpa o outro pra não confundir)
+    // (limpa o outro pra nÃ£o confundir)
     $discValor.dataset.valorOriginal = vv_fmtBRL(0);
 
     return;
   }
 
-  // Caso contrário, trata como VALOR FIXO (R$), inclusive quando raw = "500"
+  // Caso contrÃ¡rio, trata como VALOR FIXO (R$), inclusive quando raw = "500"
   const rValor = controls.querySelector('input[name="discModo"][value="valor"]');
   if (rValor) rValor.checked = true;
 
-  // se for "500" puro, vv_parseBRL pode retornar 0 dependendo da sua implementação,
-  // então garantimos fallback numérico
+  // se for "500" puro, vv_parseBRL pode retornar 0 dependendo da sua implementaÃ§Ã£o,
+  // entÃ£o garantimos fallback numÃ©rico
   let v = (typeof vv_parseBRL === 'function') ? vv_parseBRL(raw) : 0;
   if (!v || isNaN(v)) {
     v = Number(String(raw).replace(/[^\d,\.]/g,'').replace(/\./g,'').replace(',','.')) || 0;
@@ -3004,17 +3004,17 @@ function syncDescontoFromCampoFinal(){
 
   $discValor.value = vv_fmtBRL(v);
 
-  // ✅ AJUSTE: data-valor-original do discValor = data-valor-original do campoDescontoFinal (mesma base numérica)
+  // âœ… AJUSTE: data-valor-original do discValor = data-valor-original do campoDescontoFinal (mesma base numÃ©rica)
   // Ex: campoDescontoFinal data-valor-original="500" -> discValor data-valor-original="500"
   $discValor.dataset.valorOriginal = String(Number(v) || 0);
-  // (e mantém o percent coerente)
+  // (e mantÃ©m o percent coerente)
   $discPercent.dataset.valorOriginal = String(Number($discPercent.value || 0) || 0);
 }
 
 // sincroniza ao abrir o modal
 syncDescontoFromCampoFinal();
 
-// mantém sincronizado quando o campo mudar fora do modal
+// mantÃ©m sincronizado quando o campo mudar fora do modal
 if ($campoDescontoFinal){
   $campoDescontoFinal.addEventListener('input', ()=>{ syncDescontoFromCampoFinal(); recalc(); });
   $campoDescontoFinal.addEventListener('change', ()=>{ syncDescontoFromCampoFinal(); recalc(); });
@@ -3089,12 +3089,12 @@ const getModoComissao = () => (controls.querySelector('input[name="comModo"]:che
     alerta.style.background = "#e8f7ee";
     alerta.style.color = "#146c2e";
     alerta.style.border = "1px solid #b7e4c7";
-    alerta.innerHTML = `✅ ${msg}`;
+    alerta.innerHTML = `âœ… ${msg}`;
   } else {
     alerta.style.background = "#fdecec";
     alerta.style.color = "#a61b1b";
     alerta.style.border = "1px solid #f5b5b5";
-    alerta.innerHTML = `⚠️ ${msg}`;
+    alerta.innerHTML = `âš ï¸ ${msg}`;
   }
 }
     // ===================== RECALC =====================
@@ -3121,7 +3121,7 @@ function recalc(){
     .filter(tr => isIgnoredKey(tr.dataset.key) && tr.dataset.islabor !== '1')
     .reduce((acc, tr) => acc + toCents(Number(tr.dataset.custo || 0)), 0);
 
-  // ✅ baseParaServico = (totalTodos - desconto) - faturamento direto
+  // âœ… baseParaServico = (totalTodos - desconto) - faturamento direto
   const totalTodosComDescontoParaServico = Math.max(0, totalTodos - descontoTotal);
   const baseParaServico = Math.max(0, totalTodosComDescontoParaServico - fromCents(catIgnoradosSemMO));
   const valorServicosAutomatic = baseParaServico * 0.20;
@@ -3130,7 +3130,7 @@ function recalc(){
   console.log('[recalc] baseParaServico:', baseParaServico);
   console.log('[recalc] valorServicosAutomatic:', valorServicosAutomatic);
 
-  // Preenche campo de serviços automaticamente se vazio ou divergente
+  // Preenche campo de serviÃ§os automaticamente se vazio ou divergente
 if ($srvValor && valorServicosAutomatic > 0 && !srvValorEditadoManualmente) {
   const valorAtual = vv_parseBRL($srvValor.value || '0');
   if (Math.abs(valorAtual - valorServicosAutomatic) > 0.01) {
@@ -3189,7 +3189,7 @@ if ($srvValor && valorServicosAutomatic > 0 && !srvValorEditadoManualmente) {
     totalLiquidoGeral += baseLiquida;
   });
 
-  // ✅ Usa valorServicosAutomatic direto — não lê o campo para evitar loop
+  // âœ… Usa valorServicosAutomatic direto â€” nÃ£o lÃª o campo para evitar loop
 const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
   ? valorServicosAutomatic
   : getModoServicos() === 'percent'
@@ -3297,13 +3297,13 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
     });
     [...tbody.querySelectorAll('.vv-ignorar')].forEach(c => c.addEventListener('change', recalc));
 
-    // ── Checkbox "Somente Serviços" ───────────────────────────────────────────
+    // â”€â”€ Checkbox "Somente ServiÃ§os" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const chkSoServicos = header.querySelector('#vv-chk-so-servicos');
     if (chkSoServicos) {
       chkSoServicos.addEventListener('change', () => {
         const ativo = chkSoServicos.checked;
 
-        // ── 1) Marca/desmarca produtos na tabela ──
+        // â”€â”€ 1) Marca/desmarca produtos na tabela â”€â”€
         [...tbody.querySelectorAll('tr')].forEach(tr => {
           const ehServico = tr.dataset.kind === 'servico';
           const chk = tr.querySelector('.vv-ignorar');
@@ -3311,7 +3311,7 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
           tr.style.opacity = (ativo && !ehServico) ? '0.4' : '';
         });
 
-        // ── 2) Destaca o label ──
+        // â”€â”€ 2) Destaca o label â”€â”€
         const label = header.querySelector('#vv-label-so-servicos');
         if (label) {
           label.style.background  = ativo ? '#7c3aed' : '#f5f3ff';
@@ -3319,9 +3319,9 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
           label.style.borderColor = ativo ? '#7c3aed' : '#c4b5fd';
         }
 
-        // ── 3) Quando ativo: muda para "Valor fixo" e destaca o campo ──
-        // Em modo somente serviços o total aprovado vira 0, então percentual
-        // sempre resultaria em R$ 0. Força valor fixo para o usuário poder
+        // â”€â”€ 3) Quando ativo: muda para "Valor fixo" e destaca o campo â”€â”€
+        // Em modo somente serviÃ§os o total aprovado vira 0, entÃ£o percentual
+        // sempre resultaria em R$ 0. ForÃ§a valor fixo para o usuÃ¡rio poder
         // digitar o valor correto.
         if (ativo) {
           const radioValor = controls.querySelector('input[name="srvModo"][value="valor"]');
@@ -3329,7 +3329,7 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
             radioValor.checked = true;
             radioValor.dispatchEvent(new Event('change', { bubbles: true }));
           }
-          // Destaca o campo de valor de serviço
+          // Destaca o campo de valor de serviÃ§o
           $srvValor.style.outline     = '2px solid #7c3aed';
           $srvValor.style.borderColor = '#7c3aed';
           $srvValor.focus();
@@ -3342,7 +3342,7 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
         recalc();
       });
     }
-    // ─────────────────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     footer.querySelector('#vv-comissoes').addEventListener('click', async ()=>{
       await abrirPopupComissao();
@@ -3353,8 +3353,8 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
       resolve(null);
     });
 
-    // ===== helper: envio com confirmação (toast) =====
-  // ===== helper: envio com confirmação (toast) =====
+    // ===== helper: envio com confirmaÃ§Ã£o (toast) =====
+  // ===== helper: envio com confirmaÃ§Ã£o (toast) =====
 
 
 async function tentarEnviarComissoes(payload){
@@ -3363,16 +3363,16 @@ async function tentarEnviarComissoes(payload){
   } catch(e){}
 
   if (typeof window.enviarComissoes !== 'function'){
-    vvToast('Comissões preparadas, mas função enviarComissoes() não está disponível.', 'info');
-    return { ok:false, resposta:null, erro:'Função enviarComissoes() ausente' };
+    vvToast('ComissÃµes preparadas, mas funÃ§Ã£o enviarComissoes() nÃ£o estÃ¡ disponÃ­vel.', 'info');
+    return { ok:false, resposta:null, erro:'FunÃ§Ã£o enviarComissoes() ausente' };
   }
 
-  vvToast('Enviando comissões…', 'info', 2000);
+  vvToast('Enviando comissÃµesâ€¦', 'info', 2000);
 
   try{
     const r = await Promise.resolve(window.enviarComissoes(payload));
 
-    console.group("🚀 [COMISSÕES] Resultado final");
+    console.group("ðŸš€ [COMISSÃ•ES] Resultado final");
     console.log("Payload enviado:", JSON.parse(JSON.stringify(payload || {})));
     console.log("Retorno completo:", JSON.parse(JSON.stringify(r || {})));
     console.groupEnd();
@@ -3389,12 +3389,12 @@ async function tentarEnviarComissoes(payload){
 
     if (arqInfo.status === 'enviado') msgs.push(`Arquiteto enviado: ${vv_fmtBRL(arqV)}`);
     else if (arqInfo.status === 'ignorado') msgs.push(`Arquiteto ignorado`);
-    else if (arqInfo.status === 'invalido') msgs.push(`Arquiteto inválido: ${arqInfo.erro || '-'}`);
+    else if (arqInfo.status === 'invalido') msgs.push(`Arquiteto invÃ¡lido: ${arqInfo.erro || '-'}`);
     else if (arqInfo.status === 'erro') msgs.push(`Arquiteto com erro: ${arqInfo.erro || '-'}`);
 
     if (vendInfo.status === 'enviado') msgs.push(`Vendedor enviado: ${vv_fmtBRL(venV)}`);
     else if (vendInfo.status === 'ignorado') msgs.push(`Vendedor ignorado`);
-    else if (vendInfo.status === 'invalido') msgs.push(`Vendedor inválido: ${vendInfo.erro || '-'}`);
+    else if (vendInfo.status === 'invalido') msgs.push(`Vendedor invÃ¡lido: ${vendInfo.erro || '-'}`);
     else if (vendInfo.status === 'erro') msgs.push(`Vendedor com erro: ${vendInfo.erro || '-'}`);
 
     // --- Envia valores financeiros para a Kommo ---
@@ -3405,7 +3405,7 @@ async function tentarEnviarComissoes(payload){
         const valorNFServico = vv_parseBRL(document.getElementById('vv-cat-servico')?.textContent || '0');
         const valorFatDireto = vv_parseBRL(document.getElementById('vv-cat-vidro')?.textContent  || '0');
 
-        console.log('[KOMMO] Enviando financeiro — Produto:', valorNFProduto, '| Serviço:', valorNFServico, '| Fat. Direto:', valorFatDireto);
+        console.log('[KOMMO] Enviando financeiro â€” Produto:', valorNFProduto, '| ServiÃ§o:', valorNFServico, '| Fat. Direto:', valorFatDireto);
 
         fetch(`https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/financeiro`, {
           method: "POST",
@@ -3416,7 +3416,7 @@ async function tentarEnviarComissoes(payload){
         .then(res => console.log('[KOMMO] Financeiro atualizado na Kommo:', res))
         .catch(err => console.warn('[KOMMO] Erro ao atualizar financeiro na Kommo:', err));
       } else {
-        console.warn('[KOMMO] ID da proposta não encontrado na URL — financeiro não enviado');
+        console.warn('[KOMMO] ID da proposta nÃ£o encontrado na URL â€” financeiro nÃ£o enviado');
       }
     } catch(eKommo) {
       console.warn('[KOMMO] Erro inesperado ao enviar financeiro:', eKommo);
@@ -3424,7 +3424,7 @@ async function tentarEnviarComissoes(payload){
     // --- fim envio Kommo ---
 
     if (ok){
-      vvToast(`Comissões processadas.\n${msgs.join(' | ')}`, 'ok', 7000);
+      vvToast(`ComissÃµes processadas.\n${msgs.join(' | ')}`, 'ok', 7000);
       try {
         document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', {
           detail: { ok:true, resposta:r, payload }
@@ -3432,7 +3432,7 @@ async function tentarEnviarComissoes(payload){
       } catch(_){}
       return { ok:true, resposta:r, erro:null };
     } else {
-      const msg = r?.message || r?.erro || 'Nenhuma comissão foi enviada.';
+      const msg = r?.message || r?.erro || 'Nenhuma comissÃ£o foi enviada.';
       vvToast(`${msg}\n${msgs.join(' | ')}`, 'erro', 7000);
       try {
         document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', {
@@ -3442,8 +3442,8 @@ async function tentarEnviarComissoes(payload){
       return { ok:false, resposta:r, erro:msg };
     }
   } catch(e){
-    const msg = e?.message || 'Erro inesperado ao enviar comissões.';
-    console.group("💥 [COMISSÕES] Exceção");
+    const msg = e?.message || 'Erro inesperado ao enviar comissÃµes.';
+    console.group("ðŸ’¥ [COMISSÃ•ES] ExceÃ§Ã£o");
     console.error("Mensagem:", msg);
     console.error("Erro completo:", e);
     console.error("Payload:", JSON.parse(JSON.stringify(payload || {})));
@@ -3503,7 +3503,7 @@ async function prepararComissoesAutomaticamente() {
     const cards = [...document.querySelectorAll('.col')];
     for (const card of cards) {
       const titulo = card.querySelector('.text-muted.small')?.textContent || '';
-      if (/Comissão\s*Arquiteta/i.test(titulo.replace(/\s+/g, ' '))) {
+      if (/ComissÃ£o\s*Arquiteta/i.test(titulo.replace(/\s+/g, ' '))) {
         const bold = card.querySelector('.fw-bold')?.textContent || '0';
         return parseBRL(bold);
       }
@@ -3563,7 +3563,7 @@ async function prepararComissoesAutomaticamente() {
     document.getElementById("numeroOrcamento")?.dataset?.valorOriginal?.trim() ||
     '';
 
-  const obsPadrao = numeroOrcamento ? `Orçamento: ${numeroOrcamento}` : '';
+  const obsPadrao = numeroOrcamento ? `OrÃ§amento: ${numeroOrcamento}` : '';
 
   const hoje = new Date();
   const defaultArq = proximoDia15(hoje);
@@ -3601,7 +3601,7 @@ async function prepararComissoesAutomaticamente() {
   _comVend.venc = _comVend.venc || defaultVend;
   _comVend.obs = _comVend.obs || obsPadrao;
 
-  console.group("🛠️ [COMISSÕES] Estado preparado automaticamente");
+  console.group("ðŸ› ï¸ [COMISSÃ•ES] Estado preparado automaticamente");
   console.log("_comArq:", JSON.parse(JSON.stringify(_comArq || {})));
   console.log("_comVend:", JSON.parse(JSON.stringify(_comVend || {})));
   console.log("Base arquiteto (resumo):", valorArquitetoResumo);
@@ -3671,10 +3671,10 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
             []
           );
 
-  // Os alvos (totalFinalProdutos / valorServicos) já refletem desconto e
-  // itens ignorados do popup anterior — são os valores corretos.
-  // As parcelas existentes são carregadas apenas como ponto de partida;
-  // o usuário ajusta se necessário antes de confirmar.
+  // Os alvos (totalFinalProdutos / valorServicos) jÃ¡ refletem desconto e
+  // itens ignorados do popup anterior â€” sÃ£o os valores corretos.
+  // As parcelas existentes sÃ£o carregadas apenas como ponto de partida;
+  // o usuÃ¡rio ajusta se necessÃ¡rio antes de confirmar.
   parcelamentoProdutosServicos = await abrirPopupParcelamentoProdutosServicos({
     valorTotalProdutos: vv_parseBRL($catProduto.textContent || '0'),
     valorTotalServicos: valorServicos,
@@ -3738,7 +3738,7 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
     }
   };
 
-  console.group("🧾 [COMISSÕES] Antes do envio");
+  console.group("ðŸ§¾ [COMISSÃ•ES] Antes do envio");
   console.log("_comArq:", JSON.parse(JSON.stringify(_comArq || {})));
   console.log("_comVend:", JSON.parse(JSON.stringify(_comVend || {})));
   console.log("_lastTotalBaseMO:", _lastTotalBaseMO);
@@ -3783,7 +3783,7 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
   window.vvParcelamentoServicosOmie      = parcelamentoServicos;
   window.vvParcelamentoProdutosServicosOmie = parcelamentoProdutosServicos;
 
-  console.log('💾 Totais da seleção Omie gravados em window:', totaisPayload);
+  console.log('ðŸ’¾ Totais da seleÃ§Ã£o Omie gravados em window:', totaisPayload);
 
   await tentarEnviarComissoes(comissoesParaEnvio);
 
@@ -3805,9 +3805,9 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
 
 
 /* ======================================================================
-   FUNÇÃO GLOBAL DE ENVIO (usa seu backend /api/omie/comissao e
+   FUNÃ‡ÃƒO GLOBAL DE ENVIO (usa seu backend /api/omie/comissao e
    respeita: codigo_cliente_fornecedor + observacao vindos do front,
-   e força codigo_categoria conforme papel)
+   e forÃ§a codigo_categoria conforme papel)
    ====================================================================== */
 (function () {
   if (window.enviarComissoes && window.enviarComissoes.__vvFixCategoriasIndependenteFinal) return;
@@ -3874,7 +3874,7 @@ function montarLancamento(tipo, fonte, baseConsiderada, codigoProjeto) {
   const observacaoLocal = vv_normalizarObservacaoComissao(fonte?.observacao);
   const observacaoPadrao = vv_getObservacaoPadraoComissao();
   const observacao = observacaoLocal || observacaoPadrao ||
-    `Comissão ${tipo} — ${fonte?.nome || ""} (base: ${Number(baseConsiderada || 0).toFixed(2)})`;
+    `ComissÃ£o ${tipo} â€” ${fonte?.nome || ""} (base: ${Number(baseConsiderada || 0).toFixed(2)})`;
 
   const payload = {
     codigo_categoria,
@@ -3890,12 +3890,12 @@ function montarLancamento(tipo, fonte, baseConsiderada, codigoProjeto) {
   if (numero_pedido)                           payload.numero_pedido             = numero_pedido;
   if (codigo_vendedor !== undefined)           payload.codigo_vendedor           = codigo_vendedor;
 
-  console.group(`🧾 [montarLancamento] ${tipo}`);
+  console.group(`ðŸ§¾ [montarLancamento] ${tipo}`);
   console.log("payload final:", JSON.parse(JSON.stringify(payload)));
   console.log("id_conta_corrente:", typeof payload.id_conta_corrente, payload.id_conta_corrente);
-  console.log("tipos → codigo_cliente_fornecedor:", typeof payload.codigo_cliente_fornecedor, payload.codigo_cliente_fornecedor);
-  console.log("tipos → codigo_projeto:", typeof payload.codigo_projeto, payload.codigo_projeto);
-  console.log("tipos → codigo_vendedor:", typeof payload.codigo_vendedor, payload.codigo_vendedor);
+  console.log("tipos â†’ codigo_cliente_fornecedor:", typeof payload.codigo_cliente_fornecedor, payload.codigo_cliente_fornecedor);
+  console.log("tipos â†’ codigo_projeto:", typeof payload.codigo_projeto, payload.codigo_projeto);
+  console.log("tipos â†’ codigo_vendedor:", typeof payload.codigo_vendedor, payload.codigo_vendedor);
   console.groupEnd();
 
   return payload;
@@ -3903,7 +3903,7 @@ function montarLancamento(tipo, fonte, baseConsiderada, codigoProjeto) {
 
   function validarLancamento(lanc, papel) {
     const erros = [];
-    if (!(lanc?.valor_documento > 0)) erros.push("valor_documento inválido");
+    if (!(lanc?.valor_documento > 0)) erros.push("valor_documento invÃ¡lido");
     if (!lanc?.data_previsao) erros.push("data_previsao ausente");
     if (!lanc?.data_vencimento) erros.push("data_vencimento ausente");
     if (!lanc?.codigo_cliente_fornecedor) erros.push("codigo_cliente_fornecedor ausente");
@@ -3915,7 +3915,7 @@ function montarLancamento(tipo, fonte, baseConsiderada, codigoProjeto) {
   }
 
  async function postarLancamento(lanc, papel) {
-  // ✅ Força tipos integer para campos que a Omie exige como number
+  // âœ… ForÃ§a tipos integer para campos que a Omie exige como number
   const lancFinal = { ...lanc };
   if (lancFinal.codigo_cliente_fornecedor !== undefined)
     lancFinal.codigo_cliente_fornecedor = Number(lancFinal.codigo_cliente_fornecedor);
@@ -3926,7 +3926,7 @@ function montarLancamento(tipo, fonte, baseConsiderada, codigoProjeto) {
   if (lancFinal.id_conta_corrente !== undefined)
     lancFinal.id_conta_corrente = Number(lancFinal.id_conta_corrente);
 
-  console.group(`🚨 [PRÉ-ENVIO COMISSÃO] ${papel.toUpperCase()}`);
+  console.group(`ðŸš¨ [PRÃ‰-ENVIO COMISSÃƒO] ${papel.toUpperCase()}`);
   console.log("Body FINAL enviado:", JSON.stringify(lancFinal, null, 2));
   console.log("codigo_cliente_fornecedor:", lancFinal.codigo_cliente_fornecedor, typeof lancFinal.codigo_cliente_fornecedor);
   console.log("codigo_projeto:", lancFinal.codigo_projeto, typeof lancFinal.codigo_projeto);
@@ -3967,7 +3967,7 @@ function montarLancamento(tipo, fonte, baseConsiderada, codigoProjeto) {
 
     const json = await r.json().catch(() => ({}));
 
-    console.group(`📥 [RESPOSTA COMISSÃO] ${papel}`);
+    console.group(`ðŸ“¥ [RESPOSTA COMISSÃƒO] ${papel}`);
     console.log("HTTP status:", r.status);
     console.log("HTTP ok:", r.ok);
     console.log("JSON retornado:", json);
@@ -3998,27 +3998,27 @@ function montarLancamento(tipo, fonte, baseConsiderada, codigoProjeto) {
     const lancArq = montarLancamento("arquiteto", fonteArq, payload?.baseConsiderada, codigoProjeto);
     const lancVend = montarLancamento("vendedor", fonteVend, payload?.baseConsiderada, codigoProjeto);
 
-    console.group("🧾 [COMISSÕES] Pré-envio");
+    console.group("ðŸ§¾ [COMISSÃ•ES] PrÃ©-envio");
     console.log("Payload original:", JSON.parse(JSON.stringify(payload || {})));
     console.log("codigoProjeto:", codigoProjeto);
-    console.log("Existe arquiteto?", existeArq, "Código:", fonteArq?.codigo || "");
-    console.log("Existe vendedor?", existeVend, "Código:", fonteVend?.codigo || "");
-    console.log("Lançamento arquiteto:", JSON.parse(JSON.stringify(lancArq || {})));
-    console.log("Lançamento vendedor:", JSON.parse(JSON.stringify(lancVend || {})));
+    console.log("Existe arquiteto?", existeArq, "CÃ³digo:", fonteArq?.codigo || "");
+    console.log("Existe vendedor?", existeVend, "CÃ³digo:", fonteVend?.codigo || "");
+    console.log("LanÃ§amento arquiteto:", JSON.parse(JSON.stringify(lancArq || {})));
+    console.log("LanÃ§amento vendedor:", JSON.parse(JSON.stringify(lancVend || {})));
     console.groupEnd();
 
     let resArq = {
       ok: false,
       status: 'ignorado',
       papel: 'arquiteto',
-      erro: 'Comissão não existente (sem código).'
+      erro: 'ComissÃ£o nÃ£o existente (sem cÃ³digo).'
     };
 
     let resVend = {
       ok: false,
       status: 'ignorado',
       papel: 'vendedor',
-      erro: 'Comissão não existente (sem código).'
+      erro: 'ComissÃ£o nÃ£o existente (sem cÃ³digo).'
     };
 
     if (existeArq) {
@@ -4067,7 +4067,7 @@ function montarLancamento(tipo, fonte, baseConsiderada, codigoProjeto) {
       }
     };
 
-    console.group("📦 [COMISSÕES] Retorno final");
+    console.group("ðŸ“¦ [COMISSÃ•ES] Retorno final");
     console.log(JSON.parse(JSON.stringify(retorno || {})));
     console.groupEnd();
 
@@ -4393,7 +4393,7 @@ function montarLancamento(tipo, fonte, baseConsiderada, codigoProjeto) {
 
 
 /* =========================================================
-   4) ITENS IGNORADOS → "PRODUTOS FATURADOS DIRETO" (opcional)
+   4) ITENS IGNORADOS â†’ "PRODUTOS FATURADOS DIRETO" (opcional)
    ========================================================= */
 
 
@@ -4408,7 +4408,7 @@ function vv_getClienteNome() {
     if (v) return v;
   }
   const fallback = document.querySelector('#clientesWrapper .cliente-item .razaoSocial');
-  return (fallback?.value?.trim() || fallback?.getAttribute('data-valor-original')?.trim() || 'Cliente não identificado');
+  return (fallback?.value?.trim() || fallback?.getAttribute('data-valor-original')?.trim() || 'Cliente nÃ£o identificado');
 }
 function vv_getNumeroOrcamento() {
   const inp = document.getElementById('numeroOrcamento');
@@ -4512,7 +4512,7 @@ function vv_getObservacaoPadraoComissao() {
 
   if (!numeroPedido && !numeroOrcamento) return '';
 
-  return `numero do pedido: ${numeroPedido} - numero do orçamento: ${numeroOrcamento}`;
+  return `numero do pedido: ${numeroPedido} - numero do orÃ§amento: ${numeroOrcamento}`;
 }
 function vv_normalizarObservacaoComissao(valor) {
   const texto = String(valor || '').trim();
@@ -4554,7 +4554,7 @@ async function conferirTotalProdutosOmieComMarcador() {
     const payload = await gerarPayloadOmie();
 
     if (!payload || !Array.isArray(payload.det)) {
-      alert("Não foi possível gerar o payload da Omie para conferência.");
+      alert("NÃ£o foi possÃ­vel gerar o payload da Omie para conferÃªncia.");
       return;
     }
 
@@ -4633,7 +4633,7 @@ async function conferirTotalProdutosOmieComMarcador() {
       marcador.style.color = "#146c2e";
       marcador.style.borderColor = "#b7e4c7";
       marcador.innerHTML = `
-        ✅ Total conferido com sucesso<br>
+        âœ… Total conferido com sucesso<br>
         Omie: <strong>R$ ${totalOmie.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong><br>
         Tela: <strong>R$ ${totalTela.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
       `;
@@ -4642,19 +4642,19 @@ async function conferirTotalProdutosOmieComMarcador() {
       marcador.style.color = "#a61b1b";
       marcador.style.borderColor = "#f5b5b5";
       marcador.innerHTML = `
-        ❌ Divergência encontrada no total<br>
+        âŒ DivergÃªncia encontrada no total<br>
         Omie: <strong>R$ ${totalOmie.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong><br>
         Tela: <strong>R$ ${totalTela.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong><br>
-        Diferença: <strong>R$ ${round2(totalOmie - totalTela).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+        DiferenÃ§a: <strong>R$ ${round2(totalOmie - totalTela).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
       `;
     }
 
-    console.group("🔎 Conferência total produtos Omie");
+    console.group("ðŸ”Ž ConferÃªncia total produtos Omie");
     console.log("Payload gerado:", payload);
     console.table(itensConsiderados);
     console.log("Total Omie:", totalOmie);
     console.log("Total Tela (#vv-cat-produto):", totalTela);
-    console.log("Bate?", bate ? "SIM" : "NÃO");
+    console.log("Bate?", bate ? "SIM" : "NÃƒO");
     console.groupEnd();
 
     return {
@@ -4683,10 +4683,10 @@ async function gerarPayloadOmie() {
   const clientes = document.querySelectorAll("#clientesWrapper .cliente-item");
   const codigoCliente = clientes[0]?.querySelector(".codigoCliente")?.value?.trim();
 
-  if (!codigoCliente) pendencias.push("Código do cliente não preenchido.");
+  if (!codigoCliente) pendencias.push("CÃ³digo do cliente nÃ£o preenchido.");
 
   if (!textoSelecionado || textoSelecionado.toUpperCase() === "SELECIONE") {
-    pendencias.push("Selecione um Vendedor Responsável válido.");
+    pendencias.push("Selecione um Vendedor ResponsÃ¡vel vÃ¡lido.");
   }
 
   let primeiraDataParcelaRaw = Array.from(document.querySelectorAll(".data-parcela"))
@@ -4708,14 +4708,14 @@ async function gerarPayloadOmie() {
       blocosContainer.querySelectorAll("tbody tr:not(.extra-summary-row)").length > 0
     );
 
-  // Nota: pedidos somente de serviços são permitidos — a ausência de produtos
-  // não bloqueia mais o envio. A validação ocorre dentro do popup de seleção.
+  // Nota: pedidos somente de serviÃ§os sÃ£o permitidos â€” a ausÃªncia de produtos
+  // nÃ£o bloqueia mais o envio. A validaÃ§Ã£o ocorre dentro do popup de seleÃ§Ã£o.
 
   if (pendencias.length > 0) {
     if (typeof mostrarPopupPendencias === "function") {
       mostrarPopupPendencias(pendencias);
     } else {
-      alert("Pendências:\n- " + pendencias.join("\n- "));
+      alert("PendÃªncias:\n- " + pendencias.join("\n- "));
     }
     return null;
   }
@@ -4929,7 +4929,7 @@ async function gerarPayloadOmie() {
     }
 
     if (numeroOrcamentoLimpo) {
-      linhas.push(`Numero de orçamento: ${numeroOrcamentoLimpo}`);
+      linhas.push(`Numero de orÃ§amento: ${numeroOrcamentoLimpo}`);
     }
 
     return linhas.join("\n").trim();
@@ -4975,7 +4975,7 @@ async function gerarPayloadOmie() {
       document.getElementById("vv-total-ajustado") ||
       document.getElementById("vv-cat-produto");
     if (!elTotalTela || !elTotalTela.parentNode) {
-      console.warn("⚠️ Elemento #vv-cat-produto não encontrado para marcador visual.");
+      console.warn("âš ï¸ Elemento #vv-cat-produto nÃ£o encontrado para marcador visual.");
       return { bate, totalOmie, totalTela, diferenca: round2(totalOmie - totalTela) };
     }
 
@@ -5001,7 +5001,7 @@ async function gerarPayloadOmie() {
       marcador.style.color = "#166534";
       marcador.style.borderColor = "#bbf7d0";
       marcador.innerHTML = `
-        ✅ Total dos produtos confere com a Omie<br>
+        âœ… Total dos produtos confere com a Omie<br>
         Omie: <strong>R$ ${formatarMoedaBR(totalOmie)}</strong><br>
         Tela: <strong>R$ ${formatarMoedaBR(totalTela)}</strong>
       `;
@@ -5010,10 +5010,10 @@ async function gerarPayloadOmie() {
       marcador.style.color = "#b42318";
       marcador.style.borderColor = "#fecdca";
       marcador.innerHTML = `
-        ❌ Divergência no total dos produtos<br>
+        âŒ DivergÃªncia no total dos produtos<br>
         Omie: <strong>R$ ${formatarMoedaBR(totalOmie)}</strong><br>
         Tela: <strong>R$ ${formatarMoedaBR(totalTela)}</strong><br>
-        Diferença: <strong>R$ ${formatarMoedaBR(round2(totalOmie - totalTela))}</strong>
+        DiferenÃ§a: <strong>R$ ${formatarMoedaBR(round2(totalOmie - totalTela))}</strong>
       `;
     }
 
@@ -5057,7 +5057,7 @@ async function gerarPayloadOmie() {
       : [];
 
     if (!lista.length) {
-      console.warn("⚠️ VENDEDORES_FIXOS_FALLBACK.cadastro está vazio ou inexistente.");
+      console.warn("âš ï¸ VENDEDORES_FIXOS_FALLBACK.cadastro estÃ¡ vazio ou inexistente.");
       return null;
     }
 
@@ -5084,7 +5084,7 @@ async function gerarPayloadOmie() {
     }
 
     if (!match) {
-      console.warn("⚠️ Não foi possível localizar vendedor na variável fixa.", {
+      console.warn("âš ï¸ NÃ£o foi possÃ­vel localizar vendedor na variÃ¡vel fixa.", {
         nomeSelecionado,
         nomeNorm,
         lista
@@ -5102,7 +5102,7 @@ async function gerarPayloadOmie() {
   const vendedorInfo = await pegarVendedorSelecionadoComCodigo("vendedorResponsavel");
 
   if (!vendedorInfo?.codigo) {
-    alert("Selecione um Vendedor Responsável válido (não foi possível recuperar o código).");
+    alert("Selecione um Vendedor ResponsÃ¡vel vÃ¡lido (nÃ£o foi possÃ­vel recuperar o cÃ³digo).");
     return null;
   }
 
@@ -5113,33 +5113,33 @@ async function gerarPayloadOmie() {
   const candidatos = coletarItensPorGrupoParaOmie(ambientesMarcados);
 
   if (!candidatos.length) {
-    alert("Nenhum item elegível encontrado nos ambientes marcados.");
+    alert("Nenhum item elegÃ­vel encontrado nos ambientes marcados.");
     return null;
   }
 
   const selecao = await abrirPopupSelecaoItensOmie(candidatos);
 
   if (!selecao) {
-    console.log("🚫 Seleção cancelada pelo usuário.");
+    console.log("ðŸš« SeleÃ§Ã£o cancelada pelo usuÃ¡rio.");
     return null;
   }
 
   const { aprovadosParaOmie, ignorados, totais } = selecao;
 
-  // ── DETECÇÃO: pedido somente de serviços ──────────────────────────────────
+  // â”€â”€ DETECÃ‡ÃƒO: pedido somente de serviÃ§os â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Casos cobertos:
   //   a) aprovados vazio + valorServicos preenchido
-  //      → checkbox "Somente Serviços" marcou todos os produtos como ignorados
-  //   b) aprovados só tem itens do tipo "servico" (MO Hora etc.) + valorServicos > 0
-  //      → nenhum produto/vidro foi aprovado
-  // Em ambos os casos os totais já foram gravados em
+  //      â†’ checkbox "Somente ServiÃ§os" marcou todos os produtos como ignorados
+  //   b) aprovados sÃ³ tem itens do tipo "servico" (MO Hora etc.) + valorServicos > 0
+  //      â†’ nenhum produto/vidro foi aprovado
+  // Em ambos os casos os totais jÃ¡ foram gravados em
   // window.vvUltimosTotaisSelecaoItensOmie pelo popup (incluindo parcelasServico).
   if (!aprovadosParaOmie.length) {
     if (Number(totais?.valorServicos || 0) > 0) {
-      console.log("[gerarPayloadOmie] Aprovados vazio + valorServicos > 0 → modo somente serviços.");
+      console.log("[gerarPayloadOmie] Aprovados vazio + valorServicos > 0 â†’ modo somente serviÃ§os.");
       return { servicosOnly: true };
     }
-    alert("Selecione ao menos um item para enviar à Omie.");
+    alert("Selecione ao menos um item para enviar Ã  Omie.");
     return null;
   }
 
@@ -5148,10 +5148,10 @@ async function gerarPayloadOmie() {
     return tipo === "produto" || tipo === "vidro";
   });
   if (_aprovadosProdutos.length === 0 && Number(totais?.valorServicos || 0) > 0) {
-    console.log("[gerarPayloadOmie] Nenhum produto aprovado + valorServicos > 0 → modo somente serviços.");
+    console.log("[gerarPayloadOmie] Nenhum produto aprovado + valorServicos > 0 â†’ modo somente serviÃ§os.");
     return { servicosOnly: true };
   }
-  // ─────────────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   window.__vvUltimaSelecaoOmie = selecao;
 
@@ -5256,11 +5256,11 @@ async function gerarPayloadOmie() {
     const codigo_produto = String(item.codigo || "").trim();
 
     if (!codigo_produto) {
-      console.warn("⛔ Produto sem código Omie:", item);
+      console.warn("â›” Produto sem cÃ³digo Omie:", item);
       return;
     }
 
-    const descricao = String(item.descricao || "Item sem descrição").trim();
+    const descricao = String(item.descricao || "Item sem descriÃ§Ã£o").trim();
 
     let quantidade = Number(item.quantidade || 1);
     if (!quantidade || quantidade <= 0) quantidade = 1;
@@ -5282,14 +5282,14 @@ async function gerarPayloadOmie() {
     valor_unitario = round2(valor_unitario);
 
     if (!valor_unitario || valor_unitario <= 0) {
-      console.warn("⛔ Produto sem valor_unitario válido:", item);
+      console.warn("â›” Produto sem valor_unitario vÃ¡lido:", item);
       return;
     }
 
     const totalItem = round2(quantidade * valor_unitario);
 
     if (!totalItem || totalItem <= 0) {
-      console.warn("⛔ Produto com total zerado ignorado:", item);
+      console.warn("â›” Produto com total zerado ignorado:", item);
       return;
     }
 
@@ -5335,13 +5335,13 @@ async function gerarPayloadOmie() {
   totalProdutosOmie = round2(totalProdutosOmie);
 
   if (!payload.det.length) {
-    alert("Nenhum item válido foi montado para envio à Omie. Verifique código Omie e valor dos produtos.");
+    alert("Nenhum item vÃ¡lido foi montado para envio Ã  Omie. Verifique cÃ³digo Omie e valor dos produtos.");
     return null;
   }
 
   // Garante que a soma dos itens bate com o Total parcelado (produtos) confirmado no popup de parcelas.
-  // Se o usuário ajustou as parcelas (ex: faturamento direto, arredondamentos), o valor correto a
-  // enviar é a soma das parcelas de produto — não o total calculado internamente.
+  // Se o usuÃ¡rio ajustou as parcelas (ex: faturamento direto, arredondamentos), o valor correto a
+  // enviar Ã© a soma das parcelas de produto â€” nÃ£o o total calculado internamente.
   const totalParceladoProdutos = round2(
     (parcelasProdutoParaEnvio || [])
       .reduce((s, p) => s + Number(p?.valor || 0), 0)
@@ -5357,7 +5357,7 @@ async function gerarPayloadOmie() {
         acumulado = round2(acumulado + novoValor * item.produto.quantidade);
         item.produto.valor_unitario = novoValor;
       } else {
-        // último item absorve o resíduo de arredondamento
+        // Ãºltimo item absorve o resÃ­duo de arredondamento
         const restante = round2(totalParceladoProdutos - acumulado);
         item.produto.valor_unitario = round2(
           item.produto.quantidade > 0 ? restante / item.produto.quantidade : restante
@@ -5366,7 +5366,7 @@ async function gerarPayloadOmie() {
     });
 
     console.log(
-      `[payload] valor_unitario reescalado: ${totalProdutosOmie} → ${totalParceladoProdutos} (fator ${fator.toFixed(6)})`
+      `[payload] valor_unitario reescalado: ${totalProdutosOmie} â†’ ${totalParceladoProdutos} (fator ${fator.toFixed(6)})`
     );
     totalProdutosOmie = totalParceladoProdutos;
   }
@@ -5401,13 +5401,13 @@ async function gerarPayloadOmie() {
     resumoConferencia
   };
 
-  console.group("✅ Payload de produtos gerado");
+  console.group("âœ… Payload de produtos gerado");
   console.log("Payload:", payload);
   console.table(itensConsideradosNoTotal);
   console.log("Total produtos Omie:", totalProdutosOmie);
   console.log("Total tela (#vv-cat-produto):", totalTelaProdutos);
-  console.log("Resumo conferência:", resumoConferencia);
-  console.log("🛠️ Valor de serviços separado para OS:", totais?.valorServicos || 0);
+  console.log("Resumo conferÃªncia:", resumoConferencia);
+  console.log("ðŸ› ï¸ Valor de serviÃ§os separado para OS:", totais?.valorServicos || 0);
   console.groupEnd();
 
   return payload;
@@ -5417,7 +5417,7 @@ async function gerarPayloadOmie() {
 
 
 /* =========================================================
-   POPUP DE ESCOLHA: Produtos+Serviços  vs  Somente Serviços
+   POPUP DE ESCOLHA: Produtos+ServiÃ§os  vs  Somente ServiÃ§os
    ========================================================= */
 function abrirPopupEscolhaTipoEnvioOmie() {
   return new Promise((resolve) => {
@@ -5437,23 +5437,23 @@ function abrirPopupEscolhaTipoEnvioOmie() {
       display:flex; flex-direction:column; gap:20px;
     `;
 
-    // título
+    // tÃ­tulo
     const titulo = document.createElement('h3');
     titulo.textContent = 'O que deseja enviar para a Omie?';
     titulo.style.cssText = 'margin:0; font-size:18px; font-weight:700; color:#1e293b;';
 
-    // subtítulo
+    // subtÃ­tulo
     const sub = document.createElement('p');
-    sub.textContent = 'Escolha o tipo de envio para esta operação.';
+    sub.textContent = 'Escolha o tipo de envio para esta operaÃ§Ã£o.';
     sub.style.cssText = 'margin:0; font-size:14px; color:#64748b;';
 
-    // botões de opção
+    // botÃµes de opÃ§Ã£o
     const btnProdServ = document.createElement('button');
     btnProdServ.innerHTML = `
-      <span style="font-size:22px;">📦🛠️</span>
+      <span style="font-size:22px;">ðŸ“¦ðŸ› ï¸</span>
       <div>
-        <div style="font-weight:700; font-size:15px;">Produtos + Serviços</div>
-        <div style="font-size:13px; color:#475569; margin-top:3px;">Envia pedido de produtos e OS de serviços</div>
+        <div style="font-weight:700; font-size:15px;">Produtos + ServiÃ§os</div>
+        <div style="font-size:13px; color:#475569; margin-top:3px;">Envia pedido de produtos e OS de serviÃ§os</div>
       </div>
     `;
     btnProdServ.style.cssText = `
@@ -5473,10 +5473,10 @@ function abrirPopupEscolhaTipoEnvioOmie() {
 
     const btnSoServ = document.createElement('button');
     btnSoServ.innerHTML = `
-      <span style="font-size:22px;">🛠️</span>
+      <span style="font-size:22px;">ðŸ› ï¸</span>
       <div>
-        <div style="font-weight:700; font-size:15px;">Somente Serviços</div>
-        <div style="font-size:13px; color:#475569; margin-top:3px;">Envia apenas a OS de serviços (sem pedido de produtos)</div>
+        <div style="font-weight:700; font-size:15px;">Somente ServiÃ§os</div>
+        <div style="font-size:13px; color:#475569; margin-top:3px;">Envia apenas a OS de serviÃ§os (sem pedido de produtos)</div>
       </div>
     `;
     btnSoServ.style.cssText = `
@@ -5494,7 +5494,7 @@ function abrirPopupEscolhaTipoEnvioOmie() {
       btnSoServ.style.background = '#f8fafc';
     };
 
-    // botão cancelar
+    // botÃ£o cancelar
     const btnCancel = document.createElement('button');
     btnCancel.textContent = 'Cancelar';
     btnCancel.style.cssText = `
@@ -5529,7 +5529,7 @@ function abrirPopupEscolhaTipoEnvioOmie() {
 
 
 /* =========================================================
-   FLUXO: Somente Serviços (sem popup de produtos)
+   FLUXO: Somente ServiÃ§os (sem popup de produtos)
    ========================================================= */
 async function fluxoSomenteServicos() {
   const abrirStatus = (titulo, mensagem, tipo = 'info') => {
@@ -5546,13 +5546,13 @@ async function fluxoSomenteServicos() {
     await vvCarregarClientesServicoOmie();
     definirCodigoVendedorServicoSelecionado();
 
-    // ── carrega parcelas existentes ──────────────────────────
+    // â”€â”€ carrega parcelas existentes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const parcelasServicoExistentes =
       (Array.isArray(window.vvParcelasServicoOmie) && window.vvParcelasServicoOmie.length)
         ? window.vvParcelasServicoOmie
         : (window.propostaEmEdicao?.camposFormulario?.parcelasServico || []);
 
-    // ── fecha loading ANTES de abrir o popup ─────────────────
+    // â”€â”€ fecha loading ANTES de abrir o popup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (typeof ocultarCarregando === 'function') ocultarCarregando();
 
     const resultado = await abrirPopupSomenteServicos({
@@ -5561,14 +5561,14 @@ async function fluxoSomenteServicos() {
     });
 
     if (!resultado) {
-      abrirStatus('ℹ️ Cancelado', 'Envio de serviços cancelado.', 'info');
+      abrirStatus('â„¹ï¸ Cancelado', 'Envio de serviÃ§os cancelado.', 'info');
       return;
     }
 
     const { valorServicos, parcelasServico } = resultado;
 
     if (!(valorServicos > 0)) {
-      alert('Informe um valor de serviços válido.');
+      alert('Informe um valor de serviÃ§os vÃ¡lido.');
       return;
     }
 
@@ -5576,24 +5576,24 @@ async function fluxoSomenteServicos() {
     window.vvTotalServicosAplicado  = valorServicos;
 
     if (typeof mostrarCarregando === 'function') mostrarCarregando();
-    abrirStatus('🛠️ Enviando Serviços', 'Enviando OS de serviços para a Omie.', 'info');
+    abrirStatus('ðŸ› ï¸ Enviando ServiÃ§os', 'Enviando OS de serviÃ§os para a Omie.', 'info');
 
     const osResp = await enviarOSServico({ valorServicos, parcelasServico });
 
     if (osResp?.ok) {
-      abrirStatus('✅ Serviços enviados', 'OS de serviços criada com sucesso na Omie.', 'success');
+      abrirStatus('âœ… ServiÃ§os enviados', 'OS de serviÃ§os criada com sucesso na Omie.', 'success');
     } else {
       abrirStatus(
-        '❌ Falha no envio dos serviços',
+        'âŒ Falha no envio dos serviÃ§os',
         osResp?.error || osResp?.erro || osResp?.message || 'Erro desconhecido.',
         'error'
       );
     }
 
   } catch (erro) {
-    console.error('❌ fluxoSomenteServicos:', erro);
+    console.error('âŒ fluxoSomenteServicos:', erro);
     if (typeof mostrarPopupCustomizado === 'function') {
-      mostrarPopupCustomizado('❌ Erro', erro?.message || String(erro), 'error');
+      mostrarPopupCustomizado('âŒ Erro', erro?.message || String(erro), 'error');
     } else {
       alert('Erro: ' + (erro?.message || erro));
     }
@@ -5606,8 +5606,8 @@ async function fluxoSomenteServicos() {
 function abrirPopupSomenteServicos({ parcelasServicoExistentes = [], numeroPedido = '' } = {}) {
   return new Promise((resolve) => {
 
-    // ── lê valor e desconto da tela ──────────────────────────
-    // ── lê valor e desconto da tela ──────────────────────────
+    // â”€â”€ lÃª valor e desconto da tela â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â”€â”€ lÃª valor e desconto da tela â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function lerValorTela(id) {
   const el = document.getElementById(id);
   if (!el) return 0;
@@ -5616,32 +5616,32 @@ function lerValorTela(id) {
   return typeof vv_parseBRL === 'function' ? vv_parseBRL(txt) : 0;
 }
 
-// No fluxo "Somente Serviços", o valor dos serviços = Valor Final Total
+// No fluxo "Somente ServiÃ§os", o valor dos serviÃ§os = Valor Final Total
 const valorServicoInicial = lerValorTela('valorFinalTotal');
 
-// desconto da tela para exibição informativa
+// desconto da tela para exibiÃ§Ã£o informativa
 const campoDesc = document.getElementById('campoDescontoFinal');
 const descontoTexto = (
   campoDesc?.value?.trim() ||
   campoDesc?.dataset?.valorOriginal?.trim() ||
   ''
 );
-const valorFinalTela = valorServicoInicial; // são o mesmo valor
+const valorFinalTela = valorServicoInicial; // sÃ£o o mesmo valor
 
-    // ── parcelas: usa existentes ou lê do formulário principal ─
+    // â”€â”€ parcelas: usa existentes ou lÃª do formulÃ¡rio principal â”€
     let parcelasIniciais = parcelasServicoExistentes;
     if (!parcelasIniciais.length) {
-      // tenta reutilizar as parcelas de produto do formulário como ponto de partida
+      // tenta reutilizar as parcelas de produto do formulÃ¡rio como ponto de partida
       parcelasIniciais = vvLerParcelasFormularioPrincipal()
         .filter(p => p.valor > 0)
         .map(p => ({
           ...p,
-          // mantém tipo e condição, zera valor para o usuário preencher
+          // mantÃ©m tipo e condiÃ§Ã£o, zera valor para o usuÃ¡rio preencher
           valor: 0
         }));
     }
 
-    // ── monta modal ──────────────────────────────────────────
+    // â”€â”€ monta modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const bd = document.createElement('div');
     bd.className = 'vv-modal-backdrop';
 
@@ -5653,9 +5653,9 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
     const hd = document.createElement('header');
     hd.innerHTML = `
       <div style="display:grid; gap:4px;">
-        <h3>🛠️ Configurar Serviços para a Omie</h3>
+        <h3>ðŸ› ï¸ Configurar ServiÃ§os para a Omie</h3>
         <div class="vv-help" style="margin:0;">
-          Informe o valor e as parcelas da OS de serviços que será criada na Omie.
+          Informe o valor e as parcelas da OS de serviÃ§os que serÃ¡ criada na Omie.
         </div>
       </div>
     `;
@@ -5676,13 +5676,13 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
   <div>
     Valor Final Total:
     <b id="vv-so-info-final">
-      ${valorFinalTela > 0 ? vv_fmtBRL(valorFinalTela) : '—'}
+      ${valorFinalTela > 0 ? vv_fmtBRL(valorFinalTela) : 'â€”'}
     </b>
   </div>
   <div>
     Desconto aplicado:
     <b id="vv-so-info-desc">
-      ${descontoTexto || '—'}
+      ${descontoTexto || 'â€”'}
     </b>
   </div>
 </div>
@@ -5690,7 +5690,7 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
         <!-- Campo de valor -->
         <div>
           <label class="form-label" style="font-weight:600;">
-            Valor total dos Serviços (R$)
+            Valor total dos ServiÃ§os (R$)
           </label>
           <input
             id="vv-so-serv-valor"
@@ -5701,7 +5701,7 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
             style="max-width:280px; margin-top:6px;"
           >
           <small class="vv-help" style="display:block; margin-top:4px;">
-            Este é o valor que será gerado na OS de serviços da Omie.
+            Este Ã© o valor que serÃ¡ gerado na OS de serviÃ§os da Omie.
           </small>
         </div>
 
@@ -5712,7 +5712,7 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
             align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;
           ">
             <label class="form-label" style="font-weight:600; margin:0;">
-              Parcelas de Serviço
+              Parcelas de ServiÃ§o
             </label>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
               <button type="button" class="vv-btn" id="vv-so-gerar-1x">Gerar 1x</button>
@@ -5741,7 +5741,7 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
     ft.className = 'vv-footer';
     ft.innerHTML = `
       <div class="vv-help">
-        Pedido: <b>${numeroPedido || '(não preenchido)'}</b>
+        Pedido: <b>${numeroPedido || '(nÃ£o preenchido)'}</b>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="vv-btn" id="vv-so-cancelar">Cancelar</button>
@@ -5759,7 +5759,7 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
     const valorInput    = by.querySelector('#vv-so-serv-valor');
     const totalParc     = by.querySelector('#vv-so-total-parcelado');
 
-    // ── atualiza total parcelado ──────────────────────────────
+    // â”€â”€ atualiza total parcelado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function atualizarTotalParcelado() {
       const linhas = [...listaEl.querySelectorAll('.vv-so-row')];
       const soma = linhas.reduce((acc, row) => {
@@ -5769,7 +5769,7 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
       if (totalParc) totalParc.textContent = vv_fmtBRL(soma);
     }
 
-    // ── cria linha de parcela ─────────────────────────────────
+    // â”€â”€ cria linha de parcela â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function criarLinhaParcela(parcela = {}) {
       const norm = vvNormalizarParcelaControle(parcela);
       const row  = document.createElement('div');
@@ -5783,21 +5783,21 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
       `;
       row.innerHTML = `
         <div>
-          <label class="form-label mb-0" style="font-size:12px;">Tipo Monetário</label>
+          <label class="form-label mb-0" style="font-size:12px;">Tipo MonetÃ¡rio</label>
           <select class="form-select form-select-sm tipo-mon-so">
             <option value="" disabled selected>Selecione...</option>
             <option value="17">Pix</option>
             <option value="01">Dinheiro</option>
-            <option value="03">Cartão Parcelado</option>
-            <option value="03">Cartão de Crédito</option>
-            <option value="04">Cartão de Débito</option>
+            <option value="03">CartÃ£o Parcelado</option>
+            <option value="03">CartÃ£o de CrÃ©dito</option>
+            <option value="04">CartÃ£o de DÃ©bito</option>
             <option value="15">Boleto Recorrente</option>
-            <option value="15">Boleto à Vista</option>
+            <option value="15">Boleto Ã  Vista</option>
             <option value="99">Permuta</option>
           </select>
         </div>
         <div>
-          <label class="form-label mb-0" style="font-size:12px;">Condição de Pagto</label>
+          <label class="form-label mb-0" style="font-size:12px;">CondiÃ§Ã£o de Pagto</label>
           <div class="cond-wrapper-so"></div>
         </div>
         <div>
@@ -5810,7 +5810,7 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
         </div>
         <div style="padding-bottom:2px;">
           <button type="button" class="vv-btn danger btn-remover-so"
-            style="padding:6px 10px; font-size:13px;">✕</button>
+            style="padding:6px 10px; font-size:13px;">âœ•</button>
         </div>
       `;
 
@@ -5849,12 +5849,12 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
       atualizarTotalParcelado();
     }
 
-    // ── gerar N parcelas iguais ───────────────────────────────
+    // â”€â”€ gerar N parcelas iguais â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function gerarParcelasIguais(qtd) {
       const totalServico = vv_parseBRL(valorInput.value || '0');
       listaEl.innerHTML = '';
 
-      // tenta reutilizar dados da primeira parcela existente como referência
+      // tenta reutilizar dados da primeira parcela existente como referÃªncia
       const refParcela = parcelasIniciais[0] || {};
 
       let acumulado = 0;
@@ -5874,14 +5874,14 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
       }
     }
 
-    // ── carrega parcelas iniciais ─────────────────────────────
+    // â”€â”€ carrega parcelas iniciais â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (parcelasIniciais.length) {
       parcelasIniciais.forEach(p => adicionarParcela(p));
     } else {
       adicionarParcela();
     }
 
-    // ── eventos dos botões ────────────────────────────────────
+    // â”€â”€ eventos dos botÃµes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     valorInput.addEventListener('blur', () => {
       const v = vv_parseBRL(valorInput.value || '0');
       valorInput.value = v > 0 ? vv_fmtBRL(v) : '';
@@ -5907,7 +5907,7 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
         const valorServicos = vv_parseBRL(valorInput.value || '0');
 
         if (!(valorServicos > 0)) {
-          alert('Informe um valor de serviços válido.');
+          alert('Informe um valor de serviÃ§os vÃ¡lido.');
           return;
         }
 
@@ -5946,132 +5946,115 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
   });
 }
 /* =======================================
-   6) ENVIAR PARA OMIE (botão/onclick)
+   6) ENVIAR PARA OMIE (botÃ£o/onclick)
    ======================================= */
 async function atualizarNaOmie() {
 
-  // ── VALIDAÇÃO: cliente precisa ter UF cadastrada na Omie ──────────
+  // â”€â”€ VALIDAÃ‡ÃƒO: cliente precisa ter UF cadastrada na Omie â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
-    // Exibe overlay de "verificando" imediatamente — o popup aparece antes de qualquer outra ação
+    // Exibe overlay de "verificando" imediatamente â€” o popup aparece antes de qualquer outra aÃ§Ã£o
     const _ufLoadingOv = document.createElement("div");
     _ufLoadingOv.id = "_uf_loading_ov";
     _ufLoadingOv.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;";
     _ufLoadingOv.innerHTML = `<div style="background:#fff;border-radius:12px;padding:24px 32px;box-shadow:0 8px 32px rgba(0,0,0,.2);font-size:14px;color:#374151;display:flex;align-items:center;gap:12px;">
       <span style="display:inline-block;width:20px;height:20px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:_uf_spin .7s linear infinite;"></span>
-      Verificando dados do cliente na Omie…
+      Verificando dados do cliente na Omieâ€¦
     </div>
     <style>@keyframes _uf_spin{to{transform:rotate(360deg)}}</style>`;
     document.body.appendChild(_ufLoadingOv);
 
-    let _ufProsseguir = true; // por padrão prossegue; false = usuário cancelou
+    let _ufProsseguir = true; // por padrÃ£o prossegue; false = usuÃ¡rio cancelou
 
     try {
-      const _cnpjCpfEl = document.querySelector(".cliente-item .cpfCnpj");
-      const _cnpjCpf = (_cnpjCpfEl?.value || "").replace(/\D/g, "").trim();
+      // Tenta identificar o cliente pelo cÃ³digo Omie, CNPJ ou nome â€” na ordem de prioridade
+      const _codigoOmieEl = document.querySelector(".cliente-item .codigoCliente");
+      const _cnpjCpfEl   = document.querySelector(".cliente-item .cpfCnpj");
+      const _razaoEl     = document.querySelector(".cliente-item .razaoSocial");
+      const _codigoOmie  = (_codigoOmieEl?.value || "").trim();
+      const _cnpjCpf     = (_cnpjCpfEl?.value || "").replace(/\D/g, "").trim();
+      const _razao       = (_razaoEl?.value || "").trim().toLowerCase();
 
-      if (_cnpjCpf) {
-        const _buscaResp = await fetch(
-          `https://ulhoa-0a02024d350a.herokuapp.com/clientes/buscar?cnpj_cpf=${_cnpjCpf}`
-        ).catch(() => null);
-
-        if (_buscaResp && _buscaResp.ok) {
-          const _buscaData = await _buscaResp.json().catch(() => null);
-          if (_buscaData && _buscaData.encontrado && _buscaData.clientes?.length > 0) {
-            const _cli = _buscaData.clientes[0];
-            // tenta vários nomes de campo possíveis para UF
-            const _ufOmie = (
-              _cli.estado || _cli.cEstado || _cli.cUF || _cli.uf || ""
-            ).trim().toUpperCase();
-
-            if (!_ufOmie || _ufOmie.length !== 2) {
-              // Remove o loading e abre popup de UF
-              document.body.removeChild(_ufLoadingOv);
-              const _nomeCliente = _cli.razao_social || _cli.nome_fantasia || "o cliente";
-
-              const _ufInformada = await new Promise(resolve => {
-                const _ov = document.createElement("div");
-                _ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;";
-                _ov.innerHTML = `
-                  <div style="background:#fff;border-radius:14px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.22);">
-                    <h5 style="margin:0 0 10px;color:#b45309;font-size:15px;font-weight:700;">⚠️ UF não cadastrada na Omie</h5>
-                    <p style="margin:0 0 4px;font-size:13px;color:#374151;">O cliente <b>${_nomeCliente}</b> não possui estado (UF) registrado na Omie.</p>
-                    <p style="margin:0 0 14px;font-size:13px;color:#374151;">Informe a UF para salvar e continuar o envio:</p>
-                    <input id="_uf_omie_inp" type="text" maxlength="2" placeholder="Ex: MG, SP, RJ..."
-                      style="width:100%;padding:11px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:18px;text-transform:uppercase;letter-spacing:4px;text-align:center;margin-bottom:8px;box-sizing:border-box;font-family:'Poppins',sans-serif;">
-                    <div id="_uf_omie_err" style="font-size:12px;color:#ef4444;min-height:18px;margin-bottom:14px;"></div>
-                    <div style="display:flex;gap:10px;justify-content:flex-end;">
-                      <button id="_uf_omie_cancel" style="padding:9px 20px;border:1px solid #d1d5db;border-radius:8px;background:#f9fafb;cursor:pointer;font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;color:#374151;">Cancelar</button>
-                      <button id="_uf_omie_ok" style="padding:9px 22px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;">Salvar e continuar</button>
-                    </div>
-                  </div>`;
-                document.body.appendChild(_ov);
-                const _inp = _ov.querySelector("#_uf_omie_inp");
-                const _err = _ov.querySelector("#_uf_omie_err");
-                _inp.focus();
-                _inp.addEventListener("input", () => { _inp.value = _inp.value.toUpperCase().replace(/[^A-Z]/g,""); _err.textContent = ""; });
-                _ov.querySelector("#_uf_omie_ok").onclick = () => {
-                  const v = _inp.value.trim().toUpperCase();
-                  if (!v || v.length !== 2) { _err.textContent = "⚠️ Informe exatamente 2 letras (ex: MG)."; return; }
-                  document.body.removeChild(_ov);
-                  resolve(v);
-                };
-                _ov.querySelector("#_uf_omie_cancel").onclick = () => { document.body.removeChild(_ov); resolve(""); };
-                _inp.addEventListener("keydown", ev => {
-                  if (ev.key === "Enter") _ov.querySelector("#_uf_omie_ok").click();
-                  if (ev.key === "Escape") _ov.querySelector("#_uf_omie_cancel").click();
-                });
-              });
-
-              if (!_ufInformada) return; // cancelou — aborta envio
-
-              // Salva UF na Omie
-              try {
-                const _payloadAlt = { ..._cli, estado: _ufInformada };
-                const _altResp = await fetch("https://utils-b488312867a6.herokuapp.com/omie/clientes/alterar", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(_payloadAlt)
-                }).catch(() => null);
-                if (_altResp && _altResp.ok) {
-                  console.log("✅ UF salva na Omie:", _ufInformada);
-                } else {
-                  console.warn("⚠️ Endpoint alterar retornou erro — UF informada mas não salva na Omie.");
-                }
-              } catch (_eAlt) {
-                console.warn("⚠️ Erro ao salvar UF na Omie:", _eAlt.message);
-              }
-
-              // Remove o loading se ainda existir (não deveria)
-              document.getElementById("_uf_loading_ov")?.remove();
-            } else {
-              // UF já cadastrada — remove loading e prossegue
-              document.body.removeChild(_ufLoadingOv);
-            }
-          } else {
-            // Cliente não encontrado na Omie pelo CNPJ — remove loading e prossegue
-            console.warn("⚠️ Cliente não encontrado na Omie pelo CNPJ/CPF — pulando validação de UF.");
-            document.body.removeChild(_ufLoadingOv);
-          }
+      // Carrega lista completa (usa cache interno de vvCarregarClientesVisualizar se disponÃ­vel)
+      let _listaClientes = [];
+      try {
+        if (typeof vvCarregarClientesVisualizar === "function") {
+          _listaClientes = await vvCarregarClientesVisualizar();
         } else {
-          // Fetch falhou — remove loading e prossegue
-          console.warn("⚠️ Falha ao consultar clientes na Omie — pulando validação de UF.");
+          const _r = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/clientes/visualizar").catch(() => null);
+          if (_r && _r.ok) {
+            const _j = await _r.json().catch(() => null);
+            _listaClientes = Array.isArray(_j) ? _j : (_j?.clientes || _j?.data || []);
+          }
+        }
+      } catch (_eLista) { /* silencioso */ }
+
+      // Encontra o cliente na lista pelo cÃ³digo Omie, CNPJ ou nome
+      let _cli = null;
+      if (_codigoOmie) {
+        _cli = _listaClientes.find(c => String(c.codigo_cliente_omie || "") === _codigoOmie);
+      }
+      if (!_cli && _cnpjCpf) {
+        _cli = _listaClientes.find(c => (c.cnpj_cpf || "").replace(/\D/g, "") === _cnpjCpf);
+      }
+      if (!_cli && _razao) {
+        _cli = _listaClientes.find(c =>
+          (c.razao_social || c.nome_fantasia || "").toLowerCase().includes(_razao) ||
+          _razao.includes((c.razao_social || c.nome_fantasia || "").toLowerCase())
+        );
+      }
+
+      if (_cli) {
+        const _ufOmie = (_cli.estado || _cli.cEstado || _cli.cUF || _cli.uf || "").trim().toUpperCase();
+        if (!_ufOmie || _ufOmie.length !== 2) {
+          document.body.removeChild(_ufLoadingOv);
+          const _nomeCliente = _cli.razao_social || _cli.nome_fantasia || "o cliente";
+          const _ufInformada = await new Promise(resolve => {
+            const _ov = document.createElement("div");
+            _ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;";
+            _ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.22);"><h5 style="margin:0 0 10px;color:#b45309;font-size:15px;font-weight:700;">UF nao cadastrada na Omie</h5><p style="margin:0 0 4px;font-size:13px;color:#374151;">O cliente <b id="_uf_nome_cli"></b> nao possui estado (UF) registrado na Omie.</p><p style="margin:0 0 14px;font-size:13px;color:#374151;">Informe a UF para salvar e continuar:</p><input id="_uf_omie_inp" type="text" maxlength="2" placeholder="Ex: MG, SP..." style="width:100%;padding:11px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:18px;text-transform:uppercase;letter-spacing:4px;text-align:center;margin-bottom:8px;box-sizing:border-box;"><div id="_uf_omie_err" style="font-size:12px;color:#ef4444;min-height:18px;margin-bottom:14px;"></div><div style="display:flex;gap:10px;justify-content:flex-end;"><button id="_uf_omie_cancel" style="padding:9px 20px;border:1px solid #d1d5db;border-radius:8px;background:#f9fafb;cursor:pointer;font-size:13px;font-weight:600;">Cancelar</button><button id="_uf_omie_ok" style="padding:9px 22px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:700;">Salvar e continuar</button></div></div>';
+            document.body.appendChild(_ov);
+            _ov.querySelector("#_uf_nome_cli").textContent = _nomeCliente;
+            const _inp = _ov.querySelector("#_uf_omie_inp");
+            const _err = _ov.querySelector("#_uf_omie_err");
+            _inp.focus();
+            _inp.addEventListener("input", () => { _inp.value = _inp.value.toUpperCase().replace(/[^A-Z]/g, ""); _err.textContent = ""; });
+            _ov.querySelector("#_uf_omie_ok").onclick = () => {
+              const v = _inp.value.trim().toUpperCase();
+              if (!v || v.length !== 2) { _err.textContent = "Informe exatamente 2 letras (ex: MG)."; return; }
+              document.body.removeChild(_ov); resolve(v);
+            };
+            _ov.querySelector("#_uf_omie_cancel").onclick = () => { document.body.removeChild(_ov); resolve(""); };
+            _inp.addEventListener("keydown", ev => {
+              if (ev.key === "Enter") _ov.querySelector("#_uf_omie_ok").click();
+              if (ev.key === "Escape") _ov.querySelector("#_uf_omie_cancel").click();
+            });
+          });
+          if (!_ufInformada) return;
+          try {
+            const _altResp = await fetch("https://utils-b488312867a6.herokuapp.com/omie/clientes/alterar", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ..._cli, estado: _ufInformada })
+            }).catch(() => null);
+            console.log(_altResp && _altResp.ok ? "UF salva na Omie: " + _ufInformada : "Alterar retornou erro");
+          } catch (_eAlt) { console.warn("Erro ao salvar UF:", _eAlt.message); }
+        } else {
           document.body.removeChild(_ufLoadingOv);
         }
       } else {
-        // Sem CNPJ no formulário — remove loading e prossegue
+        console.warn("Cliente nao encontrado na Omie -- pulando validacao de UF.");
         document.body.removeChild(_ufLoadingOv);
       }
     } catch (_eUF) {
-      console.warn("⚠️ Erro inesperado na validação de UF:", _eUF.message);
+      console.warn("âš ï¸ Erro inesperado na validaÃ§Ã£o de UF:", _eUF.message);
       document.getElementById("_uf_loading_ov")?.remove();
     }
 
     if (!_ufProsseguir) return;
   }
 
-   // ── ESCOLHA DO TIPO DE ENVIO ──────────────────────────────
+   // â”€â”€ ESCOLHA DO TIPO DE ENVIO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const tipoEnvio = await abrirPopupEscolhaTipoEnvioOmie();
-  if (!tipoEnvio) return; // usuário cancelou
+  if (!tipoEnvio) return; // usuÃ¡rio cancelou
 
   if (tipoEnvio === 'so_servicos') {
     return fluxoSomenteServicos();
@@ -6134,21 +6117,21 @@ async function atualizarNaOmie() {
     const numeroPedidoGarantido = await garantirNumeroPedidoPreenchido();
 
     abrirStatus(
-      "⏳ Iniciando envio",
-      "Estamos preparando o pedido de produtos e os serviços.",
+      "â³ Iniciando envio",
+      "Estamos preparando o pedido de produtos e os serviÃ§os.",
       "info"
     );
 
     const payload = await gerarPayloadOmie();
 
     if (!payload) {
-      throw new Error("Não foi possível gerar o payload para envio.");
+      throw new Error("NÃ£o foi possÃ­vel gerar o payload para envio.");
     }
 
-    // Detecta se o popup sinalizou "somente serviços" (sem produtos/vidros)
+    // Detecta se o popup sinalizou "somente serviÃ§os" (sem produtos/vidros)
     const somenteServicos = payload.servicosOnly === true;
 
-    // numeroPedido começa com o valor garantido; será sobrescrito pela resposta
+    // numeroPedido comeÃ§a com o valor garantido; serÃ¡ sobrescrito pela resposta
     // da Omie se houver envio de produtos.
     let numeroPedido =
       numeroPedidoGarantido ||
@@ -6156,14 +6139,14 @@ async function atualizarNaOmie() {
       "";
 
     if (!somenteServicos) {
-      console.log("📦 Payload gerado (produtos):", payload);
+      console.log("ðŸ“¦ Payload gerado (produtos):", payload);
 
       // =========================================================
       // 1) ENVIO DE PRODUTOS
       // =========================================================
       abrirStatus(
-        "📦 Enviando produtos",
-        "Os produtos estão sendo enviados para a Omie.",
+        "ðŸ“¦ Enviando produtos",
+        "Os produtos estÃ£o sendo enviados para a Omie.",
         "info"
       );
 
@@ -6178,11 +6161,11 @@ async function atualizarNaOmie() {
 
       const retornoProdutos = await readJsonOrText(respostaProdutos);
 
-      console.log("📥 Resposta /pedidos:", respostaProdutos.status, retornoProdutos.parsed ?? retornoProdutos.raw);
+      console.log("ðŸ“¥ Resposta /pedidos:", respostaProdutos.status, retornoProdutos.parsed ?? retornoProdutos.raw);
 
       if (!respostaProdutos.ok) {
         alertServer(
-          "❌ ERRO AO ENVIAR PRODUTOS",
+          "âŒ ERRO AO ENVIAR PRODUTOS",
           respostaProdutos.status,
           retornoProdutos.parsed ?? retornoProdutos.raw
         );
@@ -6205,30 +6188,30 @@ async function atualizarNaOmie() {
         "";
 
       alertServer(
-        "✅ PRODUTOS ENVIADOS COM SUCESSO",
+        "âœ… PRODUTOS ENVIADOS COM SUCESSO",
         respostaProdutos.status,
         retornoProdutos.parsed ?? retornoProdutos.raw
       );
 
       abrirStatus(
-        "✅ Produtos enviados",
-        `Produtos enviados com sucesso. Pedido nº ${numeroPedido}.`,
+        "âœ… Produtos enviados",
+        `Produtos enviados com sucesso. Pedido nÂº ${numeroPedido}.`,
         "success"
       );
     } else {
       // =========================================================
-      // 1-B) MODO SOMENTE SERVIÇOS — pula envio de produtos
+      // 1-B) MODO SOMENTE SERVIÃ‡OS â€” pula envio de produtos
       // =========================================================
-      console.log("[atualizarNaOmie] Modo somente-serviços: POST de produtos ignorado.");
+      console.log("[atualizarNaOmie] Modo somente-serviÃ§os: POST de produtos ignorado.");
       abrirStatus(
-        "⚙️ Pedido somente de serviços",
-        "Nenhum produto neste pedido — enviando apenas os serviços na OS.",
+        "âš™ï¸ Pedido somente de serviÃ§os",
+        "Nenhum produto neste pedido â€” enviando apenas os serviÃ§os na OS.",
         "info"
       );
     }
 
     // =========================================================
-    // 2) OBTÉM TOTAIS / PARCELAS DE SERVIÇO
+    // 2) OBTÃ‰M TOTAIS / PARCELAS DE SERVIÃ‡O
     // =========================================================
     const totais =
       window.vvUltimosTotaisSelecaoItensOmie ||
@@ -6245,14 +6228,14 @@ async function atualizarNaOmie() {
       totais?.parcelasServico || null
     );
 
-    console.group("🔎 Dados recuperados para envio de serviços");
+    console.group("ðŸ”Ž Dados recuperados para envio de serviÃ§os");
     console.log("totais:", totais);
     console.log("valorServicos:", valorServicos);
     console.log("parcelasServicoCorretas:", parcelasServicoCorretas);
     console.groupEnd();
 
     // =========================================================
-    // 3) ENVIO DE SERVIÇOS
+    // 3) ENVIO DE SERVIÃ‡OS
     // =========================================================
     let houveTentativaDeServico = false;
     let servicosEnviadosComSucesso = false;
@@ -6261,8 +6244,8 @@ async function atualizarNaOmie() {
       houveTentativaDeServico = true;
 
       abrirStatus(
-        "🛠️ Enviando serviços",
-        "Agora estamos enviando os serviços na estrutura própria da OS.",
+        "ðŸ› ï¸ Enviando serviÃ§os",
+        "Agora estamos enviando os serviÃ§os na estrutura prÃ³pria da OS.",
         "info"
       );
 
@@ -6271,42 +6254,42 @@ async function atualizarNaOmie() {
         parcelasServico: parcelasServicoCorretas
       });
 
-      console.log("📥 Resposta /os:", osResp);
+      console.log("ðŸ“¥ Resposta /os:", osResp);
 
       if (osResp?.ok) {
         servicosEnviadosComSucesso = true;
 
         alertServer(
-          "✅ SERVIÇOS ENVIADOS COM SUCESSO",
+          "âœ… SERVIÃ‡OS ENVIADOS COM SUCESSO",
           osResp?.status || 200,
           osResp
         );
 
         abrirStatus(
-          "✅ Serviços enviados",
-          "Os serviços foram enviados com sucesso na estrutura própria da OS.",
+          "âœ… ServiÃ§os enviados",
+          "Os serviÃ§os foram enviados com sucesso na estrutura prÃ³pria da OS.",
           "success"
         );
       } else {
         alertServer(
-          "❌ ERRO AO ENVIAR SERVIÇOS",
+          "âŒ ERRO AO ENVIAR SERVIÃ‡OS",
           osResp?.status || "sem status",
           osResp
         );
 
         abrirStatus(
-          "❌ Falha no envio dos serviços",
+          "âŒ Falha no envio dos serviÃ§os",
           osResp?.error ||
             osResp?.erro ||
             osResp?.message ||
-            "Os serviços não puderam ser enviados.",
+            "Os serviÃ§os nÃ£o puderam ser enviados.",
           "error"
         );
       }
     } else {
       abrirStatus(
-        "ℹ️ Sem serviços para enviar",
-        "Nenhum serviço foi selecionado para envio nesta operação.",
+        "â„¹ï¸ Sem serviÃ§os para enviar",
+        "Nenhum serviÃ§o foi selecionado para envio nesta operaÃ§Ã£o.",
         "info"
       );
     }
@@ -6316,26 +6299,26 @@ async function atualizarNaOmie() {
     // =========================================================
     if (!houveTentativaDeServico) {
       abrirStatus(
-        "✅ Processo concluído",
+        "âœ… Processo concluÃ­do",
         somenteServicos
-          ? `Nenhum serviço encontrado para enviar. Pedido nº ${numeroPedido}.`
-          : `Produtos enviados com sucesso. Pedido nº ${numeroPedido}.`,
+          ? `Nenhum serviÃ§o encontrado para enviar. Pedido nÂº ${numeroPedido}.`
+          : `Produtos enviados com sucesso. Pedido nÂº ${numeroPedido}.`,
         "success"
       );
     } else if (servicosEnviadosComSucesso) {
       abrirStatus(
-        "✅ Processo concluído",
+        "âœ… Processo concluÃ­do",
         somenteServicos
-          ? `Serviços enviados com sucesso. Pedido nº ${numeroPedido}.`
-          : `Produtos e serviços enviados com sucesso. Pedido nº ${numeroPedido}.`,
+          ? `ServiÃ§os enviados com sucesso. Pedido nÂº ${numeroPedido}.`
+          : `Produtos e serviÃ§os enviados com sucesso. Pedido nÂº ${numeroPedido}.`,
         "success"
       );
     } else {
       abrirStatus(
-        "⚠️ Processo concluído parcialmente",
+        "âš ï¸ Processo concluÃ­do parcialmente",
         somenteServicos
-          ? `Pedido nº ${numeroPedido}: houve falha no envio dos serviços.`
-          : `Produtos enviados com sucesso no pedido nº ${numeroPedido}, mas houve falha no envio dos serviços.`,
+          ? `Pedido nÂº ${numeroPedido}: houve falha no envio dos serviÃ§os.`
+          : `Produtos enviados com sucesso no pedido nÂº ${numeroPedido}, mas houve falha no envio dos serviÃ§os.`,
         "warning"
       );
     }
@@ -6343,15 +6326,15 @@ async function atualizarNaOmie() {
     console.info("[Omie] Proposta nao foi atualizada no Heroku apos o envio; parcelas usadas apenas para este envio.");
 
   } catch (erro) {
-    console.error("❌ Erro em atualizarNaOmie:", erro);
+    console.error("âŒ Erro em atualizarNaOmie:", erro);
 
     abrirStatus(
-      "❌ Erro no processo",
+      "âŒ Erro no processo",
       erro?.message || "Ocorreu um erro durante o envio.",
       "error"
     );
 
-    alert(`❌ Erro no processo\n\n${erro?.message || erro}`);
+    alert(`âŒ Erro no processo\n\n${erro?.message || erro}`);
   } finally {
     if (spinner) spinner.style.display = "none";
     if (botao) botao.disabled = false;
@@ -6366,20 +6349,20 @@ const API_BASE_PRODUTOS = 'https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com';
 // TROQUE isso pela URL real quando publicar o server.
 
 // =============================
-// 🔹 Função GLOBAL: primeiro insumo da tabela do grupo
+// ðŸ”¹ FunÃ§Ã£o GLOBAL: primeiro insumo da tabela do grupo
 // =============================
 // =============================
-// 🔹 GLOBAL: primeiro insumo do grupo (continua igual)
+// ðŸ”¹ GLOBAL: primeiro insumo do grupo (continua igual)
 // =============================
 // =============================
-// 🔹 Função GLOBAL: primeiro insumo do grupo
+// ðŸ”¹ FunÃ§Ã£o GLOBAL: primeiro insumo do grupo
 // =============================
 // =============================
-// 🔹 Lista COMPLETA de insumos do grupo (linhas da tabela)
+// ðŸ”¹ Lista COMPLETA de insumos do grupo (linhas da tabela)
 //     Pega coluna "Quantidade" e "Valor de Custo Final"
 // =============================
 // =============================
-// 🔹 Pega o nome do grupo no accordion
+// ðŸ”¹ Pega o nome do grupo no accordion
 //     <span id="titulo-accordion-bloco-0">Vidro</span>
 // =============================
 window.getNomeGrupo = function (grupoId) {
@@ -6388,19 +6371,19 @@ window.getNomeGrupo = function (grupoId) {
   const span = document.querySelector(`#titulo-accordion-${grupoId}`);
   if (!span) {
     console.warn(
-      `⚠️ Não encontrei #titulo-accordion-${grupoId} para pegar o nome do grupo.`
+      `âš ï¸ NÃ£o encontrei #titulo-accordion-${grupoId} para pegar o nome do grupo.`
     );
     return '';
   }
 
   const nome = (span.textContent || '').trim();
-  console.log(`🏷️ Nome do grupo (${grupoId}):`, nome);
+  console.log(`ðŸ·ï¸ Nome do grupo (${grupoId}):`, nome);
   return nome;
 };
 
 // =============================
-// 🔹 Lista COMPLETA de insumos do grupo (linhas da tabela)
-//     Pega coluna "Quantidade" (6ª) e "Valor de Custo Final" (3ª)
+// ðŸ”¹ Lista COMPLETA de insumos do grupo (linhas da tabela)
+//     Pega coluna "Quantidade" (6Âª) e "Valor de Custo Final" (3Âª)
 // =============================
 window.getListaInsumosGrupo = function (grupoId) {
   if (!grupoId) return [];
@@ -6424,31 +6407,31 @@ window.getListaInsumosGrupo = function (grupoId) {
   ths.forEach((th, i) => {
     const txt = (th.textContent || '').trim().toLowerCase();
 
-    if (txt.includes('código') || txt.includes('codigo'))   idxCodigo    = i;
-    if (txt.includes('descrição') || txt.includes('descricao')) idxDescricao = i;
+    if (txt.includes('cÃ³digo') || txt.includes('codigo'))   idxCodigo    = i;
+    if (txt.includes('descriÃ§Ã£o') || txt.includes('descricao')) idxDescricao = i;
     if (txt.includes('unidade') || txt.includes('un.'))     idxUnidade   = i;
     if (txt.includes('quantidade'))                         idxQuantidade = i;
     if (txt.includes('valor de custo final'))               idxValorCustoFinal = i;
   });
 
-  // 👇 Força os índices conforme você informou:
-  // 3ª coluna = valor, 6ª coluna = quantidade
-  if (ths.length >= 3) idxValorCustoFinal = 2;  // índice 2 = 3ª coluna
-  if (ths.length >= 6) idxQuantidade      = 5;  // índice 5 = 6ª coluna
+  // ðŸ‘‡ ForÃ§a os Ã­ndices conforme vocÃª informou:
+  // 3Âª coluna = valor, 6Âª coluna = quantidade
+  if (ths.length >= 3) idxValorCustoFinal = 2;  // Ã­ndice 2 = 3Âª coluna
+  if (ths.length >= 6) idxQuantidade      = 5;  // Ã­ndice 5 = 6Âª coluna
 
   if (idxQuantidade === -1) {
     console.warn(
-      `⚠️ Não encontrei coluna "Quantidade" em #tabela-${grupoId}. Confere o texto do cabeçalho/ordem.`
+      `âš ï¸ NÃ£o encontrei coluna "Quantidade" em #tabela-${grupoId}. Confere o texto do cabeÃ§alho/ordem.`
     );
   }
 
   if (idxValorCustoFinal === -1) {
     console.warn(
-      `⚠️ Não encontrei coluna "Valor de Custo Final" em #tabela-${grupoId}. Confere o texto do cabeçalho/ordem.`
+      `âš ï¸ NÃ£o encontrei coluna "Valor de Custo Final" em #tabela-${grupoId}. Confere o texto do cabeÃ§alho/ordem.`
     );
   }
 
-  // helper para pegar valor atual da célula (input > span > texto)
+  // helper para pegar valor atual da cÃ©lula (input > span > texto)
   function extrairTextoCelula(td) {
     if (!td) return '';
     const input = td.querySelector('input');
@@ -6474,15 +6457,15 @@ window.getListaInsumosGrupo = function (grupoId) {
     });
   });
 
-  console.log(`🧾 Insumos lidos da tabela do grupo ${grupoId}:`, insumos);
+  console.log(`ðŸ§¾ Insumos lidos da tabela do grupo ${grupoId}:`, insumos);
   return insumos;
 };
 
 // =============================
-// 🔹 Helper: converter número BR
-//     "R$ 1.234,56"  → 1234.56
-//     "159.698,78"   → 159698.78
-//     "159698.78"    → 159698.78
+// ðŸ”¹ Helper: converter nÃºmero BR
+//     "R$ 1.234,56"  â†’ 1234.56
+//     "159.698,78"   â†’ 159698.78
+//     "159698.78"    â†’ 159698.78
 // =============================
 function parseNumeroBR(valor) {
   if (valor == null) return 0;
@@ -6491,7 +6474,7 @@ function parseNumeroBR(valor) {
   let str = String(valor).trim();
   if (!str) return 0;
 
-  // remove tudo que não é dígito, vírgula, ponto ou sinal
+  // remove tudo que nÃ£o Ã© dÃ­gito, vÃ­rgula, ponto ou sinal
   str = str.replace(/[^\d.,-]/g, '');
 
   if (!str) return 0;
@@ -6500,13 +6483,13 @@ function parseNumeroBR(valor) {
   const hasDot   = str.includes('.');
 
   if (hasComma && hasDot) {
-    // formato "1.234,56" → tira pontos de milhar e troca vírgula por ponto
+    // formato "1.234,56" â†’ tira pontos de milhar e troca vÃ­rgula por ponto
     str = str.replace(/\./g, '').replace(',', '.');
   } else if (hasComma && !hasDot) {
-    // formato "1234,56" → vírgula como decimal
+    // formato "1234,56" â†’ vÃ­rgula como decimal
     str = str.replace(',', '.');
   } else {
-    // apenas ponto ou só números → deixa como está
+    // apenas ponto ou sÃ³ nÃºmeros â†’ deixa como estÃ¡
   }
 
   const n = Number(str);
@@ -6514,14 +6497,14 @@ function parseNumeroBR(valor) {
 }
 
 // =============================
-// 🔹 Função GLOBAL: valores vindos do popup do grupo
-//    (Total produtos após ajuste / Total (Produto) / Total (Serviço))
+// ðŸ”¹ FunÃ§Ã£o GLOBAL: valores vindos do popup do grupo
+//    (Total produtos apÃ³s ajuste / Total (Produto) / Total (ServiÃ§o))
 // =============================
 window.getValoresPopupGrupo = function (grupoId, valorGrupoFallback = 0) {
   const popupData =
     (window.groupPopupsData && window.groupPopupsData[grupoId]) || {};
 
-  // 🟦 Total produtos após ajuste  → valorTotalPedido
+  // ðŸŸ¦ Total produtos apÃ³s ajuste  â†’ valorTotalPedido
   const rawTotalProdutosAjuste =
     popupData.totalProdutosAposAjuste ??
     popupData.totalProdutosAjustado ??
@@ -6529,14 +6512,14 @@ window.getValoresPopupGrupo = function (grupoId, valorGrupoFallback = 0) {
     popupData.totalPedidoComDesconto ??
     null;
 
-  // 🟩 Total (Produto)
+  // ðŸŸ© Total (Produto)
   const rawProdutos =
     popupData.totalProdutos ??
     popupData.totalProduto ??
     popupData.valorTotalNFProdutos ??
     0;
 
-  // 🟥 Total (Serviço)
+  // ðŸŸ¥ Total (ServiÃ§o)
   const rawServicos =
     popupData.totalServicos ??
     popupData.totalServico ??
@@ -6560,7 +6543,7 @@ window.getValoresPopupGrupo = function (grupoId, valorGrupoFallback = 0) {
 };
 
 // =============================
-// 🔹 Função principal: cada INSUMO vira um PRODUTO enviado
+// ðŸ”¹ FunÃ§Ã£o principal: cada INSUMO vira um PRODUTO enviado
 // =============================
 window.produtosFaturadosParaOCliente = async function (ignorados) {
   try {
@@ -6577,19 +6560,19 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
         ? window.vvUltimoTotalFinalProdutosOmie
         : totaisSelecao?.totalFinalProdutos) || 0;
 
-    console.log('💰 Valor total do pedido ajustado (usado nos docs):', valorTotalPedidoAjustado);
+    console.log('ðŸ’° Valor total do pedido ajustado (usado nos docs):', valorTotalPedidoAjustado);
     console.log(
-      '📊 Totais completos da seleção Omie disponíveis em window.vvUltimosTotaisSelecaoItensOmie:',
+      'ðŸ“Š Totais completos da seleÃ§Ã£o Omie disponÃ­veis em window.vvUltimosTotaisSelecaoItensOmie:',
       totaisSelecao
     );
 
     const docs = [];
 
-    // 🔁 Para cada GRUPO ignorado…
+    // ðŸ” Para cada GRUPO ignoradoâ€¦
     ignorados.forEach((item) => {
       const valorGrupo = Number(item.valorTotalGrupo) || 0;
 
-      // 🏷️ Nome do grupo (produto acabado)
+      // ðŸ·ï¸ Nome do grupo (produto acabado)
       const nomeGrupo =
         (typeof window.getNomeGrupo === 'function'
           ? window.getNomeGrupo(item.grupoId)
@@ -6622,10 +6605,10 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
       const valorTotalNFServicos =
         totaisSelecao?.porCategoria?.servico ?? valorNFServicosGrupo;
 
-      // 🔸 Caso não haja linhas de insumo na tabela, cria doc único do grupo
+      // ðŸ”¸ Caso nÃ£o haja linhas de insumo na tabela, cria doc Ãºnico do grupo
       if (!insumosGrupo.length) {
         console.warn(
-          `⚠️ Grupo ${item.grupoId} não tem linhas de insumos na tabela. Criando doc único do grupo.`
+          `âš ï¸ Grupo ${item.grupoId} nÃ£o tem linhas de insumos na tabela. Criando doc Ãºnico do grupo.`
         );
 
         const docGrupoFallback = {
@@ -6671,9 +6654,9 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
           numeroNotaFiscal: '',
           formaPagamento: '',
 
-          observacao: `Ignorado no envio à Omie | Ambiente: ${item.ambiente || '-'} | Grupo: ${
+          observacao: `Ignorado no envio Ã  Omie | Ambiente: ${item.ambiente || '-'} | Grupo: ${
             item.grupoId || '-'
-          } | Código: ${item.codigo || '-'}`,
+          } | CÃ³digo: ${item.codigo || '-'}`,
 
           meta: {
             origem: 'produtosFaturadosParaOCliente',
@@ -6702,12 +6685,12 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
           },
         };
 
-        console.log('📦 Documento (FALLBACK GRUPO) pronto para envio:', docGrupoFallback);
+        console.log('ðŸ“¦ Documento (FALLBACK GRUPO) pronto para envio:', docGrupoFallback);
         docs.push(docGrupoFallback);
         return;
       }
 
-      // 🔁 Para cada INSUMO da tabela, criamos um "produto" individual
+      // ðŸ” Para cada INSUMO da tabela, criamos um "produto" individual
       insumosGrupo.forEach((insumo) => {
         const valorTotalInsumo = parseNumeroBR(insumo.valorCustoFinal);
         const quantidadeInsumo = parseNumeroBR(insumo.quantidade) || 1;
@@ -6761,9 +6744,9 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
           formaPagamento: '',
 
           observacao:
-            `Ignorado no envio à Omie | Ambiente: ${item.ambiente || '-'} | Grupo: ${
+            `Ignorado no envio Ã  Omie | Ambiente: ${item.ambiente || '-'} | Grupo: ${
               item.grupoId || '-'
-            } | Código grupo: ${item.codigo || '-'} | ` +
+            } | CÃ³digo grupo: ${item.codigo || '-'} | ` +
             `Insumo: ${insumo.descricao || '-'} (linha ${insumo.ordem})`,
 
           meta: {
@@ -6808,12 +6791,12 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
           },
         };
 
-        console.log('📦 Documento (INSUMO → produto) pronto para envio:', doc);
+        console.log('ðŸ“¦ Documento (INSUMO â†’ produto) pronto para envio:', doc);
         docs.push(doc);
       });
     });
 
-    console.log('📦 docs prontos para envio a /api/produtos:', {
+    console.log('ðŸ“¦ docs prontos para envio a /api/produtos:', {
       totalDocs: docs.length,
       docs,
     });
@@ -6822,7 +6805,7 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
     const resultados = [];
 
     for (const doc of docs) {
-      console.log('🚚 Enviando insumo como produto para /api/produtos:', doc);
+      console.log('ðŸšš Enviando insumo como produto para /api/produtos:', doc);
 
       const res = await fetch(`${API_BASE_PRODUTOS}/api/produtos`, {
         method: 'POST',
@@ -6831,7 +6814,7 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
       });
 
       const j = await res.json();
-      console.log('📥 Resposta do POST /api/produtos:', j);
+      console.log('ðŸ“¥ Resposta do POST /api/produtos:', j);
 
       if (!j.ok) {
         throw new Error(j.error || 'Falha ao salvar itens ignorados (insumos)');
@@ -6842,11 +6825,11 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
     }
 
     console.log(
-      `✅ ${inseridos} produto(s)/insumo(s) criado(s) na "Aba de produtos faturados direto".`
+      `âœ… ${inseridos} produto(s)/insumo(s) criado(s) na "Aba de produtos faturados direto".`
     );
     alert(
-      `✅ ${inseridos} produto(s)/insumo(s) foram criados na aba de Produtos Faturados Direto.\n` +
-        `Eles não foram enviados para a Omie.`
+      `âœ… ${inseridos} produto(s)/insumo(s) foram criados na aba de Produtos Faturados Direto.\n` +
+        `Eles nÃ£o foram enviados para a Omie.`
     );
 
     if (typeof carregarProdutos === 'function') {
@@ -6855,7 +6838,7 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
 
     return resultados;
   } catch (err) {
-    console.error('❌ produtosFaturadosParaOCliente() erro:', err);
+    console.error('âŒ produtosFaturadosParaOCliente() erro:', err);
     alert('Erro ao salvar itens ignorados: ' + err.message);
     return null;
   }
@@ -6863,8 +6846,8 @@ window.produtosFaturadosParaOCliente = async function (ignorados) {
 
 
 function obterParcelasServicoCorretas(parcelasServico = null) {
-  console.group("🔎 [obterParcelasServicoCorretas] entrada");
-  console.log("parcelasServico parâmetro:", JSON.parse(JSON.stringify(parcelasServico || null)));
+  console.group("ðŸ”Ž [obterParcelasServicoCorretas] entrada");
+  console.log("parcelasServico parÃ¢metro:", JSON.parse(JSON.stringify(parcelasServico || null)));
   console.log("window.vvUltimosTotaisSelecaoItensOmie?.parcelasServico:", JSON.parse(JSON.stringify(window.vvUltimosTotaisSelecaoItensOmie?.parcelasServico || null)));
   console.log("window.vvParcelasServicoOmie:", JSON.parse(JSON.stringify(window.vvParcelasServicoOmie || null)));
   console.log("window.propostaEmEdicao?.camposFormulario?.parcelasServico:", JSON.parse(JSON.stringify(window.propostaEmEdicao?.camposFormulario?.parcelasServico || null)));
@@ -6875,33 +6858,33 @@ function obterParcelasServicoCorretas(parcelasServico = null) {
 
   if (Array.isArray(parcelasServico) && parcelasServico.length > 0) {
     parcelas = parcelasServico;
-    console.log("✅ Fonte usada: parâmetro parcelasServico");
+    console.log("âœ… Fonte usada: parÃ¢metro parcelasServico");
   } else if (
     Array.isArray(window.vvUltimosTotaisSelecaoItensOmie?.parcelasServico) &&
     window.vvUltimosTotaisSelecaoItensOmie.parcelasServico.length > 0
   ) {
     parcelas = window.vvUltimosTotaisSelecaoItensOmie.parcelasServico;
-    console.log("✅ Fonte usada: window.vvUltimosTotaisSelecaoItensOmie.parcelasServico");
+    console.log("âœ… Fonte usada: window.vvUltimosTotaisSelecaoItensOmie.parcelasServico");
   } else if (
     Array.isArray(window.vvParcelasServicoOmie) &&
     window.vvParcelasServicoOmie.length > 0
   ) {
     parcelas = window.vvParcelasServicoOmie;
-    console.log("✅ Fonte usada: window.vvParcelasServicoOmie");
+    console.log("âœ… Fonte usada: window.vvParcelasServicoOmie");
   } else if (
     Array.isArray(window.propostaEmEdicao?.camposFormulario?.parcelasServico) &&
     window.propostaEmEdicao.camposFormulario.parcelasServico.length > 0
   ) {
     parcelas = window.propostaEmEdicao.camposFormulario.parcelasServico;
-    console.log("✅ Fonte usada: window.propostaEmEdicao.camposFormulario.parcelasServico");
+    console.log("âœ… Fonte usada: window.propostaEmEdicao.camposFormulario.parcelasServico");
   } else if (
     Array.isArray(window.propostaAtual?.camposFormulario?.parcelasServico) &&
     window.propostaAtual.camposFormulario.parcelasServico.length > 0
   ) {
     parcelas = window.propostaAtual.camposFormulario.parcelasServico;
-    console.log("✅ Fonte usada: window.propostaAtual.camposFormulario.parcelasServico");
+    console.log("âœ… Fonte usada: window.propostaAtual.camposFormulario.parcelasServico");
   } else {
-    console.warn("⚠️ Nenhuma fonte de parcelas de serviço encontrada.");
+    console.warn("âš ï¸ Nenhuma fonte de parcelas de serviÃ§o encontrada.");
   }
 
   const parcelasNormalizadas = parcelas.map((p) => {
@@ -6915,7 +6898,7 @@ function obterParcelasServicoCorretas(parcelasServico = null) {
     };
   });
 
-  console.group("📦 [obterParcelasServicoCorretas] saída normalizada");
+  console.group("ðŸ“¦ [obterParcelasServicoCorretas] saÃ­da normalizada");
   console.log("parcelas originais:", JSON.parse(JSON.stringify(parcelas || [])));
   console.log("parcelas normalizadas:", JSON.parse(JSON.stringify(parcelasNormalizadas || [])));
   console.table(
@@ -6946,12 +6929,12 @@ const CETAPA_DEFAULT     = "20";
 const CCODCATEG_DEFAULT  = "1.01.99";
 const NCODCC_DEFAULT     = 10937506623;
 
-/* Código e nome do vendedor de serviços selecionado */
+/* CÃ³digo e nome do vendedor de serviÃ§os selecionado */
 let NCODVEND_SERVICO_DEFAULT = "";
 let NOME_VENDEDOR_SERVICO_DEFAULT = "";
 
 /* =========================================================
-   Base de vendedores de serviços
+   Base de vendedores de serviÃ§os
    ========================================================= */
 const VENDEDORES_SERVICOS_FERREIRA_ULHOA = {
   pagina: 1,
@@ -6968,7 +6951,7 @@ const VENDEDORES_SERVICOS_FERREIRA_ULHOA = {
     { codInt: "", codigo: 10922409053, comissao: 0, email: "marilena.ulhoa@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "MARILENA DE ALMEIDA ULHOA", visualiza_pedido: "N" },
     { codInt: "", codigo: 10922409055, comissao: 0, email: "projetos@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "ANA FLAVIA RODRIGUES PRATES", visualiza_pedido: "N" },
     { codInt: "", codigo: 10922409059, comissao: 1, email: "rafael.angelo@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "N", nome: "RAFAEL ANGELO ARAUJO DA SILVA", visualiza_pedido: "N" },
-    { codInt: "", codigo: 10985073333, comissao: 0, email: "lais.rabelo@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "S", nome: "LAIS MAGALHÃES RABELO", visualiza_pedido: "N" },
+    { codInt: "", codigo: 10985073333, comissao: 0, email: "lais.rabelo@ferreiraulhoa.com.br", fatura_pedido: "N", inativo: "S", nome: "LAIS MAGALHÃƒES RABELO", visualiza_pedido: "N" },
     { codInt: "", codigo: 11059840338, comissao: 0, email: "servidor@ferreiraulhoa.com.br", fatura_pedido: "S", inativo: "S", nome: "VANESSA ULHOA", visualiza_pedido: "N" },
     { codInt: "Enviado via API", codigo: 11060014882, comissao: 0, email: "", fatura_pedido: "N", inativo: "S", nome: "Enviado via API", visualiza_pedido: "N" },
     { codInt: "", codigo: 11158319843, comissao: 0, email: "", fatura_pedido: "N", inativo: "N", nome: "MAURO FERREIRA", visualiza_pedido: "N" },
@@ -6995,7 +6978,7 @@ const VENDEDORES_SERVICOS_FERREIRA_ULHOA = {
 };
 
 /* =========================================================
-   Normalização para comparar nomes
+   NormalizaÃ§Ã£o para comparar nomes
    ========================================================= */
 function normalizarTextoServico(valor) {
   return String(valor || "")
@@ -7006,7 +6989,7 @@ function normalizarTextoServico(valor) {
 }
 
 function definirCodigoVendedorServicoSelecionado() {
-  // ── base completa de vendedores de serviço (interna) ──────
+  // â”€â”€ base completa de vendedores de serviÃ§o (interna) â”€â”€â”€â”€â”€â”€
   const cadastroVendedoresServico = [
     { codigo: 10922409030, inativo: "S", nome: "Paulo Sergio Machado da Silva" },
     { codigo: 10922409032, inativo: "S", nome: "DOUGLAS VITOR DA SILVA" },
@@ -7017,7 +7000,7 @@ function definirCodigoVendedorServicoSelecionado() {
     { codigo: 10922409053, inativo: "N", nome: "MARILENA DE ALMEIDA ULHOA" },
     { codigo: 10922409055, inativo: "N", nome: "ANA FLAVIA RODRIGUES PRATES" },
     { codigo: 10922409059, inativo: "N", nome: "RAFAEL ANGELO ARAUJO DA SILVA" },
-    { codigo: 10985073333, inativo: "S", nome: "LAIS MAGALHÃES RABELO" },
+    { codigo: 10985073333, inativo: "S", nome: "LAIS MAGALHÃƒES RABELO" },
     { codigo: 11059840338, inativo: "S", nome: "VANESSA ULHOA" },
     { codigo: 11060014882, inativo: "S", nome: "Enviado via API" },
     { codigo: 11158319843, inativo: "N", nome: "MAURO FERREIRA" },
@@ -7042,13 +7025,13 @@ function definirCodigoVendedorServicoSelecionado() {
     { codigo: 11158376723, inativo: "N", nome: "SEBASTIAO DOS REIS DE MATOS" }
   ];
 
-  // ── aliases: nome do select → nome na base ────────────────
+  // â”€â”€ aliases: nome do select â†’ nome na base â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const aliases = {
     "MAURO LUCIO":          "MAURO FERREIRA",
-    "LAIS MAGALHAES RABELO": "LAIS MAGALHÃES RABELO"
+    "LAIS MAGALHAES RABELO": "LAIS MAGALHÃƒES RABELO"
   };
 
-  // ── normaliza texto para comparação ──────────────────────
+  // â”€â”€ normaliza texto para comparaÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function norm(s) {
     return String(s || "")
       .trim()
@@ -7057,11 +7040,11 @@ function definirCodigoVendedorServicoSelecionado() {
       .replace(/[\u0300-\u036f]/g, "");
   }
 
-  // ── lê nome selecionado no select ────────────────────────
+  // â”€â”€ lÃª nome selecionado no select â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const selectVendedor = document.getElementById("vendedorResponsavel");
 
   if (!selectVendedor) {
-    console.warn("⚠️ [vendedor serviço] #vendedorResponsavel não encontrado.");
+    console.warn("âš ï¸ [vendedor serviÃ§o] #vendedorResponsavel nÃ£o encontrado.");
     NCODVEND_SERVICO_DEFAULT = "";
     NOME_VENDEDOR_SERVICO_DEFAULT = "";
     return;
@@ -7077,22 +7060,22 @@ function definirCodigoVendedorServicoSelecionado() {
   NOME_VENDEDOR_SERVICO_DEFAULT = nomeSelecionado;
 
   if (!nomeSelecionado) {
-    console.warn("⚠️ [vendedor serviço] Nenhum vendedor selecionado.");
+    console.warn("âš ï¸ [vendedor serviÃ§o] Nenhum vendedor selecionado.");
     NCODVEND_SERVICO_DEFAULT = "";
     return;
   }
 
-  // ── resolve alias se necessário ──────────────────────────
+  // â”€â”€ resolve alias se necessÃ¡rio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const nomeNorm      = norm(nomeSelecionado);
   const nomeResolvido = aliases[nomeNorm] || nomeSelecionado;
 
-  // ── busca na base interna ────────────────────────────────
+  // â”€â”€ busca na base interna â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const encontrados = cadastroVendedoresServico.filter(
     v => norm(v.nome) === norm(nomeResolvido)
   );
 
   if (!encontrados.length) {
-    console.warn("⚠️ [vendedor serviço] Não encontrado na base:", {
+    console.warn("âš ï¸ [vendedor serviÃ§o] NÃ£o encontrado na base:", {
       nomeSelecionado,
       nomeResolvido
     });
@@ -7107,7 +7090,7 @@ function definirCodigoVendedorServicoSelecionado() {
 
   NCODVEND_SERVICO_DEFAULT = Number(vendedor.codigo) || 0;
 
-  console.log("✅ [vendedor serviço] Resolvido:", {
+  console.log("âœ… [vendedor serviÃ§o] Resolvido:", {
     nomeSelecionado,
     nomeResolvido,
     codigo: NCODVEND_SERVICO_DEFAULT,
@@ -7132,7 +7115,7 @@ function toBR(valor) {
 
   const v = String(valor).trim();
 
-  // já está em BR
+  // jÃ¡ estÃ¡ em BR
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) {
     return v;
   }
@@ -7150,7 +7133,7 @@ function toBR(valor) {
     return `${d}/${m}/${y}`;
   }
 
-  // fallback — usa UTC para evitar deslocamento de fuso horário
+  // fallback â€” usa UTC para evitar deslocamento de fuso horÃ¡rio
   const d = new Date(v);
   if (isNaN(d)) return "";
   const dd = String(d.getUTCDate()).padStart(2, "0");
@@ -7163,7 +7146,7 @@ function toISO(valor) {
 
   const v = String(valor).trim();
 
-  // já está em ISO puro
+  // jÃ¡ estÃ¡ em ISO puro
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
     return v;
   }
@@ -7181,7 +7164,7 @@ function toISO(valor) {
     return `${y}-${m}-${d}`;
   }
 
-  // fallback — usa UTC para evitar deslocamento de fuso horário
+  // fallback â€” usa UTC para evitar deslocamento de fuso horÃ¡rio
   const d = new Date(v);
   if (isNaN(d)) return "";
   const y = d.getUTCFullYear();
@@ -7194,7 +7177,7 @@ function vv_fmtBRL(n){
   return (Number(n)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 }
 
-/* ====== AJUSTE: BUSCA DE CÓDIGO DO CLIENTE PELO NOVO RETORNO DA API ====== */
+/* ====== AJUSTE: BUSCA DE CÃ“DIGO DO CLIENTE PELO NOVO RETORNO DA API ====== */
 /*
   Esperado da API /clientes:
   {
@@ -7209,7 +7192,7 @@ function vv_fmtBRL(n){
     ]
   }
 
-  Em algum lugar do código você deve fazer algo como:
+  Em algum lugar do cÃ³digo vocÃª deve fazer algo como:
     const resp = await fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes");
     const data = await resp.json();
     window.listaClientesServico = data.clientes || [];
@@ -7267,7 +7250,7 @@ async function vvCarregarClientesServicoOmie({ force = false } = {}) {
 window.vvCarregarClientesServicoOmie = vvCarregarClientesServicoOmie;
 
 /**
- * Retorna o codigo_cliente_omie (número) a partir da razão social / nome fantasia.
+ * Retorna o codigo_cliente_omie (nÃºmero) a partir da razÃ£o social / nome fantasia.
  * Usada em ctxHeaderOS -> getCodigoClientePorRazao(razao)
  */
 function getCodigoClientePorRazao(razaoBusca) {
@@ -7275,7 +7258,7 @@ function getCodigoClientePorRazao(razaoBusca) {
 
   const lista = window.listaClientesServico;
   if (!Array.isArray(lista) || !lista.length) {
-    console.warn("⚠️ listaClientesServico ainda não carregada.");
+    console.warn("âš ï¸ listaClientesServico ainda nÃ£o carregada.");
     return "";
   }
 
@@ -7286,7 +7269,7 @@ function getCodigoClientePorRazao(razaoBusca) {
     (c) => normalizarTexto(c.razao_social || c.nome_fantasia || c.nome) === alvo
   );
 
-  // 2) Fallback: contém
+  // 2) Fallback: contÃ©m
   if (!cliente) {
     cliente = lista.find(
       (c) => normalizarTexto(c.razao_social || c.nome_fantasia || c.nome).includes(alvo)
@@ -7294,13 +7277,13 @@ function getCodigoClientePorRazao(razaoBusca) {
   }
 
   if (!cliente) {
-    console.warn("⚠️ Cliente não encontrado na lista para:", razaoBusca);
+    console.warn("âš ï¸ Cliente nÃ£o encontrado na lista para:", razaoBusca);
     return "";
   }
 
   const codigo = cliente.codigo_cliente_omie;
   if (!codigo) {
-    console.warn("⚠️ Cliente encontrado mas sem codigo_cliente_omie:", cliente);
+    console.warn("âš ï¸ Cliente encontrado mas sem codigo_cliente_omie:", cliente);
     return "";
   }
 
@@ -7308,7 +7291,7 @@ function getCodigoClientePorRazao(razaoBusca) {
 }
 
 /* ================== CONTEXTOS DA TELA ================== */
-/* Caso você tenha inputs dedicados (inpCodInt, inpData, inpCli, inpParc, inpAdicNF),
+/* Caso vocÃª tenha inputs dedicados (inpCodInt, inpData, inpCli, inpParc, inpAdicNF),
    mapeie seus IDs aqui para captar valores com prioridade. */
 function gerarCodigoOs7() {
   const now = new Date();
@@ -7319,28 +7302,28 @@ function gerarCodigoOs7() {
     now.getSeconds() * 1000 +
     now.getMilliseconds();
 
-  // "sal" aleatório para reduzir colisão
-  const random = Math.floor(Math.random() * 36); // 0–35
+  // "sal" aleatÃ³rio para reduzir colisÃ£o
+  const random = Math.floor(Math.random() * 36); // 0â€“35
 
-  // base36 -> 0-9 + a-z, em maiúsculo
+  // base36 -> 0-9 + a-z, em maiÃºsculo
   const raw = (baseTime.toString(36) + random.toString(36)).toUpperCase();
 
-  // garante no máximo 7 caracteres (pegando o final, mais variável)
+  // garante no mÃ¡ximo 7 caracteres (pegando o final, mais variÃ¡vel)
   return raw.slice(-7);
 }
 
 function ctxFormOS() {
   const byId = (id) => document.getElementById(id);
 
-  // gera código único se não houver valor digitado
+  // gera cÃ³digo Ãºnico se nÃ£o houver valor digitado
   let codInt = byId("os-codint")?.value?.trim();
   if (!codInt) {
     codInt = gerarCodigoOs7();
     const inputCodInt = byId("os-codint");
-    if (inputCodInt) inputCodInt.value = codInt; // opcional: já mostra na tela
+    if (inputCodInt) inputCodInt.value = codInt; // opcional: jÃ¡ mostra na tela
   }
 
-  const dataBr  = byId("os-data")?.value?.trim();       // se já vier em DD/MM/AAAA
+  const dataBr  = byId("os-data")?.value?.trim();       // se jÃ¡ vier em DD/MM/AAAA
   const dataIso = byId("os-data-iso")?.value?.trim();   // se vier ISO
   const codCli  = byId("os-codcli")?.value?.trim();     // ex: inpCli.value
   const qtParc  = byId("os-qtd-parc")?.value?.trim();   // ex: inpParc.value
@@ -7368,7 +7351,7 @@ function ctxParcelasOS(parcelasServico = null) {
   const dDtPrevisaoBR = toBR(dataPrevisaoOmie);
   const dDtPrevisaoISO = toISO(dataPrevisaoOmie);
 
-  console.group("🧮 [ctxParcelasOS AJUSTADO]");
+  console.group("ðŸ§® [ctxParcelasOS AJUSTADO]");
   console.table(
     parcelasCorretas.map((p, i) => ({
       index: i,
@@ -7564,10 +7547,10 @@ function montarPayloadOS({
 
   const nValUnitFinal = Number(valorServicos);
   if (!(nValUnitFinal > 0)) {
-    throw new Error("Valor de Serviços inválido ou zero.");
+    throw new Error("Valor de ServiÃ§os invÃ¡lido ou zero.");
   }
 
-  // ── resolve vendedor ──────────────────────────────────────
+  // â”€â”€ resolve vendedor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const cadastroVendedoresServico = [
     { codigo: 10922409030, inativo: "S", nome: "Paulo Sergio Machado da Silva" },
     { codigo: 10922409032, inativo: "S", nome: "DOUGLAS VITOR DA SILVA" },
@@ -7578,7 +7561,7 @@ function montarPayloadOS({
     { codigo: 10922409053, inativo: "N", nome: "MARILENA DE ALMEIDA ULHOA" },
     { codigo: 10922409055, inativo: "N", nome: "ANA FLAVIA RODRIGUES PRATES" },
     { codigo: 10922409059, inativo: "N", nome: "RAFAEL ANGELO ARAUJO DA SILVA" },
-    { codigo: 10985073333, inativo: "S", nome: "LAIS MAGALHÃES RABELO" },
+    { codigo: 10985073333, inativo: "S", nome: "LAIS MAGALHÃƒES RABELO" },
     { codigo: 11059840338, inativo: "S", nome: "VANESSA ULHOA" },
     { codigo: 11060014882, inativo: "S", nome: "Enviado via API" },
     { codigo: 11158319843, inativo: "N", nome: "MAURO FERREIRA" },
@@ -7605,7 +7588,7 @@ function montarPayloadOS({
 
   const aliasesVendedorServico = {
     "MAURO LUCIO":           "MAURO FERREIRA",
-    "LAIS MAGALHAES RABELO": "LAIS MAGALHÃES RABELO"
+    "LAIS MAGALHAES RABELO": "LAIS MAGALHÃƒES RABELO"
   };
 
   const normV = (s) => String(s || "")
@@ -7635,13 +7618,13 @@ function montarPayloadOS({
 
   const codigoVendedorServico = resolverCodVend(nomeVendedorTela);
 
-  console.log("[montarPayloadOS] vendedor serviço:", {
+  console.log("[montarPayloadOS] vendedor serviÃ§o:", {
     nomeVendedorTela,
     codigoVendedorServico
   });
 
-  // ── Cabecalho ─────────────────────────────────────────────
-// ── Cabecalho ─────────────────────────────────────────────
+  // â”€â”€ Cabecalho â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ Cabecalho â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const Cabecalho = {
     cCodIntOS:   codigoIntegracaoOS,
     cCodParc:    String(cCodParc_form || "999").trim(),
@@ -7652,12 +7635,12 @@ function montarPayloadOS({
 
   if (nCodCli) Cabecalho.nCodCli = Number(nCodCli);
 
-  // ✅ nCodVend no Cabecalho
+  // âœ… nCodVend no Cabecalho
   if (codigoVendedorServico > 0) {
     Cabecalho.nCodVend = codigoVendedorServico;
   }
 
-  // ── InformacoesAdicionais ─────────────────────────────────
+  // â”€â”€ InformacoesAdicionais â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const InformacoesAdicionais = {
     cCodCateg:    CCODCATEG_DEFAULT,
     cDadosAdicNF: String(cDadosAdicNF_form || "").trim(),
@@ -7673,8 +7656,8 @@ function montarPayloadOS({
   if (codigoProjetoNumero > 0) {
     InformacoesAdicionais.nCodProj = codigoProjetoNumero;
   }
-  // ← nCodVend não entra aqui
-  // ── ServicosPrestados ─────────────────────────────────────
+  // â† nCodVend nÃ£o entra aqui
+  // â”€â”€ ServicosPrestados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const ServicosPrestados = [
     {
       cCodServLC116: CCOD_LC116_DEFAULT,
@@ -7698,7 +7681,7 @@ function montarPayloadOS({
     }
   ];
 
-  // ── Parcelas da OS ────────────────────────────────────────
+  // â”€â”€ Parcelas da OS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const parcelasOsValidas = (parcelasServico || []).filter(p => Number(p?.valor || 0) > 0);
   const totalParcelasOs = parcelasOsValidas.reduce((s, p) => s + Number(p.valor || 0), 0);
 
@@ -7734,7 +7717,7 @@ function montarPayloadOS({
 
   window.__vvUltimoPayloadOSOmie = JSON.parse(JSON.stringify(payload));
 
-  console.group("📦 [montarPayloadOS] FINAL");
+  console.group("ðŸ“¦ [montarPayloadOS] FINAL");
   console.log("nomeVendedorTela:", nomeVendedorTela);
   console.log("codigoVendedorServico:", codigoVendedorServico);
   console.log("Cabecalho:", JSON.parse(JSON.stringify(Cabecalho)));
@@ -7754,9 +7737,9 @@ async function enviarOSServico({
 }) {
   try {
     if (!(Number(valorServicos) > 0)) {
-      const msg = "Valor de Serviços inválido ou zerado.";
+      const msg = "Valor de ServiÃ§os invÃ¡lido ou zerado.";
       if (typeof mostrarPopupCustomizado === "function") {
-        mostrarPopupCustomizado("❌ Erro ao enviar Serviços", msg, "error");
+        mostrarPopupCustomizado("âŒ Erro ao enviar ServiÃ§os", msg, "error");
       } else {
         alert(msg);
       }
@@ -7790,7 +7773,7 @@ async function enviarOSServico({
       return { ok: false, error: msg };
     }
 
-    console.group("🧾 [SERVIÇOS] PARCELAS ANTES DO ENVIO");
+    console.group("ðŸ§¾ [SERVIÃ‡OS] PARCELAS ANTES DO ENVIO");
     console.log("endpoint:", endpoint);
     console.log("valorServicos:", valorServicos);
     console.log("numeroPedidoGarantido:", numeroPedidoGarantido);
@@ -7801,7 +7784,7 @@ async function enviarOSServico({
     console.log("nQtdeParc:", nQtdeParc);
     console.log("dDtPrevisaoBR:", dDtPrevisaoBR);
     console.log("dDtPrevisaoISO:", dDtPrevisaoISO);
-    console.log("parcelasServico parâmetro:", JSON.parse(JSON.stringify(parcelasServico || null)));
+    console.log("parcelasServico parÃ¢metro:", JSON.parse(JSON.stringify(parcelasServico || null)));
     console.log("parcelasServicoCorretas:", JSON.parse(JSON.stringify(parcelasServicoCorretas || [])));
     console.table(
       (parcelasServicoCorretas || []).map((p, i) => ({
@@ -7828,9 +7811,9 @@ async function enviarOSServico({
       parcelasServico: parcelasServicoCorretas
     });
 
-    console.group("🚀 [SERVIÇOS] REQUEST FINAL PARA OMIE");
+    console.group("ðŸš€ [SERVIÃ‡OS] REQUEST FINAL PARA OMIE");
     console.log("URL:", endpoint);
-    console.log("Método:", "POST");
+    console.log("MÃ©todo:", "POST");
     console.log("Payload objeto:", JSON.parse(JSON.stringify(payload)));
     console.log("Payload JSON stringify:", JSON.stringify(payload, null, 2));
     console.log("Cabecalho enviado:", JSON.parse(JSON.stringify(payload?.Cabecalho || {})));
@@ -7846,7 +7829,7 @@ async function enviarOSServico({
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    console.group("📡 [SERVIÇOS] FETCH");
+    console.group("ðŸ“¡ [SERVIÃ‡OS] FETCH");
     console.log("headers:", JSON.parse(JSON.stringify(headers)));
     console.log("body cru:", JSON.stringify(payload));
     console.groupEnd();
@@ -7866,7 +7849,7 @@ async function enviarOSServico({
       data = { ok: resp.ok, raw };
     }
 
-    console.group("⬅️ [SERVIÇOS] RESPOSTA OMIE");
+    console.group("â¬…ï¸ [SERVIÃ‡OS] RESPOSTA OMIE");
     console.log("status HTTP:", resp.status);
     console.log("ok HTTP:", resp.ok);
     console.log("resposta parseada:", data);
@@ -7881,18 +7864,18 @@ async function enviarOSServico({
       const dicasHtml = [
         "- Confirme os campos exigidos pelo server (cCodParc, cEtapa, nQtdeParc etc.).",
         "- Garanta que dDtPrevisao esteja no formato aceito (DD/MM/AAAA se o server valida assim).",
-        "- Verifique se nValUnit é número (sem vírgula).",
+        "- Verifique se nValUnit Ã© nÃºmero (sem vÃ­rgula).",
         "- Se exigir Authorization, valide o token."
       ].join("<br>");
 
       if (typeof mostrarPopupCustomizado === "function") {
         mostrarPopupCustomizado(
-          "❌ Erro ao enviar OS de Serviços",
+          "âŒ Erro ao enviar OS de ServiÃ§os",
           `Status: ${resp.status}<br>Motivo: ${motivo}<br><br>${dicasHtml}`,
           "error"
         );
       } else {
-        alert(`Erro ao enviar OS de Serviços:\n${motivo}`);
+        alert(`Erro ao enviar OS de ServiÃ§os:\n${motivo}`);
       }
 
       return { ok: false, error: motivo, data };
@@ -7900,32 +7883,32 @@ async function enviarOSServico({
 
     if (typeof mostrarPopupCustomizado === "function") {
       mostrarPopupCustomizado(
-        "✅ OS de Serviços enviada",
+        "âœ… OS de ServiÃ§os enviada",
         `OS criada com sucesso.<br>Valor: ${vv_fmtBRL(valorServicos)}.`,
         "success"
       );
     } else {
-      alert("✅ OS de Serviços enviada com sucesso!");
+      alert("âœ… OS de ServiÃ§os enviada com sucesso!");
     }
 
     return { ok: true, status: resp.status, data };
   } catch (err) {
-    console.error("❌ enviarOSServico erro:", err);
+    console.error("âŒ enviarOSServico erro:", err);
     const msg = err?.message || String(err);
 
     if (typeof mostrarPopupCustomizado === "function") {
-      mostrarPopupCustomizado("❌ Erro ao enviar Serviços", msg, "error");
+      mostrarPopupCustomizado("âŒ Erro ao enviar ServiÃ§os", msg, "error");
     } else {
-      alert("Erro ao enviar Serviços:\n" + msg);
+      alert("Erro ao enviar ServiÃ§os:\n" + msg);
     }
 
     return { ok: false, error: msg };
   }
 }
 
-// ── Popup visual de retorno (sucesso / erro) ─────────────────────
-// Cria o overlay uma única vez (se ainda não existir na página) e
-// reaproveita nas próximas chamadas.
+// â”€â”€ Popup visual de retorno (sucesso / erro) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Cria o overlay uma Ãºnica vez (se ainda nÃ£o existir na pÃ¡gina) e
+// reaproveita nas prÃ³ximas chamadas.
 function mostrarPopupSync(texto, tipo = "sucesso") {
   let overlay = document.getElementById("sync-popup-overlay");
 
@@ -8012,15 +7995,15 @@ async function sincronizarPDVparaKommo() {
   const idProposta = new URLSearchParams(window.location.search).get("id");
   preencherNumeroPedidoKommo()
   if (!idProposta) {
-    console.warn("[SYNC] ID da proposta não encontrado na URL.");
+    console.warn("[SYNC] ID da proposta nÃ£o encontrado na URL.");
     return;
   }
 
-  // ── Parser BRL seguro ─────────────────────────────
+  // â”€â”€ Parser BRL seguro â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function parseBRL(texto) {
     if (!texto) return 0;
     const limpo = texto
-      .replace(/ /g, " ")
+      .replace(/Â /g, " ")
       .replace(/R\$\s*/g, "")
       .replace(/\./g, "")
       .replace(",", ".")
@@ -8031,17 +8014,17 @@ async function sincronizarPDVparaKommo() {
 
   const campos = {};
 
-  // ── Nome / Razão Social ───────────────────────────
+  // â”€â”€ Nome / RazÃ£o Social â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const nomeRazaoSocial = document.querySelector(".razaoSocial")?.value?.trim()
     || document.querySelector(".razaoSocial")?.getAttribute("data-valor-original")?.trim();
   if (nomeRazaoSocial) campos.kommo_nome_razao_social = nomeRazaoSocial;
 
-  // ── Nº do Pedido ──────────────────────────────────
+  // â”€â”€ NÂº do Pedido â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   let numeroPedido = document.getElementById("numeroPedido")?.value?.trim()
     || document.getElementById("numeroPedido")?.getAttribute("data-valor-original")?.trim();
 
   if (!numeroPedido) {
-    console.log("[SYNC] numeroPedido vazio, buscando próximo número no contador...");
+    console.log("[SYNC] numeroPedido vazio, buscando prÃ³ximo nÃºmero no contador...");
     try {
       const contadorRes = await fetch("https://contator-ulhoa-3d28d89efa68.herokuapp.com/pedido");
       if (contadorRes.ok) {
@@ -8063,19 +8046,19 @@ async function sincronizarPDVparaKommo() {
 
   if (numeroPedido) campos.kommo_numero_pedido = numeroPedido;
 
-  // ── Número Orçamento ──────────────────────────────
+  // â”€â”€ NÃºmero OrÃ§amento â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const numeroOrcamento = document.getElementById("numeroOrcamento")?.value?.trim()
     || document.getElementById("numeroOrcamento")?.getAttribute("data-valor-original")?.trim();
   if (numeroOrcamento) campos.kommo_numero_orcamento = numeroOrcamento;
 
-  // ── Valor Total da Venda ──────────────────────────
+  // â”€â”€ Valor Total da Venda â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const valorFinalTotalEl    = document.getElementById("valorFinalTotal");
   const valorFinalTotalTexto = (valorFinalTotalEl?.textContent || valorFinalTotalEl?.innerText || "")
-    .replace(/ /g, " ").trim();
+    .replace(/Â /g, " ").trim();
   const valorFinalTotal = parseBRL(valorFinalTotalTexto);
   if (valorFinalTotal > 0) campos.kommo_valor_venda = valorFinalTotal;
 
-  // ── Endereço da obra ──────────────────────────────
+  // â”€â”€ EndereÃ§o da obra â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const rua         = document.getElementById("rua")?.value?.trim();
   const numero      = document.getElementById("numero")?.value?.trim();
   const complemento = document.getElementById("complemento")?.value?.trim();
@@ -8088,7 +8071,7 @@ async function sincronizarPDVparaKommo() {
   if (bairro)      campos.kommo_bairro       = bairro;
   if (cidade)      campos.kommo_cidade       = cidade;
 
-  // ── Endereço de cobrança ──────────────────────────
+  // â”€â”€ EndereÃ§o de cobranÃ§a â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const ruaObra         = document.getElementById("ruaObra")?.value?.trim();
   const numeroObra      = document.getElementById("numeroObra")?.value?.trim();
   const complementoObra = document.getElementById("complementoObra")?.value?.trim();
@@ -8101,7 +8084,7 @@ async function sincronizarPDVparaKommo() {
   if (bairroObra)      campos.kommo_bairro_cobranca       = bairroObra;
   if (cidadeObra)      campos.kommo_cidade_cobranca       = cidadeObra;
 
-  // ── Financeiro ────────────────────────────────────
+  // â”€â”€ Financeiro â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const valorNFProduto = parseBRL(document.getElementById("vv-cat-produto")?.textContent || "0");
   const valorNFServico = parseBRL(document.getElementById("vv-cat-servico")?.textContent || "0");
   const valorFatDireto = parseBRL(document.getElementById("vv-cat-vidro")?.textContent   || "0");
@@ -8110,14 +8093,14 @@ async function sincronizarPDVparaKommo() {
   campos.kommo_valor_nf_servico = valorNFServico || 0;
   campos.kommo_valor_fat_direto = valorFatDireto || 0;
 
-  // ── Vencimento Entrada = data da primeira parcela ───
+  // â”€â”€ Vencimento Entrada = data da primeira parcela â”€â”€â”€
   const todasDatasParcelas = [...document.querySelectorAll("#listaParcelas .data-parcela")]
     .map(el => el.value?.trim())
     .filter(Boolean);
   const primeiraDataParcela = todasDatasParcelas[0] || null;
   if (primeiraDataParcela) campos.kommo_vencimento_entrada = primeiraDataParcela;
 
-  // ── Datas ─────────────────────────────────────────
+  // â”€â”€ Datas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const dataPedidoEnviado   = document.getElementById("dataPedidoEnviadoCliente")?.value;
   const dataPedidoAssinado  = document.getElementById("dataPedidoAssinado")?.value;
   const dataMedicao         = document.getElementById("dataMedicaoRealizada")?.value;
@@ -8138,7 +8121,7 @@ async function sincronizarPDVparaKommo() {
     return;
   }
 
-  console.group("📤 [SYNC] PDV → Kommo");
+  console.group("ðŸ“¤ [SYNC] PDV â†’ Kommo");
   console.log("Proposta ID:", idProposta);
   console.log("Campos enviados:", campos);
   console.groupEnd();
@@ -8157,30 +8140,30 @@ async function sincronizarPDVparaKommo() {
     console.log("lead_atual completo:", resultado.lead_atual);
 
     if (resposta.ok) {
-      // ── Loga estado real retornado pelo servidor ──
+      // â”€â”€ Loga estado real retornado pelo servidor â”€â”€
       const lead = resultado.lead_atual;
       const cf   = lead?.custom_fields_values ?? [];
 
       const getField = (id) => cf.find(f => f.field_id === id)?.values?.[0]?.value ?? null;
 
-      console.group("✅ [SYNC] Sucesso, estado atual na Kommo");
+      console.group("âœ… [SYNC] Sucesso, estado atual na Kommo");
       console.log("Lead ID:            ", resultado.lead_id);
       console.log("Lead nome:          ", resultado.lead_nome);
       console.log("Campos atualizados: ", resultado.campos_atualizados);
       console.log("Valor venda (price):", lead?.price ?? null);
       console.log("NF Produto:         ", getField(1790646));
-      console.log("NF Serviço:         ", getField(1790644));
+      console.log("NF ServiÃ§o:         ", getField(1790644));
       console.log("Fat. Direto:        ", getField(1790986));
-      console.log("Nº Pedido:          ", getField(1716834));
-      console.log("Nº Orçamento:       ", getField(1710738));
-      console.log("Nome/Razão Social:  ", getField(1791998));
+      console.log("NÂº Pedido:          ", getField(1716834));
+      console.log("NÂº OrÃ§amento:       ", getField(1710738));
+      console.log("Nome/RazÃ£o Social:  ", getField(1791998));
       console.log("Rua obra:           ", getField(1725250));
-      console.log("Número obra:        ", getField(1725254));
+      console.log("NÃºmero obra:        ", getField(1725254));
       console.log("Bairro obra:        ", getField(1725256));
       console.log("Cidade obra:        ", getField(1725260));
       console.log("Vencimento entrada: ", getField(1723710));
       if (resultado.nao_mapeados?.length) {
-        console.warn("Campos não mapeados:", resultado.nao_mapeados);
+        console.warn("Campos nÃ£o mapeados:", resultado.nao_mapeados);
       }
       console.groupEnd();
 
@@ -8189,7 +8172,7 @@ async function sincronizarPDVparaKommo() {
         "sucesso"
       );
     } else {
-      console.group("❌ [SYNC] Erro do servidor");
+      console.group("âŒ [SYNC] Erro do servidor");
       console.error("HTTP status:", resposta.status);
       console.error("Erro:", resultado?.error);
       console.error("Detalhes:", resultado?.details);
@@ -8205,8 +8188,8 @@ async function sincronizarPDVparaKommo() {
     return resultado;
 
   } catch (err) {
-    console.error("[SYNC] Erro de conexão:", err.message);
-    mostrarPopupSync("Erro de conexão ao sincronizar com a Kommo. Verifique sua internet e tente novamente.", "erro");
+    console.error("[SYNC] Erro de conexÃ£o:", err.message);
+    mostrarPopupSync("Erro de conexÃ£o ao sincronizar com a Kommo. Verifique sua internet e tente novamente.", "erro");
   }
 }
 
@@ -8214,37 +8197,37 @@ async function preencherNumeroPedidoKommo() {
   const idProposta = new URLSearchParams(window.location.search).get("id");
 
   if (!idProposta) {
-    console.warn("[PEDIDO] ID da proposta não encontrado na URL.");
+    console.warn("[PEDIDO] ID da proposta nÃ£o encontrado na URL.");
     return;
   }
 
-  // 1. Verifica se o campo já está preenchido
+  // 1. Verifica se o campo jÃ¡ estÃ¡ preenchido
   const inputPedido = document.getElementById("numeroPedido");
   const valorAtual  = inputPedido?.value?.trim();
 
   if (valorAtual) {
-    console.log("[PEDIDO] Campo já preenchido:", valorAtual, "— nenhuma ação necessária.");
+    console.log("[PEDIDO] Campo jÃ¡ preenchido:", valorAtual, "â€” nenhuma aÃ§Ã£o necessÃ¡ria.");
     return;
   }
 
   try {
-    // 2. Busca próximo número
+    // 2. Busca prÃ³ximo nÃºmero
     const contadorRes = await fetch("https://contator-ulhoa-3d28d89efa68.herokuapp.com/pedido");
     if (!contadorRes.ok) throw new Error("Erro ao buscar contador: " + contadorRes.status);
 
     const contadorData = await contadorRes.json();
-    console.group("📊 [PEDIDO] Resposta do contador");
+    console.group("ðŸ“Š [PEDIDO] Resposta do contador");
     console.log("Dados completos:", contadorData);
     console.groupEnd();
 
     const numeroPedido = String(contadorData.pedido_proximo ?? contadorData.numero ?? contadorData.pedido ?? "");
 
     if (!numeroPedido) {
-      console.warn("[PEDIDO] Número não encontrado na resposta:", contadorData);
+      console.warn("[PEDIDO] NÃºmero nÃ£o encontrado na resposta:", contadorData);
       return;
     }
 
-    console.log("[PEDIDO] Próximo número:", numeroPedido);
+    console.log("[PEDIDO] PrÃ³ximo nÃºmero:", numeroPedido);
 
     // 3. Preenche o campo na tela
     if (inputPedido) inputPedido.value = numeroPedido;
@@ -8266,20 +8249,20 @@ async function preencherNumeroPedidoKommo() {
       const cf   = lead?.custom_fields_values ?? [];
       const getField = (id) => cf.find(f => f.field_id === id)?.values?.[0]?.value ?? null;
 
-      console.group("✅ [PEDIDO] Sucesso — estado atual na Kommo");
+      console.group("âœ… [PEDIDO] Sucesso â€” estado atual na Kommo");
       console.log("Lead ID:          ", resultado.lead_id);
       console.log("Lead nome:        ", resultado.lead_nome);
       console.log("Campos atualizados:", resultado.campos_atualizados);
-      console.log("Nº Pedido salvo:  ", getField(1716834));
-      console.log("Nº Orçamento:     ", getField(1710738));
+      console.log("NÂº Pedido salvo:  ", getField(1716834));
+      console.log("NÂº OrÃ§amento:     ", getField(1710738));
       console.log("ID PDV:           ", getField(1793228));
       console.log("Lead atual completo:", lead);
       if (resultado.nao_mapeados?.length) {
-        console.warn("Campos não mapeados:", resultado.nao_mapeados);
+        console.warn("Campos nÃ£o mapeados:", resultado.nao_mapeados);
       }
       console.groupEnd();
     } else {
-      console.group("❌ [PEDIDO] Erro do servidor");
+      console.group("âŒ [PEDIDO] Erro do servidor");
       console.error("HTTP status:", resposta.status);
       console.error("Erro:", resultado?.error);
       console.error("Detalhes:", resultado?.details);
@@ -8290,7 +8273,7 @@ async function preencherNumeroPedidoKommo() {
     return resultado;
 
   } catch (err) {
-    console.error("[PEDIDO] ❌ Erro de conexão:", err.message);
+    console.error("[PEDIDO] âŒ Erro de conexÃ£o:", err.message);
   }
 }
 
