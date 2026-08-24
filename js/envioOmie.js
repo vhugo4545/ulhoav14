@@ -7747,15 +7747,11 @@ function montarPayloadOS({
 
   // ── Parcelas da OS ────────────────────────────────────────
   const parcelasOsValidas = (parcelasServico || []).filter(p => Number(p?.valor || 0) > 0);
-  const totalParcelasOs = parcelasOsValidas.reduce((s, p) => s + Number(p.valor || 0), 0);
 
   const Parcelas = parcelasOsValidas.map((p) => {
     const parc = {
-      dDtVenc:   String(p.vencimento || p.previsao || p.data || "").trim(),
-      nValParc:  Number((Number(p.valor || 0)).toFixed(2)),
-      nPercParc: totalParcelasOs > 0
-        ? Number(((Number(p.valor || 0) / totalParcelasOs) * 100).toFixed(2))
-        : 0
+      dDtVenc:  String(p.vencimento || p.previsao || p.data || "").trim(),
+      nValParc: Number((Number(p.valor || 0)).toFixed(2))
     };
     const meio = String(p.tipo_monetario || "").trim();
     if (meio) parc.meio_pagamento = meio;
