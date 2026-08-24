@@ -28,12 +28,12 @@
     </button>
 <br>
 
-    <button id="btn-solicitar" class="sidebar-button" onclick="marcarPendenteAprovacao()">
+    <button id="btn-solicitar" class="sidebar-button" onclick="irParaPagina('solicitarAprovacao.html')">
       <span class="material-icons-outlined">assignment_turned_in</span> Solicitar Aprovação
     </button>
 
-    <button id="btn-autorizar" class="sidebar-button" onclick="marcarAprovadoPeloGestor()">
-      <span class="material-icons-outlined">verified_user</span> Aprovar ( Gestor )
+    <button id="btn-autorizar" class="sidebar-button" onclick="irParaPagina('autorizarProposta.html')">
+      <span class="material-icons-outlined">verified_user</span> Autorizar Proposta
     </button>
 
     <button id="btn-enviar" class="sidebar-button" onclick="irParaPagina('enviarProposta.html')">
@@ -242,49 +242,44 @@
               </button>
             </h2>
             <div id="collapseProdutos" class="accordion-collapse collapse">
-              <div class="accordion-body" style="padding:0;font-family:'Poppins',sans-serif;">
-
-                <!-- Prazos por Área -->
-                <div style="padding:22px 26px;border-bottom:1px solid #f1f5f9;">
-                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:12px;">Prazos por Área</div>
-                  <textarea class="form-control" id="prazosArea" rows="4" placeholder="Área ___: ___ dias úteis após aprovação..." style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;resize:vertical;"></textarea>
+              <div class="accordion-body">
+                <div class="mb-3">
+                  <label class="form-label">Prazos por Área</label>
+                  <textarea class="form-control" id="prazosArea" rows="5"
+                    placeholder="Área ___: ___ dias úteis após aprovação..."></textarea>
                 </div>
 
-                <!-- Condição de Pagamento -->
-                <div style="padding:22px 26px;border-bottom:1px solid #f1f5f9;">
-                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:12px;">Condição de Pagamento</div>
-                  <select class="form-select" id="condicaoPagamento" style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
-                    <option value="">Selecione</option>
-                    <option value="debito_40_40_20">40% de entrada, 40% após 30 dias e 20% após 60 dias.</option>
-                    <option value="debito_40_30_30">40% de entrada, 30% após 30 dias e 30% após 60 dias.</option>
-                    <option value="debito_60_40">60% de entrada, 40% após 30 dias.</option>
-                    <option value="parcelado">Personalizado</option>
-                  </select>
+<div class="mb-3">
+  <label class="form-label">Condição de Pagamento</label>
+  <select class="form-select" id="condicaoPagamento">
+    <option value="">Selecione</option>
+    <option value="debito_40_40_20">40% de entrada, 40% após 30 dias e 20% após 60 dias.</option>
+    <option value="debito_40_30_30">40% de entrada, 30% após 30 dias e 30% após 60 dias.</option>
+    <option value="debito_60_40">60% de entrada, 40% após 30 dias.</option>
+    <option value="parcelado">Personalizado</option>
+  </select>
+</div>
+
+                <div id="parcelamentoContainer" style="display: none;">
+                  <label class="form-label">Parcelas</label>
+                  <div id="listaParcelas"></div>
+                  <strong>Total das parcelas: <span id="totalParcelas">R$ 0,00</span></strong>
+                  <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="adicionarParcela()">+ Adicionar
+                    Parcela</button>
                 </div>
 
-                <!-- Parcelas -->
-                <div id="parcelamentoContainer" style="padding:22px 26px;border-bottom:1px solid #f1f5f9;display:none;">
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;">Parcelas</div>
-                    <button type="button" onclick="adicionarParcela()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:#475569;cursor:pointer;">
-                      <span style="font-size:15px;line-height:1;">+</span> Adicionar Parcela
-                    </button>
+                <div class="mb-3 mt-3">
+                  <label class="form-label">Condições Gerais</label>
+                  <div class="d-flex flex-wrap gap-2 mb-2">
+                    <button type="button" class="btn btn-outline-primary"
+                      onclick="preencherCondicoesComInstalacao()">Com medição e instalação</button>
+                    <button type="button" class="btn btn-outline-secondary"
+                      onclick="preencherCondicoesSemInstalacao()">Sem medição e instalação</button>
+                    <button type="button" class="btn btn-outline-warning" onclick="preencherCondicoesSemTampo()">Sem
+                      tampo</button>
                   </div>
-                  <div id="listaParcelas" style="display:flex;flex-direction:column;gap:10px;"></div>
-                  <div style="margin-top:14px;padding:10px 16px;background:#f8fafc;border-radius:8px;border:1px solid #f1f5f9;font-size:13px;color:#475569;font-weight:600;">
-                    Total das parcelas: <span id="totalParcelas" style="color:#0f172a;">R$ 0,00</span>
-                  </div>
-                </div>
-
-                <!-- Condições Gerais -->
-                <div style="padding:22px 26px;">
-                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:12px;">Condições Gerais</div>
-                  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
-                    <button type="button" onclick="preencherCondicoesComInstalacao()" style="padding:6px 14px;border:1px solid #cbd5e1;border-radius:20px;background:#fff;font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:#475569;cursor:pointer;">Com medição e instalação</button>
-                    <button type="button" onclick="preencherCondicoesSemInstalacao()" style="padding:6px 14px;border:1px solid #cbd5e1;border-radius:20px;background:#fff;font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:#475569;cursor:pointer;">Sem medição e instalação</button>
-                    <button type="button" onclick="preencherCondicoesSemTampo()" style="padding:6px 14px;border:1px solid #cbd5e1;border-radius:20px;background:#fff;font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:#475569;cursor:pointer;">Sem tampo</button>
-                  </div>
-                  <textarea class="form-control" id="condicoesGerais" rows="10" placeholder="Escolha uma opção ou edite manualmente..." style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;resize:vertical;"></textarea>
+                  <textarea class="form-control" id="condicoesGerais" rows="10"
+                    placeholder="Escolha uma opção ou edite manualmente..."></textarea>
                 </div>
 
               </div>
@@ -411,115 +406,112 @@
 
   </main>
   <!-- Modal de Incluir Cliente -->
-<div class="modal fade" id="popupClienteModal" tabindex="-1" aria-labelledby="popupClienteLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content" style="border:none;border-radius:16px;overflow:hidden;font-family:'Poppins',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.18);">
-
-      <div class="modal-header" style="background:#0f172a;border:none;padding:20px 28px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span class="material-icons-outlined" style="color:#94a3b8;font-size:20px;">person_add</span>
-          <h5 class="modal-title" id="popupClienteLabel" style="margin:0;font-size:15px;font-weight:700;color:#f1f5f9;">Incluir Cliente</h5>
-        </div>
-        <button type="button" class="btn-close btn-close-white" onclick="confirmarFecharModalCliente()" aria-label="Fechar"></button>
+<div class="modal fade" id="popupClienteModal" tabindex="-1" aria-labelledby="popupClienteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="popupClienteLabel">Incluir Cliente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
-
-      <div class="modal-body" style="padding:28px;background:#fff;">
+      <div class="modal-body">
         <form id="popupCliente_form">
-          <input type="hidden" id="popupCliente_codigo">
+          <div class="mb-3 d-none">
+            <label class="form-label">Código de Integração</label>
+            <input type="text" class="form-control" id="popupCliente_codigo" readonly>
+          </div>
 
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:14px;">Identificação</div>
-          <div class="row g-3 mb-3">
-            <div class="col-md-6">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">CNPJ ou CPF *</label>
-              <input type="text" class="form-control" id="popupCliente_cnpjcpf" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Razão Social</label>
+              <input type="text" class="form-control" id="popupCliente_razao" required>
             </div>
-            <div class="col-md-6">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Razão Social *</label>
-              <input type="text" class="form-control" id="popupCliente_razao" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Nome Fantasia *</label>
-              <input type="text" class="form-control" id="popupCliente_fantasia" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">E-mail *</label>
-              <input type="email" class="form-control" id="popupCliente_email" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
+
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Nome Fantasia</label>
+              <input type="text" class="form-control" id="popupCliente_fantasia" required>
             </div>
           </div>
 
-          <hr style="border-color:#f1f5f9;margin:20px 0;">
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">E-mail</label>
+              <input type="email" class="form-control" id="popupCliente_email" required>
+            </div>
 
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:14px;">Endereço</div>
-          <div class="row g-3 mb-3">
-            <div class="col-12">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Endereço *</label>
-              <input type="text" class="form-control" id="popupCliente_endereco" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Bairro *</label>
-              <input type="text" class="form-control" id="popupCliente_bairro" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Cidade *</label>
-              <input type="text" class="form-control" id="popupCliente_cidade" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Estado (UF) *</label>
-              <select class="form-control" id="popupCliente_estado" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
-                <option value="">Selecione...</option>
-                <option>AC</option><option>AL</option><option>AM</option><option>AP</option>
-                <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
-                <option>GO</option><option>MA</option><option>MG</option><option>MS</option>
-                <option>MT</option><option>PA</option><option>PB</option><option>PE</option>
-                <option>PI</option><option>PR</option><option>RJ</option><option>RN</option>
-                <option>RO</option><option>RR</option><option>RS</option><option>SC</option>
-                <option>SE</option><option>SP</option><option>TO</option>
-              </select>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">CEP *</label>
-              <input type="text" class="form-control" id="popupCliente_cep" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">CNPJ ou CPF</label>
+              <input type="text" class="form-control" id="popupCliente_cnpjcpf" required>
             </div>
           </div>
 
-          <hr style="border-color:#f1f5f9;margin:20px 0;">
+          <div class="mb-3">
+            <label class="form-label">Endereço</label>
+            <input type="text" class="form-control" id="popupCliente_endereco" required>
+          </div>
 
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:14px;">Contato & Dados Fiscais</div>
-          <div class="row g-3 mb-3">
-            <div class="col-md-6">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Contato</label>
-              <input type="text" class="form-control" id="popupCliente_contato" style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Bairro</label>
+              <input type="text" class="form-control" id="popupCliente_bairro" required>
             </div>
-            <div class="col-md-6">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Telefone</label>
-              <input type="text" class="form-control" id="popupCliente_telefone1_numero" placeholder="(00) 00000-0000" style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
+
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Cidade</label>
+              <input type="text" class="form-control" id="popupCliente_cidade" required>
             </div>
-            <div class="col-md-6">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Inscrição Municipal</label>
-              <input type="text" class="form-control" id="popupCliente_inscricao_municipal" style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
+          </div>
+
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Estado (UF)</label>
+              <input type="text" class="form-control" id="popupCliente_estado" maxlength="2" required>
             </div>
-            <div class="col-md-6">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Inscrição Estadual</label>
-              <input type="text" class="form-control" id="popupCliente_inscricao_estadual" style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
+
+            <div class="mb-3 col-md-6">
+              <label class="form-label">CEP</label>
+              <input type="text" class="form-control" id="popupCliente_cep" required>
             </div>
-            <div class="col-md-6">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Chave Pix</label>
-              <input type="text" class="form-control" id="popupCliente_chave_pix" placeholder="CPF, e-mail, telefone ou chave aleatória" style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
+          </div>
+
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Contato</label>
+              <input type="text" class="form-control" id="popupCliente_contato">
             </div>
-            <div class="col-12">
-              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Observação</label>
-              <textarea class="form-control" id="popupCliente_observacao" rows="2" placeholder="Observações sobre o cliente..." style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;resize:vertical;"></textarea>
+
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Inscrição Municipal</label>
+              <input type="text" class="form-control" id="popupCliente_inscricao_municipal">
             </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Inscrição Estadual</label>
+            <input type="text" class="form-control" id="popupCliente_inscricao_estadual">
+          </div>
+
+          <div class="row">
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Telefone</label>
+              <input type="text" class="form-control" id="popupCliente_telefone1_numero" placeholder="(00) 00000-0000">
+            </div>
+            <div class="mb-3 col-md-6">
+              <label class="form-label">Chave Pix</label>
+              <input type="text" class="form-control" id="popupCliente_chave_pix" placeholder="CPF, e-mail, telefone ou chave aleatória">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Observação</label>
+            <textarea class="form-control" id="popupCliente_observacao" rows="2" placeholder="Observações sobre o cliente..."></textarea>
           </div>
 
         </form>
       </div>
-
-      <div class="modal-footer" style="border-top:1px solid #f1f5f9;padding:16px 28px;background:#fff;gap:10px;">
-        <button class="btn btn-secondary" onclick="confirmarFecharModalCliente()" style="border-radius:8px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;background:#f1f5f9;border:1px solid #e2e8f0;color:#475569;">Cancelar</button>
-        <button class="btn btn-primary" onclick="enviarClienteParaAPI()" style="border-radius:8px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;background:#475569;border:none;padding:10px 24px;">Salvar Cliente</button>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="enviarClienteParaAPI()">Salvar Cliente</button>
       </div>
-
     </div>
   </div>
 </div>
