@@ -80,23 +80,20 @@
 </script>
   <!-- SIDEBAR -->
   <aside class="sidebar">
-    <ul>
-    
-      <li><a href="../pages/listagem.html"><span class="material-icons-outlined">list</span> Início</a></li>
-     
-    </ul>
+    <a href="../pages/listagem.html" class="sidebar-button" style="text-decoration:none;">
+      <span class="material-icons-outlined">arrow_back</span> Listagem
+    </a>
+    <ul></ul>
 <div class="sidebar-footer">
  
 
-  <button id="btn-criar" class="sidebar-button" onclick="salvarPropostaEditavel() " style="display: block;">
-      <span class="material-icons-outlined">add_circle_outline</span> Criar Propostaa
-    </button>
-    
- <div class="sidebar-footer">
-  <button id="btn-destravar" class="sidebar-button" onclick="destravarCampos()">
-    <span class="material-icons-outlined">lock_open</span><br> Destravar Campos
+  <button id="btn-criar" class="sidebar-button" onclick="salvarPropostaEditavel()">
+    <span class="material-icons-outlined">add_circle_outline</span> Criar Proposta
   </button>
-</div>
+
+  <button id="btn-destravar" class="sidebar-button" onclick="destravarCampos()">
+    <span class="material-icons-outlined">lock_open</span> Destravar Campos
+  </button>
 
 
 <script>
@@ -110,31 +107,32 @@ function destravarCampos() {
 
 
 <button id="btn-planilha-custos" class="sidebar-button" onclick="gerarPlanilhaCustos()">
-  <span class="material-icons-outlined">table_chart</span><br><P></P>Planilha de Custos
+  <span class="material-icons-outlined">table_chart</span> Planilha de Custos
 </button>
 <!-- Teste git -->
 
- <button id="btn-editar" class="sidebar-button" onclick="atualizarPropostaEditavel() ">
-    <span class="material-icons-outlined">edit</span> Editar Proposta ( Atualizar )
+  <button id="btn-editar" class="sidebar-button" onclick="atualizarPropostaEditavel()">
+    <span class="material-icons-outlined">save</span> Salvar Proposta
   </button>
   
-  <button id="btn-solicitar" class="sidebar-button" onclick="sincronizarPDVparaKommo()">
-    <span class="material-icons-outlined">assignment_turned_in</span><br> Solicitar Aprovação ( Gestor )
+  <button id="btn-solicitar" class="sidebar-button" onclick="marcarPendenteAprovacao()">
+    <span class="material-icons-outlined">assignment_turned_in</span> Solicitar Aprovação
   </button>
 
-  <button id="btn-autorizar" class="sidebar-button" onclick="preencherNumeroPedidoKommo() ">
-    <span class="material-icons-outlined">verified_user</span><br> teste de codigo 
+  <button id="btn-autorizar" class="sidebar-button" onclick="marcarAprovadoPeloGestor()">
+    <span class="material-icons-outlined">verified_user</span> Aprovar ( Gestor )
   </button>
 
- <button id="btn-visualizar-proposta" class="sidebar-button" onclick="gerarOrcamentoParaImpressaoCompleta()">
-  <span class="material-icons-outlined">visibility</span><br><P></P>  Visualizar Proposta
+<button id="btn-visualizar-proposta" class="sidebar-button" onclick="gerarOrcamentoParaImpressaoCompleta()">
+  <span class="material-icons-outlined">visibility</span> Visualizar Proposta
 </button>
 
-<button id="btn-visualizar-proposta" class="sidebar-button" onclick="abrirPopupVisualizarOP()">
-  <span class="material-icons-outlined">visibility</span><br><p></p> Folhas de impressão
+<button id="btn-folhas-impressao" class="sidebar-button" onclick="abrirPopupVisualizarOP()">
+  <span class="material-icons-outlined">print</span> Folhas de Impressão
 </button>
+
 <button id="btn-pedido-finalizado" class="sidebar-button" onclick="marcarPedidoFinalizado()">
-  <span class="material-icons-outlined">lock</span><br><p></p> Pedido Finalizado
+  <span class="material-icons-outlined">lock</span> Pedido Finalizado
 </button>
 
 
@@ -364,41 +362,44 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (e.target === overlay) fechar();
     });
 
-    document.getElementById("btn-folha-ordem-servico").addEventListener("click", () => {
+    document.getElementById("btn-folha-ordem-servico").addEventListener("click", async () => {
       fechar();
+      if (!await validarItensZeradosParaImpressao()) return;
       gerarFolha1OrdemDeServico();
     });
 
-    document.getElementById("btn-etapas-processo").addEventListener("click", () => {
+    document.getElementById("btn-etapas-processo").addEventListener("click", async () => {
       fechar();
+      if (!await validarItensZeradosParaImpressao()) return;
       gerarFolha4RelatorioEntrega();
     });
 
-    document.getElementById("btn-historico-producao").addEventListener("click", () => {
+    document.getElementById("btn-historico-producao").addEventListener("click", async () => {
       fechar();
+      if (!await validarItensZeradosParaImpressao()) return;
       gerarHistoricoDeProducaoParaImpressao();
     });
   }
 </script>
 
   <button id="btn-enviar-cliente" class="sidebar-button" onclick="marcarEnviadoParaCliente()">
-    <span class="material-icons-outlined">send</span><br> Enviar Proposta
+    <span class="material-icons-outlined">send</span> Enviar Proposta
   </button>
 
   <button id="btn-aprovado-cliente" class="sidebar-button" onclick="marcarAprovadoPeloCliente()">
-    <span class="material-icons-outlined">check_circle</span><br>  Aprovado pelo Cliente
+    <span class="material-icons-outlined">check_circle</span> Aprovado pelo Cliente
   </button>
 
-   <button id="btn-gerar-pedido" class="sidebar-button" onclick="sincronizarPDVparaKommo()">
-    <span class="material-icons-outlined">receipt_long</span><br> Enviar Pedido (Kommo)
+  <button id="btn-gerar-pedido-kommo" class="sidebar-button" onclick="sincronizarPDVparaKommo()" style="display:none">
+    <span class="material-icons-outlined">receipt_long</span> Enviar Pedido (Kommo)
   </button>
 
   <button id="btn-gerar-pedido" class="sidebar-button" onclick="atualizarNaOmie()">
-    <span class="material-icons-outlined">receipt_long</span><br> Enviar para Omie 
+    <span class="material-icons-outlined">cloud_upload</span> Enviar para Omie
   </button>
 
   <button id="btn-atualizar-precos" class="sidebar-button" onclick="atualizarPrecosOmieNaDOM()">
-    <span class="material-icons-outlined">sync</span><br>  Atualizar Preços da Omie
+    <span class="material-icons-outlined">sync</span> Atualizar Preços da Omie
   </button>
 
 
@@ -464,7 +465,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     padding: 0;
     justify-content: center;
   }
-  #pdv-float.minimizado #pdv-float-header span,
+  #pdv-float.minimizado #pdv-float-header .pdv-header-title,
   #pdv-float.minimizado #pdv-float-body {
     display: none;
   }
@@ -568,12 +569,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 <div id="pdv-float">
   <div id="pdv-float-header">
-    <span>Painel</span>
-    <button id="pdv-float-min" title="Minimizar">&#8722;</button>
+    <span class="pdv-header-title">Ações Rápidas</span>
+    <button id="pdv-float-min" title="Minimizar"><span class="material-icons-outlined" style="font-size:20px;color:#fff;">remove</span></button>
   </div>
   <div id="pdv-float-body">
-    <button class="botao-atualizar" id="btn-prod">&#128260; Atualizar Produtos</button>
-    <button class="botao-atualizar" id="btn-cli">&#128260; Atualizar Clientes</button>
+    <button class="botao-atualizar" id="btn-prod"><span class="material-icons-outlined" style="font-size:16px;">inventory_2</span> Atualizar Produtos</button>
+    <button class="botao-atualizar" id="btn-cli"><span class="material-icons-outlined" style="font-size:16px;">people</span> Atualizar Clientes</button>
+    <button class="botao-atualizar" id="btn-ajuste-nomenclatura" style="display:none;"><span class="material-icons-outlined" style="font-size:16px;">edit_note</span> Ajuste de nomenclatura</button>
+    <!-- botão de resumo compacto inserido aqui pelo JS -->
   </div>
 </div>
 
@@ -650,7 +653,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   btnMin.addEventListener('click', e => {
     e.stopPropagation();
     const minimizado = painel.classList.toggle('minimizado');
-    btnMin.innerHTML = minimizado ? '&#128260;' : '&#8722;';
+    btnMin.innerHTML = minimizado
+      ? '<span class="material-icons-outlined" style="font-size:20px;color:#fff;">open_in_full</span>'
+      : '<span class="material-icons-outlined" style="font-size:20px;color:#fff;">remove</span>';
     btnMin.title = minimizado ? 'Restaurar' : 'Minimizar';
 
     // Sempre a mesma posição fixa (canto superior direito), tanto ao
@@ -1254,47 +1259,50 @@ function criarCamposEnderecoObra() {
               </button>
             </h2>
             <div id="collapseProdutos" class="accordion-collapse collapse">
-              <div class="accordion-body">
-                <div class="mb-3">
-                  <label class="form-label">Prazos por Área</label>
-                  <textarea class="form-control" id="prazosArea" rows="5"
-                    placeholder="Área ___: ___ dias úteis após aprovação..."></textarea>
+              <div class="accordion-body" style="padding:0;font-family:'Poppins',sans-serif;">
+
+                <!-- Prazos por Área -->
+                <div style="padding:22px 26px;border-bottom:1px solid #f1f5f9;">
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:12px;">Prazos por Área</div>
+                  <textarea class="form-control" id="prazosArea" rows="4" placeholder="Área ___: ___ dias úteis após aprovação..." style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;resize:vertical;"></textarea>
                 </div>
 
-            <div class="mb-3">
-  <label class="form-label">Condição de Pagamento</label>
-  <select class="form-select" id="condicaoPagamento">
-    <option value="">Selecione</option>
-    <option value="debito_40_40_20">40% de entrada, 40% após 30 dias e 20% após 60 dias.</option>
-    <option value="debito_40_30_30">40% de entrada, 30% após 30 dias e 30% após 60 dias.</option>
-    <option value="debito_60_40">60% de entrada, 40% após 30 dias.</option>
-    <option value="parcelado">Personalizado</option>
-  </select>
-</div>
-
-                <div id="parcelamentoContainer" style="display: none;">
-                  <label class="form-label">Parcelas</label>
-                  <div id="listaParcelas"></div>
-                  <strong>Total das parcelas: <span id="totalParcelas">R$ 0,00</span></strong>
-                  <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="adicionarParcela()">+ Adicionar
-                    Parcela</button>
+                <!-- Condição de Pagamento -->
+                <div style="padding:22px 26px;border-bottom:1px solid #f1f5f9;">
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:12px;">Condição de Pagamento</div>
+                  <select class="form-select" id="condicaoPagamento" style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
+                    <option value="">Selecione</option>
+                    <option value="debito_40_40_20">40% de entrada, 40% após 30 dias e 20% após 60 dias.</option>
+                    <option value="debito_40_30_30">40% de entrada, 30% após 30 dias e 30% após 60 dias.</option>
+                    <option value="debito_60_40">60% de entrada, 40% após 30 dias.</option>
+                    <option value="parcelado">Personalizado</option>
+                  </select>
                 </div>
 
-                <div class="mb-3 mt-3">
-                  <label class="form-label">Condições Gerais</label>
-                  <div class="d-flex flex-wrap gap-2 mb-2">
-                    <button type="button" class="btn btn-outline-primary"
-                      onclick="preencherCondicoesComInstalacao()">Com medição e instalação</button>
-                    <button type="button" class="btn btn-outline-secondary"
-                      onclick="preencherCondicoesSemInstalacao()">Sem medição e instalação</button>
-                    <button type="button" class="btn btn-outline-warning" onclick="preencherCondicoesSemTampo()">Sem
-                      tampo</button>
-                      <button type="button" class="btn btn-outline-dark"
-  onclick="preencherCondicoesGeraisComDiagramacao()">Descritivo contratual</button>
-
+                <!-- Parcelas -->
+                <div id="parcelamentoContainer" style="padding:22px 26px;border-bottom:1px solid #f1f5f9;display:none;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;">Parcelas</div>
+                    <button type="button" onclick="adicionarParcela()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:#475569;cursor:pointer;">
+                      <span style="font-size:15px;line-height:1;">+</span> Adicionar Parcela
+                    </button>
                   </div>
-                  <textarea class="form-control" id="condicoesGerais" rows="10"
-                    placeholder="Escolha uma opção ou edite manualmente..."></textarea>
+                  <div id="listaParcelas" style="display:flex;flex-direction:column;gap:10px;"></div>
+                  <div style="margin-top:14px;padding:10px 16px;background:#f8fafc;border-radius:8px;border:1px solid #f1f5f9;font-size:13px;color:#475569;font-weight:600;">
+                    Total das parcelas: <span id="totalParcelas" style="color:#0f172a;">R$ 0,00</span>
+                  </div>
+                </div>
+
+                <!-- Condições Gerais -->
+                <div style="padding:22px 26px;">
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:12px;">Condições Gerais</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+                    <button type="button" onclick="preencherCondicoesComInstalacao()" style="padding:6px 14px;border:1px solid #cbd5e1;border-radius:20px;background:#fff;font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:#475569;cursor:pointer;transition:background .15s;">Com medição e instalação</button>
+                    <button type="button" onclick="preencherCondicoesSemInstalacao()" style="padding:6px 14px;border:1px solid #cbd5e1;border-radius:20px;background:#fff;font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:#475569;cursor:pointer;">Sem medição e instalação</button>
+                    <button type="button" onclick="preencherCondicoesSemTampo()" style="padding:6px 14px;border:1px solid #cbd5e1;border-radius:20px;background:#fff;font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:#475569;cursor:pointer;">Sem tampo</button>
+                    <button type="button" onclick="preencherCondicoesGeraisComDiagramacao()" style="padding:6px 14px;border:1px solid #cbd5e1;border-radius:20px;background:#fff;font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:#475569;cursor:pointer;">Descritivo contratual</button>
+                  </div>
+                  <textarea class="form-control" id="condicoesGerais" rows="10" placeholder="Escolha uma opção ou edite manualmente..." style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;resize:vertical;"></textarea>
                 </div>
 
               </div>
@@ -1417,17 +1425,10 @@ function criarCamposEnderecoObra() {
             </button>
           </div>
 
-          <button id="fecharSanfonasBtn" class="btn btn-outline-secondary btn-sm w-100 mt-2" onclick="fecharTodasSanfonas()">
-            🔽 Fechar todos os blocos
-          </button>
-
-          <button id="abrirSanfonasBtn" class="btn btn-outline-primary btn-sm w-100 mt-2" onclick="abrirTodasSanfonas()">
-            🔼 Abrir todos os blocos
-          </button>
 
 
 
-          <ul id="sugestoesProdutos" class="list-group position-absolute w-100 shadow bg-white mt-2" style="z-index: 10; top: 100%; display: block; max-height: 200px; overflow-y: auto;"><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Proteção</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Montante H</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Calha Infinity</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Botão</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Garra</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Calha Ferreira Ulhoa</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Canaleta</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Guarda Corpo - Spider</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Fechamento Frontal</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Pergolado</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Porta / Portão / Portinhola</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Corrimão</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Perfil U</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Revestimento</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Espera</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Instalação</li><li class="list-group-item list-group-item-action" style="cursor: pointer;">Vidro</li></ul>
+          <ul id="sugestoesProdutos" class="list-group position-absolute w-100 shadow bg-white mt-2" style="z-index: 10; top: 100%; display: none; max-height: 200px; overflow-y: auto;"></ul>
         </div>
       </div>
 <br>
@@ -1451,112 +1452,121 @@ function criarCamposEnderecoObra() {
 
   </main>
 
-<div class="modal fade" id="popupClienteModal" tabindex="-1" aria-labelledby="popupClienteLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="popupClienteLabel">Incluir Cliente</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+<div class="modal fade" id="popupClienteModal" tabindex="-1" aria-labelledby="popupClienteLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border:none;border-radius:16px;overflow:hidden;font-family:'Poppins',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.18);">
+
+      <!-- Header -->
+      <div class="modal-header" style="background:#0f172a;border:none;padding:20px 28px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="material-icons-outlined" style="color:#94a3b8;font-size:20px;">person_add</span>
+          <h5 class="modal-title" id="popupClienteLabel" style="margin:0;font-size:15px;font-weight:700;color:#f1f5f9;">Incluir Cliente</h5>
+        </div>
+        <button type="button" class="btn-close btn-close-white" onclick="confirmarFecharModalCliente()" aria-label="Fechar"></button>
       </div>
-      <div class="modal-body">
+
+      <!-- Body -->
+      <div class="modal-body" style="padding:28px;background:#fff;">
         <form id="popupCliente_form">
-          <div class="mb-3 d-none">
-            <label class="form-label">Código de Integração</label>
-            <input type="text" class="form-control" id="popupCliente_codigo" readonly>
-          </div>
+          <input type="hidden" id="popupCliente_codigo">
 
-          <div class="row">
-            <div class="mb-3 col-md-6">
-              <label class="form-label">Razão Social</label>
-              <input type="text" class="form-control" id="popupCliente_razao" required>
+          <!-- Seção: Identificação -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:14px;">Identificação</div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">CNPJ ou CPF *</label>
+              <input type="text" class="form-control" id="popupCliente_cnpjcpf" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
             </div>
-
-            <div class="mb-3 col-md-6">
-              <label class="form-label">Nome Fantasia</label>
-              <input type="text" class="form-control" id="popupCliente_fantasia" required>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Razão Social *</label>
+              <input type="text" class="form-control" id="popupCliente_razao" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
             </div>
-          </div>
-
-          <div class="row">
-            <div class="mb-3 col-md-6">
-              <label class="form-label">E-mail</label>
-              <input type="email" class="form-control" id="popupCliente_email" required>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Nome Fantasia *</label>
+              <input type="text" class="form-control" id="popupCliente_fantasia" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
             </div>
-
-            <div class="mb-3 col-md-6">
-              <label class="form-label">CNPJ ou CPF</label>
-              <input type="text" class="form-control" id="popupCliente_cnpjcpf" required>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">E-mail *</label>
+              <input type="email" class="form-control" id="popupCliente_email" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
             </div>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label">Endereço</label>
-            <input type="text" class="form-control" id="popupCliente_endereco" required>
-          </div>
+          <hr style="border-color:#f1f5f9;margin:20px 0;">
 
-          <div class="row">
-            <div class="mb-3 col-md-6">
-              <label class="form-label">Bairro</label>
-              <input type="text" class="form-control" id="popupCliente_bairro" required>
+          <!-- Seção: Endereço -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:14px;">Endereço</div>
+          <div class="row g-3 mb-3">
+            <div class="col-12">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Endereço *</label>
+              <input type="text" class="form-control" id="popupCliente_endereco" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
             </div>
-
-            <div class="mb-3 col-md-6">
-              <label class="form-label">Cidade</label>
-              <input type="text" class="form-control" id="popupCliente_cidade" required>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Bairro *</label>
+              <input type="text" class="form-control" id="popupCliente_bairro" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
             </div>
-          </div>
-
-          <div class="row">
-            <div class="mb-3 col-md-6">
-              <label class="form-label">Estado (UF)</label>
-              <input type="text" class="form-control" id="popupCliente_estado" maxlength="2" required>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Cidade *</label>
+              <input type="text" class="form-control" id="popupCliente_cidade" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
             </div>
-
-            <div class="mb-3 col-md-6">
-              <label class="form-label">CEP</label>
-              <input type="text" class="form-control" id="popupCliente_cep" required>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Estado (UF) *</label>
+              <select class="form-control" id="popupCliente_estado" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
+                <option value="">Selecione...</option>
+                <option>AC</option><option>AL</option><option>AM</option><option>AP</option>
+                <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+                <option>GO</option><option>MA</option><option>MG</option><option>MS</option>
+                <option>MT</option><option>PA</option><option>PB</option><option>PE</option>
+                <option>PI</option><option>PR</option><option>RJ</option><option>RN</option>
+                <option>RO</option><option>RR</option><option>RS</option><option>SC</option>
+                <option>SE</option><option>SP</option><option>TO</option>
+              </select>
             </div>
-          </div>
-
-          <div class="row">
-            <div class="mb-3 col-md-6">
-              <label class="form-label">Contato</label>
-              <input type="text" class="form-control" id="popupCliente_contato">
-            </div>
-
-            <div class="mb-3 col-md-6">
-              <label class="form-label">Inscrição Municipal</label>
-              <input type="text" class="form-control" id="popupCliente_inscricao_municipal">
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">CEP *</label>
+              <input type="text" class="form-control" id="popupCliente_cep" required style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
             </div>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label">Inscrição Estadual</label>
-            <input type="text" class="form-control" id="popupCliente_inscricao_estadual">
-          </div>
+          <hr style="border-color:#f1f5f9;margin:20px 0;">
 
-          <div class="row">
-            <div class="mb-3 col-md-6">
-              <label class="form-label">Telefone</label>
-              <input type="text" class="form-control" id="popupCliente_telefone1_numero" placeholder="(00) 00000-0000">
+          <!-- Seção: Contato e extras -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:14px;">Contato & Dados Fiscais</div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Contato</label>
+              <input type="text" class="form-control" id="popupCliente_contato" style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
             </div>
-            <div class="mb-3 col-md-6">
-              <label class="form-label">Chave Pix</label>
-              <input type="text" class="form-control" id="popupCliente_chave_pix" placeholder="CPF, e-mail, telefone ou chave aleatória">
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Telefone</label>
+              <input type="text" class="form-control" id="popupCliente_telefone1_numero" placeholder="(00) 00000-0000" style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
             </div>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Observação</label>
-            <textarea class="form-control" id="popupCliente_observacao" rows="2" placeholder="Observações sobre o cliente..."></textarea>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Inscrição Municipal</label>
+              <input type="text" class="form-control" id="popupCliente_inscricao_municipal" style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Inscrição Estadual</label>
+              <input type="text" class="form-control" id="popupCliente_inscricao_estadual" style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Chave Pix</label>
+              <input type="text" class="form-control" id="popupCliente_chave_pix" placeholder="CPF, e-mail, telefone ou chave aleatória" style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;">
+            </div>
+            <div class="col-12">
+              <label class="form-label" style="font-size:12px;font-weight:600;color:#475569;">Observação</label>
+              <textarea class="form-control" id="popupCliente_observacao" rows="2" placeholder="Observações sobre o cliente..." style="border-radius:8px;border-color:#e2e8f0;font-size:13px;font-family:'Poppins',sans-serif;resize:vertical;"></textarea>
+            </div>
           </div>
 
         </form>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button class="btn btn-primary" onclick="enviarClienteParaAPI()">Salvar Cliente</button>
+
+      <!-- Footer -->
+      <div class="modal-footer" style="border-top:1px solid #f1f5f9;padding:16px 28px;background:#fff;gap:10px;">
+        <button class="btn btn-secondary" onclick="confirmarFecharModalCliente()" style="border-radius:8px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;background:#f1f5f9;border:1px solid #e2e8f0;color:#475569;">Cancelar</button>
+        <button class="btn btn-primary" onclick="enviarClienteParaAPI()" style="border-radius:8px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;background:#475569;border:none;padding:10px 24px;">Salvar Cliente</button>
       </div>
+
     </div>
   </div>
 </div>
@@ -1574,8 +1584,9 @@ function criarCamposEnderecoObra() {
     <ul id="listaPendencias" class="mb-3" style="padding-left: 18px;"></ul>
     <button onclick="fecharPopupPendencias()" class="btn btn-secondary w-100">Fechar</button>
   </div>
+  <script src="../js/configuracoes.js"></script>
   <script src="../js/salvarPropostas.js" defer></script>
-   <script src="../js/cadastroClientes.js" defer></script>
+   <script src="../js/cadastroClientes.js"></script>
   <script src="../js/validarToken.js" defer></script>
   <script src="../js/sair.js" defer></script>
   <!-- SCRIPTS -->
@@ -1607,7 +1618,7 @@ function criarCamposEnderecoObra() {
   <script src="../js/formulaValores.js" defer></script>
   <script src="../js/salvarPropostas.js" defer></script>
   <script src="../js/carregamento.js" defer></script>
- 
+  <script src="../js/visualizarBotoes.js" defer></script>
   <script src="../js/envioOmie.js" defer></script>
   <script src="../js/totais.js" defer></script>
   <script src="../js/conferencia.js" defer></script>
@@ -1927,7 +1938,7 @@ document.body.appendChild(btn);
 
 
 window.atualizarPropostaEditavel = async function () {
-  // ── pular validação de zerados para o modelo base ──────────────────────────
+  // Guard: se for o modelo base, pula validação de itens zerados
   const _idAtualEditar = new URLSearchParams(window.location.search).get("id");
   if (_idAtualEditar !== "68746e305b9691a7ed3b3f97") {
     const _itensZeradosEditar = [];
@@ -1945,13 +1956,22 @@ window.atualizarPropostaEditavel = async function () {
     });
     if (_itensZeradosEditar.length > 0) {
       await new Promise(resolve => {
-        const ov = document.createElement("div");
-        ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;";
-        const lista = _itensZeradosEditar.map(n => `<li style="margin-bottom:4px;">${n}</li>`).join("");
-        ov.innerHTML = `<div style="background:#fff;border-radius:14px;padding:28px;width:min(480px,92vw);box-shadow:0 16px 48px rgba(0,0,0,.25);max-height:80vh;overflow-y:auto;"><div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px;">⚠️ Produtos com custo zero</div><div style="font-size:13px;color:#64748b;margin-bottom:16px;">Os seguintes produtos estão com custo zerado. Corrija os valores antes de salvar:</div><ul style="font-size:13px;color:#ef4444;font-weight:600;padding-left:18px;margin-bottom:24px;">${lista}</ul><div style="display:flex;justify-content:flex-end;"><button id="_zero_ok2" style="padding:9px 24px;border:none;border-radius:8px;background:#475569;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Entendido</button></div></div>`;
-        document.body.appendChild(ov);
-        document.getElementById("_zero_ok2").onclick = () => { document.body.removeChild(ov); resolve(); };
-      });
+        const _div = document.createElement("div");
+        _div.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;";
+        _div.innerHTML = `<div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+          <h5 style="color:#dc2626;margin:0 0 12px;">⚠️ Itens com custo zerado</h5>
+          <p style="margin:0 0 10px;font-size:14px;color:#374151;">Os seguintes itens estão com custo unitário R$ 0,00:</p>
+          <ul style="margin:0 0 18px;padding-left:18px;font-size:13px;color:#374151;">${_itensZeradosEditar.map(n=>`<li>${n}</li>`).join("")}</ul>
+          <p style="margin:0 0 18px;font-size:13px;color:#6b7280;">Deseja salvar mesmo assim?</p>
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button id="_zero_cancel2" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:8px;background:#f9fafb;cursor:pointer;">Cancelar</button>
+            <button id="_zero_ok2" style="padding:8px 18px;border:none;border-radius:8px;background:#dc2626;color:#fff;cursor:pointer;">Salvar mesmo assim</button>
+          </div>
+        </div>`;
+        document.body.appendChild(_div);
+        _div.querySelector("#_zero_ok2").onclick = () => { document.body.removeChild(_div); resolve(); };
+        _div.querySelector("#_zero_cancel2").onclick = () => { document.body.removeChild(_div); resolve("cancelar"); };
+      }).then(r => { if (r === "cancelar") return Promise.reject("cancelar"); });
       return;
     }
   }
@@ -3167,7 +3187,8 @@ document.addEventListener("DOMContentLoaded", function () {
   let startTop = 0;
 
   function atualizarBotao() {
-    btn.innerHTML = ativo ? iconeOlhoFechado() : iconeOlhoAberto();
+    btn.innerHTML = (ativo ? iconeOlhoFechado() : iconeOlhoAberto()) +
+      `<span style="margin-left:6px;font-size:.82rem;font-weight:600;">${ativo ? "Resumo Normal" : "Resumo Compacto"}</span>`;
     btn.title = ativo ? "Voltar ao normal" : "Ativar resumo compacto";
   }
 
@@ -3185,91 +3206,37 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function alternar() {
-    if (ativo) {
-      desativar();
-    } else {
-      ativar();
-    }
+    if (ativo) desativar(); else ativar();
   }
+
+  // Estilo inline para funcionar dentro do painel (não flutuante)
+  btn.style.position = "static";
+  btn.style.width = "100%";
+  btn.style.height = "auto";
+  btn.style.borderRadius = "10px";
+  btn.style.background = "#f4f7fc";
+  btn.style.boxShadow = "none";
+  btn.style.border = "1px solid #e1e8f5";
+  btn.style.color = "#114187";
+  btn.style.cursor = "pointer";
+  btn.style.display = "flex";
+  btn.style.alignItems = "center";
+  btn.style.padding = "10px 12px";
+  btn.style.userSelect = "none";
+  btn.style.transition = "background .15s, border-color .15s";
 
   atualizarBotao();
-  document.body.appendChild(btn);
 
-  const savedX = localStorage.getItem(POS_X_KEY);
-  const savedY = localStorage.getItem(POS_Y_KEY);
+  btn.addEventListener("click", alternar);
 
-  if (savedX !== null && savedY !== null) {
-    btn.style.left = savedX + "px";
-    btn.style.top = savedY + "px";
-    btn.style.right = "auto";
-    btn.style.bottom = "auto";
+  const panelBody = document.getElementById("pdv-float-body");
+  if (panelBody) {
+    panelBody.appendChild(btn);
+  } else {
+    document.body.appendChild(btn);
   }
-
-  btn.addEventListener("mousedown", function (e) {
-    dragging = true;
-    moved = false;
-    btn.classList.add("dragging");
-
-    const rect = btn.getBoundingClientRect();
-    startX = e.clientX;
-    startY = e.clientY;
-    startLeft = rect.left;
-    startTop = rect.top;
-
-    e.preventDefault();
-  });
-
-  document.addEventListener("mousemove", function (e) {
-    if (!dragging) return;
-
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-      moved = true;
-    }
-
-    let left = startLeft + dx;
-    let top = startTop + dy;
-
-    const maxLeft = window.innerWidth - btn.offsetWidth - 10;
-    const maxTop = window.innerHeight - btn.offsetHeight - 10;
-
-    left = Math.max(10, Math.min(left, maxLeft));
-    top = Math.max(10, Math.min(top, maxTop));
-
-    btn.style.left = left + "px";
-    btn.style.top = top + "px";
-    btn.style.right = "auto";
-    btn.style.bottom = "auto";
-  });
-
-  document.addEventListener("mouseup", function () {
-    if (!dragging) return;
-
-    dragging = false;
-    btn.classList.remove("dragging");
-
-    const left = parseInt(btn.style.left || "0", 10);
-    const top = parseInt(btn.style.top || "0", 10);
-
-    localStorage.setItem(POS_X_KEY, left);
-    localStorage.setItem(POS_Y_KEY, top);
-  });
-
-  btn.addEventListener("click", function (e) {
-    if (moved) {
-      e.preventDefault();
-      e.stopPropagation();
-      moved = false;
-      return;
-    }
-
-    alternar();
-  });
 });
 </script>
 </body>
 <script src="../js/envioOmie.js"></script>
 </html>
-
