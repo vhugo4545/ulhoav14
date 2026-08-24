@@ -662,6 +662,56 @@ window.criarProjetoServicoTeste = async function criarProjetoServicoTeste() {
 })();
 
 /* =========================================================
+   DIAGNÓSTICO DE BLOCOS — chame diagnosticarBlocos() no console
+   ========================================================= */
+window.diagnosticarBlocos = function () {
+  const blocos = document.querySelectorAll("[id^='bloco-']");
+  console.group(`🔬 diagnosticarBlocos — ${blocos.length} bloco(s) encontrado(s)`);
+
+  blocos.forEach((bloco) => {
+    const grupoId = bloco.id;
+    const inputAmb = bloco.querySelector("input[placeholder='Ambiente'][data-id-grupo]");
+    const nomeAmbiente = (inputAmb?.value || "").trim() || "(sem nome)";
+
+    console.group(`📦 ${grupoId} — "${nomeAmbiente}"`);
+
+    // Tabela
+    const tabela = bloco.querySelector("table") || bloco.querySelector(".table");
+    const tfootEl = tabela?.querySelector("tfoot tr td:last-child strong");
+    console.log("tfoot strong:", tfootEl?.textContent?.trim() || "(não encontrado)");
+
+    // Resumo
+    const resumoEl = bloco.querySelector(".resumo-totalizador-interno");
+    console.log(".resumo-totalizador-interno:", resumoEl ? "✅ encontrado" : "❌ NÃO encontrado");
+
+    if (resumoEl) {
+      const cols = resumoEl.querySelectorAll(".row > .col, .col");
+      console.log(`  Colunas encontradas: ${cols.length}`);
+      cols.forEach((col, i) => {
+        const titulo = col.querySelector(".text-muted")?.textContent?.replace(/\s+/g, " ")?.trim() || "(sem .text-muted)";
+        const valor  = col.querySelector(".fw-bold")?.textContent?.trim() || "(sem .fw-bold)";
+        console.log(`  [${i}] "${titulo}" → "${valor}"`);
+      });
+    } else {
+      // Tenta variantes
+      const alt1 = bloco.querySelector(".resumo-totalizador");
+      const alt2 = bloco.querySelector("[class*='resumo']");
+      console.log("  Alternativas: .resumo-totalizador =", alt1 ? "✅" : "❌",
+                  "| [class*=resumo] =", alt2?.className || "❌");
+    }
+
+    // MO hora
+    const primeiraLinha = tabela?.querySelector("tbody tr");
+    const td2 = primeiraLinha?.querySelector("td:nth-child(2)");
+    console.log("  Descrição 1ª linha:", td2?.textContent?.trim() || "(não encontrado)");
+
+    console.groupEnd();
+  });
+
+  console.groupEnd();
+};
+
+/* =========================================================
    2) COLETAR ITENS (1º produto por grupo + total por grupo)
    ========================================================= */
 function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
