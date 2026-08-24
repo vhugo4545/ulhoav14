@@ -6189,7 +6189,8 @@ async function atualizarNaOmie() {
     const payload = await gerarPayloadOmie();
 
     if (!payload) {
-      throw new Error("Não foi possível gerar o payload para envio.");
+      // Cancelamento intencional pelo usuário — sem mensagem de erro
+      return;
     }
 
     // Detecta se o popup sinalizou "somente serviços" (sem produtos/vidros)
