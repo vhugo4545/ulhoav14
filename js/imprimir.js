@@ -1,7 +1,9 @@
-﻿let contadorGlobal = 1;
+let contadorGlobal = 1;
 
 // ── Validação compartilhada: itens com custo zero ────────────────────────────
 async function validarItensZeradosParaImpressao() {
+  const _idAtual = new URLSearchParams(window.location.search).get("id");
+  if (_idAtual === "68746e305b9691a7ed3b3f97") return true; // modelo — não valida
   const itensZerados = [];
   document.querySelectorAll("tbody").forEach(tbody => {
     tbody.querySelectorAll("tr").forEach((tr, idx) => {
@@ -360,6 +362,8 @@ function validarInsumosZerados() {
 // (ignora a linha 1 de cada tabela = Produto Acabado / máscara)
 // ==========================
 function validarInsumosZerados() {
+  const _idAtual = new URLSearchParams(window.location.search).get("id");
+  if (_idAtual === "68746e305b9691a7ed3b3f97") return []; // modelo — não valida
   const parseBRLLocal = (valor) => {
     if (valor == null || valor === "") return 0;
     const str = String(valor).replace(/\u00A0/g, " ").trim();
