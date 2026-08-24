@@ -687,11 +687,18 @@ window.diagnosticarBlocos = function () {
     if (resumoEl) {
       const cols = resumoEl.querySelectorAll(".row > .col, .col");
       console.log(`  Colunas encontradas: ${cols.length}`);
+      let _custo = 0, _sugerido = 0;
       cols.forEach((col, i) => {
         const titulo = col.querySelector(".text-muted")?.textContent?.replace(/\s+/g, " ")?.trim() || "(sem .text-muted)";
         const valor  = col.querySelector(".fw-bold")?.textContent?.trim() || "(sem .fw-bold)";
-        console.log(`  [${i}] "${titulo}" → "${valor}"`);
+        const parsed = typeof vv_parseBRL !== 'undefined' ? vv_parseBRL(valor) : 0;
+        const t = titulo.toLowerCase();
+        if (t.includes("custo") && t.includes("material")) _custo = parsed;
+        if (t.includes("sugerido")) _sugerido = parsed;
+        console.log(`  [${i}] "${titulo}" → "${valor}" (parsed: ${parsed})`);
       });
+      console.log(`  ✅ CUSTO MATERIAL → R$ ${_custo.toLocaleString('pt-BR',{minimumFractionDigits:2})}`);
+      console.log(`  ✅ VALOR SUGERIDO → R$ ${_sugerido.toLocaleString('pt-BR',{minimumFractionDigits:2})}`);
     } else {
       // Tenta variantes
       const alt1 = bloco.querySelector(".resumo-totalizador");
@@ -777,9 +784,9 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
       for (const col of cols) {
         const titulo = col.querySelector(".text-muted")?.textContent?.replace(/\s+/g, " ")?.trim()?.toLowerCase() || "";
         const valorTexto = (col.querySelector(".fw-bold")?.textContent || "").trim();
-        if (titulo.includes("custo total") && titulo.includes("material")) {
+        if (titulo.includes("custo") && titulo.includes("material")) {
           valorCustoMaterial = vv_parseBRL(valorTexto);
-        } else if (titulo.includes("valor sugerido")) {
+        } else if (titulo.includes("valor sugerido") || titulo.includes("sugerido")) {
           valorSugerido = vv_parseBRL(valorTexto);
         }
       }
