@@ -55,7 +55,7 @@ async function controlarBotoesSidebar() {
   const idsBloqueados = [
     "btn-visualizar-proposta", "btn-folhas-impressao", "btn-pedido-finalizado",
     "btn-enviar-cliente", "btn-aprovado-cliente",
-    "btn-gerar-pedido", "btn-gerar-pedido-kommo", "btn-atualizar-precos"
+    "btn-gerar-pedido", "btn-gerar-pedido-kommo"
   ];
   idsBloqueados.forEach(id => {
     document.querySelectorAll(`#${id}`).forEach(btn => {
