@@ -8289,7 +8289,7 @@ window.testarIntegracaoKommo = async function () {
   try {
     const h = await fetch(`${BASE}/health`);
     const hd = await h.json();
-    if (hd.kommo_configurado) {
+    if (hd.kommo_configured || hd.kommo_configurado) {
       console.log("✅ Servidor OK — Kommo configurado:", hd.kommo_domain || "(domínio ok)");
     } else {
       console.error("❌ Servidor sem credenciais Kommo:", hd);
