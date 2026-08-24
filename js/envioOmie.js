@@ -7749,17 +7749,13 @@ function montarPayloadOS({
   const parcelasOsValidas = (parcelasServico || []).filter(p => Number(p?.valor || 0) > 0);
   const totalParcelasOs = parcelasOsValidas.reduce((s, p) => s + Number(p.valor || 0), 0);
 
-  const Parcelas = parcelasOsValidas.map((p, i) => {
-    const parc = {
-      nOrdem:       i + 1,
-      dDtVenc:      String(p.vencimento || p.previsao || p.data || "").trim(),
-      nValParc:     Number((Number(p.valor || 0)).toFixed(2)),
-      nPercParc:    totalParcelasOs > 0
-        ? Number(((Number(p.valor || 0) / totalParcelasOs) * 100).toFixed(2))
-        : 0
-    };
-    return parc;
-  });
+  const Parcelas = parcelasOsValidas.map((p) => ({
+    dDtVenc:   String(p.vencimento || p.previsao || p.data || "").trim(),
+    nValParc:  Number((Number(p.valor || 0)).toFixed(2)),
+    nPercParc: totalParcelasOs > 0
+      ? Number(((Number(p.valor || 0) / totalParcelasOs) * 100).toFixed(2))
+      : 0
+  }));
 
   const payload = {
     Cabecalho,
