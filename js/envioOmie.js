@@ -8279,9 +8279,14 @@ async function sincronizarPDVparaKommo() {
       console.warn("Validation errors:", JSON.stringify(resultado?.details?.['validation-errors'], null, 2));
       console.groupEnd();
 
+      const naoLocalizado =
+        resposta.status === 404 ||
+        resultado?.error === "Cliente não localizado na Kommo" ||
+        resultado?.error === "Nenhum lead encontrado pelo ID PDV";
+
       mostrarPopupSync(
-        resultado?.error === "Nenhum lead encontrado pelo ID PDV" || resultado?.error?.includes("lead")
-          ? `Lead não encontrado na Kommo para esta proposta.\nVerifique se o lead foi vinculado (campo ID PDV).`
+        naoLocalizado
+          ? `Cliente não localizado na Kommo.\nA busca foi feita pelo ID PDV, número do orçamento e número do pedido — nenhum lead correspondente foi encontrado.`
           : `Falha ao sincronizar com a Kommo:\n${resultado?.error || "Erro desconhecido"}`,
         "erro"
       );
