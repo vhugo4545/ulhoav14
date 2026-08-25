@@ -8045,6 +8045,7 @@ function mostrarPopupSync(texto, tipo = "sucesso") {
       }
       .sync-popup-icone.sucesso { background: #e6f7ee; }
       .sync-popup-icone.erro { background: #fdecea; }
+      .sync-popup-icone.aviso { background: #fff8e6; }
       .sync-popup-texto {
         color: #2c3e50;
         font-size: .92rem;
@@ -8084,7 +8085,7 @@ function mostrarPopupSync(texto, tipo = "sucesso") {
 
   const icone = overlay.querySelector("#sync-popup-icone");
   icone.className = `sync-popup-icone ${tipo}`;
-  icone.textContent = tipo === "sucesso" ? "\u{2705}" : "\u{274C}";
+  icone.textContent = tipo === "sucesso" ? "\u{2705}" : tipo === "aviso" ? "\u{1F4CB}" : "\u{274C}";
   overlay.querySelector("#sync-popup-texto").textContent = texto;
   overlay.classList.add("aberto");
 }
@@ -8284,12 +8285,17 @@ async function sincronizarPDVparaKommo() {
         resultado?.error === "Cliente não localizado na Kommo" ||
         resultado?.error === "Nenhum lead encontrado pelo ID PDV";
 
-      mostrarPopupSync(
-        naoLocalizado
-          ? `Cliente não localizado na Kommo.\nA busca foi feita pelo ID PDV, número do orçamento e número do pedido — nenhum lead correspondente foi encontrado.`
-          : `Falha ao sincronizar com a Kommo:\n${resultado?.error || "Erro desconhecido"}`,
-        "erro"
-      );
+      if (naoLocalizado) {
+        mostrarPopupSync(
+          `Cliente não encontrado na Kommo.\n\nO consultor deve cadastrar o cliente na Kommo e realizar o processo corretamente antes de sincronizar.`,
+          "aviso"
+        );
+      } else {
+        mostrarPopupSync(
+          `Falha ao sincronizar com a Kommo:\n${resultado?.error || "Erro desconhecido"}`,
+          "erro"
+        );
+      }
     }
 
     return resultado;
