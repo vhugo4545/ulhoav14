@@ -1800,7 +1800,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   font-style: italic;
   color: #333;
   line-height: 1.35;
-  font-size: 20px;
+  font-size: 40px;
 }
 
         /* ====== BIG TABLES ====== */
