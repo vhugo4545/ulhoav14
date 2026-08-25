@@ -4873,6 +4873,8 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   // Cabeçalho pré-renderizado para embutir no script de paginação
   const cabHTML = cabecalhoCompletoHTML("ORDEM DE SERVIÇO / PRODUÇÃO", 1, 1);
   const cabHTMLEsc = cabHTML.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+  const cabHTMLSimples = cabecalhoBasicoHTML("ORDEM DE SERVIÇO / PRODUÇÃO", "", "");
+  const cabHTMLSimplesEsc = cabHTMLSimples.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
 
   const pagina2HTML = `
     <div class="page-break pagina2-break"></div>
@@ -5289,6 +5291,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
         <script>
         (function () {
           var CAB_HTML = \`${cabHTMLEsc}\`;
+          var CAB_HTML_SIMPLES = \`${cabHTMLSimplesEsc}\`;
           var ALTURA_PAGINA = 700;
 
           window.addEventListener('load', function () {
@@ -5378,9 +5381,9 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
               numDiv.innerHTML = 'Pág. ' + (i + 1) + ' / ' + total;
               pDiv.appendChild(numDiv);
 
-              // Cabeçalho
+              // Cabeçalho: completo só na pág. 1, simplificado nas demais
               var cabDiv = document.createElement('div');
-              cabDiv.innerHTML = CAB_HTML;
+              cabDiv.innerHTML = i === 0 ? CAB_HTML : CAB_HTML_SIMPLES;
               pDiv.appendChild(cabDiv);
 
               // Conteúdo — página 1 com wrapper escalado se necessário
