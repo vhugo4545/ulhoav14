@@ -1344,19 +1344,27 @@ function vvMontarParcelasProdutoPayloadOmie(parcelasProduto = []) {
     parcelasValidas.reduce((acc, parcela) => acc + Number(parcela.valor || 0), 0)
   );
 
-  return parcelasValidas.map((parcela, index) => {
+  const resultados = [];
+  let somaPctAcumulada = 0;
+  parcelasValidas.forEach((parcela, index) => {
+    const isUltima = index === parcelasValidas.length - 1;
+    const pct = totalParcelas > 0
+      ? (isUltima
+          ? Number((100 - somaPctAcumulada).toFixed(2))
+          : Number(((Number(parcela.valor || 0) / totalParcelas) * 100).toFixed(2)))
+      : 0;
+    somaPctAcumulada += pct;
     const obj = {
       numero_parcela: index + 1,
-      percentual: totalParcelas > 0
-        ? Number(((Number(parcela.valor || 0) / totalParcelas) * 100).toFixed(2))
-        : 0,
+      percentual: pct,
       data_vencimento: formatarDataBR(parcela.vencimento),
       valor: vvRound2ControleParcelas(parcela.valor)
     };
     const meio = String(parcela.tipo_monetario || "").trim();
     if (meio) obj.meio_pagamento = meio;
-    return obj;
+    resultados.push(obj);
   });
+  return resultados;
 }
 
 function vvCriarLinhaParcelaFormularioFallback() {
