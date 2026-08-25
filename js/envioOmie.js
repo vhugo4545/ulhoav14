@@ -8157,7 +8157,7 @@ async function sincronizarPDVparaKommo() {
   // ── Desconto ──────────────────────────────────────
   const descontoRaw = document.querySelector("#campoDescontoFinal")?.value?.trim();
   if (descontoRaw) {
-    const descontoNum = parseFloat(String(descontoRaw).replace(',', '.').replace(/[^0-9.]/g, ''));
+    const descontoNum = parseFloat(String(descontoRaw).replace(/\./g, '').replace(',', '.'));
     if (!isNaN(descontoNum) && descontoNum > 0) campos.kommo_desconto = descontoNum;
   }
 
