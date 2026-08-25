@@ -6311,12 +6311,6 @@ async function atualizarNaOmie() {
         document.getElementById("numeroPedido")?.value ||
         "";
 
-      alertServer(
-        "✅ PRODUTOS ENVIADOS COM SUCESSO",
-        respostaProdutos.status,
-        retornoProdutos.parsed ?? retornoProdutos.raw
-      );
-
       abrirStatus(
         "✅ Produtos enviados",
         `Produtos enviados com sucesso. Pedido nº ${numeroPedido}.`,
@@ -6382,12 +6376,6 @@ async function atualizarNaOmie() {
 
       if (osResp?.ok) {
         servicosEnviadosComSucesso = true;
-
-        alertServer(
-          "✅ SERVIÇOS ENVIADOS COM SUCESSO",
-          osResp?.status || 200,
-          osResp
-        );
 
         abrirStatus(
           "✅ Serviços enviados",
@@ -6457,8 +6445,6 @@ async function atualizarNaOmie() {
       erro?.message || "Ocorreu um erro durante o envio.",
       "error"
     );
-
-    mostrarPopupCustomizado("❌ Erro no processo", erro?.message || String(erro), "error");
   } finally {
     if (spinner) spinner.style.display = "none";
     if (botao) botao.disabled = false;

@@ -912,6 +912,7 @@ async function atualizarStatus(novoStatus) {
 
 
 function mostrarPopupCustomizado(titulo, mensagem, tipo = "info") {
+  if (typeof ocultarCarregando === "function") ocultarCarregando();
   const popupExistente = document.getElementById("popup-status-omie");
   if (popupExistente) popupExistente.remove();
 
