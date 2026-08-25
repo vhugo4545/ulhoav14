@@ -8150,6 +8150,10 @@ async function sincronizarPDVparaKommo() {
     || document.getElementById("numeroOrcamento")?.getAttribute("data-valor-original")?.trim();
   if (numeroOrcamento) campos.kommo_numero_orcamento = numeroOrcamento;
 
+  // ── TAG Omie ──────────────────────────────────────
+  const tagOmie = document.getElementById("tagOmie")?.value?.trim();
+  if (tagOmie) campos.kommo_tag_omie = tagOmie;
+
   // ── Valor Total da Venda ──────────────────────────
   const valorFinalTotalEl    = document.getElementById("valorFinalTotal");
   const valorFinalTotalTexto = (valorFinalTotalEl?.textContent || valorFinalTotalEl?.innerText || "")
