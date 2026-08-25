@@ -1802,7 +1802,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   font-weight: 700;
   color: #333;
   line-height: 1.35;
-  font-size: 40px;
+  font-size: 20px;
 }
 
         /* ====== BIG TABLES ====== */
@@ -2969,7 +2969,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   font-weight: 700;
   color: #333;
   line-height: 1.35;
-  font-size: 40px;
+  font-size: 20px;
 }
 
         /* ====== BIG TABLES ====== */
@@ -5115,7 +5115,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   font-weight: 700;
   color: #333;
   line-height: 1.35;
-  font-size: 40px;
+  font-size: 20px;
 }
 
           .fullBox {
