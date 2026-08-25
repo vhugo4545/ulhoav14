@@ -1751,7 +1751,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
         .metaRight { text-align: right; line-height: 1.25; }
 
       .numeroPedidoGigante {
-  font-size: 20px;
+  font-size: 25px;
   font-weight: 900; /* ✅ negrito */
   margin: 4px 0 0;
   line-height: 1;
@@ -1802,7 +1802,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   font-weight: 700;
   color: #333;
   line-height: 1.35;
-  font-size: 20px;
+  font-size: 25px;
 }
 
         /* ====== BIG TABLES ====== */
@@ -1890,7 +1890,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
 .obs-text{
   line-height: 1.35;
   min-height: 70px;
-  font-size: 20px;
+  font-size: 25px;
 }
 
 /* ======= PRIMEIRA PÁGINA (rodapé no final) ======= */
@@ -2918,7 +2918,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
         .metaRight { text-align: right; line-height: 1.25; }
 
       .numeroPedidoGigante {
-  font-size: 20px;
+  font-size: 25px;
   font-weight: 900; /* ✅ negrito */
   margin: 4px 0 0;
   line-height: 1;
@@ -2969,7 +2969,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   font-weight: 700;
   color: #333;
   line-height: 1.35;
-  font-size: 20px;
+  font-size: 25px;
 }
 
         /* ====== BIG TABLES ====== */
@@ -3057,7 +3057,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
 .obs-text{
   line-height: 1.35;
   min-height: 70px;
-  font-size: 20px;
+  font-size: 25px;
 }
 
 /* ======= PRIMEIRA PÁGINA (rodapé no final) ======= */
@@ -5115,7 +5115,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   font-weight: 700;
   color: #333;
   line-height: 1.35;
-  font-size: 20px;
+  font-size: 25px;
 }
 
           .fullBox {
