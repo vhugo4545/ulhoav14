@@ -5616,9 +5616,7 @@ function abrirPopupEscolhaTipoEnvioOmie() {
    ========================================================= */
 async function fluxoSomenteServicos() {
   const abrirStatus = (titulo, mensagem, tipo = 'info') => {
-    if (typeof mostrarPopupCustomizado === 'function') {
-      mostrarPopupCustomizado(titulo, mensagem, tipo);
-    }
+    mostrarPopupCustomizado(titulo, mensagem, tipo);
   };
 
   try {
@@ -6198,11 +6196,7 @@ async function atualizarNaOmie() {
     document.getElementById("loadingSpinner");
 
   const abrirStatus = (titulo, mensagem, tipo = "info") => {
-    if (typeof mostrarPopupCustomizado === "function") {
-      mostrarPopupCustomizado(titulo, mensagem, tipo);
-    } else {
-      console.log(`[${tipo}] ${titulo}: ${mensagem}`);
-    }
+    mostrarPopupCustomizado(titulo, mensagem, tipo);
   };
 
   const montarTextoResposta = (dataOrText) => {
