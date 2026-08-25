@@ -209,6 +209,9 @@ async function enviarClienteParaAPI() {
   const chave_pix = (document.getElementById("popupCliente_chave_pix")?.value || "").trim();
   const observacao = (document.getElementById("popupCliente_observacao")?.value || "").trim();
 
+  const tagsSelecionadas = [...document.querySelectorAll("#popupCliente_tags_container input[type=checkbox]:checked")]
+    .map(cb => ({ tag: cb.value }));
+
   // Validações extras
 
   // E-mail simples
@@ -295,7 +298,8 @@ async function enviarClienteParaAPI() {
     inscricao_estadual,
     telefone1_numero,
     ...(chave_pix ? { cChavePix: chave_pix } : {}),
-    ...(observacao ? { observacao } : {})
+    ...(observacao ? { observacao } : {}),
+    ...(tagsSelecionadas.length ? { tags: tagsSelecionadas } : {})
   };
 
   console.log("➡️ Enviando cliente para o servidor:", cliente);
