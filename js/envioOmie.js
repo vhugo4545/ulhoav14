@@ -5182,7 +5182,7 @@ async function gerarPayloadOmie() {
   const vendedorInfo = await pegarVendedorSelecionadoComCodigo("vendedorResponsavel");
 
   if (!vendedorInfo?.codigo) {
-    alert("Selecione um Vendedor Responsável válido (não foi possível recuperar o código).");
+    mostrarPopupCustomizado("Atenção", "Selecione um Vendedor Responsável válido (não foi possível recuperar o código).", "info");
     return null;
   }
 
@@ -5193,7 +5193,7 @@ async function gerarPayloadOmie() {
   const candidatos = coletarItensPorGrupoParaOmie(ambientesMarcados);
 
   if (!candidatos.length) {
-    alert("Nenhum item elegível encontrado nos ambientes marcados.");
+    mostrarPopupCustomizado("Atenção", "Nenhum item elegível encontrado nos ambientes marcados.", "info");
     return null;
   }
 
@@ -5219,7 +5219,7 @@ async function gerarPayloadOmie() {
       console.log("[gerarPayloadOmie] Aprovados vazio + valorServicos > 0 → modo somente serviços.");
       return { servicosOnly: true };
     }
-    alert("Selecione ao menos um item para enviar à Omie.");
+    mostrarPopupCustomizado("Atenção", "Selecione ao menos um item para enviar à Omie.", "info");
     return null;
   }
 
@@ -5249,15 +5249,13 @@ async function gerarPayloadOmie() {
     .filter(item => !formatarDataBR(item.parcela?.vencimento));
 
   if (!parcelasProdutoParaEnvio.length) {
-    alert("Nenhuma parcela de produto valida foi informada para enviar a Omie.");
+    mostrarPopupCustomizado("Atenção", "Nenhuma parcela de produto válida foi informada para enviar à Omie.", "info");
     return null;
   }
 
   if (parcelasProdutoSemData.length) {
-    alert(
-      "Preencha a data de vencimento das parcelas de produto antes de enviar a Omie.\n" +
-      parcelasProdutoSemData.map(item => `Parcela ${item.index + 1}`).join(", ")
-    );
+    mostrarPopupCustomizado("Atenção", "Preencha a data de vencimento das parcelas de produto antes de enviar à Omie: " +
+      parcelasProdutoSemData.map(item => `Parcela ${item.index + 1}`).join(", "), "info");
     return null;
   }
 
@@ -5265,7 +5263,7 @@ async function gerarPayloadOmie() {
   primeiraDataParcela = parcelasProdutoPayloadOmie[0]?.data_vencimento || "";
 
   if (!primeiraDataParcela) {
-    alert("Data da 1a parcela de produto nao preenchida.");
+    mostrarPopupCustomizado("Atenção", "Data da 1ª parcela de produto não preenchida.", "info");
     return null;
   }
 
@@ -5415,7 +5413,7 @@ async function gerarPayloadOmie() {
   totalProdutosOmie = round2(totalProdutosOmie);
 
   if (!payload.det.length) {
-    alert("Nenhum item válido foi montado para envio à Omie. Verifique código Omie e valor dos produtos.");
+    mostrarPopupCustomizado("Atenção", "Nenhum item válido foi montado para envio à Omie. Verifique código Omie e valor dos produtos.", "info");
     return null;
   }
 
@@ -5653,7 +5651,7 @@ async function fluxoSomenteServicos() {
     const { valorServicos, parcelasServico } = resultado;
 
     if (!(valorServicos > 0)) {
-      alert('Informe um valor de serviços válido.');
+      mostrarPopupCustomizado("Atenção", "Informe um valor de serviços válido.", "info");
       return;
     }
 
@@ -5677,11 +5675,7 @@ async function fluxoSomenteServicos() {
 
   } catch (erro) {
     console.error('❌ fluxoSomenteServicos:', erro);
-    if (typeof mostrarPopupCustomizado === 'function') {
-      mostrarPopupCustomizado('❌ Erro', erro?.message || String(erro), 'error');
-    } else {
-      alert('Erro: ' + (erro?.message || erro));
-    }
+    mostrarPopupCustomizado('❌ Erro', erro?.message || String(erro), 'error');
   } finally {
     if (typeof ocultarCarregando === 'function') ocultarCarregando();
   }
@@ -5992,7 +5986,7 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
         const valorServicos = vv_parseBRL(valorInput.value || '0');
 
         if (!(valorServicos > 0)) {
-          alert('Informe um valor de serviços válido.');
+          mostrarPopupCustomizado("Atenção", "Informe um valor de serviços válido.", "info");
           return;
         }
 
@@ -6009,16 +6003,13 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
           .filter(p => p.valor > 0);
 
         if (!parcelas.length) {
-          alert('Adicione ao menos uma parcela com valor.');
+          mostrarPopupCustomizado("Atenção", "Adicione ao menos uma parcela com valor.", "info");
           return;
         }
 
         const semData = parcelas.filter(p => !p.vencimento);
         if (semData.length) {
-          alert(
-            `Preencha a data de vencimento de todas as parcelas.\n` +
-            `${semData.length} parcela(s) sem data.`
-          );
+          mostrarPopupCustomizado("Atenção", `Preencha a data de vencimento de todas as parcelas. ${semData.length} parcela(s) sem data.`, "info");
           return;
         }
 
@@ -6167,12 +6158,12 @@ async function atualizarNaOmie() {
               setTimeout(() => _toast.remove(), 4000);
             } else {
               const _msg = _altData?.omieRaw?.faultstring || _altData?.message || _altData?.omieErro?.faultstring || _altData?.mensagem || _altData?.erro || `HTTP ${_altResp.status}`;
-              alert(`⚠️ Não foi possível salvar a UF na Omie.\n\n${_msg}\n\nO envio continuará mesmo assim.`);
+              mostrarPopupCustomizado("⚠️ Aviso", `Não foi possível salvar a UF na Omie: ${_msg}. O envio continuará mesmo assim.`, "info");
             }
           } catch (_eAlt) {
             ocultarCarregando();
             console.warn("Erro ao salvar UF:", _eAlt.message);
-            alert(`⚠️ Erro ao comunicar com a Omie: ${_eAlt.message}\n\nO envio continuará mesmo assim.`);
+            mostrarPopupCustomizado("⚠️ Aviso", `Erro ao comunicar com a Omie: ${_eAlt.message}. O envio continuará mesmo assim.`, "info");
           }
         } else {
           document.body.removeChild(_ufLoadingOv);
@@ -6225,7 +6216,7 @@ async function atualizarNaOmie() {
 
   const alertServer = (titulo, status, dataOrText) => {
     const corpo = montarTextoResposta(dataOrText);
-    alert(`${titulo}\nHTTP: ${status}\n\n${corpo}`);
+    mostrarPopupCustomizado(titulo, `HTTP ${status}\n\n${corpo}`, "error");
   };
 
   const readJsonOrText = async (res) => {
@@ -6473,7 +6464,7 @@ async function atualizarNaOmie() {
       "error"
     );
 
-    alert(`❌ Erro no processo\n\n${erro?.message || erro}`);
+    mostrarPopupCustomizado("❌ Erro no processo", erro?.message || String(erro), "error");
   } finally {
     if (spinner) spinner.style.display = "none";
     if (botao) botao.disabled = false;
@@ -7887,11 +7878,7 @@ async function enviarOSServico({
   try {
     if (!(Number(valorServicos) > 0)) {
       const msg = "Valor de Serviços inválido ou zerado.";
-      if (typeof mostrarPopupCustomizado === "function") {
-        mostrarPopupCustomizado("❌ Erro ao enviar Serviços", msg, "error");
-      } else {
-        alert(msg);
-      }
+      mostrarPopupCustomizado("❌ Erro ao enviar Serviços", msg, "error");
       return { ok: false, error: msg };
     }
 
@@ -7913,12 +7900,7 @@ async function enviarOSServico({
           parcelasServicoSemData.map(item => `Parcela ${item.index + 1}`).join(", ")
         : "Data de previsao das parcelas de servico nao preenchida.";
 
-      if (typeof mostrarPopupCustomizado === "function") {
-        mostrarPopupCustomizado("Erro ao enviar Servicos", msg, "error");
-      } else {
-        alert(msg);
-      }
-
+      mostrarPopupCustomizado("Erro ao enviar Serviços", msg, "error");
       return { ok: false, error: msg };
     }
 
@@ -8017,40 +7999,27 @@ async function enviarOSServico({
         "- Se exigir Authorization, valide o token."
       ].join("<br>");
 
-      if (typeof mostrarPopupCustomizado === "function") {
-        mostrarPopupCustomizado(
-          "❌ Erro ao enviar OS de Serviços",
-          `Status: ${resp.status}<br>Motivo: ${motivo}<br><br>${dicasHtml}`,
-          "error"
-        );
-      } else {
-        alert(`Erro ao enviar OS de Serviços:\n${motivo}`);
-      }
+      mostrarPopupCustomizado(
+        "❌ Erro ao enviar OS de Serviços",
+        `Status: ${resp.status}<br>Motivo: ${motivo}<br><br>${dicasHtml}`,
+        "error"
+      );
 
       return { ok: false, error: motivo, data };
     }
 
-    if (typeof mostrarPopupCustomizado === "function") {
-      mostrarPopupCustomizado(
-        "✅ OS de Serviços enviada",
-        `OS criada com sucesso.<br>Valor: ${vv_fmtBRL(valorServicos)}.`,
-        "success"
-      );
-    } else {
-      alert("✅ OS de Serviços enviada com sucesso!");
-    }
+    mostrarPopupCustomizado(
+      "✅ OS de Serviços enviada",
+      `OS criada com sucesso.<br>Valor: ${vv_fmtBRL(valorServicos)}.`,
+      "success"
+    );
 
     return { ok: true, status: resp.status, data };
   } catch (err) {
     console.error("❌ enviarOSServico erro:", err);
     const msg = err?.message || String(err);
 
-    if (typeof mostrarPopupCustomizado === "function") {
-      mostrarPopupCustomizado("❌ Erro ao enviar Serviços", msg, "error");
-    } else {
-      alert("Erro ao enviar Serviços:\n" + msg);
-    }
-
+    mostrarPopupCustomizado("❌ Erro ao enviar Serviços", msg, "error");
     return { ok: false, error: msg };
   }
 }
