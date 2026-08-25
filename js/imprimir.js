@@ -1702,7 +1702,8 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   .obs-row {
     border-top: 1px solid #000;
     padding: 6px 8px;
-    font-size: 12px;
+    font-size: 24px;
+    font-weight: 700;
   }
 
   @media print {
@@ -2868,7 +2869,8 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   .obs-row {
     border-top: 1px solid #000;
     padding: 6px 8px;
-    font-size: 12px;
+    font-size: 24px;
+    font-weight: 700;
   }
 
   @media print {
