@@ -3198,9 +3198,18 @@ function recalc(){
   const baseParaServico = Math.max(0, totalTodosComDescontoParaServico - fromCents(catIgnoradosSemMO));
   const valorServicosAutomatic = baseParaServico * 0.20;
 
-  console.log('[recalc] catIgnoradosSemMO:', fromCents(catIgnoradosSemMO));
-  console.log('[recalc] baseParaServico:', baseParaServico);
-  console.log('[recalc] valorServicosAutomatic:', valorServicosAutomatic);
+  console.group('[recalc] detalhes');
+  console.log('totalTodos:', totalTodos, '| descontoTotal:', descontoTotal);
+  rows.filter(tr => isIgnoredKey(tr.dataset.key)).forEach(tr => {
+    console.log('  [ignorado]', tr.dataset.key,
+      '| valor:', Number(tr.dataset.valor||0).toFixed(2),
+      '| custo:', Number(tr.dataset.custo||0).toFixed(2),
+      '| islabor:', tr.dataset.islabor);
+  });
+  console.log('catIgnoradosSemMO:', fromCents(catIgnoradosSemMO));
+  console.log('baseParaServico:', baseParaServico);
+  console.log('valorServicosAutomatic:', valorServicosAutomatic);
+  console.groupEnd();
 
   // Preenche campo de serviços automaticamente se vazio ou divergente
 if ($srvValor && valorServicosAutomatic > 0 && !srvValorEditadoManualmente) {
