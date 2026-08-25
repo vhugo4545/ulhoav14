@@ -8154,6 +8154,13 @@ async function sincronizarPDVparaKommo() {
   const tagOmie = document.getElementById("tagOmie")?.value?.trim();
   if (tagOmie) campos.kommo_tag_omie = tagOmie;
 
+  // ── Desconto ──────────────────────────────────────
+  const descontoRaw = document.querySelector("#campoDescontoFinal")?.value?.trim();
+  if (descontoRaw) {
+    const descontoNum = parseFloat(String(descontoRaw).replace(',', '.').replace(/[^0-9.]/g, ''));
+    if (!isNaN(descontoNum) && descontoNum > 0) campos.kommo_desconto = descontoNum;
+  }
+
   // ── Valor Total da Venda ──────────────────────────
   const valorFinalTotalEl    = document.getElementById("valorFinalTotal");
   const valorFinalTotalTexto = (valorFinalTotalEl?.textContent || valorFinalTotalEl?.innerText || "")
