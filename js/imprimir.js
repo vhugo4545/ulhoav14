@@ -1798,6 +1798,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   border-top: 1px solid #111;
   padding: 8px 10px;
   font-style: italic;
+  font-weight: 700;
   color: #333;
   line-height: 1.35;
   font-size: 40px;
