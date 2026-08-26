@@ -222,10 +222,6 @@
 
     const errosObrigatorios = [];
 
-    if (!camposFormulario.origemCliente || !camposFormulario.origemCliente.trim()) {
-      errosObrigatorios.push("O campo Origem do Cliente é obrigatório.");
-    }
-
     const selectVendedor = document.getElementById("vendedorResponsavel");
     const valorSelecionado = selectVendedor?.value?.trim() || "";
 

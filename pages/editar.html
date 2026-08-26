@@ -1100,7 +1100,7 @@ async function openOsPopup({ endpoint = "https://ulhoa-servico-ec4e1aa95355.hero
                     <label class="form-label">Data de criação:</label>
                     <input type="date" class="form-control" id="dataOrcamento" required>
                   </div>
-                  <div class="col-md-4">
+                  <div class="col-md-4" style="display:none">
   <label class="form-label">TAG Omie (tipo de cliente)</label>
   <select class="form-select" id="tagOmie">
     <option value="">Selecione...</option>
@@ -1115,9 +1115,9 @@ async function openOsPopup({ endpoint = "https://ulhoa-servico-ec4e1aa95355.hero
     <option>Órgão Público</option>
   </select>
 </div>
-                  <div class="col-md-4">
+                  <div class="col-md-4" style="display:none">
   <label class="form-label">Origem do Cliente</label>
-  <select class="form-select" id="origemCliente" required>
+  <select class="form-select" id="origemCliente">
     <option value="">Selecione</option>
     <option>Google</option>
     <option>Instagram</option>
@@ -1956,11 +1956,6 @@ Instagram: </textarea>
 // ✅ Validação de campos obrigatórios + validação de produtos (texto puro, sem HTML)
 // ✅ Validação de campos obrigatórios + validação de produtos (texto puro, sem HTML)
 const errosObrigatorios = [];
-
-// Origem do Cliente
-if (!camposFormulario.origemCliente || !camposFormulario.origemCliente.trim()) {
-  errosObrigatorios.push("O campo Origem do Cliente é obrigatório.");
-}
 
 // ✅ Vendedor Responsável (usa sua variável textoSelecionado + checa value do select)
 const selectVendedor = document.getElementById("vendedorResponsavel");
