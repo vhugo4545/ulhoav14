@@ -575,6 +575,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   <div id="pdv-float-body">
     <button class="botao-atualizar" id="btn-prod"><span class="material-icons-outlined" style="font-size:16px;">inventory_2</span> Atualizar Produtos</button>
     <button class="botao-atualizar" id="btn-cli"><span class="material-icons-outlined" style="font-size:16px;">people</span> Atualizar Clientes</button>
+    <button class="botao-atualizar" id="btn-preencher-params" onclick="abrirPopupPreencherParams()"><span class="material-icons-outlined" style="font-size:16px;">tune</span> Preencher Parâmetros</button>
     <button class="botao-atualizar" id="btn-ajuste-nomenclatura" style="display:none;"><span class="material-icons-outlined" style="font-size:16px;">edit_note</span> Ajuste de nomenclatura</button>
     <!-- botão de resumo compacto inserido aqui pelo JS -->
   </div>
@@ -683,6 +684,109 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById('btn-cli').onclick = () =>
     solicitarAtualizacao('https://ulhoa-0a02024d350a.herokuapp.com/clientes/atualizar', 'GET', 'clientes');
 })();
+
+// ── Popup: Preencher Parâmetros em Todos os Grupos ──────────────────────────
+const PARAMS_CONFIG = [
+  { name: "miudezas",          label: "Miudezas",                        readonly: true  },
+  { name: "gasto_operacional", label: "Gastos Operacionais",              readonly: true  },
+  { name: "impostos",          label: "Impostos",                         readonly: true  },
+  { name: "margem_seguranca",  label: "Margem de Segurança",              readonly: false },
+  { name: "comissao_arquiteta",label: "Comissão Arquiteta",               readonly: false },
+  { name: "margem_negociacao", label: "Margem de Negociação",             readonly: false },
+  { name: "numero_montantes",  label: "Nº de Montantes / Fixações",       readonly: false },
+  { name: "altura_montante",   label: "Altura do Montante",               readonly: false },
+  { name: "numero_protecoes",  label: "Número de Proteções / Altura Vidro", readonly: false },
+  { name: "margem_lucro",      label: "Margem de Lucro",                  readonly: false },
+  { name: "descricao",         label: "Metragem / Unidade(s)",            readonly: false },
+];
+
+function abrirPopupPreencherParams() {
+  if (document.getElementById("popup-params-overlay")) return;
+
+  // Lê valores do primeiro bloco como referência
+  const primeiroBloco = document.querySelector(".main-container");
+  function lerValorRef(name) {
+    return primeiroBloco?.querySelector(`input[name="${name}"]`)?.value || "";
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "popup-params-overlay";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;";
+
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.25);padding:24px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;font-size:17px;font-weight:700;">Preencher Parâmetros em Todos os Grupos</h3>
+        <button onclick="document.getElementById('popup-params-overlay').remove()" style="border:none;background:#e5e7eb;border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600;">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:20px;">
+        ${PARAMS_CONFIG.map(p => `
+          <div>
+            <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:3px;">${p.label}</label>
+            <div style="display:flex;gap:4px;align-items:center;">
+              <input
+                type="text"
+                data-param="${p.name}"
+                value="${lerValorRef(p.name)}"
+                placeholder="${p.readonly ? "calculado" : "deixe vazio p/ ignorar"}"
+                ${p.readonly ? 'style="background:#f3f3f3;flex:1;" readonly' : 'style="flex:1;"'}
+                class="form-control form-control-sm"
+              >
+              ${!p.readonly ? `<button type="button" data-apply="${p.name}" title="Aplicar só este campo" style="border:none;background:#e0f2fe;color:#0369a1;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;white-space:nowrap;">Aplicar</button>` : ''}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button onclick="document.getElementById('popup-params-overlay').remove()" style="border:1px solid #d1d5db;background:#fff;border-radius:8px;padding:8px 18px;cursor:pointer;font-weight:600;">Cancelar</button>
+        <button id="btn-aplicar-todos-params" style="border:none;background:#2563eb;color:#fff;border-radius:8px;padding:8px 18px;cursor:pointer;font-weight:700;">Substituir em Todos os Grupos</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
+
+  // Simula digitação campo a campo (dispara eventos para fórmulas reagirem)
+  function simularDigitacao(input, valor) {
+    input.focus();
+    input.value = "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    // digita caractere por caractere
+    for (const ch of String(valor)) {
+      input.value += ch;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    input.blur();
+  }
+
+  function aplicarCampo(name, valor) {
+    if (valor === "" || valor === null || valor === undefined) return;
+    document.querySelectorAll(`.main-container input[name="${name}"]`).forEach(inp => {
+      if (!inp.readOnly) simularDigitacao(inp, valor);
+    });
+  }
+
+  // Botões de aplicar campo individual
+  overlay.querySelectorAll("[data-apply]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const name = btn.dataset.apply;
+      const inp = overlay.querySelector(`input[data-param="${name}"]`);
+      aplicarCampo(name, inp?.value || "");
+    });
+  });
+
+  // Botão aplicar todos
+  document.getElementById("btn-aplicar-todos-params").addEventListener("click", () => {
+    PARAMS_CONFIG.forEach(p => {
+      if (p.readonly) return;
+      const inp = overlay.querySelector(`input[data-param="${p.name}"]`);
+      aplicarCampo(p.name, inp?.value || "");
+    });
+    overlay.remove();
+  });
+}
 </script>
 <script>
 let CLIENTES_CACHE = [];

@@ -259,6 +259,105 @@
 
     <div class="ajustes-grid">
 
+      <!-- Card: Usuários — topo da página -->
+      <div class="card" style="grid-column: 1 / -1; padding:0; overflow:hidden;">
+
+        <!-- Header do card -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);background:var(--bg);">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="material-icons-outlined" style="font-size:18px;color:#475569;">manage_accounts</span>
+            <span style="font-size:13px;font-weight:700;color:#1e293b;letter-spacing:.01em;">Gestão de Usuários</span>
+          </div>
+          <button onclick="nuCarregar()" title="Atualizar lista" style="border:none;background:#f1f5f9;color:#475569;border-radius:8px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;transition:background .15s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+            <span class="material-icons-outlined" style="font-size:15px;">refresh</span> Atualizar
+          </button>
+        </div>
+
+        <!-- Layout: form à esquerda, lista à direita -->
+        <div style="display:grid;grid-template-columns:340px 1fr;min-height:260px;">
+
+          <!-- Painel esquerdo: form -->
+          <div style="padding:20px 22px;border-right:1px solid var(--border);background:#f8fafc;">
+            <div style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;">Novo usuário</div>
+
+            <div style="display:flex;flex-direction:column;gap:11px;">
+              <div>
+                <label style="font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Nome</label>
+                <input id="nu-nome" type="text" placeholder="Nome completo"
+                  style="width:100%;box-sizing:border-box;padding:8px 11px;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;outline:none;background:#fff;color:#1e293b;transition:border .15s;"
+                  onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='#cbd5e1'">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">E-mail</label>
+                <input id="nu-email" type="email" placeholder="email@exemplo.com"
+                  style="width:100%;box-sizing:border-box;padding:8px 11px;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;outline:none;background:#fff;color:#1e293b;transition:border .15s;"
+                  onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='#cbd5e1'">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Senha</label>
+                <input id="nu-senha" type="password" placeholder="Mínimo 6 caracteres"
+                  style="width:100%;box-sizing:border-box;padding:8px 11px;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;outline:none;background:#fff;color:#1e293b;transition:border .15s;"
+                  onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='#cbd5e1'">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Tipo</label>
+                <select id="nu-tipo"
+                  style="width:100%;box-sizing:border-box;padding:8px 11px;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;outline:none;background:#fff;color:#1e293b;cursor:pointer;">
+                  <option value="usuario">Usuário</option>
+                  <option value="gestor">Gestor</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+            </div>
+
+            <button onclick="nuCriar()"
+              style="margin-top:16px;width:100%;border:none;background:#1e293b;color:#fff;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s;"
+              onmouseover="this.style.background='#334155'" onmouseout="this.style.background='#1e293b'">
+              <span class="material-icons-outlined" style="font-size:16px;">person_add</span> Criar usuário
+            </button>
+            <div id="nu-status" style="margin-top:8px;font-size:11px;text-align:center;min-height:16px;"></div>
+          </div>
+
+          <!-- Painel direito: lista -->
+          <div style="display:flex;flex-direction:column;overflow:hidden;">
+            <!-- Barra de pesquisa -->
+            <div style="padding:10px 16px;border-bottom:1px solid #f1f5f9;background:#fff;">
+              <div style="position:relative;">
+                <span class="material-icons-outlined" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:16px;color:#94a3b8;pointer-events:none;">search</span>
+                <input id="nu-busca" type="text" placeholder="Buscar por nome ou e-mail..."
+                  oninput="nuFiltrar()"
+                  style="width:100%;box-sizing:border-box;padding:7px 10px 7px 32px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;outline:none;background:#f8fafc;color:#1e293b;transition:border .15s;"
+                  onfocus="this.style.borderColor='#64748b';this.style.background='#fff'" onblur="this.style.borderColor='#e2e8f0';this.style.background='#f8fafc'">
+              </div>
+            </div>
+            <!-- Cabeçalho fixo -->
+            <table style="width:100%;border-collapse:collapse;font-size:12px;flex-shrink:0;">
+              <thead>
+                <tr style="background:#f1f5f9;border-bottom:2px solid #e2e8f0;">
+                  <th style="text-align:left;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Nome</th>
+                  <th style="text-align:left;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;">E-mail</th>
+                  <th style="text-align:center;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;width:110px;">Tipo</th>
+                  <th style="text-align:center;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;width:150px;">Ações</th>
+                </tr>
+              </thead>
+            </table>
+            <!-- Corpo com scroll -->
+            <div style="overflow-y:auto;max-height:290px;flex:1;">
+              <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <tbody id="nu-tbody">
+                  <tr><td colspan="4" style="padding:32px;text-align:center;color:#94a3b8;">Carregando...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- Rodapé com total -->
+            <div id="nu-rodape" style="padding:7px 16px;border-top:1px solid #f1f5f9;font-size:11px;color:#94a3b8;background:#fafafa;display:none;">
+              Mostrando <strong id="nu-count" style="color:#475569;">0</strong> de <span id="nu-total">0</span>
+              <span id="nu-ver-todos-wrap"> — <button onclick="nuMostrarTodos()" style="border:none;background:none;color:#0369a1;font-size:11px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline;">ver todos</button></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Card: Sincronização -->
       <div class="card">
         <div class="card-title">
@@ -374,6 +473,46 @@
         </div>
       </div>
 
+      <!-- Card: Visibilidade de Botões por Status -->
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="card-title">
+          <span class="material-icons-outlined">toggle_on</span>
+          Visibilidade de Botões — Usuário Padrão por Status
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);margin:0 0 16px;">
+          Marque em quais status cada botão deve aparecer para o usuário padrão. Deixe desmarcado para ocultar.
+        </p>
+
+        <div style="overflow-x:auto;">
+          <table id="tabela-visibilidade" style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:8px 12px;background:#475569;color:#fff;border:1px solid #334155;min-width:180px;">Botão</th>
+                <th style="padding:8px 10px;background:#475569;color:#fff;border:1px solid #334155;text-align:center;white-space:nowrap;">Orc. Iniciado</th>
+                <th style="padding:8px 10px;background:#475569;color:#fff;border:1px solid #334155;text-align:center;white-space:nowrap;">Pend. Aprovação</th>
+                <th style="padding:8px 10px;background:#475569;color:#fff;border:1px solid #334155;text-align:center;white-space:nowrap;">Aprov. Gestor</th>
+                <th style="padding:8px 10px;background:#475569;color:#fff;border:1px solid #334155;text-align:center;white-space:nowrap;">Enviado Cliente</th>
+                <th style="padding:8px 10px;background:#475569;color:#fff;border:1px solid #334155;text-align:center;white-space:nowrap;">Aprov. Cliente</th>
+                <th style="padding:8px 10px;background:#475569;color:#fff;border:1px solid #334155;text-align:center;white-space:nowrap;">Ped. Finalizado</th>
+                <th style="padding:8px 10px;background:#2d4a6b;color:#fff;border:1px solid #334155;text-align:center;white-space:nowrap;">Visível para</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-visibilidade"></tbody>
+          </table>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap;">
+          <button class="cfg-save-btn" onclick="salvarVisibilidade()">
+            <span class="material-icons-outlined">cloud_upload</span> Salvar
+          </button>
+          <span class="cfg-status" id="cfg-status-visibilidade"></span>
+          <span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">
+            <span class="material-icons-outlined" style="font-size:14px;">info</span>
+            Estas configurações afetam apenas usuários comuns. Administradores sempre veem todos os botões.
+          </span>
+        </div>
+      </div>
+
       <!-- Restaurar padrão -->
       <div style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center;">
         <button class="cfg-reset-btn" onclick="cfgResetar()">Restaurar padrão</button>
@@ -383,6 +522,161 @@
   </main>
 
   <script src="../js/configuracoes.js"></script>
+  <script>
+  // ── Visibilidade de Botões por Status ────────────────────────────────────
+  const VIS_BOTOES = [
+    { id: "btn-criar",              label: "Criar / Duplicar Proposta" },
+    { id: "btn-destravar",          label: "Destravar Campos"         },
+    { id: "btn-planilha-custos",    label: "Planilha de Custos"       },
+    { id: "btn-editar",             label: "Salvar Proposta"          },
+    { id: "btn-solicitar",          label: "Solicitar Aprovação"      },
+    { id: "btn-autorizar",          label: "Aprovar (Gestor)"         },
+    { id: "btn-visualizar-proposta",label: "Visualizar Proposta"      },
+    { id: "btn-folhas-impressao",   label: "Folhas de Impressão"      },
+    { id: "btn-pedido-finalizado",  label: "Pedido Finalizado"        },
+    { id: "btn-enviar-cliente",     label: "Enviar Proposta"          },
+    { id: "btn-aprovado-cliente",   label: "Aprovado pelo Cliente"    },
+    { id: "btn-gerar-pedido-kommo", label: "Enviar Pedido (Kommo)"    },
+    { id: "btn-gerar-pedido",       label: "Enviar para Omie"         },
+    { id: "btn-atualizar-precos",   label: "Atualizar Preços Omie"    },
+  ];
+
+  const VIS_STATUS = [
+    "Orçamento Iniciado",
+    "Pendente de aprovação",
+    "Aprovado Pelo Gestor",
+    "Enviado Para o Cliente",
+    "Orçamento Aprovado pelo Cliente",
+    "Pedido Finalizado",
+  ];
+
+  const VIS_KEY = "cfg_visibilidade_botoes";
+
+  function visCarregarConfig() {
+    const cfgServer = window.CFgAPI?.obter()?.visibilidadeBotoes;
+    if (cfgServer) return cfgServer;
+    try { return JSON.parse(localStorage.getItem(VIS_KEY)) || {}; } catch { return {}; }
+  }
+
+  function visRenderizar() {
+    const cfg = visCarregarConfig();
+    const tbody = document.getElementById("tbody-visibilidade");
+    tbody.innerHTML = "";
+
+    VIS_BOTOES.forEach(btn => {
+      const tr = document.createElement("tr");
+
+      const tdLabel = document.createElement("td");
+      tdLabel.style.cssText = "padding:7px 12px;border:1px solid var(--border);font-weight:600;";
+      tdLabel.textContent = btn.label;
+      tr.appendChild(tdLabel);
+
+      VIS_STATUS.forEach(status => {
+        const td = document.createElement("td");
+        td.style.cssText = "padding:7px 10px;border:1px solid var(--border);text-align:center;";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.dataset.btn = btn.id;
+        cb.dataset.status = status;
+        cb.style.width = "16px";
+        cb.style.height = "16px";
+        cb.style.cursor = "pointer";
+        const visivel = cfg[btn.id]?.[status] !== false; // padrão: visível
+        cb.checked = visivel;
+        td.appendChild(cb);
+        tr.appendChild(td);
+      });
+
+      // Coluna "Visível para"
+      const tdPub = document.createElement("td");
+      tdPub.style.cssText = "padding:4px 8px;border:1px solid var(--border);text-align:center;background:rgba(45,74,107,0.06);";
+      const sel = document.createElement("select");
+      sel.dataset.btn = btn.id;
+      sel.dataset.field = "publico";
+      sel.style.cssText = "font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid var(--border);cursor:pointer;width:100%;";
+      [
+        { value: "ambos",   label: "Ambos"        },
+        { value: "usuario", label: "Só Usuários"  },
+        { value: "admin",   label: "Só Admin"     },
+      ].forEach(op => {
+        const opt = document.createElement("option");
+        opt.value = op.value;
+        opt.textContent = op.label;
+        sel.appendChild(opt);
+      });
+      sel.value = cfg[btn.id]?._publico || "ambos";
+      tdPub.appendChild(sel);
+      tr.appendChild(tdPub);
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function salvarVisibilidade() {
+    const cfg = {};
+    document.querySelectorAll("#tbody-visibilidade input[type=checkbox]").forEach(cb => {
+      const btnId = cb.dataset.btn;
+      const status = cb.dataset.status;
+      if (!cfg[btnId]) cfg[btnId] = {};
+      cfg[btnId][status] = cb.checked;
+    });
+    document.querySelectorAll("#tbody-visibilidade select[data-field='publico']").forEach(sel => {
+      const btnId = sel.dataset.btn;
+      if (!cfg[btnId]) cfg[btnId] = {};
+      cfg[btnId]._publico = sel.value;
+    });
+
+    // Persiste localmente como cache
+    localStorage.setItem(VIS_KEY, JSON.stringify(cfg));
+
+    const statusEl = document.getElementById("cfg-status-visibilidade");
+    statusEl.className = "cfg-status";
+    statusEl.textContent = "Salvando…";
+
+    // Tenta salvar no servidor via CFgAPI
+    const cfgParcial = Object.assign({}, window.CFgAPI?.obter() || {}, { visibilidadeBotoes: cfg });
+    const ok = await window.CFgAPI?.salvar(cfgParcial);
+    statusEl.textContent = "";
+
+    const erro   = ok === false;
+    const titulo = erro ? "Salvo localmente" : "Configuração salva!";
+    const msg    = erro
+      ? "O servidor estava indisponível. As configurações foram salvas localmente e serão enviadas na próxima vez."
+      : "As alterações foram salvas com sucesso.\n\nLembre-se: estas configurações afetam apenas usuários comuns. Administradores sempre visualizam todos os botões, independente desta configuração.";
+
+    const iconeNome  = erro ? "warning" : "check_circle";
+    const iconeCor   = erro ? "#b45309" : "#15803d";
+    const iconeBg    = erro ? "#fef9c3" : "#dcfce7";
+
+    // Popup
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;";
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,.25);padding:28px 28px 22px;max-width:400px;width:100%;text-align:center;font-family:system-ui,sans-serif;">
+        <div style="width:56px;height:56px;border-radius:50%;background:${iconeBg};display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+          <span class="material-icons-outlined" style="font-size:30px;color:${iconeCor};">${iconeNome}</span>
+        </div>
+        <div style="font-size:17px;font-weight:700;color:#1e293b;margin-bottom:10px;">${titulo}</div>
+        <div style="font-size:13px;color:#475569;line-height:1.6;white-space:pre-line;">${msg}</div>
+        <button id="vis-popup-fechar" style="margin-top:20px;background:#1e293b;color:#fff;border:none;border-radius:10px;padding:10px 28px;font-size:14px;font-weight:700;cursor:pointer;">Entendido</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    const fechar = () => overlay.remove();
+    overlay.querySelector("#vis-popup-fechar").addEventListener("click", fechar);
+    overlay.addEventListener("click", e => { if (e.target === overlay) fechar(); });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Aguarda CFgAPI carregar config do servidor antes de renderizar
+    if (window.CFgAPI) {
+      visRenderizar();
+    } else {
+      document.addEventListener("cfgapi:pronto", visRenderizar, { once: true });
+      // fallback: se evento não disparar, renderiza mesmo assim
+      setTimeout(visRenderizar, 1500);
+    }
+  });
+  </script>
   <script>
     const BASE_URL        = 'https://contator-ulhoa-3d28d89efa68.herokuapp.com';
     const PROD_ATU_URL    = "https://ulhoa-0a02024d350a.herokuapp.com/produtos/atualizar";
@@ -644,6 +938,232 @@
   // Aguarda configuracoes.js estar pronto
   if (window.CFgAPI) { cfgInit(); }
   else { document.addEventListener("DOMContentLoaded", cfgInit); }
+  </script>
+
+  <script>
+  // ── Gestão de usuários ───────────────────────────────────────────────────
+  const NU_API = "https://ulhoa-0a02024d350a.herokuapp.com/api/auth";
+
+  function nuToken() {
+    return localStorage.getItem("token") || localStorage.getItem("accessToken") || "";
+  }
+
+  function nuAuthHeader() {
+    return { "Content-Type": "application/json", "Authorization": `Bearer ${nuToken()}` };
+  }
+
+  const TIPO_BADGE = {
+    admin:   { bg: "#dbeafe", cor: "#1d4ed8", label: "Admin"   },
+    gestor:  { bg: "#fef9c3", cor: "#854d0e", label: "Gestor"  },
+    usuario: { bg: "#f1f5f9", cor: "#475569", label: "Usuário" },
+  };
+
+  let nuListaCompleta = [];
+
+  function nuRenderizar(lista) {
+    const tbody = document.getElementById("nu-tbody");
+    if (!lista.length) {
+      tbody.innerHTML = `<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Nenhum usuário encontrado.</td></tr>`;
+      document.getElementById("nu-rodape").style.display = "none";
+      return;
+    }
+    tbody.innerHTML = lista.map((u, i) => {
+      const b = TIPO_BADGE[u.tipo] || TIPO_BADGE.usuario;
+      const bg = i % 2 === 0 ? "#fff" : "#f8fafc";
+      return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;transition:background .1s;" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='${bg}'">
+        <td style="padding:10px 16px;color:#1e293b;font-weight:500;">${_esc(u.nome || "—")}</td>
+        <td style="padding:10px 16px;color:#64748b;font-size:11px;">${_esc(u.email || "—")}</td>
+        <td style="padding:10px 16px;text-align:center;">
+          <span style="background:${b.bg};color:${b.cor};border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;">${b.label}</span>
+        </td>
+        <td style="padding:8px 16px;text-align:center;">
+          <div style="display:flex;gap:6px;justify-content:center;">
+            <button onclick="nuAbrirEdicao('${u._id}','${_esc(u.nome)}','${_esc(u.email)}','${u.tipo}')"
+              style="background:#f0f9ff;color:#0369a1;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:3px;border:1px solid #bae6fd;">
+              <span class="material-icons-outlined" style="font-size:13px;">edit</span> Editar
+            </button>
+            <button onclick="nuExcluir('${u._id}','${_esc(u.nome || u.email)}')"
+              style="background:#fff5f5;color:#dc2626;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:3px;border:1px solid #fecaca;">
+              <span class="material-icons-outlined" style="font-size:13px;">delete</span> Excluir
+            </button>
+          </div>
+        </td>
+      </tr>`;
+    }).join("");
+  }
+
+  function nuAtualizarRodape(exibidos, total) {
+    const rodape = document.getElementById("nu-rodape");
+    if (total === 0) { rodape.style.display = "none"; return; }
+    rodape.style.display = "flex";
+    document.getElementById("nu-count").textContent = exibidos;
+    document.getElementById("nu-total").textContent = total;
+    document.getElementById("nu-ver-todos-wrap").style.display = exibidos < total ? "" : "none";
+  }
+
+  function nuFiltrar() {
+    const q = (document.getElementById("nu-busca")?.value || "").toLowerCase().trim();
+    const filtrados = q
+      ? nuListaCompleta.filter(u => (u.nome||"").toLowerCase().includes(q) || (u.email||"").toLowerCase().includes(q))
+      : nuListaCompleta;
+    const exibir = filtrados.slice(0, 10);
+    nuRenderizar(exibir);
+    nuAtualizarRodape(exibir.length, filtrados.length);
+  }
+
+  function nuMostrarTodos() {
+    const q = (document.getElementById("nu-busca")?.value || "").toLowerCase().trim();
+    const filtrados = q
+      ? nuListaCompleta.filter(u => (u.nome||"").toLowerCase().includes(q) || (u.email||"").toLowerCase().includes(q))
+      : nuListaCompleta;
+    nuRenderizar(filtrados);
+    nuAtualizarRodape(filtrados.length, filtrados.length);
+  }
+
+  async function nuCarregar() {
+    const tbody = document.getElementById("nu-tbody");
+    tbody.innerHTML = `<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Carregando...</td></tr>`;
+    document.getElementById("nu-rodape").style.display = "none";
+    if (document.getElementById("nu-busca")) document.getElementById("nu-busca").value = "";
+    try {
+      const res = await fetch(`${NU_API}/usuarios`, { headers: nuAuthHeader() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      nuListaCompleta = await res.json();
+      const exibir = nuListaCompleta.slice(0, 10);
+      nuRenderizar(exibir);
+      nuAtualizarRodape(exibir.length, nuListaCompleta.length);
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="4" style="padding:16px;text-align:center;color:#991b1b;">Erro ao carregar: ${e.message}</td></tr>`;
+    }
+  }
+
+  async function nuCriar() {
+    const nome  = document.getElementById("nu-nome").value.trim();
+    const email = document.getElementById("nu-email").value.trim();
+    const senha = document.getElementById("nu-senha").value;
+    const tipo  = document.getElementById("nu-tipo").value;
+    const st    = document.getElementById("nu-status");
+
+    if (!nome || !email || !senha) {
+      st.textContent = "Preencha nome, e-mail e senha.";
+      st.style.color = "#991b1b";
+      return;
+    }
+
+    st.textContent = "Criando...";
+    st.style.color = "#64748b";
+    try {
+      const res = await fetch(`${NU_API}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome, email, username: email, password: senha, tipo })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.msg || data.erro || `HTTP ${res.status}`);
+      st.textContent = "Usuário criado com sucesso";
+      st.style.color = "#15803d";
+      document.getElementById("nu-nome").value  = "";
+      document.getElementById("nu-email").value = "";
+      document.getElementById("nu-senha").value = "";
+      setTimeout(() => { st.textContent = ""; }, 3000);
+      nuCarregar();
+    } catch(e) {
+      st.textContent = "Erro: " + e.message;
+      st.style.color = "#991b1b";
+    }
+  }
+
+  function nuAbrirEdicao(id, nome, email, tipo) {
+    if (document.getElementById("nu-edit-overlay")) return;
+    const overlay = document.createElement("div");
+    overlay.id = "nu-edit-overlay";
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;";
+
+    const TIPO_BADGE_LOCAL = TIPO_BADGE;
+    const INP = "width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;outline:none;background:#fff;color:#1e293b;font-family:system-ui,sans-serif;";
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,.22);padding:28px;max-width:440px;width:100%;font-family:system-ui,sans-serif;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:15px;font-weight:700;color:#1e293b;">Editar usuário</div>
+          <button id="nu-edit-fechar" style="border:none;background:#f1f5f9;border-radius:8px;padding:6px;cursor:pointer;color:#475569;display:flex;align-items:center;">
+            <span class="material-icons-outlined" style="font-size:18px;">close</span>
+          </button>
+        </div>
+        <div style="color:#94a3b8;font-size:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #f1f5f9;">${email}</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;">Nome</label>
+            <input id="nu-edit-nome" type="text" value="${nome}" style="${INP}">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;">Tipo</label>
+            <select id="nu-edit-tipo" style="${INP}cursor:pointer;">
+              <option value="usuario" ${tipo==='usuario'?'selected':''}>Usuário</option>
+              <option value="gestor"  ${tipo==='gestor'?'selected':''}>Gestor</option>
+              <option value="admin"   ${tipo==='admin'?'selected':''}>Admin</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;">Nova senha <span style="font-weight:400;text-transform:none;color:#94a3b8;">(vazio = não alterar)</span></label>
+            <input id="nu-edit-senha" type="password" placeholder="••••••••" style="${INP}">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px;">
+          <button id="nu-edit-cancelar" style="border:1px solid #e2e8f0;background:#fff;border-radius:8px;padding:9px 20px;cursor:pointer;font-size:13px;font-weight:600;color:#475569;font-family:system-ui,sans-serif;">Cancelar</button>
+          <button id="nu-edit-salvar" style="border:none;background:#1e293b;color:#fff;border-radius:8px;padding:9px 22px;cursor:pointer;font-size:13px;font-weight:700;font-family:system-ui,sans-serif;">Salvar</button>
+        </div>
+        <div id="nu-edit-status" style="margin-top:10px;font-size:12px;text-align:center;min-height:16px;"></div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+    const fechar = () => overlay.remove();
+    overlay.querySelector("#nu-edit-fechar").onclick   = fechar;
+    overlay.querySelector("#nu-edit-cancelar").onclick = fechar;
+    overlay.addEventListener("click", e => { if (e.target === overlay) fechar(); });
+
+    overlay.querySelector("#nu-edit-salvar").onclick = async () => {
+      const novoNome  = overlay.querySelector("#nu-edit-nome").value.trim();
+      const novoTipo  = overlay.querySelector("#nu-edit-tipo").value;
+      const novaSenha = overlay.querySelector("#nu-edit-senha").value;
+      const stEl      = overlay.querySelector("#nu-edit-status");
+
+      const body = { nome: novoNome, tipo: novoTipo };
+      if (novaSenha) body.password = novaSenha;
+
+      stEl.textContent = "Salvando...";
+      stEl.style.color = "#64748b";
+      try {
+        const res = await fetch(`${NU_API}/usuarios/${id}`, {
+          method: "PUT",
+          headers: nuAuthHeader(),
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.msg || `HTTP ${res.status}`);
+        fechar();
+        nuCarregar();
+      } catch(e) {
+        stEl.textContent = "Erro: " + e.message;
+        stEl.style.color = "#991b1b";
+      }
+    };
+  }
+
+  async function nuExcluir(id, nome) {
+    if (!confirm(`Excluir o usuário "${nome}"?\n\nEsta ação não pode ser desfeita.`)) return;
+    try {
+      const res = await fetch(`${NU_API}/usuarios/${id}`, { method: "DELETE", headers: nuAuthHeader() });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.msg || `HTTP ${res.status}`);
+      }
+      nuCarregar();
+    } catch(e) {
+      alert("Erro ao excluir: " + e.message);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", nuCarregar);
   </script>
 </body>
 </html>

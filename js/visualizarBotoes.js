@@ -63,10 +63,43 @@ async function controlarBotoesSidebar() {
     });
   });
 
-  // Na página de edição: sempre mostra todos os botões — o 🚫 faz o papel de restrição visual
+  // Na página de edição: mostra todos os botões e aplica configuração de visibilidade
   if (paginaAtual === "editar.html") {
     Object.values(botoes).forEach(btn => btn && (btn.style.display = "block"));
-    if (tipoUsuario !== "admin" && botoes.autorizar) botoes.autorizar.style.display = "none";
+
+    if (tipoUsuario !== "admin") {
+      // Sempre oculta o botão de autorizar para não-admin
+      if (botoes.autorizar) botoes.autorizar.style.display = "none";
+
+      // Aplica configuração de visibilidade do servidor
+      const cfgVis = window.CFgAPI?.obter()?.visibilidadeBotoes ||
+                     (() => { try { return JSON.parse(localStorage.getItem("cfg_visibilidade_botoes")) || {}; } catch { return {}; } })();
+
+      // Itera todos os botões configurados, buscando diretamente no DOM pelo ID
+      Object.entries(cfgVis).forEach(([btnId, btnCfg]) => {
+        if (btnId.startsWith("_")) return;
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+
+        // Botões exclusivos de admin: esconde para usuário comum
+        const publico = btnCfg._publico || "ambos";
+        if (publico === "admin") {
+          btn.style.display = "none";
+          return;
+        }
+
+        // Verifica se deve aparecer no status atual
+        // Se todas as entradas estiverem false, fica oculto independente do status
+        const statusEntries = Object.entries(btnCfg).filter(([k]) => !k.startsWith("_"));
+        const algumVisivel = statusEntries.some(([, v]) => v === true);
+        const nenhum = statusEntries.length > 0 && !algumVisivel;
+
+        if (nenhum || (status && btnCfg[status] === false)) {
+          btn.style.display = "none";
+        }
+      });
+    }
+
     return;
   }
 
