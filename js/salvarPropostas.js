@@ -573,6 +573,9 @@ window.atualizarPropostaEditavel = async function () {
         parametros[nome] = isNaN(valor) ? valor : parseFloat(valor);
       });
 
+      const textareaInformacoes = bloco.querySelector(`textarea[name="informacoesProduto"]`);
+      if (textareaInformacoes) parametros.informacoesProduto = textareaInformacoes.value?.trim() || "";
+
       const camposPopupExtras = {};
       bloco.querySelectorAll(".tab-pane .campo-resultado").forEach(el => {
         const nome = el.id?.replace("campo-", "") || "";
@@ -749,6 +752,9 @@ const camposFormulario = {
         if (valor?.includes(",")) valor = valor.replace(",", ".");
         parametros[nome] = isNaN(valor) ? valor : parseFloat(valor);
       });
+
+      const textareaInformacoes = bloco.querySelector(`textarea[name="informacoesProduto"]`);
+      if (textareaInformacoes) parametros.informacoesProduto = textareaInformacoes.value?.trim() || "";
 
       // 🧮 Campos extras do popup (ex: #custoTotalMaterial, #precoMinimo)
       const camposPopupExtras = {};

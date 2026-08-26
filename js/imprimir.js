@@ -61,7 +61,8 @@ async function carregarLogoBase64(src) {
 
 async function gerarOrcamentoParaImpressaoCompleta() {
   if (!await validarItensZeradosParaImpressao()) return;
-  const logoBase64 = await carregarLogoBase64("../js/logo.jpg");
+  const logoAbsUrl = new URL("../js/logo.jpg", window.location.href).href;
+  const logoBase64 = await carregarLogoBase64(logoAbsUrl) || logoAbsUrl;
   function moedaBRParaNumero(valor) {
     if (valor == null || valor === "") return 0;
 
@@ -186,6 +187,17 @@ async function gerarOrcamentoParaImpressaoCompleta() {
     totalComDescontoFormatado: numeroParaMoedaBR(totalComDesconto),
     descontoFormatado: numeroParaMoedaBR(desconto)
   });
+
+  // Notificação: prazos não preenchidos
+  const semPrazo = grupos.filter(g => {
+    const prazo = document.querySelector(`#${g.grupoId}-aba3 input[name="previsaoEntrega"]`)?.value?.trim();
+    const info  = document.querySelector(`#${g.grupoId}-aba3 textarea[name="informacoesProduto"]`)?.value?.trim();
+    return !prazo && !info;
+  });
+  if (semPrazo.length) {
+    const nomes = semPrazo.map(g => `• ${g.nomeAmbiente}`).join("\n");
+    alert(`Atenção: os itens abaixo estão sem prazo preenchido:\n\n${nomes}\n\nA impressão continuará normalmente.`);
+  }
 
   mostrarPopupSelecaoGruposEstetico(
     grupos,
@@ -535,6 +547,8 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
     let descricao = colunas?.[1]?.textContent.trim() || "-";
     let qtd = linhaProduto?.querySelector("input.quantidade")?.value || "1";
     const ocultar = !!(gruposOcultarProduto && gruposOcultarProduto[grupoId]);
+    const informacoesProduto = document.querySelector(`#${grupoId}-aba3 textarea[name="informacoesProduto"]`)?.value?.trim() || "";
+    const previsaoEntrega = document.querySelector(`#${grupoId}-aba3 input[name="previsaoEntrega"]`)?.value?.trim() || "";
     gruposDados.push({
       grupoId,
       nomeAmbiente,
@@ -542,6 +556,8 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
       descricao,
       qtd,
       resumoGrupo,
+      informacoesProduto,
+      previsaoEntrega,
       ocultar
     });
   });
@@ -581,6 +597,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
                 <td>${g.qtd}</td>
               </tr>
               ${g.resumoGrupo ? `<tr><td colspan="3"><em>${g.resumoGrupo}</em></td></tr>` : ""}
+              ${(g.previsaoEntrega || g.informacoesProduto) ? `<tr><td colspan="3" style="font-size:11px;font-weight:600;text-align:center;background:#f8f8f8;padding:5px 8px;">${[g.previsaoEntrega, g.informacoesProduto].filter(Boolean).join(" ")}</td></tr>` : ""}
             </tbody>
           </table>
         </div>`;
@@ -4570,10 +4587,15 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
       })
       .filter((x) => x.descricao && x.descricao !== "-");
 
+    const informacoesProduto = document.querySelector(`#${grupoId}-aba3 textarea[name="informacoesProduto"]`)?.value?.trim() || "";
+    const previsaoEntrega = document.querySelector(`#${grupoId}-aba3 input[name="previsaoEntrega"]`)?.value?.trim() || "";
+
     gruposDados.push({
       grupoId,
       nomeAmbiente,
       resumoGrupo,
+      informacoesProduto,
+      previsaoEntrega,
       itens: linhas,
     });
   });
@@ -4604,14 +4626,18 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           </tr>
         `;
 
-      const resumoHTML = g.resumoGrupo
-        ? `<div class="obs"><strong>Observações:</strong><br>${g.resumoGrupo}</div>`
+      const numItem = contadorGrupo++;
+      const prazoFrase = [g.previsaoEntrega, g.informacoesProduto].filter(Boolean).join(" ");
+      const prazoTexto = prazoFrase || "-";
+      const prazoFooterHTML = `<tr><td colspan="4" style="font-weight:700;font-size:20px;background:#f0f0f0;padding:6px 10px;border-top:1px solid #aaa;text-align:center;">Prazo:&nbsp;${prazoTexto}&nbsp;&nbsp;|&nbsp;&nbsp;Pedido:&nbsp;${numeroPedido}&nbsp;&nbsp;|&nbsp;&nbsp;ITEM&nbsp;${numItem}</td></tr>`;
+      const obsRowHTML = g.resumoGrupo
+        ? `<tr><td colspan="4" class="obs"><strong>Observações:</strong><br>${g.resumoGrupo}</td></tr>`
         : "";
 
       return `
         <div class="item">
           <div class="item-head">
-            <div class="item-title">ITEM ${contadorGrupo++}</div>
+            <div class="item-title">ITEM ${numItem}</div>
             <div class="item-sub">AMBIENTE: ${String(g.nomeAmbiente || "").toUpperCase()}</div>
           </div>
 
@@ -4624,10 +4650,8 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
                 <th style="width:110px;">Quantidade</th>
               </tr>
             </thead>
-            <tbody>${linhasHTML}</tbody>
+            <tbody>${linhasHTML}${prazoFooterHTML}${obsRowHTML}</tbody>
           </table>
-
-          ${resumoHTML}
         </div>
       `;
     })
@@ -4704,93 +4728,48 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
 
   // ================== ETAPAS DO PROCESSO ==================
   const etapasDoProcessoHTML = `
-    <div class="etapas-box vv-etapas">
-      <div class="etapas-title">Etapas do Processo</div>
-
-      <table class="etapas-grid">
-        <tr>
-          <td class="etapas-col">
-            <div class="etapas-col-title">Pedido</div>
-            <table class="etapas-inner">
-              <tr>
-                <td class="etapas-cell">Enviado</td>
-                <td class="etapas-cell">Assinado</td>
-              </tr>
-              <tr>
-                <td class="etapas-cell blank">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-              </tr>
-              <tr>
-                <td class="etapas-cell blank">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-              </tr>
-              <tr>
-                <td class="etapas-cell blank">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-              </tr>
-            </table>
-          </td>
-
-          <td class="etapas-col">
-            <div class="etapas-col-title">Projeto</div>
-            <table class="etapas-inner">
-              <tr>
-                <td class="etapas-cell w-item">Item</td>
-                <td class="etapas-cell">Enviado</td>
-                <td class="etapas-cell">Assinado</td>
-              </tr>
-              <tr>
-                <td class="etapas-cell w-item center">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-              </tr>
-              <tr>
-                <td class="etapas-cell w-item center">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-              </tr>
-              <tr>
-                <td class="etapas-cell w-item center">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-              </tr>
-            </table>
-          </td>
-
-          <td class="etapas-col">
-            <div class="etapas-col-title">Obra / Medição</div>
-            <table class="etapas-inner">
-              <tr>
-                <td class="etapas-cell w-item">Item</td>
-                <td class="etapas-cell">Liberação Obra</td>
-                <td class="etapas-cell">Medição Realizada</td>
-                <td class="etapas-cell">Medidor</td>
-              </tr>
-              <tr>
-                <td class="etapas-cell w-item center">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-              </tr>
-              <tr>
-                <td class="etapas-cell w-item center">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-              </tr>
-              <tr>
-                <td class="etapas-cell w-item center">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-                <td class="etapas-cell blank">&nbsp;</td>
-              </tr>
-            </table>
-          </td>
-        </tr>
+    <div class="vv-etapas">
+      <table class="etapas-flat">
+        <thead>
+          <tr>
+            <th colspan="2" class="etapas-group-header">Pedido</th>
+            <th colspan="3" class="etapas-group-header etapas-border-left">Projeto</th>
+            <th colspan="4" class="etapas-group-header etapas-border-left">Obra / Medição</th>
+          </tr>
+          <tr>
+            <th>Enviado</th>
+            <th>Assinado</th>
+            <th class="etapas-border-left etapas-w-item">Item</th>
+            <th>Enviado</th>
+            <th>Assinado</th>
+            <th class="etapas-border-left etapas-w-item">Item</th>
+            <th>Liberação Obra</th>
+            <th>Medição Realizada</th>
+            <th>Medidor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td></td><td></td>
+            <td class="etapas-border-left"></td><td></td><td></td>
+            <td class="etapas-border-left"></td><td></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td></td><td></td>
+            <td class="etapas-border-left"></td><td></td><td></td>
+            <td class="etapas-border-left"></td><td></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td></td><td></td>
+            <td class="etapas-border-left"></td><td></td><td></td>
+            <td class="etapas-border-left"></td><td></td><td></td><td></td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr><td colspan="9" class="etapas-desc-label"><strong>Descrição:</strong></td></tr>
+          <tr><td colspan="9" class="etapas-desc-area">&nbsp;</td></tr>
+        </tfoot>
       </table>
-
-      <div class="etapas-obs"><strong>Descrição:</strong></div>
-      <div class="etapas-obs-area">&nbsp;</div>
     </div>
   `;
 
@@ -5057,8 +5036,6 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           .item {
             border: 2px solid #111;
             margin-top: 10px;
-            page-break-inside: avoid;
-            break-inside: avoid;
           }
 
           .item-head {
@@ -5187,71 +5164,45 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             break-inside: avoid;
           }
 
-          .etapas-box {
-            border: 2px solid #000;
-            padding: 0;
-          }
-
-          .etapas-title {
-            text-align: center;
-            font-weight: 700;
-            padding: 5px 0;
-            border-bottom: 2px solid #000;
-          }
-
-          .etapas-grid {
+          .etapas-flat {
             width: 100%;
             border-collapse: collapse;
-            table-layout: fixed;
-          }
-
-          .etapas-col {
-            vertical-align: top;
-            border-right: 1px solid #000;
-            padding: 0;
-          }
-
-          .etapas-col:last-child {
-            border-right: 0;
-          }
-
-          .etapas-col-title {
-            text-align: center;
-            font-weight: 700;
-            padding: 5px 0;
-            border-bottom: 1px solid #000;
-          }
-
-          .etapas-inner {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
             font-size: 12px;
+            border: 2px solid #000;
           }
 
-          .etapas-cell {
+          .etapas-flat th,
+          .etapas-flat td {
             border: 1px solid #000;
             padding: 5px;
             text-align: center;
             vertical-align: middle;
           }
 
-          .etapas-cell.blank { height: ${ALTURA_LINHA_ETAPAS}px; }
-          .etapas-cell.w-item { width: 52px; }
-
-          .center {
-            text-align: center;
+          .etapas-flat thead tr:first-child th {
+            font-weight: 700;
+            font-size: 13px;
+            background: #f0f0f0;
+            padding: 6px 5px;
           }
 
-          .etapas-obs {
-            border-top: 1px solid #000;
-            padding: 5px 7px;
+          .etapas-flat tbody tr { height: ${ALTURA_LINHA_ETAPAS}px; }
+
+          .etapas-group-header { border-bottom: 2px solid #000; }
+          .etapas-border-left { border-left: 2px solid #000; }
+          .etapas-w-item { width: 46px; }
+          .etapas-center { text-align: center; }
+
+          .etapas-desc-label {
+            text-align: left;
             font-size: 12px;
+            padding: 4px 7px;
+            border-top: 2px solid #000;
           }
 
-          .etapas-obs-area {
-            height: 28px;
-            border-top: 1px solid #000;
+          .etapas-desc-area {
+            height: calc(${ALTURA_LINHA_ETAPAS}px * 3);
+            border-top: none;
           }
 
           @media print {
@@ -5297,7 +5248,9 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
         (function () {
           var CAB_HTML = \`${cabHTMLEsc}\`;
           var CAB_HTML_SIMPLES = \`${cabHTMLSimplesEsc}\`;
-          var ALTURA_PAGINA = 700;
+          var ALTURA_PAGINA = 850;
+          var NUMERO_PEDIDO = "${numeroPedido}";
+          var NUMERO_ORCAMENTO = "${numeroOrcamento}";
 
           window.addEventListener('load', function () {
             setTimeout(function () {
@@ -5306,68 +5259,132 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             }, 1800);
           });
 
+          // Tenta cortar um .item no ponto onde o espaço disponível se esgota.
+          // Retorna [parte1, parte2] ou null se não for possível cortar.
+          function cortarItem(el, espacoDisponivel) {
+            var tbody = el.querySelector('tbody');
+            if (!tbody) return null;
+            var itemHead = el.querySelector('.item-head');
+            var itemLabel = el.querySelector('.item-title') ? el.querySelector('.item-title').textContent.trim() : 'ITEM';
+            var headH = itemHead ? (itemHead.getBoundingClientRect().height || 0) : 0;
+            var espaco = espacoDisponivel - headH - 6;
+            if (espaco <= 0) {
+              console.log('[CORTE] ' + itemLabel + ': espaco insuficiente (' + espacoDisponivel.toFixed(1) + 'px disponivel, ' + headH.toFixed(1) + 'px so cabecalho) — nao corta');
+              return null;
+            }
+
+            var trs = Array.from(tbody.querySelectorAll('tr'));
+            var acum = 0;
+            var corte = 0;
+            for (var i = 0; i < trs.length; i++) {
+              var trH = trs[i].getBoundingClientRect().height || 30;
+              if (acum + trH > espaco) {
+                console.log('[CORTE] ' + itemLabel + ' linha ' + (i + 1) + ': NAO cabe (acum=' + acum.toFixed(1) + ' + trH=' + trH.toFixed(1) + ' > espaco=' + espaco.toFixed(1) + ') — corte aqui');
+                break;
+              }
+              acum += trH;
+              corte = i + 1;
+              console.log('[CORTE] ' + itemLabel + ' linha ' + corte + ': cabe (acum=' + acum.toFixed(1) + '/' + espaco.toFixed(1) + ')');
+            }
+            if (corte === 0 || corte >= trs.length) {
+              console.log('[CORTE] ' + itemLabel + ': corte=' + corte + '/' + trs.length + ' — sem corte necessario');
+              return null;
+            }
+
+            // Parte 1: cabeçalho + primeiras N linhas
+            var p1 = el.cloneNode(true);
+            var trs1 = Array.from(p1.querySelector('tbody').querySelectorAll('tr'));
+            for (var j = corte; j < trs1.length; j++) trs1[j].remove();
+
+            // Parte 2: sem item-head, linhas restantes + faixa de continuação
+            var p2 = el.cloneNode(true);
+            p2.dataset.continuacao = '1';
+            var head2 = p2.querySelector('.item-head');
+            var itemLabel = el.querySelector('.item-title') ? el.querySelector('.item-title').textContent.trim() : 'ITEM';
+            if (head2) head2.remove();
+            var tbody2 = p2.querySelector('tbody');
+            var trs2 = Array.from(tbody2.querySelectorAll('tr'));
+            for (var k = 0; k < corte; k++) trs2[k].remove();
+
+            // Div de continuação antes da tabela
+            var divCont = document.createElement('div');
+            divCont.style.cssText = 'text-align:center;font-weight:700;font-size:10.5px;color:#000;padding:3px 8px;letter-spacing:0.3px;';
+            divCont.textContent = 'Continuacao ' + itemLabel + '   |   Pedido: ' + NUMERO_PEDIDO + '   |   Orcamento: ' + NUMERO_ORCAMENTO;
+            p2.insertBefore(divCont, p2.firstChild);
+
+            return [p1, p2];
+          }
+
           function construirPaginas() {
             var raw = document.getElementById('raw');
             if (!raw) return;
             var filhos = Array.from(raw.children);
-
             raw.style.visibility = 'visible';
 
-            // 1) Medir alturas brutas de todos os filhos
+            // Medir alturas brutas
             var hBrutos = filhos.map(function (el) {
               return el.getBoundingClientRect().height || el.offsetHeight || 40;
             });
 
-            // 2) filhos[0]=etapas, filhos[1]=item1 — forçar juntos na página 1
-            //    Calcular escala necessária (máx. -15%)
-            var escala = 1.0;
-            var h0 = hBrutos[0] || 0;
-            var h1 = hBrutos[1] || 0;
-            if (h0 + h1 > ALTURA_PAGINA) {
-              escala = Math.max(0.85, ALTURA_PAGINA / (h0 + h1));
-            }
+            // Distribuição: etapas (filhos[0]) sempre abre a pg1;
+            // todos os demais itens usam "cabe inteiro ou corta" em sequência.
+            var todasPaginas = [[]];
+            var altAtual = 0;
+            var numPagina = 1;
 
-            // 3) Página 1: etapas + item1 (fixo)
-            //    Espaço restante na pág 1 (em unidades escaladas)
-            var restantePag1 = (ALTURA_PAGINA / escala) - h0 - h1;
+            for (var i = 0; i < filhos.length; i++) {
+              var el = filhos[i];
+              var h  = hBrutos[i];
+              var label = (el.querySelector('.item-title') ? el.querySelector('.item-title').textContent.trim() : (i === 0 ? 'Etapas' : 'bloco-' + i));
 
-            var pag1Els    = filhos.slice(0, Math.min(2, filhos.length));
-            var altPag1    = h0 + h1;
+              if (i === 0) {
+                // Etapas do Processo: sempre na pg1, não cortar
+                console.log('[PG ' + numPagina + '] ' + label + ': ' + h.toFixed(1) + 'px (fixo, abre pg1)');
+                todasPaginas[0].push(el);
+                altAtual = h;
+                continue;
+              }
 
-            // Absorver itens extras que ainda caibam na página 1
-            var inicio = pag1Els.length;
-            for (var k = inicio; k < filhos.length; k++) {
-              if (altPag1 + hBrutos[k] <= ALTURA_PAGINA / escala) {
-                pag1Els.push(filhos[k]);
-                altPag1 += hBrutos[k];
+              if (altAtual + h <= ALTURA_PAGINA) {
+                // Cabe inteiro na página atual
+                console.log('[PG ' + numPagina + '] ' + label + ': CABE inteiro (acum=' + altAtual.toFixed(1) + ' + h=' + h.toFixed(1) + ' = ' + (altAtual + h).toFixed(1) + '/' + ALTURA_PAGINA + ')');
+                todasPaginas[todasPaginas.length - 1].push(el);
+                altAtual += h;
+              } else if (altAtual === 0) {
+                // Página vazia e item maior que ALTURA_PAGINA — colocar e virar página
+                console.log('[PG ' + numPagina + '] ' + label + ': maior que ALTURA_PAGINA (' + h.toFixed(1) + 'px), coloca e vira pagina');
+                todasPaginas[todasPaginas.length - 1].push(el);
+                todasPaginas.push([]);
+                numPagina++;
+                console.log('--- Abrindo PG ' + numPagina + ' (cabecalho simplificado) ---');
+                altAtual = 0;
               } else {
-                break;
+                // Tentar cortar o item no espaço restante
+                console.log('[PG ' + numPagina + '] ' + label + ': NAO cabe inteiro (acum=' + altAtual.toFixed(1) + ' + h=' + h.toFixed(1) + ' > ' + ALTURA_PAGINA + ') — tentando cortar com espaco=' + (ALTURA_PAGINA - altAtual).toFixed(1) + 'px');
+                var partes = cortarItem(el, ALTURA_PAGINA - altAtual);
+                if (partes) {
+                  todasPaginas[todasPaginas.length - 1].push(partes[0]);
+                  numPagina++;
+                  console.log('--- Abrindo PG ' + numPagina + ' (cabecalho simplificado) — continuacao de ' + label + ' ---');
+                  todasPaginas.push([partes[1]]);
+                  altAtual = partes[1].getBoundingClientRect().height || 40;
+                  console.log('[PG ' + numPagina + '] continuacao de ' + label + ': ' + altAtual.toFixed(1) + 'px');
+                } else {
+                  // Não foi possível cortar — item inteiro para próxima página
+                  numPagina++;
+                  console.log('--- Abrindo PG ' + numPagina + ' (cabecalho simplificado) — ' + label + ' inteiro ---');
+                  todasPaginas.push([el]);
+                  altAtual = h;
+                }
               }
             }
 
-            // 4) Distribuir itens restantes em páginas normais
-            var todasPaginas = [pag1Els];
-            var restantes    = filhos.slice(pag1Els.length);
-            if (restantes.length > 0) {
-              var pAtual  = [];
-              var altAtual = 0;
-              restantes.forEach(function (el, idx) {
-                var h = hBrutos[pag1Els.length + idx];
-                if (altAtual + h > ALTURA_PAGINA && pAtual.length > 0) {
-                  todasPaginas.push(pAtual);
-                  pAtual  = [el];
-                  altAtual = h;
-                } else {
-                  pAtual.push(el);
-                  altAtual += h;
-                }
-              });
-              if (pAtual.length > 0) todasPaginas.push(pAtual);
-            }
+            // Remover última página se ficou vazia
+            if (todasPaginas[todasPaginas.length - 1].length === 0) todasPaginas.pop();
 
             raw.remove();
 
-            var total  = todasPaginas.length + 1; // +1 página 2 estática
+            var total  = todasPaginas.length + 1;
             var anchor = document.querySelector('.pagina2-break');
 
             todasPaginas.forEach(function (els, i) {
@@ -5380,31 +5397,20 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
               var pDiv = document.createElement('div');
               pDiv.className = 'pagina';
 
-              // Número de página — primeiro elemento, canto esquerdo
               var numDiv = document.createElement('div');
               numDiv.className = 'pg-num';
               numDiv.innerHTML = 'Pág. ' + (i + 1) + ' / ' + total;
               pDiv.appendChild(numDiv);
 
-              // Cabeçalho: completo só na pág. 1, simplificado nas demais
               var cabDiv = document.createElement('div');
               cabDiv.innerHTML = i === 0 ? CAB_HTML : CAB_HTML_SIMPLES;
               pDiv.appendChild(cabDiv);
 
-              // Conteúdo — página 1 com wrapper escalado se necessário
-              if (i === 0 && escala < 1.0) {
-                var wrapper = document.createElement('div');
-                wrapper.style.cssText = 'transform:scale(' + escala.toFixed(3) + ');transform-origin:top left;width:' + Math.round(100 / escala) + '%;';
-                els.forEach(function (el) { el.style.visibility = 'visible'; wrapper.appendChild(el); });
-                pDiv.appendChild(wrapper);
-              } else {
-                els.forEach(function (el) { el.style.visibility = 'visible'; pDiv.appendChild(el); });
-              }
+              els.forEach(function (el) { el.style.visibility = 'visible'; pDiv.appendChild(el); });
 
               document.body.insertBefore(pDiv, anchor);
             });
 
-            // Numerar a página 2 estática
             var pag2 = document.querySelector('.pagina-secundaria');
             if (pag2) {
               var cab2 = pag2.querySelector('.topbar');
