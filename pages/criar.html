@@ -648,7 +648,54 @@ document.querySelectorAll('.sidebar-button').forEach(btn => {
   <script src="../js/formularioOrcamento.js" defer></script>
   <script src="../js/formulaValores.js" defer></script>
   <script src="../js/visualizarBotoes.js" defer></script>
- 
+
+<!-- Barra sticky: Orçamento + Pedido -->
+<div id="sticky-numeros" style="
+  display:none;
+  position:fixed;
+  top:0; left:0; right:0;
+  z-index:9999;
+  background:#1e293b;
+  color:#fff;
+  font-size:14px;
+  font-weight:600;
+  padding:8px 20px;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);
+  pointer-events:none;
+  gap:24px;
+  align-items:center;
+  justify-content:center;
+  letter-spacing:.02em;
+">
+  <span>Orçamento: <span id="sticky-orc" style="color:#93c5fd;">—</span></span>
+  <span style="opacity:.35;">|</span>
+  <span>Pedido: <span id="sticky-ped" style="color:#93c5fd;">—</span></span>
+</div>
+<script>
+(function() {
+  var bar = document.getElementById("sticky-numeros");
+
+  function sync() {
+    var orc = document.getElementById("numeroOrcamento")?.value || "—";
+    var ped = document.getElementById("numeroPedido")?.value || "—";
+    document.getElementById("sticky-orc").textContent = orc;
+    document.getElementById("sticky-ped").textContent = ped;
+  }
+
+  var sentinel = document.getElementById("numeroOrcamento");
+  var observer = new IntersectionObserver(function(entries) {
+    var visivel = entries[0].isIntersecting;
+    bar.style.display = visivel ? "none" : "flex";
+    if (!visivel) sync();
+  }, { threshold: 0 });
+
+  if (sentinel) observer.observe(sentinel);
+
+  setInterval(function() {
+    if (bar.style.display !== "none") sync();
+  }, 500);
+})();
+</script>
 </body>
 
 

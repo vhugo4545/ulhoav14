@@ -88,7 +88,7 @@
  
 
   <button id="btn-criar" class="sidebar-button" onclick="salvarPropostaEditavel()">
-    <span class="material-icons-outlined">add_circle_outline</span> Criar Proposta
+    <span class="material-icons-outlined">content_copy</span> Duplicar Proposta
   </button>
 
   <button id="btn-destravar" class="sidebar-button" onclick="destravarCampos()">
@@ -3266,6 +3266,60 @@ document.addEventListener("DOMContentLoaded", function () {
     document.body.appendChild(btn);
   }
 });
+</script>
+
+<!-- Barra de identificação fixa no topo (ao lado da sidebar) -->
+<div id="topbar-numeros" style="
+  display:none;
+  position:fixed;
+  top:0;
+  left:220px;
+  right:0;
+  z-index:9998;
+  background:#1e293b;
+  color:#fff;
+  font-size:15px;
+  font-weight:600;
+  padding:9px 20px;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);
+  pointer-events:none;
+  gap:24px;
+  align-items:center;
+  justify-content:center;
+  letter-spacing:.02em;
+">
+  <span>Orç: <span id="tb-orc" style="color:#93c5fd;">—</span></span>
+  <span style="opacity:.3;">|</span>
+  <span>Ped: <span id="tb-ped" style="color:#93c5fd;">—</span></span>
+  <span style="opacity:.3;">|</span>
+  <span id="tb-cli" style="color:#e2e8f0;font-weight:400;max-width:400px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</span>
+</div>
+<script>
+(function() {
+  var bar = document.getElementById("topbar-numeros");
+
+  function sync() {
+    var orc = document.getElementById("numeroOrcamento")?.value || "—";
+    var ped = document.getElementById("numeroPedido")?.value || "—";
+    var cli = document.querySelector("input.razaoSocial")?.value
+           || document.querySelector(".nomeContato")?.value
+           || "—";
+    document.getElementById("tb-orc").textContent = orc;
+    document.getElementById("tb-ped").textContent = ped;
+    document.getElementById("tb-cli").textContent = cli;
+  }
+
+  var sentinel = document.getElementById("numeroOrcamento");
+  new IntersectionObserver(function(entries) {
+    var visivel = entries[0].isIntersecting;
+    bar.style.display = visivel ? "none" : "flex";
+    if (!visivel) sync();
+  }, { threshold: 0 }).observe(sentinel || document.body);
+
+  setInterval(function() {
+    if (bar.style.display !== "none") sync();
+  }, 500);
+})();
 </script>
 </body>
 </html>

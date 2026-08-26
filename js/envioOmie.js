@@ -529,7 +529,7 @@ window.criarProjetoServicoTeste = async function criarProjetoServicoTeste() {
   .vv-transfer-grid{
     display:grid;
     gap:12px;
-    grid-template-columns:repeat(auto-fit,minmax(380px,1fr));
+    grid-template-columns:1fr 1fr;
     align-items:stretch;
   }
   .vv-transfer-panel{
@@ -1652,8 +1652,8 @@ function abrirPopupParcelamentoProdutosServicos({
 
     const md = document.createElement("div");
     md.className = "vv-modal";
-    md.style.maxWidth = "1400px";
-    md.style.width = "96vw";
+    md.style.maxWidth = "1800px";
+    md.style.width = "98vw";
 
     const hd = document.createElement("header");
     hd.innerHTML = `
@@ -1779,22 +1779,22 @@ function abrirPopupParcelamentoProdutosServicos({
             <label class="form-label mb-0">Condicao de Pagto</label>
             <div class="condicao-wrapper-transfer"></div>
           </div>
-          <div class="col-12 col-xl-2">
+          <div class="col-12 col-xl-3">
             <label class="form-label mb-0">Valor</label>
             <input type="text" class="form-control valor-parcela-transfer" placeholder="Ex: 1000,00">
           </div>
-          <div class="col-12 col-xl-3">
+          <div class="col-12 col-xl-2" style="min-width:150px;">
             <label class="form-label mb-0">Vencimento</label>
             <input type="date" class="form-control data-parcela-transfer">
           </div>
-          <div class="col-12 col-xl-3">
+          <div class="col-12 col-xl-4">
             <label class="form-label mb-0">Tipo de Parcelamento</label>
             <select class="form-select tipo-parcelamento-transfer">
               <option value="normal">Normal</option>
               <option value="faturamento_direto">Faturamento Direto</option>
             </select>
           </div>
-          <div class="col-12">
+          <div class="col-12 col-xl-8">
             <label class="form-label mb-0">Descritivo</label>
             <input type="text" class="form-control descritivo-parcela-transfer" placeholder="Ex: Entrada, 1ª parcela...">
           </div>
