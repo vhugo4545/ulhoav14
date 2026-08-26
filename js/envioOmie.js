@@ -6195,11 +6195,16 @@ async function atualizarNaOmie() {
         fetch(`${OMIE_SERVICOS_API_BASE}/clientes/buscar?cnpj_cpf=${cpfCnpj}`).then(r => r.json()).catch(() => null)
       ]);
 
-      const naUlhoa   = resUlhoa?.encontrado   === true;
-      const naServico = resServico?.encontrado  === true;
+      // Só considera "não encontrado" quando a resposta é válida (tem campo "encontrado")
+      // Se vier erro de auth ou falha de rede, ignora aquela base
+      const ulhoaRespondeu   = resUlhoa  != null && "encontrado" in (resUlhoa  || {});
+      const servicoRespondeu = resServico != null && "encontrado" in (resServico || {});
+
+      const naUlhoa   = !ulhoaRespondeu   || resUlhoa?.encontrado   === true;
+      const naServico = !servicoRespondeu || resServico?.encontrado  === true;
 
       // Salva o código real da base Serviços para uso garantido no envio da OS
-      if (naServico && resServico?.clientes?.[0]?.codigo_cliente_omie) {
+      if (resServico?.encontrado && resServico?.clientes?.[0]?.codigo_cliente_omie) {
         window.__vvNCodCliServico = Number(resServico.clientes[0].codigo_cliente_omie);
       }
 
