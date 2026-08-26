@@ -6182,6 +6182,58 @@ async function atualizarNaOmie() {
   const tipoEnvio = await abrirPopupEscolhaTipoEnvioOmie();
   if (!tipoEnvio) return; // usuário cancelou
 
+  // ── VALIDAÇÃO DO CLIENTE NAS DUAS BASES DA OMIE ───────────
+  {
+    const cpfCnpjRaw = document.querySelector(".cpfCnpj")?.value || "";
+    const cpfCnpj = cpfCnpjRaw.replace(/\D/g, "");
+
+    if (cpfCnpj) {
+      mostrarPopupCustomizado("🔍 Verificando cliente", "Consultando cliente diretamente nas duas bases da Omie...", "info");
+
+      const [resUlhoa, resServico] = await Promise.all([
+        fetch(`${OMIE_ULHOA_API_BASE}/clientes/buscar?cnpj_cpf=${cpfCnpj}`).then(r => r.json()).catch(() => null),
+        fetch(`${OMIE_SERVICOS_API_BASE}/clientes/buscar?cnpj_cpf=${cpfCnpj}`).then(r => r.json()).catch(() => null)
+      ]);
+
+      const naUlhoa   = resUlhoa?.encontrado   === true;
+      const naServico = resServico?.encontrado  === true;
+
+      if (!naUlhoa || !naServico) {
+        const faltando = [
+          !naUlhoa   && "Base Ulhoa (Produtos)",
+          !naServico && "Base Serviços"
+        ].filter(Boolean).join(" e ");
+
+        const continuar = await new Promise(resolve => {
+          const bd = document.createElement("div");
+          bd.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;";
+          bd.innerHTML = `
+            <div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+              <div style="font-size:22px;font-weight:700;color:#b91c1c;margin-bottom:10px;">⚠️ Cliente não encontrado</div>
+              <div style="color:#374151;margin-bottom:18px;line-height:1.5;">
+                O cliente com CPF/CNPJ <strong>${cpfCnpjRaw}</strong> não foi encontrado em:<br>
+                <strong style="color:#b91c1c;">${faltando}</strong><br><br>
+                O envio para a Omie pode falhar. Deseja continuar mesmo assim?
+              </div>
+              <div style="display:flex;gap:12px;justify-content:flex-end;">
+                <button id="_vv_val_cancelar" style="padding:8px 20px;border:1px solid #d1d5db;border-radius:8px;background:#f9fafb;cursor:pointer;">Cancelar</button>
+                <button id="_vv_val_continuar" style="padding:8px 20px;border:none;border-radius:8px;background:#b91c1c;color:#fff;cursor:pointer;">Continuar mesmo assim</button>
+              </div>
+            </div>`;
+          document.body.appendChild(bd);
+          bd.querySelector("#_vv_val_cancelar").onclick  = () => { bd.remove(); resolve(false); };
+          bd.querySelector("#_vv_val_continuar").onclick = () => { bd.remove(); resolve(true);  };
+        });
+
+        if (!continuar) return;
+      } else {
+        const nomeCliente = resUlhoa?.clientes?.[0]?.razao_social || resServico?.clientes?.[0]?.razao_social || "";
+        mostrarPopupCustomizado("✅ Cliente verificado", `${nomeCliente ? `<strong>${nomeCliente}</strong><br>` : ""}Encontrado nas duas bases da Omie.`, "success");
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+  }
+
   if (tipoEnvio === 'so_servicos') {
     return fluxoSomenteServicos();
   }
