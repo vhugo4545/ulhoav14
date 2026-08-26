@@ -12,7 +12,6 @@
     "/api/auth/login",
     "/api/auth/register",
     "/api/auth/refresh",
-    "/api/auth/verificar-token",
     "/api/autenticacao",
   ];
 
