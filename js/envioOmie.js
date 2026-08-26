@@ -6198,6 +6198,11 @@ async function atualizarNaOmie() {
       const naUlhoa   = resUlhoa?.encontrado   === true;
       const naServico = resServico?.encontrado  === true;
 
+      // Salva o código real da base Serviços para uso garantido no envio da OS
+      if (naServico && resServico?.clientes?.[0]?.codigo_cliente_omie) {
+        window.__vvNCodCliServico = Number(resServico.clientes[0].codigo_cliente_omie);
+      }
+
       if (!naUlhoa || !naServico) {
         const faltando = [
           !naUlhoa   && "Base Ulhoa (Produtos)",
@@ -7550,9 +7555,12 @@ function ctxHeaderOS() {
     || (razaoEl?.dataset?.valorOriginal && String(razaoEl.dataset.valorOriginal).trim())
     || "";
 
-  const nCodCli = (typeof getCodigoClientePorRazao === "function")
+  const nCodCliCache = (typeof getCodigoClientePorRazao === "function")
     ? (getCodigoClientePorRazao(razao) || "")
     : "";
+
+  // Usa o código obtido diretamente da Omie durante a validação como fallback garantido
+  const nCodCli = nCodCliCache || (window.__vvNCodCliServico ? String(window.__vvNCodCliServico) : "");
 
   return { cCodIntOS, nCodCli, razaoSocial: razao, numeroOrcamento };
 }
