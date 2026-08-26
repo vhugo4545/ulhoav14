@@ -401,10 +401,13 @@ window.addEventListener("DOMContentLoaded", () => {
 
 
 
-// 🔁 Ativa o recálculo automático ao alterar qualquer input[name]
+// 🔁 Ativa o recálculo automático ao alterar inputs financeiros (exclui campos informativos)
+const _CAMPOS_NAO_FINANCEIROS = new Set([
+  'previsaoEntrega', 'informacoesProduto', 'ambiente'
+]);
 document.addEventListener('input', function (e) {
   const input = e.target;
-  if (input.matches('input[name]')) {
+  if (input.matches('input[name]') && !_CAMPOS_NAO_FINANCEIROS.has(input.name)) {
     const bloco = input.closest('.main-container');
     if (bloco && bloco.id) {
       preencherValoresFinanceiros(bloco.id);

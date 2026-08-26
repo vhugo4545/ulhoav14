@@ -294,6 +294,7 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
     bloco.appendChild(divInterna);
   });
 
+  const _descontoSalvo = document.getElementById("campoDescontoFinal")?.value || "";
   document.querySelectorAll("#totalizadoresExternosPorAmbiente").forEach(e => e.remove());
 
   const containerResumo = document.createElement("div");
@@ -358,7 +359,7 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
   inputDesconto.className = "form-control tot-desconto-input text-center";
   inputDesconto.placeholder = "Desconto (R$ ou %)";
   inputDesconto.id = "campoDescontoFinal";
-  inputDesconto.value = "";
+  inputDesconto.value = _descontoSalvo;
 
   const final = document.createElement("div");
   final.className = "tot-valor-final-box mb-5";
