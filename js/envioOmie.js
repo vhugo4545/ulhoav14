@@ -859,13 +859,7 @@ function coletarItensPorGrupoParaOmie(ambientesMarcados = []) {
    - Chama window.enviarComissoes(...) no confirmar
    ========================================================= */
 
-const dispararAtualizacaoClientes = () => {
-  fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes/atualizar").catch(() => {});
-  fetch("https://ulhoa-0a02024d350a.herokuapp.com/clientes/atualizar").catch(() => {});
-};
-
-
-async function verificarClienteEAtualizar() {
+async function verificarClienteEAtualizar_REMOVIDA() {
   const inp = document.querySelector(
     '#clientesWrapper > div > div.col-md-6.position-relative.d-flex.align-items-end.gap-2 > div > input, ' +
     'input.form-control.razaoSocial'
@@ -2122,7 +2116,6 @@ function abrirPopupParcelamentoProdutosServicos({
 
 
 async function abrirPopupSelecaoItensOmie(itens){
-verificarClienteEAtualizar()
 
 
 
