@@ -845,10 +845,10 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
           var CAB_HTML_SIMPLES = \`${cabHTMLSimplesEsc}\`;
 
           /* A4 px @ 96dpi = 1122px; margens 10mm × 2 ≈ 76px; útil = 1046px.
-             Cabeçalho pág 1 ~150px + pg-num ~30px = 220px; sobra ~826px.
-             Cabeçalho pág 2+ ~50px + pg-num ~30px = 80px; sobra ~966px.
-             Usa 820 como limite conservador para não transbordar na pág 1. */
-          var ALTURA_PAGINA = 820;
+             Pág 1: cabeçalho ~200px + pg-num ~30px → sobra ~816px → limite 780.
+             Pág 2+: cabeçalho ~60px  + pg-num ~30px → sobra ~956px → limite 910. */
+          var ALTURA_PAG1 = 780;
+          var ALTURA_PAG_N = 910;
 
           window.addEventListener('load', function () {
             setTimeout(function () {
@@ -870,7 +870,8 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
             filhos.forEach(function (el) {
               var h = el.getBoundingClientRect().height || el.offsetHeight || 40;
               var idx = paginas.length - 1;
-              if (alturas[idx] + h > ALTURA_PAGINA && paginas[idx].length > 0) {
+              var limite = idx === 0 ? ALTURA_PAG1 : ALTURA_PAG_N;
+              if (alturas[idx] + h > limite && paginas[idx].length > 0) {
                 paginas.push([el]);
                 alturas.push(h);
               } else {
