@@ -3797,6 +3797,16 @@ async function gerarFolha4RelatorioEntrega() {
               }
             });
 
+            // Mesclar última página se quase em branco (< 120px = menos de ~3 linhas)
+            if (pages.length > 1 && pages[pages.length - 1].length > 0) {
+              var altUlt = alturas[alturas.length - 1];
+              if (altUlt < 120) {
+                pages[pages.length - 2] = pages[pages.length - 2].concat(pages[pages.length - 1]);
+                pages.pop();
+                alturas.pop();
+              }
+            }
+
             raw.remove();
 
             var procPage = document.getElementById('processes-page');
@@ -4326,6 +4336,16 @@ async function gerarHistoricoDeProducaoParaImpressao() {
                 alturas[idx] += h;
               }
             });
+
+            // Mesclar última página se quase em branco (< 120px = menos de ~3 linhas)
+            if (pages.length > 1 && pages[pages.length - 1].length > 0) {
+              var altUlt = alturas[alturas.length - 1];
+              if (altUlt < 120) {
+                pages[pages.length - 2] = pages[pages.length - 2].concat(pages[pages.length - 1]);
+                pages.pop();
+                alturas.pop();
+              }
+            }
 
             raw.remove();
 
@@ -5394,6 +5414,20 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
 
             // Remover última página se ficou vazia
             if (todasPaginas[todasPaginas.length - 1].length === 0) todasPaginas.pop();
+
+            // Mesclar última página se quase em branco (< 200px): absorve na penúltima
+            if (todasPaginas.length > 1) {
+              var ultimaPag = todasPaginas[todasPaginas.length - 1];
+              var altUltima = ultimaPag.reduce(function (sum, el) {
+                return sum + (el.getBoundingClientRect().height || el.offsetHeight || 40);
+              }, 0);
+              if (altUltima < 200) {
+                var penultima = todasPaginas[todasPaginas.length - 2];
+                ultimaPag.forEach(function (el) { penultima.push(el); });
+                todasPaginas.pop();
+                console.log('[MERGE] Ultima pagina quase em branco (' + altUltima.toFixed(1) + 'px) mesclada na penultima.');
+              }
+            }
 
             raw.remove();
 
