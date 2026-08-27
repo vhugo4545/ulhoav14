@@ -5391,11 +5391,6 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
                 numPagina++;
                 console.log('--- Abrindo PG ' + numPagina + ' (cabecalho simplificado) ---');
                 altAtual = 0;
-              } else if (altAtual < limitePag * 0.6) {
-                // Página abaixo de 60% — forçar item aqui para não criar página quase em branco
-                console.log('[PG ' + numPagina + '] ' + label + ': pagina abaixo de 60% (' + (100 * altAtual / limitePag).toFixed(0) + '%) — forcando item aqui (acum=' + altAtual.toFixed(1) + ' + h=' + h.toFixed(1) + ')');
-                todasPaginas[todasPaginas.length - 1].push(el);
-                altAtual += h;
               } else {
                 // Tentar cortar o item no espaço restante
                 console.log('[PG ' + numPagina + '] ' + label + ': NAO cabe inteiro (acum=' + altAtual.toFixed(1) + ' + h=' + h.toFixed(1) + ' > ' + limitePag + ') — tentando cortar com espaco=' + (limitePag - altAtual).toFixed(1) + 'px');
@@ -5420,39 +5415,50 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             // Remover última página se ficou vazia
             if (todasPaginas[todasPaginas.length - 1].length === 0) todasPaginas.pop();
 
-            // Validar cada página: se < 60% preenchida, mover conteúdo para a próxima página.
-            // Repete até não haver mais páginas esparsas (máx 15 iterações).
+            // Validar cada página: se < 60% preenchida, PUXAR itens da próxima página
+            // para preencher esta. Nunca ultrapassa o limite (sem overflow).
+            // Repete até estabilizar (máx 15 iterações).
             (function validarPaginas() {
+              function medirAltura(els) {
+                return els.reduce(function (sum, el) {
+                  return sum + (el.getBoundingClientRect().height || el.offsetHeight || 40);
+                }, 0);
+              }
               for (var iter = 0; iter < 15; iter++) {
                 var mudou = false;
                 for (var pi = 0; pi < todasPaginas.length - 1; pi++) {
                   var limitePi = pi === 0 ? ALTURA_PAG1 : ALTURA_PAG_N;
-                  var altPi = todasPaginas[pi].reduce(function (sum, el) {
-                    return sum + (el.getBoundingClientRect().height || el.offsetHeight || 40);
-                  }, 0);
+                  var altPi = medirAltura(todasPaginas[pi]);
                   if (altPi < limitePi * 0.6) {
-                    // Página esparsa: mover conteúdo para o início da próxima
+                    // Puxar itens do início da próxima página até atingir 60% ou limite
                     var proxima = todasPaginas[pi + 1];
-                    todasPaginas[pi].slice().reverse().forEach(function (el) { proxima.unshift(el); });
-                    todasPaginas.splice(pi, 1);
-                    console.log('[VALIDA] Pag ' + (pi + 1) + ' tinha apenas ' + altPi.toFixed(1) + 'px (' + (100 * altPi / limitePi).toFixed(0) + '%) — movida para proxima. Iter ' + (iter + 1));
+                    while (altPi < limitePi * 0.6 && proxima.length > 0) {
+                      var candidato = proxima[0];
+                      var hCand = candidato.getBoundingClientRect().height || candidato.offsetHeight || 40;
+                      if (altPi + hCand > limitePi) break; // Não ultrapassa o limite
+                      proxima.shift();
+                      todasPaginas[pi].push(candidato);
+                      altPi += hCand;
+                    }
+                    if (proxima.length === 0) todasPaginas.splice(pi + 1, 1);
+                    console.log('[VALIDA] Pag ' + (pi + 1) + ' preenchida para ' + altPi.toFixed(1) + 'px (' + (100 * altPi / limitePi).toFixed(0) + '%). Iter ' + (iter + 1));
                     mudou = true;
                     break;
                   }
                 }
                 if (!mudou) break;
               }
-              // Última página: se < 40% preenchida, absorve na penúltima
+              // Última página: se < 40% e há penúltima com espaço, absorve
               if (todasPaginas.length > 1) {
-                var limUlt = ALTURA_PAG_N;
-                var altUlt = todasPaginas[todasPaginas.length - 1].reduce(function (sum, el) {
-                  return sum + (el.getBoundingClientRect().height || el.offsetHeight || 40);
-                }, 0);
-                if (altUlt < limUlt * 0.4) {
-                  var penult = todasPaginas[todasPaginas.length - 2];
-                  todasPaginas[todasPaginas.length - 1].forEach(function (el) { penult.push(el); });
+                var altUlt = medirAltura(todasPaginas[todasPaginas.length - 1]);
+                var limPenult = todasPaginas.length === 2 ? ALTURA_PAG1 : ALTURA_PAG_N;
+                var altPenult = medirAltura(todasPaginas[todasPaginas.length - 2]);
+                if (altUlt < ALTURA_PAG_N * 0.4 && altPenult + altUlt <= limPenult * 1.05) {
+                  todasPaginas[todasPaginas.length - 1].forEach(function (el) {
+                    todasPaginas[todasPaginas.length - 2].push(el);
+                  });
                   todasPaginas.pop();
-                  console.log('[VALIDA] Ultima pag quase vazia (' + altUlt.toFixed(1) + 'px) absorvida na penultima.');
+                  console.log('[VALIDA] Ultima pag (' + altUlt.toFixed(1) + 'px) absorvida na penultima.');
                 }
               }
             })();
