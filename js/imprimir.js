@@ -4900,6 +4900,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
       <head>
         <meta charset="utf-8" />
         <title>Folha 1 - Ordem de Serviço</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
         <style>
           @page {
             size: A4;
@@ -5286,7 +5287,21 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           window.addEventListener('load', function () {
             setTimeout(function () {
               construirPaginas();
-              window.print();
+              setTimeout(function () {
+                var nome = 'OS-' + (NUMERO_PEDIDO !== '-' ? NUMERO_PEDIDO : NUMERO_ORCAMENTO) + '.pdf';
+                html2pdf()
+                  .set({
+                    margin: 0,
+                    filename: nome,
+                    image:       { type: 'jpeg', quality: 0.95 },
+                    html2canvas: { scale: 2, useCORS: true, logging: false },
+                    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak:   { mode: ['css'], before: ['.page-break'] }
+                  })
+                  .from(document.body)
+                  .save()
+                  .catch(function (err) { console.error('[OS-PDF]', err); });
+              }, 400);
             }, 1800);
           });
 
