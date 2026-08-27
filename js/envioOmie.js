@@ -6033,6 +6033,7 @@ async function atualizarNaOmie() {
 
   // ── VALIDAÇÃO: parcelas devem bater com o total antes de enviar ───
   if (typeof parcelasValidas === "function" && !parcelasValidas()) return;
+  if (typeof parcelasCompletasParaOmie === "function" && !parcelasCompletasParaOmie()) return;
 
   // ── VALIDAÇÃO: cliente precisa ter UF cadastrada na Omie ──────────
   {

@@ -29,6 +29,41 @@
   return true;
 }
 
+function parcelasCompletasParaOmie() {
+  const rows = document.querySelectorAll("#listaParcelas .row");
+  if (rows.length === 0) return true;
+
+  const incompletas = [];
+  rows.forEach((row, idx) => {
+    const tipo = row.querySelector(".tipo-item-parcela")?.value || "";
+    if (tipo === "faturado-direto") return;
+
+    const tipoMonetario = row.querySelector(".tipo-monetario")?.value || "";
+    const condicao = row.querySelector(".condicao-pagto")?.value?.trim() || "";
+    const valor = row.querySelector(".valor-parcela")?.value.trim() || "";
+    const vencimento = row.querySelector(".data-parcela")?.value || "";
+
+    const vazios = [];
+    if (!tipo)         vazios.push("Tipo");
+    if (!tipoMonetario) vazios.push("Tipo Monetário");
+    if (!condicao)     vazios.push("Condição de Pagto");
+    if (!valor)        vazios.push("Valor");
+    if (!vencimento)   vazios.push("Vencimento");
+
+    if (vazios.length) incompletas.push(`Parcela ${idx + 1}: ${vazios.join(", ")}`);
+  });
+
+  if (incompletas.length) {
+    mostrarPopupCustomizado(
+      "Parcelas incompletas",
+      `Preencha todos os campos antes de enviar para a Omie:\n\n${incompletas.join("\n")}`,
+      "error"
+    );
+    return false;
+  }
+  return true;
+}
+
 async function salvarPropostaEditavel() {
   try {
     console.log("editaveis");
@@ -911,6 +946,7 @@ async function marcarAprovadoPeloCliente() {
 // 6️⃣ Pedido Enviado para a Omie
 async function marcarPedidoEnviadoParaOmie() {
   if (!parcelasValidas()) return;
+  if (!parcelasCompletasParaOmie()) return;
   mostrarCarregando()
   await atualizarStatus("Pedido Enviado para a Omie");
   ocultarCarregando()
