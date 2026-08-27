@@ -1280,7 +1280,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
     </div>
 
     <div class="prazos">
-      <div class="t">Prazo por Área:</div>
+      <div class="t">Prazo Previsto por Área:</div>
       <div class="c">${prazosHTML}</div>
     </div>
   `;
@@ -2447,7 +2447,7 @@ const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
     </div>
 
     <div class="prazos">
-      <div class="t">Prazo por Área:</div>
+      <div class="t">Prazo Previsto por Área:</div>
       <div class="c">${prazosHTML}</div>
     </div>
   `;
@@ -4632,7 +4632,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
       const numItem = contadorGrupo++;
       const prazoFrase = [g.previsaoEntrega, g.informacoesProduto].filter(Boolean).join(" ");
       const prazoTexto = prazoFrase || "-";
-      const prazoFooterHTML = `<tr><td colspan="4" style="font-weight:700;font-size:20px;background:#f0f0f0;padding:6px 10px;border-top:1px solid #aaa;text-align:center;">Prazo:&nbsp;${prazoTexto}&nbsp;&nbsp;|&nbsp;&nbsp;Pedido:&nbsp;${numeroPedido}&nbsp;&nbsp;|&nbsp;&nbsp;ITEM&nbsp;${numItem}</td></tr>`;
+      const prazoFooterHTML = `<tr><td colspan="4" style="font-weight:700;font-size:20px;background:#f0f0f0;padding:6px 10px;border-top:1px solid #aaa;text-align:center;">Prazo Previsto:&nbsp;${prazoTexto}&nbsp;&nbsp;|&nbsp;&nbsp;Pedido:&nbsp;${numeroPedido}&nbsp;&nbsp;|&nbsp;&nbsp;ITEM&nbsp;${numItem}</td></tr>`;
       const obsRowHTML = g.resumoGrupo
         ? `<tr><td colspan="4" class="obs"><strong>Observações:</strong><br>${g.resumoGrupo}</td></tr>`
         : "";
@@ -4703,7 +4703,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
     </div>
 
     <div class="prazos">
-      <div class="t">Prazo por Área:</div>
+      <div class="t">Prazo Previsto por Área:</div>
       <div class="c">${prazosHTML}</div>
     </div>
   `;
