@@ -576,38 +576,41 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
     const valorTotalAmbiente = grupos.reduce((soma, x) => soma + x.totalGrupo, 0);
     totalGeral += valorTotalAmbiente;
     const gruposVisiveis = grupos.filter(g => !g.ocultar);
-    gruposVisiveis.forEach(g => {
-      corpoHTML += `
-        <div class="mt-4 border">
-          <div class="fw-bold border p-2 bg-light text-center">
-            AMBIENTE: ${nomeAmbiente.toUpperCase()} 
-          </div>
-          <table class="table table-sm table-bordered w-100">
-            <thead class="table-light">
-              <tr>
-                <th style="width:40px;">#</th>
-                <th>Descrição</th>
-                <th style="width:120px;">Quantidade</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>${contadorGlobal++}</td>
-                <td>${g.descricao}</td>
-                <td>${g.qtd}</td>
-              </tr>
-              ${g.resumoGrupo ? `<tr><td colspan="3"><em>${g.resumoGrupo}</em></td></tr>` : ""}
-              ${(g.previsaoEntrega || g.informacoesProduto) ? `<tr><td colspan="3" style="font-size:11px;font-weight:600;text-align:center;background:#f8f8f8;padding:5px 8px;">${[g.previsaoEntrega, g.informacoesProduto].filter(Boolean).join(" ")}</td></tr>` : ""}
-            </tbody>
-          </table>
-        </div>`;
-    });
+    if (gruposVisiveis.length === 0) return;
+    const linhasItens = gruposVisiveis.map(g => {
+      const num = contadorGlobal++;
+      return `
+        <tr>
+          <td>${num}</td>
+          <td>${g.descricao}</td>
+          <td>${g.qtd}</td>
+        </tr>
+        ${g.resumoGrupo ? `<tr><td colspan="3"><em>${g.resumoGrupo}</em></td></tr>` : ""}
+        ${(g.previsaoEntrega || g.informacoesProduto) ? `<tr><td colspan="3" style="font-size:11px;font-weight:600;text-align:center;background:#f8f8f8;padding:5px 8px;">${[g.previsaoEntrega, g.informacoesProduto].filter(Boolean).join(" ")}</td></tr>` : ""}
+      `;
+    }).join("");
     corpoHTML += `
-      <div class="border p-2 mt-2 text-end bg-light">
-        <strong>Total do Ambiente ${nomeAmbiente.toUpperCase()}:</strong> 
-        ${formatarReal(valorTotalAmbiente)}
-      </div>
-    `;
+      <div class="mt-4 border">
+        <div class="fw-bold border p-2 bg-light text-center">
+          AMBIENTE: ${nomeAmbiente.toUpperCase()}
+        </div>
+        <table class="table table-sm table-bordered w-100">
+          <thead class="table-light">
+            <tr>
+              <th style="width:40px;">#</th>
+              <th>Descrição</th>
+              <th style="width:120px;">Quantidade</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${linhasItens}
+          </tbody>
+        </table>
+        <div class="p-2 text-end bg-light">
+          <strong>Total do Ambiente ${nomeAmbiente.toUpperCase()}:</strong>
+          ${formatarReal(valorTotalAmbiente)}
+        </div>
+      </div>`;
   });
   // ==========================
   // PARCELAS
@@ -757,15 +760,24 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
       </table>
     </div>`;
 
-  /* ── Cabeçalho páginas 2+: só dados do orçamento, sem logo, sem cliente ── */
+  /* ── Cabeçalho páginas 2+: logo + dados do orçamento ── */
   const cabHTMLSimples = `
     <div style="border-bottom:3px solid #1e293b;padding-bottom:6px;margin-bottom:10px;">
-      <table class="table table-sm w-100 mb-0" style="font-size:12px;">
+      <table class="table table-bordered table-sm w-100" style="margin-bottom:0;font-size:12px;">
         <tr>
-          <td><strong>Orçamento:</strong></td><td>${dados.numero}</td>
-          <td><strong>Pedido:</strong></td><td>${dados.numeroPedido}</td>
-          <td><strong>Data:</strong></td><td>${dataHoje}</td>
-          <td><strong>Proposta válida por 7 dias úteis</strong></td>
+          <td style="width:15%;text-align:center;vertical-align:middle;">
+            <img src="${logoSrc}" style="max-height:40px;">
+          </td>
+          <td>
+            <table class="table table-sm w-100 mb-0">
+              <tr>
+                <td><strong>Orçamento:</strong></td><td>${dados.numero}</td>
+                <td><strong>Pedido:</strong></td><td>${dados.numeroPedido}</td>
+                <td><strong>Data:</strong></td><td>${dataHoje}</td>
+                <td><strong>Proposta válida por 7 dias úteis</strong></td>
+              </tr>
+            </table>
+          </td>
         </tr>
       </table>
     </div>`;
@@ -820,6 +832,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
 
         <!-- Conteúdo bruto: medido e depois repartido em páginas pelo script -->
         <div id="raw">
+          ${tabelaContatosHTML}
           ${corpoHTML}
           ${parcelasHTML}
           ${totalizadoresHTML}
