@@ -6017,6 +6017,9 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
    ======================================= */
 async function atualizarNaOmie() {
 
+  // ── VALIDAÇÃO: parcelas devem bater com o total antes de enviar ───
+  if (typeof parcelasValidas === "function" && !parcelasValidas()) return;
+
   // ── VALIDAÇÃO: cliente precisa ter UF cadastrada na Omie ──────────
   {
     // Exibe overlay de "verificando" imediatamente — o popup aparece antes de qualquer outra ação
