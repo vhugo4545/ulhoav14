@@ -1,6 +1,37 @@
-﻿async function salvarPropostaEditavel() {
+﻿function parcelasValidas() {
+  const rows = document.querySelectorAll("#listaParcelas .row");
+  if (rows.length === 0) return true;
+
+  let soma = 0;
+  rows.forEach(row => {
+    const raw = row.querySelector(".valor-parcela")?.value.trim() || "";
+    soma += parseFloat(raw.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
+  });
+
+  const totalGeral = (function() {
+    const texto = document.querySelector("#valorFinalTotal")?.textContent.trim() || "0";
+    const limpo = texto.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+    return parseFloat(limpo) || 0;
+  })();
+
+  if (Math.abs(soma - totalGeral) >= 1) {
+    const diff = totalGeral - soma;
+    const sinal = diff > 0 ? "faltam" : "excedem em";
+    mostrarPopupCustomizado(
+      "Parcelas incorretas",
+      `As parcelas ${sinal} ${Math.abs(diff).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} em relação ao total do orçamento. Corrija antes de continuar.`,
+      "error"
+    );
+    return false;
+  }
+  return true;
+}
+
+async function salvarPropostaEditavel() {
   try {
     console.log("editaveis");
+
+    if (!parcelasValidas()) return;
 
     mostrarCarregando();
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -875,9 +906,10 @@ async function marcarAprovadoPeloCliente() {
 
 // 6️⃣ Pedido Enviado para a Omie
 async function marcarPedidoEnviadoParaOmie() {
+  if (!parcelasValidas()) return;
   mostrarCarregando()
   await atualizarStatus("Pedido Enviado para a Omie");
-  ocultarCarregando() 
+  ocultarCarregando()
 }
 
 
