@@ -5293,7 +5293,8 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
                   var { jsPDF } = window.jspdf;
                   var doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
                   var paginas = Array.from(document.querySelectorAll('.pagina'));
-                  var A4W = 210, A4H = 297;
+                  var A4W = 210, A4H = 297, MARGIN = 10;
+                  var imgW = A4W - MARGIN * 2;
                   for (var i = 0; i < paginas.length; i++) {
                     if (i > 0) doc.addPage();
                     var pg = paginas[i];
@@ -5302,12 +5303,12 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
                       width: pg.offsetWidth, height: pg.offsetHeight
                     });
                     var imgData = canvas.toDataURL('image/jpeg', 0.95);
-                    // escala para caber na largura A4, mantendo proporção
+                    // escala para caber dentro das margens, mantendo proporção
                     var wMm = pg.offsetWidth  * 0.264583;
                     var hMm = pg.offsetHeight * 0.264583;
-                    var escala = A4W / wMm;
-                    var hFinal = Math.min(hMm * escala, A4H);
-                    doc.addImage(imgData, 'JPEG', 0, 0, A4W, hFinal);
+                    var escala = imgW / wMm;
+                    var hFinal = Math.min(hMm * escala, A4H - MARGIN * 2);
+                    doc.addImage(imgData, 'JPEG', MARGIN, MARGIN, imgW, hFinal);
                   }
                   var nome = 'OS-' + (NUMERO_PEDIDO !== '-' ? NUMERO_PEDIDO : NUMERO_ORCAMENTO) + '.pdf';
                   doc.save(nome);
