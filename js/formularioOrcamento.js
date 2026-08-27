@@ -307,3 +307,14 @@ function preencherDataOrcamentoSeVazio() {
 preencherDataOrcamentoSeVazio()
    // Executa assim que o DOM estiver pronto
   document.addEventListener("DOMContentLoaded", preencherOperadorInterno);
+
+// Reage a mudanças no total final (desconto, produtos ignorados, etc.)
+document.addEventListener("DOMContentLoaded", () => {
+  const alvo = document.getElementById("valorFinalTotal");
+  if (!alvo) return;
+  new MutationObserver(() => {
+    if (document.querySelectorAll("#listaParcelas .row").length > 0) {
+      atualizarValoresParcelas();
+    }
+  }).observe(alvo, { childList: true, characterData: true, subtree: true });
+});
