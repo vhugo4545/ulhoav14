@@ -934,11 +934,8 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
     printWindow.document.open();
     printWindow.document.write(htmlCompleto);
     printWindow.document.close();
-    printWindow.onload = async () => {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      printWindow.focus();
-      printWindow.print();
-    };
+    // A impressão é acionada pelo script inline no HTML (window.addEventListener 'load' + setTimeout 1800ms)
+    // que também chama construirPaginas() antes de imprimir. Não duplicar aqui.
   }
   abrirJanelaParaImpressao(htmlCompleto);
 }
