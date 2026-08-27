@@ -3766,7 +3766,8 @@ async function gerarFolha4RelatorioEntrega() {
           var CAB_BASICO   = \`${cabBasicoEsc}\`;
           var COLGROUP     = \`${colgroupEsc}\`;
           var THEAD        = \`${theadEsc}\`;
-          var ALTURA_PAGINA = 580;
+          var ALTURA_PAG1 = 580;
+          var ALTURA_PAG_N = 740;
 
           window.addEventListener('load', function () {
             setTimeout(function () {
@@ -3786,7 +3787,8 @@ async function gerarFolha4RelatorioEntrega() {
             chunks.forEach(function (chunk) {
               var h = chunk.getBoundingClientRect().height || 40;
               var idx = pages.length - 1;
-              if (alturas[idx] + h > ALTURA_PAGINA && pages[idx].length > 0) {
+              var limite = idx === 0 ? ALTURA_PAG1 : ALTURA_PAG_N;
+              if (alturas[idx] + h > limite && pages[idx].length > 0) {
                 pages.push([chunk]);
                 alturas.push(h);
               } else {
@@ -4294,7 +4296,8 @@ async function gerarHistoricoDeProducaoParaImpressao() {
           var CAB_BASICO   = \`${cabBasicoEsc}\`;
           var COLGROUP     = \`${colgroupEsc}\`;
           var THEAD        = \`${theadEsc}\`;
-          var ALTURA_PAGINA = 650;
+          var ALTURA_PAG1 = 650;
+          var ALTURA_PAG_N = 800;
 
           window.addEventListener('load', function () {
             setTimeout(function () {
@@ -4314,7 +4317,8 @@ async function gerarHistoricoDeProducaoParaImpressao() {
             chunks.forEach(function (chunk) {
               var h = chunk.getBoundingClientRect().height || 40;
               var idx = pages.length - 1;
-              if (alturas[idx] + h > ALTURA_PAGINA && pages[idx].length > 0) {
+              var limite = idx === 0 ? ALTURA_PAG1 : ALTURA_PAG_N;
+              if (alturas[idx] + h > limite && pages[idx].length > 0) {
                 pages.push([chunk]);
                 alturas.push(h);
               } else {
