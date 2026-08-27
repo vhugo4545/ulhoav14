@@ -4900,7 +4900,8 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
       <head>
         <meta charset="utf-8" />
         <title>Folha 1 - Ordem de Serviço</title>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
         <style>
           @page {
             size: A4;
@@ -5287,20 +5288,32 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           window.addEventListener('load', function () {
             setTimeout(function () {
               construirPaginas();
-              setTimeout(function () {
-                var nome = 'OS-' + (NUMERO_PEDIDO !== '-' ? NUMERO_PEDIDO : NUMERO_ORCAMENTO) + '.pdf';
-                html2pdf()
-                  .set({
-                    margin: 0,
-                    filename: nome,
-                    image:       { type: 'jpeg', quality: 0.95 },
-                    html2canvas: { scale: 2, useCORS: true, logging: false },
-                    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak:   { mode: ['css'], before: ['.page-break'] }
-                  })
-                  .from(document.body)
-                  .save()
-                  .catch(function (err) { console.error('[OS-PDF]', err); });
+              setTimeout(async function () {
+                try {
+                  var { jsPDF } = window.jspdf;
+                  var doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+                  var paginas = Array.from(document.querySelectorAll('.pagina'));
+                  var A4W = 210, A4H = 297;
+                  for (var i = 0; i < paginas.length; i++) {
+                    if (i > 0) doc.addPage();
+                    var pg = paginas[i];
+                    var canvas = await html2canvas(pg, {
+                      scale: 2, useCORS: true, logging: false,
+                      width: pg.offsetWidth, height: pg.offsetHeight
+                    });
+                    var imgData = canvas.toDataURL('image/jpeg', 0.95);
+                    // escala para caber na largura A4, mantendo proporção
+                    var wMm = pg.offsetWidth  * 0.264583;
+                    var hMm = pg.offsetHeight * 0.264583;
+                    var escala = A4W / wMm;
+                    var hFinal = Math.min(hMm * escala, A4H);
+                    doc.addImage(imgData, 'JPEG', 0, 0, A4W, hFinal);
+                  }
+                  var nome = 'OS-' + (NUMERO_PEDIDO !== '-' ? NUMERO_PEDIDO : NUMERO_ORCAMENTO) + '.pdf';
+                  doc.save(nome);
+                } catch (err) {
+                  console.error('[OS-PDF]', err);
+                }
               }, 400);
             }, 1800);
           });
