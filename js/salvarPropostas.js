@@ -54,10 +54,11 @@
         const data = row.querySelector(".data-parcela")?.value || "";
         const valor = row.querySelector(".valor-parcela")?.value || "";
         const tipo = row.querySelector(".tipo-monetario")?.value || "";
+        const tipoParcela = row.querySelector(".tipo-item-parcela")?.value || "";
         const condSelect = row.querySelector("select.condicao-pagto");
         const condInput = row.querySelector("input.condicao-pagto");
         const condicao = condSelect?.value || condInput?.value || "";
-        return { data, valor, tipo, condicao };
+        return { data, valor, tipo, tipoParcela, condicao };
       });
     }
 
@@ -439,10 +440,11 @@ window.atualizarPropostaEditavel = async function () {
     const linhas = document.querySelectorAll("#listaParcelas .row");
     const parcelas = Array.from(linhas).map(row => {
       const tipo = row.querySelector(".tipo-monetario")?.value || "";
+      const tipoParcela = row.querySelector(".tipo-item-parcela")?.value || "";
       const condicao = row.querySelector(".condicao-pagto")?.value || "";
       const valor = row.querySelector(".valor-parcela")?.value || "";
       const data = row.querySelector(".data-parcela")?.value || "";
-      return { tipo, condicao, valor, data };
+      return { tipo, tipoParcela, condicao, valor, data };
     });
 
     const desconto = document.querySelector("#campoDescontoFinal")?.value || "";
@@ -668,10 +670,11 @@ async function atualizarPropostaModelo() {
         const data = row.querySelector(".data-parcela")?.value || "";
         const valor = row.querySelector(".valor-parcela")?.value || "";
         const tipo = row.querySelector(".tipo-monetario")?.value || "";
+        const tipoParcela = row.querySelector(".tipo-item-parcela")?.value || "";
         const condSelect = row.querySelector("select.condicao-pagto");
         const condInput = row.querySelector("input.condicao-pagto");
         const condicao = condSelect?.value || condInput?.value || "";
-        return { data, valor, tipo, condicao };
+        return { data, valor, tipo, tipoParcela, condicao };
       });
     }
 

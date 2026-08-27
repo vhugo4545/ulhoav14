@@ -14,9 +14,18 @@ function adicionarParcela() {
   div.className = "row g-2 align-items-end mb-2";
 
   div.innerHTML = `
- <div class="col-3 col-lg-2">
+  <div class="col-4 col-lg-2">
+    <label class="form-label mb-0">Tipo</label>
+    <select class="form-select tipo-item-parcela" onchange="atualizarValoresParcelas()">
+      <option value="" disabled selected>Selecione…</option>
+      <option value="produtos">Produtos</option>
+      <option value="servicos">Serviços</option>
+    </select>
+  </div>
+
+  <div class="col-4 col-lg-2">
     <label class="form-label mb-0">Tipo Monetário</label>
-    <select class="form-select tipo-monetario" id="selectTipoMonetario">
+    <select class="form-select tipo-monetario">
       <option value="" disabled selected>Selecione…</option>
       <option value="03">Cartão de Crédito</option>
       <option value="01">Dinheiro</option>
@@ -27,37 +36,35 @@ function adicionarParcela() {
     </select>
   </div>
 
-    
-
-    <div class="col-4 col-lg-3">
-      <label class="form-label mb-0">Condição de Pagto</label>
-      <div class="condicao-wrapper">
-        <select class="form-select condicao-pagto" onchange="verificarCondicaoPersonalizada(this)">
-          <option value="" disabled selected>Selecione…</option>
-          <option value="avista">3 dias após finalizar instalação completa.</option>
-          <option value="na-retirada">3 dias após finalizar instalação da estrutura.</option>
-          <option value="30-dias">3 dias após finalizar instalação dos vidros.</option>
-          <option value="entrada+30">Na retirada/entrega do produto.</option>
-          <option value="personalizado">Personalizado</option>
-        </select>
-      </div>
+  <div class="col-12 col-lg-2">
+    <label class="form-label mb-0">Condição de Pagto</label>
+    <div class="condicao-wrapper">
+      <select class="form-select condicao-pagto" onchange="verificarCondicaoPersonalizada(this)">
+        <option value="" disabled selected>Selecione…</option>
+        <option value="avista">3 dias após finalizar instalação completa.</option>
+        <option value="na-retirada">3 dias após finalizar instalação da estrutura.</option>
+        <option value="30-dias">3 dias após finalizar instalação dos vidros.</option>
+        <option value="entrada+30">Na retirada/entrega do produto.</option>
+        <option value="personalizado">Personalizado</option>
+      </select>
     </div>
+  </div>
 
-    <div class="col-3 col-lg-2">
-      <label class="form-label mb-0">Valor</label>
-      <input type="text" class="form-control valor-parcela" placeholder="Ex: 1000 ou 30%">
-    </div>
+  <div class="col-4 col-lg-2">
+    <label class="form-label mb-0">Valor</label>
+    <input type="text" class="form-control valor-parcela" placeholder="Ex: 1000 ou 30%" oninput="atualizarValoresParcelas()">
+  </div>
 
-    <div class="col-2 col-lg-3">
-      <label class="form-label mb-0">Vencimento</label>
-      <input type="date" class="form-control data-parcela">
-    </div>
+  <div class="col-4 col-lg-2">
+    <label class="form-label mb-0">Vencimento</label>
+    <input type="date" class="form-control data-parcela">
+  </div>
 
-    <div class="col-12 col-lg-2">
-      <button type="button" class="btn btn-outline-danger w-100" onclick="this.closest('.row').remove(); atualizarValoresParcelas()">
-        Remover
-      </button>
-    </div>
+  <div class="col-4 col-lg-2">
+    <button type="button" class="btn btn-outline-danger w-100" onclick="this.closest('.row').remove(); atualizarValoresParcelas()">
+      Remover
+    </button>
+  </div>
   `;
 
   lista.appendChild(div);
@@ -178,31 +185,40 @@ function valorTotalProdutos() {
   }, 0);
 }
 
-/* recalcula automaticamente cada parcela e mostra o total */
+/* recalcula automaticamente cada parcela e mostra o total com validação */
 function atualizarValoresParcelas() {
-  const totalProdutos = valorTotalProdutos();
-  let totalParcelas   = 0;
+  let totalParcelas = 0;
 
   document.querySelectorAll("#listaParcelas .row").forEach(row => {
-    const tipo   = row.querySelector(".tipo-parcela").value;
-    const entrada = row.querySelector(".valor-parcela").value.trim();
-
-    /* normaliza separador decimal */
-    const num = parseFloat(entrada.replace(/\./g, "").replace(",", ".")) || 0;
-
-    const valorCalculado = tipo === "percentual"
-      ? (totalProdutos * num / 100)        // % do total
-      : num;                               // valor direto
-
-    /* armazena para eventual uso em salvamento */
-    row.dataset.valorFinal = valorCalculado.toFixed(2);
-
-    totalParcelas += valorCalculado;
+    const entrada = row.querySelector(".valor-parcela")?.value.trim() || "";
+    const num = parseFloat(entrada.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
+    row.dataset.valorFinal = num.toFixed(2);
+    totalParcelas += num;
   });
 
-  /* exibe a soma em R$ */
-  document.getElementById("totalParcelas").textContent =
-    totalParcelas.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const totalGeral = calcularTotalDosGrupos();
+  const diferenca  = totalGeral - totalParcelas;
+  const bate       = Math.abs(diferenca) < 1;
+
+  const elTotal = document.getElementById("totalParcelas");
+  if (elTotal) {
+    elTotal.textContent = totalParcelas.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  const elStatus = document.getElementById("statusParcelas");
+  if (elStatus) {
+    if (totalParcelas === 0) {
+      elStatus.textContent = "";
+      elStatus.style.color = "";
+    } else if (bate) {
+      elStatus.textContent = "✓ Parcelas batem com o total";
+      elStatus.style.color = "#16a34a";
+    } else {
+      const sinal = diferenca > 0 ? "faltam" : "excedem em";
+      elStatus.textContent = `✗ Parcelas ${sinal} ${Math.abs(diferenca).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
+      elStatus.style.color = "#dc2626";
+    }
+  }
 }
 
 /* se o total dos produtos mudar em outro ponto do sistema,

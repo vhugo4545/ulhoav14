@@ -573,6 +573,9 @@ async function carregarPropostaEditavel(proposta) {
           if (inputData) inputData.value = parcela.data || "";
           if (selectTipo) selectTipo.value = parcela.tipo || "";
 
+          const selectTipoParcela = ultima.querySelector(".tipo-item-parcela");
+          if (selectTipoParcela) selectTipoParcela.value = parcela.tipoParcela || "";
+
           const condicaoSalva = String(parcela.condicao || "").trim();
 
           if (!condWrapper) return;
