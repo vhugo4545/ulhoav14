@@ -510,12 +510,13 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
   // ==========================
   const clientes = Array.from(document.querySelectorAll("#clientesWrapper .cliente-item"))
     .map(row => ({
-      nomeCliente: getTextOrValue(row.querySelector(".nomeContato")),
+      nomeCliente: getTextOrValue(row.querySelector(".razaoSocial")),
       cpfCnpj: getTextOrValue(row.querySelector(".cpfCnpj")),
       codigo: getTextOrValue(row.querySelector(".codigoCliente")),
       nomeContato: getTextOrValue(row.querySelector(".nomeContato")),
       funcao: getTextOrValue(row.querySelector(".funcaoCliente")),
       telefone: getTextOrValue(row.querySelector(".telefoneCliente")),
+      email: getTextOrValue(row.querySelector(".emailCliente")),
     }))
     .filter(c => c.nomeCliente || c.nomeContato || c.telefone || c.cpfCnpj);
   const principal = clientes[0] || {};
@@ -528,6 +529,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
     contato: c.nomeContato || "-",
     funcao: c.funcao || "-",
     telefone: c.telefone || "-",
+    email: c.email || "-",
   }));
   // ==========================
   // GRUPOS
@@ -709,17 +711,23 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
       <table class="table table-bordered table-sm w-100">
         <thead class="table-light">
           <tr>
-            <th>Cliente</th>
+            <th>Nome / Razão Social</th>
+            <th>CPF / CNPJ</th>
+            <th>Nome do Contato</th>
             <th>Função</th>
             <th>Telefone</th>
+            <th>E-mail</th>
           </tr>
         </thead>
         <tbody>
           ${dados.contatos.map(c => `
             <tr>
               <td>${c.cliente}</td>
+              <td>${c.cpfCnpj}</td>
+              <td>${c.contato}</td>
               <td>${c.funcao}</td>
               <td>${c.telefone}</td>
+              <td>${c.email}</td>
             </tr>
           `).join("")}
         </tbody>
