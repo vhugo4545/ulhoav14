@@ -5415,19 +5415,42 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
             // Remover última página se ficou vazia
             if (todasPaginas[todasPaginas.length - 1].length === 0) todasPaginas.pop();
 
-            // Mesclar última página se quase em branco (< 200px): absorve na penúltima
-            if (todasPaginas.length > 1) {
-              var ultimaPag = todasPaginas[todasPaginas.length - 1];
-              var altUltima = ultimaPag.reduce(function (sum, el) {
-                return sum + (el.getBoundingClientRect().height || el.offsetHeight || 40);
-              }, 0);
-              if (altUltima < 200) {
-                var penultima = todasPaginas[todasPaginas.length - 2];
-                ultimaPag.forEach(function (el) { penultima.push(el); });
-                todasPaginas.pop();
-                console.log('[MERGE] Ultima pagina quase em branco (' + altUltima.toFixed(1) + 'px) mesclada na penultima.');
+            // Validar cada página: se < 60% preenchida, mover conteúdo para a próxima página.
+            // Repete até não haver mais páginas esparsas (máx 15 iterações).
+            (function validarPaginas() {
+              for (var iter = 0; iter < 15; iter++) {
+                var mudou = false;
+                for (var pi = 0; pi < todasPaginas.length - 1; pi++) {
+                  var limitePi = pi === 0 ? ALTURA_PAG1 : ALTURA_PAG_N;
+                  var altPi = todasPaginas[pi].reduce(function (sum, el) {
+                    return sum + (el.getBoundingClientRect().height || el.offsetHeight || 40);
+                  }, 0);
+                  if (altPi < limitePi * 0.6) {
+                    // Página esparsa: mover conteúdo para o início da próxima
+                    var proxima = todasPaginas[pi + 1];
+                    todasPaginas[pi].slice().reverse().forEach(function (el) { proxima.unshift(el); });
+                    todasPaginas.splice(pi, 1);
+                    console.log('[VALIDA] Pag ' + (pi + 1) + ' tinha apenas ' + altPi.toFixed(1) + 'px (' + (100 * altPi / limitePi).toFixed(0) + '%) — movida para proxima. Iter ' + (iter + 1));
+                    mudou = true;
+                    break;
+                  }
+                }
+                if (!mudou) break;
               }
-            }
+              // Última página: se < 40% preenchida, absorve na penúltima
+              if (todasPaginas.length > 1) {
+                var limUlt = ALTURA_PAG_N;
+                var altUlt = todasPaginas[todasPaginas.length - 1].reduce(function (sum, el) {
+                  return sum + (el.getBoundingClientRect().height || el.offsetHeight || 40);
+                }, 0);
+                if (altUlt < limUlt * 0.4) {
+                  var penult = todasPaginas[todasPaginas.length - 2];
+                  todasPaginas[todasPaginas.length - 1].forEach(function (el) { penult.push(el); });
+                  todasPaginas.pop();
+                  console.log('[VALIDA] Ultima pag quase vazia (' + altUlt.toFixed(1) + 'px) absorvida na penultima.');
+                }
+              }
+            })();
 
             raw.remove();
 
