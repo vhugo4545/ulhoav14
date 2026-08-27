@@ -20,6 +20,7 @@ function adicionarParcela() {
       <option value="" disabled selected>Selecione…</option>
       <option value="produtos">Produtos</option>
       <option value="servicos">Serviços</option>
+      <option value="faturado-direto">Faturado Direto</option>
     </select>
   </div>
 
