@@ -579,40 +579,34 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
     totalGeral += valorTotalAmbiente;
     const gruposVisiveis = grupos.filter(g => !g.ocultar);
     if (gruposVisiveis.length === 0) return;
-    const linhasItens = gruposVisiveis.map(g => {
+    gruposVisiveis.forEach((g, idx) => {
+      const isFirst = idx === 0;
+      const isLast  = idx === gruposVisiveis.length - 1;
       const num = contadorGlobal++;
-      return `
-        <tr>
-          <td>${num}</td>
-          <td>${g.descricao}</td>
-          <td>${g.qtd}</td>
-        </tr>
-        ${g.resumoGrupo ? `<tr><td colspan="3"><em>${g.resumoGrupo}</em></td></tr>` : ""}
-        ${(g.previsaoEntrega || g.informacoesProduto) ? `<tr><td colspan="3" style="font-size:11px;font-weight:600;text-align:center;background:#f8f8f8;padding:5px 8px;">${g.previsaoEntrega ? `<strong>Prazo Previsto:</strong> ${g.previsaoEntrega}` : ""}${g.previsaoEntrega && g.informacoesProduto ? " &nbsp;|&nbsp; " : ""}${g.informacoesProduto || ""}</td></tr>` : ""}
-      `;
-    }).join("");
-    corpoHTML += `
-      <div class="mt-4 border">
-        <div class="fw-bold border p-2 bg-light text-center">
-          AMBIENTE: ${nomeAmbiente.toUpperCase()}
-        </div>
-        <table class="table table-sm table-bordered w-100">
-          <thead class="table-light">
-            <tr>
-              <th style="width:40px;">#</th>
-              <th>Descrição</th>
-              <th style="width:120px;">Quantidade</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${linhasItens}
-          </tbody>
-        </table>
-        <div class="p-2 text-end bg-light">
-          <strong>Total do Ambiente ${nomeAmbiente.toUpperCase()}:</strong>
-          ${formatarReal(valorTotalAmbiente)}
-        </div>
-      </div>`;
+      corpoHTML += `
+        <div class="border mt-2">
+          ${isFirst ? `<div class="fw-bold p-2 bg-light text-center" style="border-bottom:1px solid #dee2e6;">AMBIENTE: ${nomeAmbiente.toUpperCase()}</div>` : ""}
+          <table class="table table-sm table-bordered w-100 mb-0">
+            <thead class="table-light">
+              <tr>
+                <th style="width:40px;">#</th>
+                <th>Descrição</th>
+                <th style="width:120px;">Quantidade</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${num}</td>
+                <td>${g.descricao}</td>
+                <td>${g.qtd}</td>
+              </tr>
+              ${g.resumoGrupo ? `<tr><td colspan="3"><em>${g.resumoGrupo}</em></td></tr>` : ""}
+              ${(g.previsaoEntrega || g.informacoesProduto) ? `<tr><td colspan="3" style="font-size:11px;font-weight:600;text-align:center;background:#f8f8f8;padding:5px 8px;">${g.previsaoEntrega ? `<strong>Prazo Previsto:</strong> ${g.previsaoEntrega}` : ""}${g.previsaoEntrega && g.informacoesProduto ? " &nbsp;|&nbsp; " : ""}${g.informacoesProduto || ""}</td></tr>` : ""}
+            </tbody>
+          </table>
+          ${isLast ? `<div class="p-2 text-end bg-light" style="border-top:1px solid #dee2e6;"><strong>Total do Ambiente ${nomeAmbiente.toUpperCase()}:</strong> ${formatarReal(valorTotalAmbiente)}</div>` : ""}
+        </div>`;
+    });
   });
   // ==========================
   // PARCELAS
