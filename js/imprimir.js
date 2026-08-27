@@ -603,8 +603,8 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
               ${g.resumoGrupo ? `<tr><td colspan="3"><em>${g.resumoGrupo}</em></td></tr>` : ""}
               ${(g.previsaoEntrega || g.informacoesProduto) ? `<tr><td colspan="3" style="font-size:20px;font-weight:700;text-align:center;background:#f8f8f8;padding:5px 8px;">${g.previsaoEntrega ? `<strong>Prazo Previsto:</strong> ${g.previsaoEntrega}` : ""}${g.previsaoEntrega && g.informacoesProduto ? " &nbsp;|&nbsp; " : ""}${g.informacoesProduto || ""}</td></tr>` : ""}
             </tbody>
+            ${isLast ? `<tfoot><tr><td colspan="3" class="text-end fw-bold bg-light" style="padding:6px 8px;">Total do Ambiente ${nomeAmbiente.toUpperCase()}: ${formatarReal(valorTotalAmbiente)}</td></tr></tfoot>` : ""}
           </table>
-          ${isLast ? `<div class="p-2 text-end bg-light" style="border-top:1px solid #dee2e6;"><strong>Total do Ambiente ${nomeAmbiente.toUpperCase()}:</strong> ${formatarReal(valorTotalAmbiente)}</div>` : ""}
         </div>`;
     });
   });
