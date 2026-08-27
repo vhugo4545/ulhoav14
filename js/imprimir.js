@@ -196,7 +196,7 @@ async function gerarOrcamentoParaImpressaoCompleta() {
   });
   if (semPrazo.length) {
     const nomes = semPrazo.map(g => `• ${g.nomeAmbiente}`).join("\n");
-    alert(`Atenção: os itens abaixo estão sem prazo preenchido:\n\n${nomes}\n\nA impressão continuará normalmente.`);
+    alert(`Atenção: os itens abaixo estão sem Prazo Previsto preenchido:\n\n${nomes}\n\nA impressão continuará normalmente.`);
   }
 
   mostrarPopupSelecaoGruposEstetico(
@@ -586,7 +586,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
           <td>${g.qtd}</td>
         </tr>
         ${g.resumoGrupo ? `<tr><td colspan="3"><em>${g.resumoGrupo}</em></td></tr>` : ""}
-        ${(g.previsaoEntrega || g.informacoesProduto) ? `<tr><td colspan="3" style="font-size:11px;font-weight:600;text-align:center;background:#f8f8f8;padding:5px 8px;">${[g.previsaoEntrega, g.informacoesProduto].filter(Boolean).join(" ")}</td></tr>` : ""}
+        ${(g.previsaoEntrega || g.informacoesProduto) ? `<tr><td colspan="3" style="font-size:11px;font-weight:600;text-align:center;background:#f8f8f8;padding:5px 8px;">${g.previsaoEntrega ? `<strong>Prazo Previsto:</strong> ${g.previsaoEntrega}` : ""}${g.previsaoEntrega && g.informacoesProduto ? " &nbsp;|&nbsp; " : ""}${g.informacoesProduto || ""}</td></tr>` : ""}
       `;
     }).join("");
     corpoHTML += `
