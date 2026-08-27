@@ -5253,7 +5253,10 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
         (function () {
           var CAB_HTML = \`${cabHTMLEsc}\`;
           var CAB_HTML_SIMPLES = \`${cabHTMLSimplesEsc}\`;
-          var ALTURA_PAGINA = 850;
+          /* Pág 1: cabeçalho completo ~280px + pg-num ~30px → conteúdo ~736px → limite 700.
+             Pág 2+: cabeçalho básico ~80px + pg-num ~30px → conteúdo ~936px → limite 890. */
+          var ALTURA_PAG1 = 700;
+          var ALTURA_PAG_N = 890;
           var NUMERO_PEDIDO = "${numeroPedido}";
           var NUMERO_ORCAMENTO = "${numeroOrcamento}";
 
@@ -5350,14 +5353,15 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
                 continue;
               }
 
-              if (altAtual + h <= ALTURA_PAGINA) {
+              var limitePag = numPagina === 1 ? ALTURA_PAG1 : ALTURA_PAG_N;
+              if (altAtual + h <= limitePag) {
                 // Cabe inteiro na página atual
-                console.log('[PG ' + numPagina + '] ' + label + ': CABE inteiro (acum=' + altAtual.toFixed(1) + ' + h=' + h.toFixed(1) + ' = ' + (altAtual + h).toFixed(1) + '/' + ALTURA_PAGINA + ')');
+                console.log('[PG ' + numPagina + '] ' + label + ': CABE inteiro (acum=' + altAtual.toFixed(1) + ' + h=' + h.toFixed(1) + ' = ' + (altAtual + h).toFixed(1) + '/' + limitePag + ')');
                 todasPaginas[todasPaginas.length - 1].push(el);
                 altAtual += h;
               } else if (altAtual === 0) {
-                // Página vazia e item maior que ALTURA_PAGINA — colocar e virar página
-                console.log('[PG ' + numPagina + '] ' + label + ': maior que ALTURA_PAGINA (' + h.toFixed(1) + 'px), coloca e vira pagina');
+                // Página vazia e item maior que limite — colocar e virar página
+                console.log('[PG ' + numPagina + '] ' + label + ': maior que limite (' + h.toFixed(1) + 'px), coloca e vira pagina');
                 todasPaginas[todasPaginas.length - 1].push(el);
                 todasPaginas.push([]);
                 numPagina++;
@@ -5365,8 +5369,8 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
                 altAtual = 0;
               } else {
                 // Tentar cortar o item no espaço restante
-                console.log('[PG ' + numPagina + '] ' + label + ': NAO cabe inteiro (acum=' + altAtual.toFixed(1) + ' + h=' + h.toFixed(1) + ' > ' + ALTURA_PAGINA + ') — tentando cortar com espaco=' + (ALTURA_PAGINA - altAtual).toFixed(1) + 'px');
-                var partes = cortarItem(el, ALTURA_PAGINA - altAtual);
+                console.log('[PG ' + numPagina + '] ' + label + ': NAO cabe inteiro (acum=' + altAtual.toFixed(1) + ' + h=' + h.toFixed(1) + ' > ' + limitePag + ') — tentando cortar com espaco=' + (limitePag - altAtual).toFixed(1) + 'px');
+                var partes = cortarItem(el, limitePag - altAtual);
                 if (partes) {
                   todasPaginas[todasPaginas.length - 1].push(partes[0]);
                   numPagina++;
