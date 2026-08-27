@@ -405,6 +405,9 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
     if (typeof atualizarValoresDasParcelas === "function") {
       atualizarValoresDasParcelas();
     }
+    if (typeof atualizarValoresParcelas === "function") {
+      atualizarValoresParcelas();
+    }
   };
 
   inputDesconto.addEventListener("input", calcularTotalFinal);
