@@ -770,24 +770,14 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
 
   /* ── Cabeçalho páginas 2+: logo + dados do orçamento ── */
   const cabHTMLSimples = `
-    <div style="border-bottom:3px solid #1e293b;padding-bottom:6px;margin-bottom:10px;">
-      <table class="table table-bordered table-sm w-100" style="margin-bottom:0;font-size:12px;">
-        <tr>
-          <td style="width:15%;text-align:center;vertical-align:middle;">
-            <img src="${logoSrc}" style="max-height:40px;">
-          </td>
-          <td>
-            <table class="table table-sm w-100 mb-0">
-              <tr>
-                <td><strong>Orçamento:</strong></td><td>${dados.numero}</td>
-                <td><strong>Pedido:</strong></td><td>${dados.numeroPedido}</td>
-                <td><strong>Data:</strong></td><td>${dataHoje}</td>
-                <td><strong>Proposta válida por 7 dias úteis</strong></td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
+    <div style="border-bottom:2px solid #1e293b;padding-bottom:6px;margin-bottom:10px;display:flex;align-items:center;gap:14px;">
+      <img src="${logoSrc}" style="max-height:38px;flex-shrink:0;">
+      <div style="font-size:12px;">
+        <strong>Orçamento:</strong> ${dados.numero} &nbsp;|&nbsp;
+        <strong>Pedido:</strong> ${dados.numeroPedido} &nbsp;|&nbsp;
+        <strong>Data:</strong> ${dataHoje} &nbsp;|&nbsp;
+        Proposta válida por 7 dias úteis
+      </div>
     </div>`;
 
   /* Escapa backticks/$ para embed seguro no <script> inline */
