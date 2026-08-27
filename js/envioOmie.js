@@ -1293,12 +1293,16 @@ function vvLerParcelasFormularioPrincipal() {
     .map(row => {
       const condSelect = row.querySelector("select.condicao-pagto");
       const condInput = row.querySelector("input.condicao-pagto");
-      return vvNormalizarParcelaControle({
-        tipo: row.querySelector(".tipo-monetario")?.value || "",
-        condicao: condSelect?.value || condInput?.value || row.querySelector(".condicao-pagto")?.value || "",
-        valor: row.querySelector(".valor-parcela")?.value || "",
-        data: row.querySelector(".data-parcela")?.value || ""
-      });
+      const tipoParcela = row.querySelector(".tipo-item-parcela")?.value || "";
+      return {
+        ...vvNormalizarParcelaControle({
+          tipo: row.querySelector(".tipo-monetario")?.value || "",
+          condicao: condSelect?.value || condInput?.value || row.querySelector(".condicao-pagto")?.value || "",
+          valor: row.querySelector(".valor-parcela")?.value || "",
+          data: row.querySelector(".data-parcela")?.value || ""
+        }),
+        _tipoParcela: tipoParcela
+      };
     })
     .filter(parcela =>
       parcela.valor > 0 ||
@@ -3723,26 +3727,36 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
   let parcelamentoServicos = null;
 
   if (valorServicos > 0 && typeof abrirPopupParcelamentoProdutosServicos === 'function') {
-    const parcelasProdutoAtuais = vvLerParcelasFormularioPrincipal();
+    const todasParcelasForm = vvLerParcelasFormularioPrincipal();
+
+    // Distribui pelo tipo definido no formulário; faturado-direto é ignorado
+    const parcelasProdutoDoForm  = todasParcelasForm.filter(p => p._tipoParcela === "produtos");
+    const parcelasServicoDoForm  = todasParcelasForm.filter(p => p._tipoParcela === "servicos");
+    const semTipoDefinido        = todasParcelasForm.filter(p => !p._tipoParcela || p._tipoParcela === "faturado-direto");
+
     const parcelasProdutoSalvas =
-      parcelasProdutoAtuais.length > 0
-        ? parcelasProdutoAtuais
-        : (Array.isArray(window.vvParcelasProdutoOmie) && window.vvParcelasProdutoOmie.length > 0)
-          ? window.vvParcelasProdutoOmie
-          : (
-              window.propostaEmEdicao?.camposFormulario?.parcelas ||
-              window.propostaAtual?.camposFormulario?.parcelas ||
-              []
-            );
+      parcelasProdutoDoForm.length > 0
+        ? parcelasProdutoDoForm
+        : semTipoDefinido.length > 0
+          ? semTipoDefinido
+          : (Array.isArray(window.vvParcelasProdutoOmie) && window.vvParcelasProdutoOmie.length > 0)
+            ? window.vvParcelasProdutoOmie
+            : (
+                window.propostaEmEdicao?.camposFormulario?.parcelas ||
+                window.propostaAtual?.camposFormulario?.parcelas ||
+                []
+              );
 
     const parcelasServicoSalvas =
-      (Array.isArray(window.vvParcelasServicoOmie) && window.vvParcelasServicoOmie.length > 0)
-        ? window.vvParcelasServicoOmie
-        : (
-            window.propostaEmEdicao?.camposFormulario?.parcelasServico ||
-            window.propostaAtual?.camposFormulario?.parcelasServico ||
-            []
-          );
+      parcelasServicoDoForm.length > 0
+        ? parcelasServicoDoForm
+        : (Array.isArray(window.vvParcelasServicoOmie) && window.vvParcelasServicoOmie.length > 0)
+          ? window.vvParcelasServicoOmie
+          : (
+              window.propostaEmEdicao?.camposFormulario?.parcelasServico ||
+              window.propostaAtual?.camposFormulario?.parcelasServico ||
+              []
+            );
 
   // Os alvos (totalFinalProdutos / valorServicos) já refletem desconto e
   // itens ignorados do popup anterior — são os valores corretos.
