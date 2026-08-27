@@ -843,10 +843,9 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
           var CAB_HTML_SIMPLES = \`${cabHTMLSimplesEsc}\`;
 
           /* A4 px @ 96dpi = 1122px; margens 10mm × 2 ≈ 76px; útil = 1046px.
-             Pág 1: cabeçalho ~200px + pg-num ~30px → sobra ~816px → limite 720.
-             Pág 2+: cabeçalho ~60px  + pg-num ~30px → sobra ~956px → limite 910. */
+             Todas as págs: cabeçalho completo ~200px + pg-num ~30px → sobra ~816px → limite 720. */
           var ALTURA_PAG1 = 720;
-          var ALTURA_PAG_N = 910;
+          var ALTURA_PAG_N = 720;
 
           window.addEventListener('load', function () {
             setTimeout(function () {
@@ -891,9 +890,9 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
               numDiv.textContent = 'Pág. ' + (i + 1) + ' / ' + total;
               pDiv.appendChild(numDiv);
 
-              /* Cabeçalho: completo só na pág. 1, simplificado nas demais */
+              /* Cabeçalho: completo em todas as páginas */
               var cabDiv = document.createElement('div');
-              cabDiv.innerHTML = i === 0 ? CAB_HTML : CAB_HTML_SIMPLES;
+              cabDiv.innerHTML = CAB_HTML;
               pDiv.appendChild(cabDiv);
 
               /* Elementos de conteúdo */
@@ -3767,7 +3766,7 @@ async function gerarFolha4RelatorioEntrega() {
           var COLGROUP     = \`${colgroupEsc}\`;
           var THEAD        = \`${theadEsc}\`;
           var ALTURA_PAG1 = 580;
-          var ALTURA_PAG_N = 740;
+          var ALTURA_PAG_N = 580;
 
           window.addEventListener('load', function () {
             setTimeout(function () {
@@ -3824,7 +3823,7 @@ async function gerarFolha4RelatorioEntrega() {
               pDiv.appendChild(pgNum);
 
               var cabDiv = document.createElement('div');
-              cabDiv.innerHTML = i === 0 ? CAB_COMPLETO : CAB_BASICO;
+              cabDiv.innerHTML = CAB_COMPLETO;
               pDiv.appendChild(cabDiv);
 
               var tableWrap = document.createElement('div');
@@ -3863,7 +3862,7 @@ async function gerarFolha4RelatorioEntrega() {
             procDiv.appendChild(pgNumProc);
 
             var cabProcDiv = document.createElement('div');
-            cabProcDiv.innerHTML = CAB_BASICO;
+            cabProcDiv.innerHTML = CAB_COMPLETO;
             procDiv.appendChild(cabProcDiv);
 
             while (procPage.firstChild) {
@@ -4307,7 +4306,7 @@ async function gerarHistoricoDeProducaoParaImpressao() {
           var COLGROUP     = \`${colgroupEsc}\`;
           var THEAD        = \`${theadEsc}\`;
           var ALTURA_PAG1 = 650;
-          var ALTURA_PAG_N = 800;
+          var ALTURA_PAG_N = 650;
 
           window.addEventListener('load', function () {
             setTimeout(function () {
@@ -4364,7 +4363,7 @@ async function gerarHistoricoDeProducaoParaImpressao() {
               pDiv.appendChild(pgNum);
 
               var cabDiv = document.createElement('div');
-              cabDiv.innerHTML = i === 0 ? CAB_COMPLETO : CAB_BASICO;
+              cabDiv.innerHTML = CAB_COMPLETO;
               pDiv.appendChild(cabDiv);
 
               var tableWrap = document.createElement('div');
@@ -4402,7 +4401,7 @@ async function gerarHistoricoDeProducaoParaImpressao() {
             histDiv.appendChild(pgNumHist);
 
             var cabHistDiv = document.createElement('div');
-            cabHistDiv.innerHTML = CAB_BASICO;
+            cabHistDiv.innerHTML = CAB_COMPLETO;
             histDiv.appendChild(cabHistDiv);
 
             while (histPage.firstChild) {
@@ -5280,7 +5279,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           /* Pág 1: cabeçalho completo ~280px + pg-num ~30px → conteúdo ~736px → limite 700.
              Pág 2+: cabeçalho básico ~80px + pg-num ~30px → conteúdo ~936px → limite 890. */
           var ALTURA_PAG1 = 700;
-          var ALTURA_PAG_N = 890;
+          var ALTURA_PAG_N = 700;
           var NUMERO_PEDIDO = "${numeroPedido}";
           var NUMERO_ORCAMENTO = "${numeroOrcamento}";
 
@@ -5484,7 +5483,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
               pDiv.appendChild(numDiv);
 
               var cabDiv = document.createElement('div');
-              cabDiv.innerHTML = i === 0 ? CAB_HTML : CAB_HTML_SIMPLES;
+              cabDiv.innerHTML = CAB_HTML;
               pDiv.appendChild(cabDiv);
 
               els.forEach(function (el) { el.style.visibility = 'visible'; pDiv.appendChild(el); });
