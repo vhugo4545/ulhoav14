@@ -601,7 +601,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
                 <td>${g.qtd}</td>
               </tr>
               ${g.resumoGrupo ? `<tr><td colspan="3"><em>${g.resumoGrupo}</em></td></tr>` : ""}
-              ${(g.previsaoEntrega || g.informacoesProduto) ? `<tr><td colspan="3" style="font-size:11px;font-weight:600;text-align:center;background:#f8f8f8;padding:5px 8px;">${g.previsaoEntrega ? `<strong>Prazo Previsto:</strong> ${g.previsaoEntrega}` : ""}${g.previsaoEntrega && g.informacoesProduto ? " &nbsp;|&nbsp; " : ""}${g.informacoesProduto || ""}</td></tr>` : ""}
+              ${(g.previsaoEntrega || g.informacoesProduto) ? `<tr><td colspan="3" style="font-size:20px;font-weight:700;text-align:center;background:#f8f8f8;padding:5px 8px;">${g.previsaoEntrega ? `<strong>Prazo Previsto:</strong> ${g.previsaoEntrega}` : ""}${g.previsaoEntrega && g.informacoesProduto ? " &nbsp;|&nbsp; " : ""}${g.informacoesProduto || ""}</td></tr>` : ""}
             </tbody>
           </table>
           ${isLast ? `<div class="p-2 text-end bg-light" style="border-top:1px solid #dee2e6;"><strong>Total do Ambiente ${nomeAmbiente.toUpperCase()}:</strong> ${formatarReal(valorTotalAmbiente)}</div>` : ""}
@@ -1793,7 +1793,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
         .miniBox { border: 1px solid #111; padding: 8px; font-weight: 700; }
 
         .prazos { border: 1px solid #111; padding: 8px; margin-top: 8px; }
-        .prazos .t { font-weight: 800; margin-bottom: 6px; }
+        .prazos .t { font-weight: 800; font-size: 20px; margin-bottom: 6px; }
         .prazos .c { font-weight: 400; line-height: 1.35; }
 
         /* ====== ITENS ====== */
@@ -2960,7 +2960,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
         .miniBox { border: 1px solid #111; padding: 8px; font-weight: 700; }
 
         .prazos { border: 1px solid #111; padding: 8px; margin-top: 8px; }
-        .prazos .t { font-weight: 800; margin-bottom: 6px; }
+        .prazos .t { font-weight: 800; font-size: 20px; margin-bottom: 6px; }
         .prazos .c { font-weight: 400; line-height: 1.35; }
 
         /* ====== ITENS ====== */
@@ -5028,6 +5028,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
 
           .prazos .t {
             font-weight: 800;
+            font-size: 20px;
             margin-bottom: 4px;
           }
 
