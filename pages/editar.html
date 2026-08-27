@@ -2072,8 +2072,6 @@ document.body.appendChild(btn);
 
 
 window.atualizarPropostaEditavel = async function () {
-  if (typeof parcelasValidas === "function" && !parcelasValidas()) return;
-
   // Guard: se for o modelo base, pula validação de itens zerados
   const _idAtualEditar = new URLSearchParams(window.location.search).get("id");
   if (_idAtualEditar !== "68746e305b9691a7ed3b3f97") {

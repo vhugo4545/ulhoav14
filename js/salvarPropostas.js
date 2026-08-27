@@ -68,8 +68,6 @@ async function salvarPropostaEditavel() {
   try {
     console.log("editaveis");
 
-    if (!parcelasValidas()) return;
-
     mostrarCarregando();
     await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -409,8 +407,6 @@ function extrairNumeroMoeda(texto) {
 }
 
 window.atualizarPropostaEditavel = async function () {
-  if (!parcelasValidas()) return;
-
   // ── Validação: itens com custo zero (exceto o 1º de cada grupo) ──────────
   const _idAtual = new URLSearchParams(window.location.search).get("id");
   if (_idAtual === "68746e305b9691a7ed3b3f97") { // modelo — pula validação
