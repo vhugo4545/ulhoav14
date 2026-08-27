@@ -191,6 +191,8 @@ function atualizarValoresParcelas() {
   let totalParcelas = 0;
 
   document.querySelectorAll("#listaParcelas .row").forEach(row => {
+    const tipo = row.querySelector(".tipo-item-parcela")?.value || "";
+    if (tipo === "faturado-direto") return;
     const entrada = row.querySelector(".valor-parcela")?.value.trim() || "";
     const num = parseFloat(entrada.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
     row.dataset.valorFinal = num.toFixed(2);
