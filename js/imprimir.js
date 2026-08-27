@@ -710,7 +710,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
             <th>Nome do Contato</th>
             <th>Função</th>
             <th>Telefone</th>
-            <th>E-mail</th>
           </tr>
         </thead>
         <tbody>
@@ -721,7 +720,6 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
               <td>${c.contato}</td>
               <td>${c.funcao}</td>
               <td>${c.telefone}</td>
-              <td>${c.email}</td>
             </tr>
           `).join("")}
         </tbody>
