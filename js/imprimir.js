@@ -1794,7 +1794,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
 
         .prazos { border: 1px solid #111; padding: 8px; margin-top: 8px; }
         .prazos .t { font-weight: 800; font-size: 20px; margin-bottom: 6px; }
-        .prazos .c { font-weight: 400; line-height: 1.35; }
+        .prazos .c { font-weight: 700; font-size: 16px; line-height: 1.35; }
 
         /* ====== ITENS ====== */
         .item { border: 2px solid #111; margin-top: 12px; page-break-inside: avoid; }
@@ -2961,7 +2961,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
 
         .prazos { border: 1px solid #111; padding: 8px; margin-top: 8px; }
         .prazos .t { font-weight: 800; font-size: 20px; margin-bottom: 6px; }
-        .prazos .c { font-weight: 400; line-height: 1.35; }
+        .prazos .c { font-weight: 700; font-size: 16px; line-height: 1.35; }
 
         /* ====== ITENS ====== */
         .item { border: 2px solid #111; margin-top: 12px; page-break-inside: avoid; }
@@ -5033,7 +5033,8 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           }
 
           .prazos .c {
-            font-weight: 400;
+            font-weight: 700;
+            font-size: 16px;
             line-height: 1.25;
           }
 
