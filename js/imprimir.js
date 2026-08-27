@@ -5391,6 +5391,11 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
                 numPagina++;
                 console.log('--- Abrindo PG ' + numPagina + ' (cabecalho simplificado) ---');
                 altAtual = 0;
+              } else if (altAtual < limitePag * 0.6) {
+                // Página abaixo de 60% — forçar item aqui para não criar página quase em branco
+                console.log('[PG ' + numPagina + '] ' + label + ': pagina abaixo de 60% (' + (100 * altAtual / limitePag).toFixed(0) + '%) — forcando item aqui (acum=' + altAtual.toFixed(1) + ' + h=' + h.toFixed(1) + ')');
+                todasPaginas[todasPaginas.length - 1].push(el);
+                altAtual += h;
               } else {
                 // Tentar cortar o item no espaço restante
                 console.log('[PG ' + numPagina + '] ' + label + ': NAO cabe inteiro (acum=' + altAtual.toFixed(1) + ' + h=' + h.toFixed(1) + ' > ' + limitePag + ') — tentando cortar com espaco=' + (limitePag - altAtual).toFixed(1) + 'px');
