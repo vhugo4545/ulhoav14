@@ -845,8 +845,10 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
           var CAB_HTML_SIMPLES = \`${cabHTMLSimplesEsc}\`;
 
           /* A4 px @ 96dpi = 1122px; margens 10mm × 2 ≈ 76px; útil = 1046px.
-             Cabeçalho ocupa ~250px + pg-num ~30px; sobra ≈ 650px p/ conteúdo. */
-          var ALTURA_PAGINA = 650;
+             Cabeçalho pág 1 ~150px + pg-num ~30px = 220px; sobra ~826px.
+             Cabeçalho pág 2+ ~50px + pg-num ~30px = 80px; sobra ~966px.
+             Usa 820 como limite conservador para não transbordar na pág 1. */
+          var ALTURA_PAGINA = 820;
 
           window.addEventListener('load', function () {
             setTimeout(function () {
