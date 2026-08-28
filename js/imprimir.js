@@ -4900,8 +4900,6 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
       <head>
         <meta charset="utf-8" />
         <title>Folha 1 - Ordem de Serviço</title>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
         <style>
           @page {
             size: A4;
@@ -5288,34 +5286,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
           window.addEventListener('load', function () {
             setTimeout(function () {
               construirPaginas();
-              setTimeout(async function () {
-                try {
-                  var { jsPDF } = window.jspdf;
-                  var doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-                  var paginas = Array.from(document.querySelectorAll('.pagina'));
-                  var A4W = 210, A4H = 297, MARGIN = 10;
-                  var imgW = A4W - MARGIN * 2;
-                  for (var i = 0; i < paginas.length; i++) {
-                    if (i > 0) doc.addPage();
-                    var pg = paginas[i];
-                    var canvas = await html2canvas(pg, {
-                      scale: 2, useCORS: true, logging: false,
-                      width: pg.offsetWidth, height: pg.offsetHeight
-                    });
-                    var imgData = canvas.toDataURL('image/jpeg', 0.95);
-                    // escala para caber dentro das margens, mantendo proporção
-                    var wMm = pg.offsetWidth  * 0.264583;
-                    var hMm = pg.offsetHeight * 0.264583;
-                    var escala = imgW / wMm;
-                    var hFinal = Math.min(hMm * escala, A4H - MARGIN * 2);
-                    doc.addImage(imgData, 'JPEG', MARGIN, MARGIN, imgW, hFinal);
-                  }
-                  var nome = 'OS-' + (NUMERO_PEDIDO !== '-' ? NUMERO_PEDIDO : NUMERO_ORCAMENTO) + '.pdf';
-                  doc.save(nome);
-                } catch (err) {
-                  console.error('[OS-PDF]', err);
-                }
-              }, 400);
+              window.print();
             }, 1800);
           });
 
