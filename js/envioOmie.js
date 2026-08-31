@@ -3093,8 +3093,8 @@ syncDescontoFromCampoFinal();
 
 // mantém sincronizado quando o campo mudar fora do modal
 if ($campoDescontoFinal){
-  $campoDescontoFinal.addEventListener('input', ()=>{ syncDescontoFromCampoFinal(); recalc(); });
-  $campoDescontoFinal.addEventListener('change', ()=>{ syncDescontoFromCampoFinal(); recalc(); });
+  $campoDescontoFinal.addEventListener('input', ()=>{ syncDescontoFromCampoFinal(); recalc(); if (typeof atualizarValoresParcelas === "function") atualizarValoresParcelas(); });
+  $campoDescontoFinal.addEventListener('change', ()=>{ syncDescontoFromCampoFinal(); recalc(); if (typeof atualizarValoresParcelas === "function") atualizarValoresParcelas(); });
 }
 // ================================================================================
 
@@ -3353,6 +3353,8 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
   $catVidro.textContent   = vv_fmtBRL(fromCents(catIgnoradosSemMO));
 
   _lastTotalBaseMO = totalBaseMO;
+
+  if (typeof atualizarValoresParcelas === "function") atualizarValoresParcelas();
 }
     controls.querySelectorAll('input[name="srvModo"]').forEach(r=> r.addEventListener('change', recalc));
     controls.querySelectorAll('input[name="discModo"]').forEach(r=> r.addEventListener('change', recalc));
