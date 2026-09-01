@@ -105,53 +105,34 @@ function mostrarPopupCustomizado(titulo, mensagem, tipo = "info") {
   const popupExistente = document.getElementById("popup-status-omie");
   if (popupExistente) popupExistente.remove();
 
+  const corTitulo   = tipo === "success" ? "#16a34a" : tipo === "error" ? "#b91c1c" : "#1e40af";
+  const corBotao    = tipo === "success" ? "#16a34a" : tipo === "error" ? "#b91c1c" : "#2563eb";
+  const icone       = tipo === "success"
+    ? `<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><circle cx="11" cy="11" r="11" fill="${corTitulo}" opacity="0.15"/><path d="M6.5 11.5L9.5 14.5L15.5 8.5" stroke="${corTitulo}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    : tipo === "error"
+    ? `<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><circle cx="11" cy="11" r="11" fill="${corTitulo}" opacity="0.15"/><line x1="11" y1="6.5" x2="11" y2="12.5" stroke="${corTitulo}" stroke-width="2.2" stroke-linecap="round"/><circle cx="11" cy="15.5" r="1.2" fill="${corTitulo}"/></svg>`
+    : `<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><circle cx="11" cy="11" r="11" fill="${corTitulo}" opacity="0.15"/><line x1="11" y1="6.5" x2="11" y2="12.5" stroke="${corTitulo}" stroke-width="2.2" stroke-linecap="round"/><circle cx="11" cy="15.5" r="1.2" fill="${corTitulo}"/></svg>`;
+
   const overlay = document.createElement("div");
   overlay.id = "popup-status-omie";
-  overlay.style.position = "fixed";
-  overlay.style.top = 0;
-  overlay.style.left = 0;
-  overlay.style.width = "100%";
-  overlay.style.height = "100%";
-  overlay.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
-  overlay.style.display = "flex";
-  overlay.style.alignItems = "center";
-  overlay.style.justifyContent = "center";
-  overlay.style.zIndex = 9999;
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,0.5);display:flex;align-items:center;justify-content:center;z-index:99999;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;";
 
-  const box = document.createElement("div");
-  box.style.backgroundColor = "#fff";
-  box.style.borderRadius = "8px";
-  box.style.padding = "24px";
-  box.style.boxShadow = "0 0 15px rgba(0, 0, 0, 0.2)";
-  box.style.maxWidth = "500px";
-  box.style.width = "90%";
-  box.style.textAlign = "center";
-  box.style.fontFamily = "Arial, sans-serif";
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:28px 32px;max-width:460px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.18);display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        ${icone}
+        <span style="font-size:17px;font-weight:700;color:${corTitulo};">${titulo}</span>
+      </div>
+      <div style="font-size:13.5px;color:#374151;line-height:1.6;">${mensagem}</div>
+      <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+        <button id="_vv_popup_fechar" style="padding:9px 24px;border:none;border-radius:8px;background:${corBotao};color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:filter 0.15s;">Fechar</button>
+      </div>
+    </div>`;
 
-  const tituloEl = document.createElement("h2");
-  tituloEl.textContent = titulo;
-  tituloEl.style.color = tipo === "success" ? "green" : tipo === "error" ? "red" : "#333";
-  tituloEl.style.marginBottom = "12px";
-
-  const mensagemEl = document.createElement("p");
-  mensagemEl.textContent = mensagem;
-  mensagemEl.style.marginBottom = "20px";
-
-  const botao = document.createElement("button");
-  botao.textContent = "Fechar";
-  botao.style.padding = "8px 20px";
-  botao.style.border = "none";
-  botao.style.backgroundColor = "#007BFF";
-  botao.style.color = "#fff";
-  botao.style.borderRadius = "4px";
-  botao.style.cursor = "pointer";
-  botao.addEventListener("click", () => overlay.remove());
-
-  box.appendChild(tituloEl);
-  box.appendChild(mensagemEl);
-  box.appendChild(botao);
-  overlay.appendChild(box);
   document.body.appendChild(overlay);
+  overlay.querySelector("#_vv_popup_fechar").addEventListener("click", () => overlay.remove());
+  overlay.querySelector("#_vv_popup_fechar").addEventListener("mouseover", function(){ this.style.filter="brightness(0.9)"; });
+  overlay.querySelector("#_vv_popup_fechar").addEventListener("mouseout",  function(){ this.style.filter="brightness(1)"; });
 }
 
 function gerarNumeroPedidoUnico() {
@@ -2080,9 +2061,61 @@ function abrirPopupParcelamentoProdutosServicos({
 
     ft.querySelector("#vv-confirmar-controle-parcelas")?.addEventListener("click", () => {
       try {
-        sincronizarPDVparaKommo().catch(e => console.warn("[SYNC] Kommo (background):", e?.message || e));
         const parcelasProduto = coletarParcelasBucket("produtos").filter(p => p.valor > 0);
         const parcelasServico = coletarParcelasBucket("servicos").filter(p => p.valor > 0);
+
+        // ── Validações ──────────────────────────────────────────────────────
+        const erros = [];
+
+        const totalProdutosConfirmado = vvRound2ControleParcelas(parcelasProduto.reduce((s, p) => s + p.valor, 0));
+        const totalServicosConfirmado = vvRound2ControleParcelas(parcelasServico.reduce((s, p) => s + p.valor, 0));
+
+        // Valida o TOTAL COMBINADO (produtos + serviços) — o usuário pode
+        // distribuir livremente entre os buckets, o que importa é a soma bater.
+        const totalCombinado         = vvRound2ControleParcelas(totalProdutosTarget + totalServicosTarget);
+        const totalCombConfirmado    = vvRound2ControleParcelas(totalProdutosConfirmado + totalServicosConfirmado);
+        const diffCombinado          = vvRound2ControleParcelas(totalCombinado - totalCombConfirmado);
+
+        if (parcelasProduto.length === 0 && parcelasServico.length === 0) {
+          erros.push("Nenhuma parcela foi preenchida.");
+        } else if (Math.abs(diffCombinado) > 0) {
+          if (Math.abs(diffCombinado) <= 0.03) {
+            // Ajuste automático de centavos na última parcela disponível
+            const ultimaLista = parcelasProduto.length > 0 ? parcelasProduto : parcelasServico;
+            ultimaLista[ultimaLista.length - 1].valor = vvRound2ControleParcelas(
+              ultimaLista[ultimaLista.length - 1].valor + diffCombinado
+            );
+            console.log(`[parcelas] ajuste automático combinado: ${diffCombinado > 0 ? "+" : ""}${diffCombinado}`);
+          } else {
+            erros.push(
+              `Parcelas somam ${vvFmtBRLControleParcelas(totalCombConfirmado)}, ` +
+              `mas o total do pedido é ${vvFmtBRLControleParcelas(totalCombinado)} ` +
+              `(diferença de ${vvFmtBRLControleParcelas(Math.abs(diffCombinado))}). Ajuste os valores.`
+            );
+          }
+        }
+
+        parcelasProduto.forEach((p, i) => {
+          if (!p.vencimento) erros.push(`Parcela de produtos ${i + 1}: data de vencimento não preenchida.`);
+          if (!p.tipo_monetario) erros.push(`Parcela de produtos ${i + 1}: tipo monetário não selecionado.`);
+        });
+
+        parcelasServico.forEach((p, i) => {
+          if (!p.vencimento) erros.push(`Parcela de serviços ${i + 1}: data de vencimento não preenchida.`);
+          if (!p.tipo_monetario) erros.push(`Parcela de serviços ${i + 1}: tipo monetário não selecionado.`);
+        });
+
+        if (erros.length > 0) {
+          if (typeof mostrarPopupPendencias === "function") {
+            mostrarPopupPendencias(erros);
+          } else {
+            alert("Pendências:\n- " + erros.join("\n- "));
+          }
+          return;
+        }
+        // ── Fim das validações ──────────────────────────────────────────────
+
+        sincronizarPDVparaKommo().catch(e => console.warn("[SYNC] Kommo (background):", e?.message || e));
 
         const parcelasServicoServidor = vvSerializarParcelasServicoParaServidor(parcelasServico);
 
@@ -2119,9 +2152,99 @@ function abrirPopupParcelamentoProdutosServicos({
 
 
 
+// ── Top-level: acessível por atualizarNaOmie sem depender de abrirPopupSelecaoItensOmie ──
+async function tentarEnviarComissoes(payload) {
+  function _toast(msg, tipo, tempo) {
+    var cont = document.getElementById('vv-toast-container');
+    if (!cont) {
+      cont = document.createElement('div');
+      cont.id = 'vv-toast-container';
+      cont.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+      document.body.appendChild(cont);
+    }
+    var t = document.createElement('div');
+    t.style.cssText = 'padding:12px 18px;border-radius:8px;color:#fff;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.2);background:' +
+      (tipo === 'erro' ? '#dc2626' : tipo === 'ok' ? '#16a34a' : '#2563eb') + ';';
+    t.textContent = msg;
+    cont.appendChild(t);
+    setTimeout(function() { if (t.parentNode) t.remove(); }, tempo || 4500);
+  }
+
+  try {
+    document.dispatchEvent(new CustomEvent('vv:comissoes:prontas', { detail: payload }));
+  } catch(e) {}
+
+  if (typeof window.enviarComissoes !== 'function') {
+    _toast('Comissões preparadas, mas função enviarComissoes() não está disponível.', 'info');
+    return { ok: false, resposta: null, erro: 'Função enviarComissoes() ausente' };
+  }
+
+  _toast('Enviando comissões…', 'info', 2000);
+
+  try {
+    const r = await Promise.resolve(window.enviarComissoes(payload));
+    const ok = !!r?.ok;
+
+    const arqInfo = r?.resultados?.arquiteto || {};
+    const vendInfo = r?.resultados?.vendedor || {};
+    const arqV = Number(payload?.arquiteto?.valorCalculado || payload?.arquiteto?.valorManual || 0);
+    const venV = Number(payload?.vendedor?.valorCalculado || payload?.vendedor?.valorManual || 0);
+    const _fmt = (n) => (typeof vv_fmtBRL === 'function') ? vv_fmtBRL(n) : String(n);
+    const msgs = [];
+
+    if (arqInfo.status === 'enviado')  msgs.push(`Arquiteto enviado: ${_fmt(arqV)}`);
+    else if (arqInfo.status === 'ignorado') msgs.push('Arquiteto ignorado');
+    else if (arqInfo.status === 'invalido') msgs.push(`Arquiteto inválido: ${arqInfo.erro || '-'}`);
+    else if (arqInfo.status === 'erro')     msgs.push(`Arquiteto com erro: ${arqInfo.erro || '-'}`);
+
+    if (vendInfo.status === 'enviado')  msgs.push(`Vendedor enviado: ${_fmt(venV)}`);
+    else if (vendInfo.status === 'ignorado') msgs.push('Vendedor ignorado');
+    else if (vendInfo.status === 'invalido') msgs.push(`Vendedor inválido: ${vendInfo.erro || '-'}`);
+    else if (vendInfo.status === 'erro')     msgs.push(`Vendedor com erro: ${vendInfo.erro || '-'}`);
+
+    // Envia valores financeiros para a Kommo (aguarda resultado)
+    let kommoOk = null;
+    let kommoErro = null;
+    try {
+      const idProposta = new URLSearchParams(window.location.search).get('id');
+      if (idProposta) {
+        const _parse = (s) => (typeof vv_parseBRL === 'function') ? vv_parseBRL(s) : parseFloat(String(s).replace(',', '.')) || 0;
+        const valorNFProduto = _parse(document.getElementById('vv-cat-produto')?.textContent || '0');
+        const valorNFServico = _parse(document.getElementById('vv-cat-servico')?.textContent || '0');
+        const valorFatDireto = _parse(document.getElementById('vv-cat-vidro')?.textContent  || '0');
+        const kommoRes = await fetch(`https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/financeiro`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ valorNFProduto, valorNFServico, valorFatDireto })
+        });
+        if (!kommoRes.ok) throw new Error(`HTTP ${kommoRes.status}`);
+        kommoOk = true;
+      }
+    } catch(eKommo) {
+      kommoOk = false;
+      kommoErro = eKommo?.message || 'Erro ao atualizar Kommo';
+      console.warn('[KOMMO] Erro:', eKommo);
+    }
+
+    if (ok) {
+      _toast(`Comissões processadas.\n${msgs.join(' | ')}`, 'ok', 7000);
+      try { document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', { detail: { ok: true, resposta: r, payload } })); } catch(_) {}
+      return { ok: true, resposta: r, erro: null, kommoOk, kommoErro };
+    } else {
+      const msg = r?.message || r?.erro || 'Nenhuma comissão foi enviada.';
+      _toast(`${msg}\n${msgs.join(' | ')}`, 'erro', 7000);
+      try { document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', { detail: { ok: false, resposta: r, erro: msg, payload } })); } catch(_) {}
+      return { ok: false, resposta: r, erro: msg, kommoOk, kommoErro };
+    }
+  } catch(e) {
+    const msg = e?.message || 'Erro inesperado ao enviar comissões.';
+    console.error('[COMISSÕES] Exceção:', e);
+    _toast(msg, 'erro', 6000);
+    try { document.dispatchEvent(new CustomEvent('vv:comissoes:enviadas', { detail: { ok: false, resposta: null, erro: msg, payload } })); } catch(_) {}
+    return { ok: false, resposta: null, erro: msg, kommoOk: null, kommoErro: null };
+  }
+}
+
 async function abrirPopupSelecaoItensOmie(itens){
-
-
 
   if (typeof ocultarCarregando === 'function') ocultarCarregando();
 
@@ -3040,14 +3163,19 @@ const $campoDescontoFinal = document.getElementById('campoDescontoFinal');
 function syncDescontoFromCampoFinal(){
   if (!$campoDescontoFinal) return;
 
-  // pega primeiro o que o usuário digitou; se vazio, usa o data-valor-original
-  let raw = String(
-    ($campoDescontoFinal.value ?? '').trim() ||
-    ($campoDescontoFinal.dataset?.valorOriginal ?? '').trim() ||
-    ($campoDescontoFinal.textContent ?? '').trim()
-  );
+  // usa apenas o valor atual digitado — ignora data-valor-original para não ressuscitar desconto removido
+  let raw = String(($campoDescontoFinal.value ?? '').trim());
 
-  if (!raw) return;
+  // campo vazio ou zerado → reseta desconto no popup
+  if (!raw || raw === '0' || raw === 'R$ 0,00' || raw === '0,00') {
+    const rValor = controls.querySelector('input[name="discModo"][value="valor"]');
+    if (rValor) rValor.checked = true;
+    $discValor.value = vv_fmtBRL(0);
+    $discValor.dataset.valorOriginal = '0';
+    $discPercent.value = '0';
+    $discPercent.dataset.valorOriginal = '0';
+    return;
+  }
 
   // normaliza NBSP
   raw = raw.replace(/\u00A0/g, ' ');
@@ -3491,9 +3619,12 @@ async function tentarEnviarComissoes(payload){
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ valorNFProduto, valorNFServico, valorFatDireto })
         })
-        .then(res => res.json())
+        .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
         .then(res => console.log('[KOMMO] Financeiro atualizado na Kommo:', res))
-        .catch(err => console.warn('[KOMMO] Erro ao atualizar financeiro na Kommo:', err));
+        .catch(err => {
+          console.warn('[KOMMO] Erro ao atualizar financeiro na Kommo:', err);
+          vvToast('Aviso: valores financeiros não atualizados no Kommo. Verifique manualmente.', 'info', 6000);
+        });
       } else {
         console.warn('[KOMMO] ID da proposta não encontrado na URL — financeiro não enviado');
       }
@@ -3522,7 +3653,7 @@ async function tentarEnviarComissoes(payload){
     }
   } catch(e){
     const msg = e?.message || 'Erro inesperado ao enviar comissões.';
-    console.group("ðŸ’¥ [COMISSÕES] Exceção");
+    console.group("ðŸ'¥ [COMISSÕES] Exceção");
     console.error("Mensagem:", msg);
     console.error("Erro completo:", e);
     console.error("Payload:", JSON.parse(JSON.stringify(payload || {})));
@@ -3872,9 +4003,10 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
   window.vvParcelamentoServicosOmie      = parcelamentoServicos;
   window.vvParcelamentoProdutosServicosOmie = parcelamentoProdutosServicos;
 
-  console.log('ðŸ’¾ Totais da seleção Omie gravados em window:', totaisPayload);
+  console.log('💾 Totais da seleção Omie gravados em window:', totaisPayload);
 
-  await tentarEnviarComissoes(comissoesParaEnvio);
+  // Comissões salvas mas NÃO enviadas aqui — serão enviadas após confirmação do pedido/OS
+  window.vvComissoesParaEnviar = comissoesParaEnvio;
 
   if (backdrop && backdrop.parentNode) {
     backdrop.parentNode.removeChild(backdrop);
@@ -4062,8 +4194,15 @@ function montarLancamento(tipo, fonte, baseConsiderada, codigoProjeto) {
     console.log("JSON retornado:", json);
     console.groupEnd();
 
-    if (!r.ok || json?.ok === false) {
-      const msg = json?.error || json?.message || `HTTP ${r.status}`;
+    if (!r.ok || json?.ok === false || json?.faultstring) {
+      const msg =
+        json?.faultstring ||
+        json?.omieRaw?.faultstring ||
+        json?.omieErro?.faultstring ||
+        json?.error ||
+        json?.erro ||
+        json?.message ||
+        `HTTP ${r.status}`;
       return { ok: false, papel, status: 'erro', erro: msg, resposta: json, enviado: lancFinal };
     }
 
@@ -5515,6 +5654,7 @@ function abrirPopupEscolhaTipoEnvioOmie() {
   return new Promise((resolve) => {
     // backdrop
     const bd = document.createElement('div');
+    bd.id = '_vv_tipo_envio_popup';
     bd.style.cssText = `
       position:fixed; inset:0; background:rgba(0,0,0,.45);
       display:flex; align-items:center; justify-content:center; z-index:9999;
@@ -6073,7 +6213,7 @@ async function atualizarNaOmie() {
             _listaClientes = Array.isArray(_j) ? _j : (_j?.clientes || _j?.data || []);
           }
         }
-      } catch (_eLista) { /* silencioso */ }
+      } catch (_eLista) { console.warn("[validação UF] Falha ao carregar lista de clientes:", _eLista?.message); }
 
       // Encontra o cliente na lista pelo código Omie, CNPJ ou nome
       let _cli = null;
@@ -6191,32 +6331,45 @@ async function atualizarNaOmie() {
     if (!_ufProsseguir) return;
   }
 
-   // ── ESCOLHA DO TIPO DE ENVIO ──────────────────────────────
-  const tipoEnvio = await abrirPopupEscolhaTipoEnvioOmie();
-  if (!tipoEnvio) return; // usuário cancelou
-
   // ── VALIDAÇÃO DO CLIENTE NAS DUAS BASES DA OMIE ───────────
-  {
-    const cpfCnpjRaw = document.querySelector(".cpfCnpj")?.value || "";
+  try {
+    const cpfCnpjRaw = (
+      document.querySelector("#clientesWrapper .cliente-item .cnpjCliente")?.value ||
+      document.querySelector(".cliente-item .cnpjCliente")?.value ||
+      document.querySelector(".cliente-item .cpfCnpj")?.value ||
+      document.querySelector(".cpfCnpj")?.value ||
+      ""
+    );
     const cpfCnpj = cpfCnpjRaw.replace(/\D/g, "");
+    console.log("[Bases] CNPJ lido:", cpfCnpj || "(vazio)");
 
     if (cpfCnpj) {
-      mostrarPopupCustomizado("🔍 Verificando cliente", "Consultando cliente diretamente nas duas bases da Omie...", "info");
+      const _token = localStorage.getItem("token") || localStorage.getItem("accessToken") || "";
+      const _authHeaders = _token ? { Authorization: "Bearer " + _token } : {};
+
+      const _buscarBase = async (url) => {
+        const _fetch = () => fetch(url, { headers: _authHeaders }).then(r => r.json()).catch(() => null);
+        let res = await _fetch();
+        if (res === null || !("encontrado" in (res || {}))) {
+          await new Promise(r => setTimeout(r, 3000));
+          res = await _fetch();
+        }
+        return res;
+      };
 
       const [resUlhoa, resServico] = await Promise.all([
-        fetch(`${OMIE_ULHOA_API_BASE}/clientes/buscar?cnpj_cpf=${cpfCnpj}`).then(r => r.json()).catch(() => null),
-        fetch(`${OMIE_SERVICOS_API_BASE}/clientes/buscar?cnpj_cpf=${cpfCnpj}`).then(r => r.json()).catch(() => null)
+        _buscarBase(`https://ulhoa-0a02024d350a.herokuapp.com/clientes/buscar?cnpj_cpf=${cpfCnpj}`),
+        _buscarBase(`${OMIE_SERVICOS_API_BASE}/clientes/buscar?cnpj_cpf=${cpfCnpj}`)
       ]);
 
-      // Só considera "não encontrado" quando a resposta é válida (tem campo "encontrado")
-      // Se vier erro de auth ou falha de rede, ignora aquela base
+      // Se o servidor não respondeu com "encontrado" (falha de rede), ignora aquela base
       const ulhoaRespondeu   = resUlhoa  != null && "encontrado" in (resUlhoa  || {});
       const servicoRespondeu = resServico != null && "encontrado" in (resServico || {});
-
       const naUlhoa   = !ulhoaRespondeu   || resUlhoa?.encontrado   === true;
       const naServico = !servicoRespondeu || resServico?.encontrado  === true;
 
-      // Salva o código real da base Serviços para uso garantido no envio da OS
+      console.log("[Bases] Ulhoa:", resUlhoa?.clientes?.[0]?.codigo_cliente_omie ?? "não encontrado", "| Serviços:", resServico?.clientes?.[0]?.codigo_cliente_omie ?? "não encontrado");
+
       if (resServico?.encontrado && resServico?.clientes?.[0]?.codigo_cliente_omie) {
         window.__vvNCodCliServico = Number(resServico.clientes[0].codigo_cliente_omie);
       }
@@ -6227,35 +6380,61 @@ async function atualizarNaOmie() {
           !naServico && "Base Serviços"
         ].filter(Boolean).join(" e ");
 
-        const continuar = await new Promise(resolve => {
+        await new Promise(resolve => {
           const bd = document.createElement("div");
-          bd.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;";
+          bd.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;";
           bd.innerHTML = `
             <div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-              <div style="font-size:22px;font-weight:700;color:#b91c1c;margin-bottom:10px;">⚠️ Cliente não encontrado</div>
-              <div style="color:#374151;margin-bottom:18px;line-height:1.5;">
+              <div style="font-size:16px;font-weight:700;color:#b91c1c;margin-bottom:10px;">Cliente não encontrado na Omie</div>
+              <div style="color:#374151;margin-bottom:18px;line-height:1.5;font-size:14px;">
                 O cliente com CPF/CNPJ <strong>${cpfCnpjRaw}</strong> não foi encontrado em:<br>
                 <strong style="color:#b91c1c;">${faltando}</strong><br><br>
-                O envio para a Omie pode falhar. Deseja continuar mesmo assim?
+                Cadastre o cliente na Omie antes de enviar o pedido.
               </div>
-              <div style="display:flex;gap:12px;justify-content:flex-end;">
-                <button id="_vv_val_cancelar" style="padding:8px 20px;border:1px solid #d1d5db;border-radius:8px;background:#f9fafb;cursor:pointer;">Cancelar</button>
-                <button id="_vv_val_continuar" style="padding:8px 20px;border:none;border-radius:8px;background:#b91c1c;color:#fff;cursor:pointer;">Continuar mesmo assim</button>
+              <div style="display:flex;justify-content:flex-end;">
+                <button id="_vv_val_cancelar" style="padding:8px 20px;border:none;border-radius:8px;background:#b91c1c;color:#fff;font-weight:600;cursor:pointer;">Fechar</button>
               </div>
             </div>`;
           document.body.appendChild(bd);
-          bd.querySelector("#_vv_val_cancelar").onclick  = () => { bd.remove(); resolve(false); };
-          bd.querySelector("#_vv_val_continuar").onclick = () => { bd.remove(); resolve(true);  };
+          bd.querySelector("#_vv_val_cancelar").onclick = () => { bd.remove(); resolve(); };
         });
-
-        if (!continuar) return;
+        return;
       } else {
         const nomeCliente = resUlhoa?.clientes?.[0]?.razao_social || resServico?.clientes?.[0]?.razao_social || "";
-        mostrarPopupCustomizado("✅ Cliente verificado", `${nomeCliente ? `<strong>${nomeCliente}</strong><br>` : ""}Encontrado nas duas bases da Omie.`, "success");
-        await new Promise(r => setTimeout(r, 1500));
+        mostrarPopupCustomizado("Cliente verificado", `${nomeCliente ? `<strong>${nomeCliente}</strong><br>` : ""}Encontrado nas duas bases da Omie.`, "success");
+        await new Promise(r => setTimeout(r, 1000));
       }
+    } else {
+      console.warn("[Bases] CNPJ vazio — validação de bases pulada.");
+      await new Promise(resolve => {
+        const bd = document.createElement("div");
+        bd.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;";
+        bd.innerHTML = `
+          <div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);font-family:'Inter',system-ui,sans-serif;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#b91c1c" opacity="0.15"/><line x1="10" y1="5.5" x2="10" y2="11" stroke="#b91c1c" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="14" r="1.1" fill="#b91c1c"/></svg>
+              <span style="font-size:15px;font-weight:700;color:#b91c1c;">CPF/CNPJ não cadastrado</span>
+            </div>
+            <div style="color:#374151;font-size:13.5px;line-height:1.6;margin-bottom:20px;">
+              O cliente selecionado não possui <strong>CPF ou CNPJ</strong> registrado.<br>
+              Cadastre o documento antes de enviar para a Omie.
+            </div>
+            <div style="display:flex;justify-content:flex-end;">
+              <button id="_vv_sem_cnpj_fechar" style="padding:9px 22px;border:none;border-radius:8px;background:#b91c1c;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Fechar</button>
+            </div>
+          </div>`;
+        document.body.appendChild(bd);
+        bd.querySelector("#_vv_sem_cnpj_fechar").onclick = () => { bd.remove(); resolve(); };
+      });
+      return;
     }
+  } catch (_eBases) {
+    console.warn("⚠️ [Bases] Erro na validação:", _eBases.message);
   }
+
+  // ── ESCOLHA DO TIPO DE ENVIO ──────────────────────────────
+  const tipoEnvio = await abrirPopupEscolhaTipoEnvioOmie();
+  if (!tipoEnvio) return; // usuário cancelou
 
   if (tipoEnvio === 'so_servicos') {
     return fluxoSomenteServicos();
@@ -6297,57 +6476,148 @@ async function atualizarNaOmie() {
     }
   };
 
-  try {
-    if (typeof mostrarCarregando === "function") {
-      mostrarCarregando();
-    }
+  // Extrai a melhor mensagem de erro de uma resposta Omie/servidor,
+  // incluindo faultstring que a Omie retorna mesmo com HTTP 200.
+  const extrairMensagemOmie = (data, httpStatus) => {
+    if (!data) return `HTTP ${httpStatus}`;
+    const fault = data?.faultstring || data?.omieRaw?.faultstring || data?.omieErro?.faultstring;
+    if (fault) return fault;
+    const detalhe = data?.detail;
+    if (detalhe) return typeof detalhe === "string" ? detalhe : JSON.stringify(detalhe);
+    const msg = data?.error || data?.erro || data?.message || data?.mensagem;
+    if (msg) return msg;
+    const raw = data?.raw;
+    if (raw && typeof raw === "string" && !raw.trim().startsWith("<")) return raw.slice(0, 500);
+    return `HTTP ${httpStatus}`;
+  };
 
+  // Rastreia onde ocorreu a falha para o catch mostrar mensagem precisa
+  let _etapaFalhou = null; // "produtos" | "inesperado"
+
+  try {
+    if (typeof mostrarCarregando === "function") mostrarCarregando();
     if (spinner) spinner.style.display = "inline-block";
     if (botao) botao.disabled = true;
 
-    abrirStatus(
-      "Conferindo pedido",
-      "Validando se o numero do pedido esta preenchido antes de iniciar o envio.",
-      "info"
-    );
-
     const numeroPedidoGarantido = await garantirNumeroPedidoPreenchido();
-
-    abrirStatus(
-      "⏳ Iniciando envio",
-      "Estamos preparando o pedido de produtos e os serviços.",
-      "info"
-    );
-
     const payload = await gerarPayloadOmie();
-
     if (!payload) {
-      // Cancelamento intencional pelo usuário — fecha o status e sai sem erro
       document.getElementById("popup-status-omie")?.remove();
       return;
     }
 
-    // Detecta se o popup sinalizou "somente serviços" (sem produtos/vidros)
     const somenteServicos = payload.servicosOnly === true;
+    let numeroPedido = numeroPedidoGarantido || document.getElementById("numeroPedido")?.value || "";
 
-    // numeroPedido começa com o valor garantido; será sobrescrito pela resposta
-    // da Omie se houver envio de produtos.
-    let numeroPedido =
-      numeroPedidoGarantido ||
-      document.getElementById("numeroPedido")?.value ||
-      "";
+    // ── Fecha todos os popups abertos ─────────────────────────────────────────
+    document.querySelectorAll('#overlayPopup,#popupPendencias,#popup-status-omie,#_vv_send_loading,#_vv_prog_overlay,#_vv_tipo_envio_popup,#sync-popup-overlay').forEach(function(el){ el.remove(); });
 
+    // ── Suprime popups durante o envio (progress popup exibe os erros) ────────
+    var _origMostrarPopup = typeof mostrarPopupCustomizado === 'function' ? mostrarPopupCustomizado : null;
+    if (_origMostrarPopup) {
+      window.mostrarPopupCustomizado = function(titulo, msg, tipo) {
+        console.log('[vv:popup suprimido durante envio]', titulo, msg);
+      };
+    }
+
+    // ── SVGs ──────────────────────────────────────────────────────────────────
+    var _SPIN = '<div style="width:18px;height:18px;border:2.5px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:_vv_spin .7s linear infinite;flex-shrink:0;"></div>';
+    var _OK   = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="#16a34a"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 0 1 0 1.414l-8 8a1 1 0 0 1-1.414 0l-4-4a1 1 0 1 1 1.414-1.414L8 12.586l7.293-7.293a1 1 0 0 1 1.414 0z"/></svg>';
+    var _ERR  = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="#dc2626"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414z"/></svg>';
+    var _NA   = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="#9ca3af"><path fill-rule="evenodd" d="M3 10a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1z"/></svg>';
+    var _INFO = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM9 9a1 1 0 0 0 0 2v3a1 1 0 0 0 2 0v-3a1 1 0 0 0-1-1z"/></svg>';
+
+    // ── Cria popup de progresso ───────────────────────────────────────────────
+    var _pov = document.createElement('div');
+    _pov.id = '_vv_prog_overlay';
+    _pov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'Poppins',Inter,system-ui,sans-serif;";
+
+    function _mkRow(id, label) {
+      return '<div style="display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid #f1f5f9;">' +
+        '<span id="_vv_icon_' + id + '" style="flex-shrink:0;margin-top:1px;display:flex;">' + _SPIN + '</span>' +
+        '<div style="flex:1;">' +
+          '<div style="font-weight:600;font-size:14px;color:#1e293b;">' + label + '</div>' +
+          '<div id="_vv_det_' + id + '" style="font-size:13px;color:#6b7280;margin-top:2px;display:flex;align-items:center;flex-wrap:wrap;gap:4px;">Aguardando...</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    _pov.innerHTML =
+      '<div style="background:#fff;border-radius:16px;padding:28px 32px;max-width:460px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto;">' +
+        '<div style="margin-bottom:18px;">' +
+          '<div id="_vv_prog_tit" style="font-size:16px;font-weight:700;color:#374151;">Enviando para Omie...</div>' +
+          '<div id="_vv_prog_num" style="font-size:12px;color:#64748b;margin-top:3px;"></div>' +
+        '</div>' +
+        '<div style="border-top:1px solid #f1f5f9;">' +
+          _mkRow('produtos',  'Pedido de produtos') +
+          _mkRow('servicos',  'OS de serviços') +
+          _mkRow('comissoes', 'Comissões') +
+          _mkRow('kommo',     'Kommo financeiro') +
+        '</div>' +
+        '<button id="_vv_prog_fechar" style="display:none;margin-top:20px;width:100%;padding:11px;border:none;border-radius:10px;background:#16a34a;color:#fff;font-size:14px;font-weight:700;cursor:pointer;">Fechar</button>' +
+        '<style>@keyframes _vv_spin{to{transform:rotate(360deg)}}</style>' +
+      '</div>';
+    document.body.appendChild(_pov);
+    _pov.querySelector('#_vv_prog_fechar').onclick = function() { _pov.remove(); };
+
+    // Atualiza uma linha: state = 'loading' | 'ok' | 'erro' | 'na'
+    window._vvTogErr = function(btn) {
+      var eid = btn.getAttribute('data-eid');
+      var d = document.getElementById(eid);
+      if (d) d.style.display = d.style.display === 'none' ? 'block' : 'none';
+    };
+
+    function _setStep(id, state, detalhe, erro) {
+      var iconEl = document.getElementById('_vv_icon_' + id);
+      var detEl  = document.getElementById('_vv_det_'  + id);
+      if (!iconEl) return;
+      var svgMap = { loading: _SPIN, ok: _OK, erro: _ERR, na: _NA };
+      var corMap = { loading: '#6b7280', ok: '#16a34a', erro: '#dc2626', na: '#9ca3af' };
+      iconEl.innerHTML = svgMap[state] || '';
+      if (detEl) {
+        var errPart = '';
+        if (state === 'erro' && erro) {
+          var eid = '_vv_errd_' + id;
+          errPart = ' <button data-eid="' + eid + '" onclick="_vvTogErr(this)" ' +
+            'style="background:none;border:1px solid #d1d5db;border-radius:4px;padding:1px 5px;cursor:pointer;color:#64748b;line-height:1;">' + _INFO + '</button>' +
+            '<div id="' + eid + '" style="display:none;width:100%;margin-top:6px;font-size:12px;color:#dc2626;background:#fef2f2;border-radius:6px;padding:8px 10px;word-break:break-word;">' + (erro || '') + '</div>';
+        }
+        detEl.style.color = corMap[state] || '#6b7280';
+        detEl.innerHTML = (detalhe || '') + errPart;
+      }
+    }
+
+    // Finaliza: atualiza título e mostra botão Fechar
+    function _progFim() {
+      var ids = ['produtos', 'servicos', 'comissoes', 'kommo'];
+      var temErro = ids.some(function(id) {
+        var el = document.getElementById('_vv_icon_' + id);
+        return el && el.innerHTML.indexOf('dc2626') !== -1;
+      });
+      var temOk = ids.some(function(id) {
+        var el = document.getElementById('_vv_icon_' + id);
+        return el && el.innerHTML.indexOf('16a34a') !== -1;
+      });
+      var tit = document.getElementById('_vv_prog_tit');
+      var btn = document.getElementById('_vv_prog_fechar');
+      if (tit) {
+        tit.textContent = !temErro ? 'Envio concluído com sucesso' : temOk ? 'Envio parcialmente concluído' : 'Falha no envio';
+        tit.style.color = !temErro ? '#16a34a' : temOk ? '#b45309' : '#dc2626';
+      }
+      if (btn) {
+        btn.style.display = 'block';
+        btn.style.background = !temErro ? '#16a34a' : temOk ? '#b45309' : '#dc2626';
+      }
+    }
+
+    // rastreia qual etapa está ativa para o catch poder marcar erro
+    var _etapaAtiva = null;
+
+    // ── 1) ENVIO DE PRODUTOS ──────────────────────────────────────────────────
     if (!somenteServicos) {
-      console.log("📦 Payload gerado (produtos):", payload);
-
-      // =========================================================
-      // 1) ENVIO DE PRODUTOS
-      // =========================================================
-      abrirStatus(
-        "📦 Enviando produtos",
-        "Os produtos estão sendo enviados para a Omie.",
-        "info"
-      );
+      _etapaAtiva = 'produtos';
+      _setStep('produtos', 'loading', 'Enviando pedido...');
+      console.log("Payload gerado (produtos):", payload);
 
       const respostaProdutos = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/omie/pedidos", {
         method: "POST",
@@ -6359,23 +6629,14 @@ async function atualizarNaOmie() {
       });
 
       const retornoProdutos = await readJsonOrText(respostaProdutos);
-
-      console.log("📥 Resposta /pedidos:", respostaProdutos.status, retornoProdutos.parsed ?? retornoProdutos.raw);
+      console.log("Resposta /pedidos:", respostaProdutos.status, retornoProdutos.parsed ?? retornoProdutos.raw);
 
       if (!respostaProdutos.ok) {
-        alertServer(
-          "❌ ERRO AO ENVIAR PRODUTOS",
-          respostaProdutos.status,
-          retornoProdutos.parsed ?? retornoProdutos.raw
-        );
-
-        throw new Error(
-          retornoProdutos?.parsed?.error ||
-          retornoProdutos?.parsed?.erro ||
-          retornoProdutos?.parsed?.message ||
-          retornoProdutos?.raw ||
-          "Erro ao incluir pedido na Omie."
-        );
+        _etapaFalhou = "produtos";
+        const msgProdutos = extrairMensagemOmie(retornoProdutos?.parsed, respostaProdutos.status) || "Erro ao incluir pedido na Omie.";
+        _setStep('produtos', 'erro', 'Falha no envio', msgProdutos);
+        _etapaAtiva = null;
+        throw new Error(msgProdutos);
       }
 
       numeroPedido =
@@ -6386,26 +6647,16 @@ async function atualizarNaOmie() {
         document.getElementById("numeroPedido")?.value ||
         "";
 
-      abrirStatus(
-        "✅ Produtos enviados",
-        `Produtos enviados com sucesso. Pedido nº ${numeroPedido}.`,
-        "success"
-      );
+      _etapaAtiva = null;
+      _setStep('produtos', 'ok', 'Pedido nº ' + numeroPedido);
+      var numEl = document.getElementById('_vv_prog_num');
+      if (numEl && numeroPedido) numEl.textContent = 'Pedido nº ' + numeroPedido;
+
     } else {
-      // =========================================================
-      // 1-B) MODO SOMENTE SERVIÇOS — pula envio de produtos
-      // =========================================================
-      console.log("[atualizarNaOmie] Modo somente-serviços: POST de produtos ignorado.");
-      abrirStatus(
-        "⚙️ Pedido somente de serviços",
-        "Nenhum produto neste pedido — enviando apenas os serviços na OS.",
-        "info"
-      );
+      _setStep('produtos', 'na', 'Não aplicável');
     }
 
-    // =========================================================
-    // 2) OBTÉM TOTAIS / PARCELAS DE SERVIÇO
-    // =========================================================
+    // ── 2) OBTÉM TOTAIS / PARCELAS DE SERVIÇO ─────────────────────────────────────
     const totais =
       window.vvUltimosTotaisSelecaoItensOmie ||
       payload?.totais ||
@@ -6421,116 +6672,115 @@ async function atualizarNaOmie() {
       totais?.parcelasServico || null
     );
 
-    console.group("🔎 Dados recuperados para envio de serviços");
-    console.log("totais:", totais);
-    console.log("valorServicos:", valorServicos);
-    console.log("parcelasServicoCorretas:", parcelasServicoCorretas);
-    console.groupEnd();
-
-    // =========================================================
-    // 3) ENVIO DE SERVIÇOS
-    // =========================================================
+    // ── 3) ENVIO DE SERVIÇOS ────────────────────────────────────────────────────
     let houveTentativaDeServico = false;
     let servicosEnviadosComSucesso = false;
+    let erroServicos = null;
 
     if (valorServicos > 0) {
       houveTentativaDeServico = true;
-
-      abrirStatus(
-        "ðŸ› ️ Enviando serviços",
-        "Agora estamos enviando os serviços na estrutura própria da OS.",
-        "info"
-      );
+      _etapaAtiva = 'servicos';
+      _setStep('servicos', 'loading', 'Enviando OS...');
 
       const osResp = await enviarOSServico({
         valorServicos,
         parcelasServico: parcelasServicoCorretas
       });
 
-      console.log("📥 Resposta /os:", osResp);
+      console.log("Resposta /os:", osResp);
 
+      _etapaAtiva = null;
       if (osResp?.ok) {
         servicosEnviadosComSucesso = true;
-
-        abrirStatus(
-          "✅ Serviços enviados",
-          "Os serviços foram enviados com sucesso na estrutura própria da OS.",
-          "success"
-        );
+        _setStep('servicos', 'ok', 'Enviada com sucesso');
       } else {
-        alertServer(
-          "❌ ERRO AO ENVIAR SERVIÇOS",
-          osResp?.status || "sem status",
-          osResp
-        );
-
-        abrirStatus(
-          "❌ Falha no envio dos serviços",
-          osResp?.error ||
-            osResp?.erro ||
-            osResp?.message ||
-            "Os serviços não puderam ser enviados.",
-          "error"
-        );
+        erroServicos = osResp?.error || osResp?.erro || osResp?.message || "Erro desconhecido ao enviar serviços.";
+        _setStep('servicos', 'erro', 'Falha no envio', erroServicos);
       }
     } else {
-      abrirStatus(
-        "ℹ️ Sem serviços para enviar",
-        "Nenhum serviço foi selecionado para envio nesta operação.",
-        "info"
-      );
+      _setStep('servicos', 'na', 'Não aplicável');
     }
 
-    // =========================================================
-    // 4) RESUMO FINAL
-    // =========================================================
-    if (!houveTentativaDeServico) {
-      abrirStatus(
-        "✅ Processo concluído",
-        somenteServicos
-          ? `Nenhum serviço encontrado para enviar. Pedido nº ${numeroPedido}.`
-          : `Produtos enviados com sucesso. Pedido nº ${numeroPedido}.`,
-        "success"
-      );
-    } else if (servicosEnviadosComSucesso) {
-      abrirStatus(
-        "✅ Processo concluído",
-        somenteServicos
-          ? `Serviços enviados com sucesso. Pedido nº ${numeroPedido}.`
-          : `Produtos e serviços enviados com sucesso. Pedido nº ${numeroPedido}.`,
-        "success"
-      );
+    // ── 4) COMISSÕES ──────────────────────────────────────────────────────────
+    const produtosOk   = !somenteServicos;
+    const servicosOk   = servicosEnviadosComSucesso;
+    const ambosOk      = produtosOk && (!houveTentativaDeServico || servicosOk);
+    const deveEnviarComissoes =
+      (somenteServicos && servicosOk) ||
+      (!somenteServicos && !houveTentativaDeServico && produtosOk) ||
+      (!somenteServicos && houveTentativaDeServico && ambosOk);
+
+    let comissoesOk = null;
+    let erroComissoes = null;
+
+    if (deveEnviarComissoes && window.vvComissoesParaEnviar) {
+      _etapaAtiva = 'comissoes';
+      _setStep('comissoes', 'loading', 'Enviando...');
+      _setStep('kommo',     'loading', 'Aguardando...');
+
+      const resComissoes = await tentarEnviarComissoes(window.vvComissoesParaEnviar).catch(function(e) {
+        console.warn("[comissoes] erro ao enviar comissões:", e?.message || e);
+        return { ok: false, erro: e?.message || "Erro inesperado", kommoOk: null, kommoErro: null };
+      });
+
+      comissoesOk = !!resComissoes?.ok;
+      if (!comissoesOk) erroComissoes = resComissoes?.erro || "Falha ao lançar comissões";
+      _etapaAtiva = null;
+      window.__vvUltimoResComissoes = resComissoes;
+      window.vvComissoesParaEnviar = null;
+
+      if (comissoesOk) {
+        _setStep('comissoes', 'ok', 'Lançadas na Omie');
+      } else {
+        _setStep('comissoes', 'erro', 'Falha ao lançar', erroComissoes);
+      }
+
+      const kommoOkF  = resComissoes?.kommoOk;
+      const kommoErrF = resComissoes?.kommoErro;
+      if (kommoOkF === true) {
+        _setStep('kommo', 'ok', 'Atualizado com sucesso');
+      } else if (kommoOkF === false) {
+        _setStep('kommo', 'erro', 'Falha na atualização', kommoErrF);
+      } else {
+        _setStep('kommo', 'na', 'Não aplicável');
+      }
     } else {
-      abrirStatus(
-        "⚠️ Processo concluído parcialmente",
-        somenteServicos
-          ? `Pedido nº ${numeroPedido}: houve falha no envio dos serviços.`
-          : `Produtos enviados com sucesso no pedido nº ${numeroPedido}, mas houve falha no envio dos serviços.`,
-        "warning"
-      );
+      _setStep('comissoes', 'na', 'Não aplicável');
+      _setStep('kommo',     'na', 'Não aplicável');
     }
 
-    console.info("[Omie] Proposta nao foi atualizada no Heroku apos o envio; parcelas usadas apenas para este envio.");
+    _progFim();
+    console.info("[Omie] Envio concluído.");
 
   } catch (erro) {
-    console.error("❌ Erro em atualizarNaOmie:", erro);
-
-    abrirStatus(
-      "❌ Erro no processo",
-      erro?.message || "Ocorreu um erro durante o envio.",
-      "error"
-    );
+    console.error("Erro em atualizarNaOmie:", erro);
+    var _povExists = !!document.getElementById('_vv_prog_overlay');
+    if (_povExists && typeof _setStep === 'function') {
+      // Marca a etapa que estava ativa como erro
+      if (_etapaAtiva) {
+        _setStep(_etapaAtiva, 'erro', 'Falha', erro?.message || 'Erro inesperado');
+      }
+      // Marca as etapas que ainda não rodaram como N/A
+      var _todasEtapas = ['produtos', 'servicos', 'comissoes', 'kommo'];
+      var _idx = _etapaAtiva ? _todasEtapas.indexOf(_etapaAtiva) + 1 : 0;
+      for (var _i = _idx; _i < _todasEtapas.length; _i++) {
+        _setStep(_todasEtapas[_i], 'na', 'Não executado');
+      }
+      if (typeof _progFim === 'function') _progFim();
+    } else if (!_povExists) {
+      alert("Erro inesperado no envio: " + (erro?.message || "Verifique o console para detalhes."));
+    }
   } finally {
+    if (typeof _origMostrarPopup === 'function') window.mostrarPopupCustomizado = _origMostrarPopup;
     if (spinner) spinner.style.display = "none";
     if (botao) botao.disabled = false;
-
-    if (typeof ocultarCarregando === "function") {
-      ocultarCarregando();
-    }
+    if (typeof ocultarCarregando === "function") ocultarCarregando();
   }
 }
 
-const API_BASE_PRODUTOS = 'https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com'; 
+window.atualizarNaOmie = atualizarNaOmie;
+
+const API_BASE_PRODUTOS = 'https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com';
 // TROQUE isso pela URL real quando publicar o server.
 
 // =============================
@@ -6599,7 +6849,7 @@ window.getListaInsumosGrupo = function (grupoId) {
     if (txt.includes('valor de custo final'))               idxValorCustoFinal = i;
   });
 
-  // ðŸ‘‡ Força os índices conforme você informou:
+  // ðŸ'‡ Força os índices conforme você informou:
   // 3ª coluna = valor, 6ª coluna = quantidade
   if (ths.length >= 3) idxValorCustoFinal = 2;  // índice 2 = 3ª coluna
   if (ths.length >= 6) idxQuantidade      = 5;  // índice 5 = 6ª coluna
@@ -8046,20 +8296,11 @@ async function enviarOSServico({
     console.groupEnd();
 
     if (!resp.ok || data?.ok === false) {
-      const motivo = data?.detail
-        ? (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail))
-        : (data?.error || data?.message || data?.raw || `HTTP ${resp.status}`);
-
-      const dicasHtml = [
-        "- Confirme os campos exigidos pelo server (cCodParc, cEtapa, nQtdeParc etc.).",
-        "- Garanta que dDtPrevisao esteja no formato aceito (DD/MM/AAAA se o server valida assim).",
-        "- Verifique se nValUnit é número (sem vírgula).",
-        "- Se exigir Authorization, valide o token."
-      ].join("<br>");
+      const motivo = extrairMensagemOmie(data, resp.status) || `HTTP ${resp.status}`;
 
       mostrarPopupCustomizado(
         "❌ Erro ao enviar OS de Serviços",
-        `Status: ${resp.status}<br>Motivo: ${motivo}<br><br>${dicasHtml}`,
+        motivo,
         "error"
       );
 
@@ -8608,3 +8849,17 @@ async function preencherNumeroPedidoKommo() {
 
 /* Expor global */
 window.enviarOSServico = enviarOSServico;
+
+/* Botão "Enviar para Omie" — scripts defer rodam com o DOM já parseado,
+   então o getElementById funciona direto, sem esperar DOMContentLoaded. */
+(function () {
+  var btn = document.getElementById('btn-gerar-pedido');
+  if (btn) {
+    btn.addEventListener('click', function () {
+      atualizarNaOmie().catch(function (err) {
+        console.error('[atualizarNaOmie] erro não tratado:', err);
+        alert('Erro ao enviar para Omie: ' + (err?.message || err));
+      });
+    });
+  }
+})();
