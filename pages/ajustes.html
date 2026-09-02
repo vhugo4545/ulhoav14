@@ -1029,7 +1029,7 @@
     try {
       const res = await fetch(`${NU_API}/usuarios`, { headers: nuAuthHeader() });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      nuListaCompleta = await res.json();
+      nuListaCompleta = (await res.json()).filter(u => u.app !== 'producao');
       const exibir = nuListaCompleta.slice(0, 10);
       nuRenderizar(exibir);
       nuAtualizarRodape(exibir.length, nuListaCompleta.length);
