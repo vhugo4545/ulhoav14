@@ -6344,6 +6344,10 @@ async function atualizarNaOmie() {
     console.log("[Bases] CNPJ lido:", cpfCnpj || "(vazio)");
 
     if (cpfCnpj) {
+      // Se o CNPJ já foi verificado com sucesso nesta sessão, pula a verificação
+      if (window.__vvClienteVerificadoCnpj === cpfCnpj) {
+        console.log("[Bases] CNPJ já verificado nesta sessão — pulando verificação.");
+      } else {
       const _token = localStorage.getItem("token") || localStorage.getItem("accessToken") || "";
       const _authHeaders = _token ? { Authorization: "Bearer " + _token } : {};
 
@@ -6400,10 +6404,12 @@ async function atualizarNaOmie() {
         });
         return;
       } else {
+        window.__vvClienteVerificadoCnpj = cpfCnpj; // cache: não re-verificar este CNPJ
         const nomeCliente = resUlhoa?.clientes?.[0]?.razao_social || resServico?.clientes?.[0]?.razao_social || "";
         mostrarPopupCustomizado("Cliente verificado", `${nomeCliente ? `<strong>${nomeCliente}</strong><br>` : ""}Encontrado nas duas bases da Omie.`, "success");
         await new Promise(r => setTimeout(r, 1000));
       }
+      } // fim do bloco de verificação
     } else {
       console.warn("[Bases] CNPJ vazio — validação de bases pulada.");
       await new Promise(resolve => {
