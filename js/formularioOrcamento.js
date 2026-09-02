@@ -123,7 +123,9 @@ function recalcularParcelasComPercentual() {
 
 
 function calcularTotalDosGrupos() {
-  const texto = document.querySelector("#valorFinalTotal").textContent.trim();
+  const el = document.querySelector("#valorFinalTotal");
+  if (!el) return 0;
+  const texto = el.textContent.trim();
   // Formato BR: "R$ 162.782,72" → remove tudo exceto dígitos, vírgula e sinal
   const valorLimpo = texto.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
   const numero = parseFloat(valorLimpo);
@@ -191,8 +193,6 @@ function atualizarValoresParcelas() {
   let totalParcelas = 0;
 
   document.querySelectorAll("#listaParcelas .row").forEach(row => {
-    const tipo = row.querySelector(".tipo-item-parcela")?.value || "";
-    if (tipo === "faturado-direto") return;
     const entrada = row.querySelector(".valor-parcela")?.value.trim() || "";
     const num = parseFloat(entrada.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
     row.dataset.valorFinal = num.toFixed(2);
