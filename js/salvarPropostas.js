@@ -4,8 +4,6 @@
 
   let soma = 0;
   rows.forEach(row => {
-    const tipo = row.querySelector(".tipo-item-parcela")?.value || "";
-    if (tipo === "faturado-direto") return;
     const raw = row.querySelector(".valor-parcela")?.value.trim() || "";
     soma += parseFloat(raw.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
   });
