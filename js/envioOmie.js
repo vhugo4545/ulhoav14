@@ -3329,13 +3329,19 @@ function recalc(){
   // ✅ baseParaServico = (totalTodos - desconto) - faturamento direto
   const totalTodosComDescontoParaServico = Math.max(0, totalTodos - descontoTotal);
   const baseParaServico = Math.max(0, totalTodosComDescontoParaServico - fromCents(catIgnoradosSemMO));
-  const valorServicosAutomatic = baseParaServico * 0.20;
+
+  // Só aplica 20% automático se há itens de serviço reais aprovados
+  const temServicosReais = rows.some(tr =>
+    !isIgnoredKey(tr.dataset.key) && (tr.dataset.kind === 'servico' || tr.dataset.islabor === '1')
+  );
+  const valorServicosAutomatic = temServicosReais ? baseParaServico * 0.20 : 0;
 
   console.log('[recalc] catIgnoradosSemMO:', fromCents(catIgnoradosSemMO));
   console.log('[recalc] baseParaServico:', baseParaServico);
+  console.log('[recalc] temServicosReais:', temServicosReais);
   console.log('[recalc] valorServicosAutomatic:', valorServicosAutomatic);
 
-  // Preenche campo de serviços automaticamente se vazio ou divergente
+  // Preenche campo de serviços automaticamente apenas se há serviços reais
 if ($srvValor && valorServicosAutomatic > 0 && !srvValorEditadoManualmente) {
   const valorAtual = vv_parseBRL($srvValor.value || '0');
   if (Math.abs(valorAtual - valorServicosAutomatic) > 0.01) {
@@ -3344,6 +3350,9 @@ if ($srvValor && valorServicosAutomatic > 0 && !srvValorEditadoManualmente) {
     $srvValor.value = vv_fmtBRL(valorServicosAutomatic);
     $srvValor.dataset.valorOriginal = vv_fmtBRL(valorServicosAutomatic);
   }
+} else if (!temServicosReais && !srvValorEditadoManualmente) {
+  // Sem serviços reais e sem edição manual — zera o campo
+  if ($srvValor) { $srvValor.value = vv_fmtBRL(0); }
 }
 
   if (nAprov === 0){
