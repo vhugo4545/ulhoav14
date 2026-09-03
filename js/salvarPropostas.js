@@ -44,7 +44,6 @@ function parcelasCompletasParaOmie() {
     const vazios = [];
     if (!tipo)         vazios.push("Tipo");
     if (!tipoMonetario) vazios.push("Tipo Monetário");
-    if (!condicao)     vazios.push("Condição de Pagto");
     if (!valor)        vazios.push("Valor");
     if (!vencimento)   vazios.push("Vencimento");
 
