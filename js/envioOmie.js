@@ -2216,7 +2216,15 @@ async function tentarEnviarComissoes(payload) {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ valorNFProduto, valorNFServico, valorFatDireto })
         });
-        if (!kommoRes.ok) throw new Error(`HTTP ${kommoRes.status}`);
+        if (!kommoRes.ok) {
+          let errMsg = `HTTP ${kommoRes.status}`;
+          if (kommoRes.status === 404) {
+            errMsg = 'Não foi possível encontrar o número de orçamento, ID PDV ou número do pedido';
+          } else {
+            try { const body = await kommoRes.json(); errMsg = body?.message || body?.erro || errMsg; } catch(_) {}
+          }
+          throw new Error(errMsg);
+        }
         kommoOk = true;
       }
     } catch(eKommo) {
