@@ -3424,6 +3424,10 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
   const totalProdutosDestinoC = toCents(totalProdutosDestino);
   const catServicoC           = toCents(servAplicavel);
 
+  // catProdutoC calculado antes do rateio para usar como base de distribuição
+  const totalTodosComDesconto = Math.max(0, totalTodos - descontoTotal);
+  const catProdutoC = toCents(Math.max(0, totalTodosComDesconto - fromCents(catIgnoradosSemMO) - servAplicavel));
+
   const rowsProdutosOmie = aprovadosRows.filter(tr => {
     const kind    = tr.dataset.kind;
     const isLabor = tr.dataset.islabor === '1';
@@ -3435,14 +3439,14 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
   }, 0);
 
   const alocacaoProdutoC = new Map();
-  if (rowsProdutosOmie.length > 0 && baseProdutosParaRateio > 0 && totalProdutosDestinoC > 0) {
+  if (rowsProdutosOmie.length > 0 && baseProdutosParaRateio > 0 && catProdutoC > 0) {
     let totalAlocadoC = 0;
     const restos = [];
 
     rowsProdutosOmie.forEach(tr => {
       const key         = tr.dataset.key;
       const baseLiquida = baseLiquidaMap.get(key) || 0;
-      const brutoC      = (baseLiquida / baseProdutosParaRateio) * totalProdutosDestinoC;
+      const brutoC      = (baseLiquida / baseProdutosParaRateio) * catProdutoC;
       const pisoC       = Math.floor(brutoC);
 
       alocacaoProdutoC.set(key, pisoC);
@@ -3452,7 +3456,7 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
 
     restos.sort((a, b) => b.resto - a.resto);
 
-    let faltanteC = totalProdutosDestinoC - totalAlocadoC;
+    let faltanteC = catProdutoC - totalAlocadoC;
     while (faltanteC > 0 && restos.length > 0) {
       const item = restos.shift();
       alocacaoProdutoC.set(item.key, (alocacaoProdutoC.get(item.key) || 0) + 1);
@@ -3488,10 +3492,7 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
   $totServ.textContent    = vv_fmtBRL(servAplicavel);
   $totDesc.textContent    = vv_fmtBRL(descontoAplicavel);
   $totCom.textContent     = vv_fmtBRL(comDisplay);
-  $totAjust.textContent   = vv_fmtBRL(fromCents(totalProdutosDestinoC));
-
-  const totalTodosComDesconto = Math.max(0, totalTodos - descontoTotal);
-  const catProdutoC = toCents(Math.max(0, totalTodosComDesconto - fromCents(catIgnoradosSemMO) - servAplicavel));
+  $totAjust.textContent   = vv_fmtBRL(fromCents(catProdutoC));
 
   $catProduto.textContent = vv_fmtBRL(fromCents(catProdutoC));
   $catServico.textContent = vv_fmtBRL(fromCents(catServicoC));
@@ -3871,7 +3872,7 @@ footer.querySelector('#vv-confirmar').addEventListener('click', async ()=>{
   const valorServicos          = vv_parseBRL($totServ.textContent || '0');
   const valorDesconto          = vv_parseBRL($totDesc.textContent || '0');
   const valorComissaoInfo      = vv_parseBRL($totCom.textContent || '0');
-  const totalFinalProdutos     = vv_parseBRL($totAjust.textContent || '0');
+  const totalFinalProdutos     = vv_parseBRL($catProduto.textContent || '0');
 
   let parcelamentoProdutosServicos = null;
   let parcelamentoServicos = null;
