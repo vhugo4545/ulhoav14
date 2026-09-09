@@ -154,7 +154,7 @@ function configurarCampoQuantidadeDesejada(inputEl, item, context = {}) {
   });
 
   inputEl.addEventListener("blur", () => {
-    const formula = (formulaOriginal || "").toString().replace(/^=/, "").replace(/[,;]/g, ".");
+    const formula = (formulaOriginal || "").toString().replace(/^=/, "");
     const valor = evaluateFormula(formula, context);
     inputEl.value = Number.isFinite(valor) ? valor : 0;
   });
