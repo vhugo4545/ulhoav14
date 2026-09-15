@@ -21,8 +21,8 @@ function evaluateFormula(formula, grupo) {
   }
 
   try {
-    // Separadores estilo Excel: vírgula decimal → ponto, ponto-e-vírgula → vírgula de argumento
-    formula = formula.replace(/,/g, '.').replace(/;/g, ',');
+    // Separadores estilo Excel: vírgula decimal entre dígitos → ponto, ponto-e-vírgula → vírgula de argumento
+    formula = formula.replace(/(\d),(\d)/g, '$1.$2').replace(/;/g, ',');
 
     // Traduz nomes de funções Excel para aliases JS
     formula = formula.replace(/\bTETO\b/g, '_TETO').replace(/\bARRED\b/g, '_ARRED');
