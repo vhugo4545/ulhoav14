@@ -1,11 +1,14 @@
 /**
  * authFetch.js
  * Intercepta window.fetch e injeta Authorization: Bearer <token>
- * automaticamente em todas as chamadas para ulhoa-0a02024d350a.herokuapp.com,
+ * automaticamente em todas as chamadas para os backends protegidos,
  * exceto rotas públicas de autenticação.
  */
 (function () {
-  const PROTECTED_ORIGIN = "https://ulhoa-0a02024d350a.herokuapp.com";
+  const PROTECTED_ORIGINS = [
+    "https://ulhoa-0a02024d350a.herokuapp.com",
+    "https://kommo-server-9f1243cbe450.herokuapp.com",
+  ];
 
   // Rotas que NÃO exigem token (login, register, refresh)
   const PUBLIC_PATHS = [
@@ -38,7 +41,7 @@
           ? url.url
           : String(url);
 
-      if (urlStr.startsWith(PROTECTED_ORIGIN) && !isPublic(urlStr)) {
+      if (PROTECTED_ORIGINS.some(o => urlStr.startsWith(o)) && !isPublic(urlStr)) {
         const token = getToken();
         if (token) {
           options = options ? { ...options } : {};
