@@ -288,9 +288,13 @@ async function vvGarantirProjetoOmiePorPedidoBase(numeroPedido, {
   console.log("endpoint:", endpoint);
   console.groupEnd();
 
+  const _tkProj = localStorage.getItem("accessToken") || localStorage.getItem("token") || "";
   const resposta = await fetch(endpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(_tkProj ? { Authorization: "Bearer " + _tkProj } : {})
+    },
     body: JSON.stringify({
       codint,
       nome: nomeProjeto,
@@ -885,8 +889,10 @@ async function verificarClienteEAtualizar_REMOVIDA() {
   console.log("Razão social buscada:", razaoSocialAlvo);
   console.log("CNPJ buscado:", cnpjAlvo || "(não encontrado)");
 
+  const _tkServico = localStorage.getItem("accessToken") || localStorage.getItem("token") || "";
+  const _hServico  = _tkServico ? { Authorization: "Bearer " + _tkServico } : {};
   const [resServico, resLocal] = await Promise.all([
-    fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes")
+    fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes", { headers: _hServico })
       .then(r => r.ok ? r.json() : null)
       .catch(() => null),
     fetch("https://ulhoa-0a02024d350a.herokuapp.com/clientes/visualizar")
