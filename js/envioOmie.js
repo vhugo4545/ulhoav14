@@ -8669,11 +8669,15 @@ async function sincronizarPDVparaKommo() {
   console.groupEnd();
 
   try {
+    const _tkKommo = localStorage.getItem("accessToken") || localStorage.getItem("token") || "";
     const resposta = await fetch(
       `https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/kommo`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(_tkKommo ? { Authorization: "Bearer " + _tkKommo } : {})
+        },
         body: JSON.stringify({ campos })
       }
     );
