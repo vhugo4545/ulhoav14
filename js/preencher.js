@@ -21,7 +21,7 @@ function mostrarLoader() {
 // ✅ Esconde o loader
 function esconderLoader() {
   document.getElementById("loader-overlay")?.style.setProperty("display", "none");
-  dobrarFonteResumosBlocos();
+  if (typeof dobrarFonteResumosBlocos === "function") dobrarFonteResumosBlocos();
 }
 
 

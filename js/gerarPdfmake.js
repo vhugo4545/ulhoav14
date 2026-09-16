@@ -1025,7 +1025,10 @@ async function gerarRelatorioEntregaPdfmake() {
         : null;
       const qtd  = linha?.querySelector('input.quantidade')?.value?.trim() || '-';
       const desc = document.getElementById(`resumo-${id}`)?.value?.trim() || '-';
-      return { seq: idx + 1, titulo: sanitize(titulo), qtd, descricao: sanitize(desc) };
+      const previsao = document.querySelector(`#${id}-aba3 input[name="previsaoEntrega"]`)?.value?.trim() || '';
+      const infoExtra = document.querySelector(`#${id}-aba3 textarea[name="informacoesProduto"]`)?.value?.trim() || '';
+      const prazo = [previsao, infoExtra].filter(Boolean).join(' | ');
+      return { seq: idx + 1, titulo: sanitize(titulo), qtd, descricao: sanitize(desc), prazo: sanitize(prazo) };
     });
 
   const logoBase64 = await carregarLogoBase64('../js/logo.jpg');
@@ -1121,7 +1124,7 @@ async function gerarRelatorioEntregaPdfmake() {
   });
 
   // ── Resumo dos Produtos ───────────────────────────────────────────────────
-  const listaProd = produtos.length ? produtos : [{ seq: 1, titulo: '-', qtd: '-', descricao: '-' }];
+  const listaProd = produtos.length ? produtos : [{ seq: 1, titulo: '-', qtd: '-', descricao: '-', prazo: '' }];
   const prodBody = [
     [
       { text: 'Itens',      bold: true, fontSize: 9, fillColor: '#fafafa', alignment: 'center' },
@@ -1129,12 +1132,21 @@ async function gerarRelatorioEntregaPdfmake() {
       { text: 'Quantidade', bold: true, fontSize: 9, fillColor: '#fafafa', alignment: 'center' },
       { text: 'Descrição',  bold: true, fontSize: 9, fillColor: '#fafafa' }
     ],
-    ...listaProd.map(p => [
-      { text: String(p.seq), fontSize: 9, alignment: 'center', bold: true },
-      { text: p.titulo, fontSize: 9 },
-      { text: p.qtd, fontSize: 9, alignment: 'center' },
-      { text: p.descricao, fontSize: 8 }
-    ])
+    ...listaProd.flatMap(p => {
+      const linhaItem = [
+        { text: String(p.seq), fontSize: 9, alignment: 'center', bold: true },
+        { text: p.titulo, fontSize: 9 },
+        { text: p.qtd, fontSize: 9, alignment: 'center' },
+        { text: p.descricao, fontSize: 8 }
+      ];
+      if (!p.prazo) return [linhaItem];
+      const linhaPrazo = [
+        { text: '', fontSize: 8 },
+        { text: [{ text: 'Prazo Previsto: ', bold: true, fontSize: 8 }, { text: p.prazo, fontSize: 8 }], colSpan: 3 },
+        {}, {}
+      ];
+      return [linhaItem, linhaPrazo];
+    })
   ];
 
   content.push({ table: { widths: ['*'], body: [[{ text: 'Resumo dos Produtos', bold: true, fontSize: 10, alignment: 'center', fillColor: COR_HEADER, margin: [0, 3, 0, 3] }]] }, layout: { defaultBorder: true }, margin: [0, 0, 0, 0] });

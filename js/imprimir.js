@@ -1619,6 +1619,8 @@ const observacoesPorItemHTML = (() => {
   return (gruposDados || []).map((g) => {
     const ambienteUpper = String(g.nomeAmbiente || "Sem Ambiente").toUpperCase();
     const obs = String(g.resumoGrupo || "").trim();
+    const prazoPartes = [g.previsaoEntrega, g.informacoesProduto].filter(Boolean);
+    const prazoTexto = prazoPartes.join(" | ");
 
     return `
       <div class="item item-obs-only">
@@ -1626,6 +1628,12 @@ const observacoesPorItemHTML = (() => {
           <div class="item-title">ITEM ${n++}</div>
           <div class="item-sub">AMBIENTE: ${ambienteUpper}</div>
         </div>
+
+        ${prazoTexto ? `
+        <div class="obs obs-only" style="border-top:1px solid #ddd;">
+          <div class="obs-label">Prazo Previsto:</div>
+          <div class="obs-text">${prazoTexto}</div>
+        </div>` : ''}
 
         <div class="obs obs-only">
           <div class="obs-label">Observações:</div>
@@ -2786,6 +2794,8 @@ const observacoesPorItemHTML = (() => {
   return (gruposDados || []).map((g) => {
     const ambienteUpper = String(g.nomeAmbiente || "Sem Ambiente").toUpperCase();
     const obs = String(g.resumoGrupo || "").trim();
+    const prazoPartes = [g.previsaoEntrega, g.informacoesProduto].filter(Boolean);
+    const prazoTexto = prazoPartes.join(" | ");
 
     return `
       <div class="item item-obs-only">
@@ -2793,6 +2803,12 @@ const observacoesPorItemHTML = (() => {
           <div class="item-title">ITEM ${n++}</div>
           <div class="item-sub">AMBIENTE: ${ambienteUpper}</div>
         </div>
+
+        ${prazoTexto ? `
+        <div class="obs obs-only" style="border-top:1px solid #ddd;">
+          <div class="obs-label">Prazo Previsto:</div>
+          <div class="obs-text">${prazoTexto}</div>
+        </div>` : ''}
 
         <div class="obs obs-only">
           <div class="obs-label">Observações:</div>
