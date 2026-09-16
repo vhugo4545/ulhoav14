@@ -231,7 +231,7 @@ async function gerarPDFComPdfmake(gruposOcultarProduto, totais = {}) {
                 { text: 'Orçamento: ', bold: true, fontSize: 8 }, { text: `${dados.numero}  `, fontSize: 8 },
                 { text: 'Pedido: ',    bold: true, fontSize: 8 }, { text: `${dados.numeroPedido}  `, fontSize: 8 },
                 { text: 'Data: ',      bold: true, fontSize: 8 }, { text: `${dataHoje}  `, fontSize: 8 },
-                { text: 'Proposta válida por 7 dias úteis', fontSize: 8, color: '#475569' }
+                ...(!dados.numeroPedido || dados.numeroPedido === '-' ? [{ text: 'Proposta válida por 7 dias úteis', fontSize: 8, color: '#475569' }] : [])
               ],
               margin: [0, 4, 0, 0]
             },
@@ -269,7 +269,7 @@ async function gerarPDFComPdfmake(gruposOcultarProduto, totais = {}) {
               [{ text: 'Orçamento:', bold: true, fontSize: 10 }, { text: dados.numero, fontSize: 10 }],
               [{ text: 'Pedido:',    bold: true, fontSize: 10 }, { text: dados.numeroPedido, fontSize: 10 }],
               [{ text: 'Data:',      bold: true, fontSize: 10 }, { text: dataHoje, fontSize: 10 }],
-              [{ text: 'Proposta válida por 7 dias úteis', bold: true, fontSize: 9, color: '#475569', colSpan: 2 }, {}],
+              ...(!dados.numeroPedido || dados.numeroPedido === '-' ? [[{ text: 'Proposta válida por 7 dias úteis', bold: true, fontSize: 9, color: '#475569', colSpan: 2 }, {}]] : []),
             ]
           },
           layout: 'lightHorizontalLines',

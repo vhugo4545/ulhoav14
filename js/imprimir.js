@@ -744,7 +744,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
               <tr><td><strong>Orçamento:</strong></td><td>${dados.numero}</td></tr>
               <tr><td><strong>Pedido:</strong></td><td>${dados.numeroPedido}</td></tr>
               <tr><td><strong>Data:</strong></td><td>${dataHoje}</td></tr>
-              <tr><td colspan="2"><strong>Proposta válida por 7 dias úteis</strong></td></tr>
+              ${!dados.numeroPedido || dados.numeroPedido === '-' ? '<tr><td colspan="2"><strong>Proposta válida por 7 dias úteis</strong></td></tr>' : ''}
             </table>
           </td>
         </tr>
@@ -764,8 +764,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
       <div style="font-size:12px;">
         <strong>Orçamento:</strong> ${dados.numero} &nbsp;|&nbsp;
         <strong>Pedido:</strong> ${dados.numeroPedido} &nbsp;|&nbsp;
-        <strong>Data:</strong> ${dataHoje} &nbsp;|&nbsp;
-        Proposta válida por 7 dias úteis
+        <strong>Data:</strong> ${dataHoje}${!dados.numeroPedido || dados.numeroPedido === '-' ? ' &nbsp;|&nbsp; Proposta válida por 7 dias úteis' : ''}
       </div>
     </div>`;
 
