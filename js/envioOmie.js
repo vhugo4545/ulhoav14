@@ -8680,6 +8680,7 @@ async function sincronizarPDVparaKommo() {
   if (primeiraDataParcela) campos.kommo_vencimento_entrada = primeiraDataParcela;
 
   // ── Datas ─────────────────────────────────────────
+  const prazoPrevisto       = document.getElementById("prazoPrevisto")?.value;
   const dataPedidoEnviado   = document.getElementById("dataPedidoEnviadoCliente")?.value;
   const dataPedidoAssinado  = document.getElementById("dataPedidoAssinado")?.value;
   const dataMedicao         = document.getElementById("dataMedicaoRealizada")?.value;
@@ -8687,6 +8688,7 @@ async function sincronizarPDVparaKommo() {
   const dataProjetoEnviado  = document.getElementById("dataProjetoEnviado")?.value;
   const dataProjetoAssinado = document.getElementById("dataProjetoAssinado")?.value;
 
+  if (prazoPrevisto)       campos.kommo_data_prevista      = prazoPrevisto;
   if (dataPedidoEnviado)   campos.kommo_contrato_enviado   = dataPedidoEnviado;
   if (dataPedidoAssinado)  campos.kommo_contrato_assinado  = dataPedidoAssinado;
   if (dataMedicao)         campos.kommo_medicao_realizada  = dataMedicao;
