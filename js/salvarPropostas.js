@@ -902,9 +902,22 @@ async function marcarOrcamentoIniciado() {
 
 // 2️⃣ Pendente de aprovação
 async function marcarPendenteAprovacao() {
-  mostrarCarregando()
+  mostrarCarregando();
   await atualizarStatus("Pendente de aprovação");
-  ocultarCarregando() 
+
+  const idProposta = new URLSearchParams(window.location.search).get("id");
+  if (idProposta) {
+    try {
+      await fetch(
+        `https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/solicitar-aprovacao`,
+        { method: "POST", headers: { "Content-Type": "application/json" } }
+      );
+    } catch (e) {
+      console.warn("[solicitar-aprovacao] Kommo não atualizado:", e);
+    }
+  }
+
+  ocultarCarregando();
 }
 
 // 3️⃣ Aprovado Pelo Gestor
