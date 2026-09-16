@@ -3535,6 +3535,7 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
   window._kommoVvProduto = fromCents(catProdutoC);
   window._kommoVvServico = fromCents(catServicoC);
   window._kommoVvVidro   = fromCents(catIgnoradosSemMO);
+  window._kommoVvSet     = true; // sentinel: popup computou valores nesta sessão
 
   // ── Badge "valor alvo" ────────────────────────────────────────────────────
   {
@@ -3710,10 +3711,10 @@ async function tentarEnviarComissoes(payload){
     else if (vendInfo.status === 'invalido') msgs.push(`Vendedor inválido: ${vendInfo.erro || '-'}`);
     else if (vendInfo.status === 'erro') msgs.push(`Vendedor com erro: ${vendInfo.erro || '-'}`);
 
-    // --- Envia valores financeiros para a Kommo ---
+    // --- Envia valores financeiros para a Kommo (apenas se popup VV rodou) ---
     try {
       const idProposta = new URLSearchParams(window.location.search).get("id");
-      if (idProposta) {
+      if (idProposta && window._kommoVvSet === true) {
         const valorNFProduto = window._kommoVvProduto ?? 0;
         const valorNFServico = window._kommoVvServico ?? 0;
         const valorFatDireto = window._kommoVvVidro   ?? 0;
@@ -8580,10 +8581,11 @@ async function sincronizarPDVparaKommo() {
 
   const campos = {};
 
-  // ── Financeiro salvo pelo recalc() antes do popup fechar ──
-  const _vvProduto = window._kommoVvProduto ?? 0;
-  const _vvServico = window._kommoVvServico ?? 0;
-  const _vvVidro   = window._kommoVvVidro   ?? 0;
+  // ── Financeiro salvo pelo recalc() — só disponível se popup VV rodou nesta sessão ──
+  const _vvSet     = window._kommoVvSet === true;
+  const _vvProduto = _vvSet ? (window._kommoVvProduto ?? 0) : null;
+  const _vvServico = _vvSet ? (window._kommoVvServico ?? 0) : null;
+  const _vvVidro   = _vvSet ? (window._kommoVvVidro   ?? 0) : null;
 
   // ── Nome / Razão Social ───────────────────────────
   const nomeRazaoSocial = document.querySelector(".razaoSocial")?.value?.trim()
@@ -8666,10 +8668,10 @@ async function sincronizarPDVparaKommo() {
   if (bairroObra)      campos.kommo_bairro_cobranca       = bairroObra;
   if (cidadeObra)      campos.kommo_cidade_cobranca       = cidadeObra;
 
-  // ── Financeiro (valores capturados no início, antes de qualquer await) ──
-  campos.kommo_valor_nf_produto = _vvProduto || 0;
-  campos.kommo_valor_nf_servico = _vvServico || 0;
-  campos.kommo_valor_fat_direto = _vvVidro   || 0;
+  // ── Financeiro — só enviado se popup VV rodou (evita sobrescrever com 0) ──
+  if (_vvProduto !== null) campos.kommo_valor_nf_produto = _vvProduto;
+  if (_vvServico !== null) campos.kommo_valor_nf_servico = _vvServico;
+  if (_vvVidro   !== null) campos.kommo_valor_fat_direto = _vvVidro;
 
   // ── Vencimento Entrada = data da primeira parcela ───
   const todasDatasParcelas = [...document.querySelectorAll("#listaParcelas .data-parcela")]
