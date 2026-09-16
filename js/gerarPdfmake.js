@@ -1141,8 +1141,8 @@ async function gerarRelatorioEntregaPdfmake() {
       ];
       if (!p.prazo) return [linhaItem];
       const linhaPrazo = [
-        { text: '', fontSize: 8 },
-        { text: [{ text: 'Prazo Previsto: ', bold: true, fontSize: 8 }, { text: p.prazo, fontSize: 8 }], colSpan: 3 },
+        { text: '', fontSize: 9 },
+        { text: [{ text: 'Prazo Previsto: ', bold: true, fontSize: 11 }, { text: p.prazo, bold: true, fontSize: 11 }], colSpan: 3 },
         {}, {}
       ];
       return [linhaItem, linhaPrazo];

@@ -1630,9 +1630,8 @@ const observacoesPorItemHTML = (() => {
         </div>
 
         ${prazoTexto ? `
-        <div class="obs obs-only" style="border-top:1px solid #ddd;">
-          <div class="obs-label">Prazo Previsto:</div>
-          <div class="obs-text">${prazoTexto}</div>
+        <div class="obs obs-only" style="border-top:1px solid #ddd; font-size:16px; font-weight:700;">
+          <span>Prazo Previsto: </span><span>${prazoTexto}</span>
         </div>` : ''}
 
         <div class="obs obs-only">
@@ -2805,9 +2804,8 @@ const observacoesPorItemHTML = (() => {
         </div>
 
         ${prazoTexto ? `
-        <div class="obs obs-only" style="border-top:1px solid #ddd;">
-          <div class="obs-label">Prazo Previsto:</div>
-          <div class="obs-text">${prazoTexto}</div>
+        <div class="obs obs-only" style="border-top:1px solid #ddd; font-size:16px; font-weight:700;">
+          <span>Prazo Previsto: </span><span>${prazoTexto}</span>
         </div>` : ''}
 
         <div class="obs obs-only">
