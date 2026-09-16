@@ -6278,6 +6278,27 @@ const valorFinalTela = valorServicoInicial; // são o mesmo valor
    ======================================= */
 async function atualizarNaOmie() {
 
+  // ── VALIDAÇÃO: valor final não pode ser menor que o valor mínimo ──
+  {
+    const _parseBRL = (s) => parseFloat((s || "").replace(/[R$\s.]/g, "").replace(",", ".")) || 0;
+    const _elMin  = document.querySelector(
+      "#totalizadoresExternosPorAmbiente .tot-bloco--total .tot-card--min .tot-value"
+    );
+    const _elFinal = document.getElementById("valorFinalTotal");
+    const _vMin   = _parseBRL(_elMin?.textContent);
+    const _vFinal = _parseBRL(_elFinal?.textContent);
+
+    if (_vMin > 0 && _vFinal < _vMin) {
+      const _fmtBRL = (n) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      mostrarPopupCustomizado(
+        "⚠️ Valor abaixo do mínimo",
+        `O valor final <b>${_fmtBRL(_vFinal)}</b> está abaixo do valor mínimo permitido <b>${_fmtBRL(_vMin)}</b>.<br><br>Ajuste o desconto ou o valor antes de enviar para a Omie.`,
+        "error"
+      );
+      return;
+    }
+  }
+
   // ── VALIDAÇÃO: parcelas devem bater com o total antes de enviar ───
   if (typeof parcelasValidas === "function" && !parcelasValidas()) return;
   if (typeof parcelasCompletasParaOmie === "function" && !parcelasCompletasParaOmie()) return;
