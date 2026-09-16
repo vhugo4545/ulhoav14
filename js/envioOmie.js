@@ -3531,6 +3531,10 @@ const servTotal = valorServicosAutomatic > 0 && !srvValorEditadoManualmente
   $catProduto.textContent = vv_fmtBRL(fromCents(catProdutoC));
   $catServico.textContent = vv_fmtBRL(fromCents(catServicoC));
   $catVidro.textContent   = vv_fmtBRL(fromCents(catIgnoradosSemMO));
+  // Persiste valores para uso após fechamento do popup (sincronizarPDVparaKommo e tentarEnviarComissoes)
+  window._kommoVvProduto = fromCents(catProdutoC);
+  window._kommoVvServico = fromCents(catServicoC);
+  window._kommoVvVidro   = fromCents(catIgnoradosSemMO);
 
   // ── Badge "valor alvo" ────────────────────────────────────────────────────
   {
@@ -3710,9 +3714,9 @@ async function tentarEnviarComissoes(payload){
     try {
       const idProposta = new URLSearchParams(window.location.search).get("id");
       if (idProposta) {
-        const valorNFProduto = vv_parseBRL(document.getElementById('vv-cat-produto')?.textContent || '0');
-        const valorNFServico = vv_parseBRL(document.getElementById('vv-cat-servico')?.textContent || '0');
-        const valorFatDireto = vv_parseBRL(document.getElementById('vv-cat-vidro')?.textContent  || '0');
+        const valorNFProduto = window._kommoVvProduto ?? 0;
+        const valorNFServico = window._kommoVvServico ?? 0;
+        const valorFatDireto = window._kommoVvVidro   ?? 0;
 
         console.log('[KOMMO] Enviando financeiro — Produto:', valorNFProduto, '| Serviço:', valorNFServico, '| Fat. Direto:', valorFatDireto);
 
@@ -8576,11 +8580,10 @@ async function sincronizarPDVparaKommo() {
 
   const campos = {};
 
-  // ── Captura financeiro AGORA (popup ainda aberto) ──
-  // Esses elementos saem do DOM quando o popup fecha; capturamos antes de qualquer await.
-  const _vvProduto = parseBRL(document.getElementById("vv-cat-produto")?.textContent || "0");
-  const _vvServico = parseBRL(document.getElementById("vv-cat-servico")?.textContent || "0");
-  const _vvVidro   = parseBRL(document.getElementById("vv-cat-vidro")?.textContent   || "0");
+  // ── Financeiro salvo pelo recalc() antes do popup fechar ──
+  const _vvProduto = window._kommoVvProduto ?? 0;
+  const _vvServico = window._kommoVvServico ?? 0;
+  const _vvVidro   = window._kommoVvVidro   ?? 0;
 
   // ── Nome / Razão Social ───────────────────────────
   const nomeRazaoSocial = document.querySelector(".razaoSocial")?.value?.trim()
