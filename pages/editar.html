@@ -811,7 +811,10 @@ let CLIENTES_CACHE = [];
 // pré-carregar clientes assim que a página abrir
 async function carregarClientesNaAbertura() {
   try {
-    const resp = await fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes");
+    const _tk = localStorage.getItem("accessToken") || localStorage.getItem("token") || "";
+    const resp = await fetch("https://ulhoa-servico-ec4e1aa95355.herokuapp.com/clientes", {
+      headers: _tk ? { Authorization: "Bearer " + _tk } : {}
+    });
     const data = await resp.json();
     if (data && Array.isArray(data.clientes)) {
       CLIENTES_CACHE = data.clientes;

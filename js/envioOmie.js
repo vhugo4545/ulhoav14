@@ -7774,9 +7774,13 @@ async function vvCarregarClientesServicoOmie({ force = false } = {}) {
     return cache.lista;
   }
 
+  const _tk = localStorage.getItem("accessToken") || localStorage.getItem("token") || "";
   const resposta = await fetch(VV_CLIENTES_SERVICO_URL, {
     method: "GET",
-    headers: { "Content-Type": "application/json" }
+    headers: {
+      "Content-Type": "application/json",
+      ...(_tk ? { Authorization: "Bearer " + _tk } : {})
+    }
   });
 
   if (!resposta.ok) {
