@@ -824,7 +824,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
           ${totalizadoresHTML}
           <div style="border:1px solid #dee2e6;padding:10px;margin-top:14px;font-size:12px;">
             <strong>PRAZO PREVISTO:</strong><br>${dados.prazos}<br><br>
-            <strong>Condições de Pagamento:</strong><br>${dados.condicao}<br><br>
+            ${parcelas.length === 0 ? `<strong>Condições de Pagamento:</strong><br>${dados.condicao}<br><br>` : ''}
             <strong>Condições Gerais:</strong><br>${condicoesGeraisFormatada}
           </div>
           <br>

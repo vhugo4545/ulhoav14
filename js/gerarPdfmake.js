@@ -455,8 +455,10 @@ async function gerarPDFComPdfmake(gruposOcultarProduto, totais = {}) {
       body: [
         [{ text: 'PRAZO PREVISTO:',          bold: true, fontSize: 9, fillColor: COR_HEADER }],
         [{ text: dados.prazos || '-',          fontSize: 9, preserveLeadingSpaces: true }],
-        [{ text: 'CONDIÇÕES DE PAGAMENTO:',   bold: true, fontSize: 9, fillColor: COR_HEADER }],
-        [{ text: condicaoTexto,                fontSize: 9, preserveLeadingSpaces: true }],
+        ...(parcelas.length === 0 ? [
+          [{ text: 'CONDIÇÕES DE PAGAMENTO:',   bold: true, fontSize: 9, fillColor: COR_HEADER }],
+          [{ text: condicaoTexto,                fontSize: 9, preserveLeadingSpaces: true }],
+        ] : []),
         [{ text: 'CONDIÇÕES GERAIS:',         bold: true, fontSize: 9, fillColor: COR_HEADER }],
         [{ text: dados.condicoesGerais || '-', fontSize: 9, preserveLeadingSpaces: true }],
       ]
