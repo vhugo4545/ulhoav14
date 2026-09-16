@@ -521,7 +521,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
   dados.cpfCnpj = principal.cpfCnpj || "-";
   dados.telefoneCliente = principal.telefone || "-";
   dados.contatos = clientes.map((c, idx) => ({
-    cliente: idx === 0 ? `${c.nomeCliente || "-"} (Responsável)` : (c.nomeCliente || "-"),
+    cliente: c.nomeCliente || "-",
     cpfCnpj: c.cpfCnpj || "-",
     contato: c.nomeContato || "-",
     funcao: c.funcao || "-",
@@ -750,7 +750,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
         </tr>
       </table>
       <table class="table table-bordered table-sm w-100" style="margin-bottom:0;font-size:12px;">
-        <tr><td style="width:35%;"><strong>Cliente (Responsável):</strong></td><td>${nomeCliente}</td></tr>
+        <tr><td style="width:35%;"><strong>Cliente:</strong></td><td>${nomeCliente}</td></tr>
         <tr><td><strong>CPF/CNPJ:</strong></td><td>${dados.cpfCnpj}</td></tr>
         <tr><td><strong>Endereço da Obra:</strong></td><td>${dados.enderecoObra}</td></tr>
         <tr><td><strong>Vendedor:</strong></td><td>${dados.vendedor}</td></tr>
@@ -1003,7 +1003,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   const contatosHTML = clientes.length
     ? clientes
         .map((c, idx) => {
-          const label = idx === 0 ? "Contato (Responsável)" : `Contato ${idx + 1}`;
+          const label = idx === 0 ? "Contato" : `Contato ${idx + 1}`;
           const nome = padVisual(c.nomeContato || c.nomeCliente || "-", 22);
           const funcao = padVisual(c.funcao || "-", 18);
           const tel = padVisual(c.telefone || "-", 16);
@@ -2177,7 +2177,7 @@ const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
   const contatosHTML = clientes.length
     ? clientes
         .map((c, idx) => {
-          const label = idx === 0 ? "Contato (Responsável)" : `Contato ${idx + 1}`;
+          const label = idx === 0 ? "Contato" : `Contato ${idx + 1}`;
           const nome = padVisual(c.nomeContato || c.nomeCliente || "-", 22);
           const funcao = padVisual(c.funcao || "-", 18);
           const tel = padVisual(c.telefone || "-", 16);
@@ -3454,7 +3454,7 @@ async function gerarFolha4RelatorioEntrega() {
   const contatosHTML = clientes.length
     ? clientes
         .map((c, idx) => {
-          const label = idx === 0 ? "Contato (Responsável)" : `Contato ${idx + 1}`;
+          const label = idx === 0 ? "Contato" : `Contato ${idx + 1}`;
           const nome = padVisual(c.nomeContato || c.nomeCliente || "-", 22);
           const funcao = padVisual(c.funcao || "-", 18);
           const tel = padVisual(c.telefone || "-", 16);
@@ -4009,7 +4009,7 @@ async function gerarHistoricoDeProducaoParaImpressao() {
   const contatosHTML = clientes.length
     ? clientes
         .map((c, idx) => {
-          const label = idx === 0 ? "Contato (Responsável)" : `Contato ${idx + 1}`;
+          const label = idx === 0 ? "Contato" : `Contato ${idx + 1}`;
           const nome = padVisual(c.nomeContato || c.nomeCliente || "-", 22);
           const funcao = padVisual(c.funcao || "-", 18);
           const tel = padVisual(c.telefone || "-", 16);
@@ -4529,7 +4529,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const contatosHTML = clientes.length
     ? clientes
         .map((c, idx) => {
-          const label = idx === 0 ? "Contato (Responsável)" : `Contato ${idx + 1}`;
+          const label = idx === 0 ? "Contato" : `Contato ${idx + 1}`;
           const nome = padVisual(c.nomeContato || c.nomeCliente || "-", 22);
           const funcao = padVisual(c.funcao || "-", 18);
           const tel = padVisual(c.telefone || "-", 16);

@@ -286,7 +286,7 @@ async function gerarPDFComPdfmake(gruposOcultarProduto, totais = {}) {
     table: {
       widths: ['30%', '70%'],
       body: [
-        [{ text: 'Cliente (Responsável):', bold: true, fontSize: 9 }, { text: nomeCliente, fontSize: 9 }],
+        [{ text: 'Cliente:', bold: true, fontSize: 9 }, { text: nomeCliente, fontSize: 9 }],
         [{ text: 'CPF/CNPJ:',             bold: true, fontSize: 9 }, { text: cpfCnpj, fontSize: 9 }],
         [{ text: 'Endereço da Obra:',      bold: true, fontSize: 9 }, { text: dados.enderecoObra, fontSize: 8 }],
         [{ text: 'Vendedor:',              bold: true, fontSize: 9 }, { text: dados.vendedor, fontSize: 9 }],
@@ -318,7 +318,7 @@ async function gerarPDFComPdfmake(gruposOcultarProduto, totais = {}) {
             { text: 'Telefone',            style: 'thCell' },
           ],
           ...clientes.map((c, i) => [
-            { text: i === 0 ? `${c.nomeCliente} (Responsável)` : (c.nomeCliente || '-'), fontSize: 8 },
+            { text: c.nomeCliente || '-', fontSize: 8 },
             { text: c.cpfCnpj || '-',     fontSize: 8 },
             { text: c.nomeContato || '-', fontSize: 8 },
             { text: c.funcao || '-',      fontSize: 8 },
@@ -721,7 +721,7 @@ async function gerarOrdemDeServicoPdfmake(gruposOcultarProduto) {
   // Contatos — cada um em mini-tabela com borda própria
   const listaContatos = clientes.length ? clientes : [{ nome: '-', cpfCnpj: '-', nomeContato: '-', funcao: '-', telefone: '-', email: '-' }];
   listaContatos.forEach((c, idx) => {
-    const label = idx === 0 ? 'Contato (Responsável)' : `Contato ${idx + 1}`;
+    const label = idx === 0 ? 'Contato' : `Contato ${idx + 1}`;
     content.push({
       table: {
         widths: ['auto', '*', 'auto', '*'],
@@ -1109,7 +1109,7 @@ async function gerarRelatorioEntregaPdfmake() {
   ];
   const listaContatos = clientes.length ? clientes : [{ nome: '-', nomeContato: '-', funcao: '-', telefone: '-', email: '-' }];
   listaContatos.forEach((c, idx) => {
-    const label = idx === 0 ? 'Contato (Responsável)' : `Contato ${idx + 1}`;
+    const label = idx === 0 ? 'Contato' : `Contato ${idx + 1}`;
     clienteBody.push([{ text: `${label}:`, bold: true, fontSize: 9 }, { text: c.nomeContato || c.nome || '-', fontSize: 9 }, { text: 'Função:', bold: true, fontSize: 9 }, { text: c.funcao || '-', fontSize: 9 }]);
     clienteBody.push([{ text: 'Telefone:', bold: true, fontSize: 9 }, { text: c.telefone || '-', fontSize: 9 }, { text: 'E-mail:', bold: true, fontSize: 9 }, { text: c.email || '-', fontSize: 9 }]);
   });
@@ -1353,7 +1353,7 @@ async function gerarEtapasDProcessoPdfmake() {
   ];
   const listaContatos = clientes.length ? clientes : [{ nome: '-', nomeContato: '-', funcao: '-', telefone: '-', email: '-' }];
   listaContatos.forEach((c, idx) => {
-    const label = idx === 0 ? 'Contato (Responsável)' : `Contato ${idx + 1}`;
+    const label = idx === 0 ? 'Contato' : `Contato ${idx + 1}`;
     clienteBody.push([{ text: `${label}:`, bold: true, fontSize: 9 }, { text: c.nomeContato || c.nome || '-', fontSize: 9 }, { text: 'Função:', bold: true, fontSize: 9 }, { text: c.funcao || '-', fontSize: 9 }]);
     clienteBody.push([{ text: 'Telefone:', bold: true, fontSize: 9 }, { text: c.telefone || '-', fontSize: 9 }, { text: 'E-mail:', bold: true, fontSize: 9 }, { text: c.email || '-', fontSize: 9 }]);
   });
