@@ -2217,11 +2217,10 @@ async function tentarEnviarComissoes(payload) {
     let kommoErro = null;
     try {
       const idProposta = new URLSearchParams(window.location.search).get('id');
-      if (idProposta) {
-        const _parse = (s) => (typeof vv_parseBRL === 'function') ? vv_parseBRL(s) : parseFloat(String(s).replace(',', '.')) || 0;
-        const valorNFProduto = _parse(document.getElementById('vv-cat-produto')?.textContent || '0');
-        const valorNFServico = _parse(document.getElementById('vv-cat-servico')?.textContent || '0');
-        const valorFatDireto = _parse(document.getElementById('vv-cat-vidro')?.textContent  || '0');
+      if (idProposta && window._kommoVvSet === true) {
+        const valorNFProduto = window._kommoVvProduto ?? 0;
+        const valorNFServico = window._kommoVvServico ?? 0;
+        const valorFatDireto = window._kommoVvVidro   ?? 0;
         const kommoRes = await fetch(`https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/kommo`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ campos: { kommo_valor_nf_produto: valorNFProduto, kommo_valor_nf_servico: valorNFServico, kommo_valor_fat_direto: valorFatDireto } })
