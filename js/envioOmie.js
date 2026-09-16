@@ -2222,9 +2222,9 @@ async function tentarEnviarComissoes(payload) {
         const valorNFProduto = _parse(document.getElementById('vv-cat-produto')?.textContent || '0');
         const valorNFServico = _parse(document.getElementById('vv-cat-servico')?.textContent || '0');
         const valorFatDireto = _parse(document.getElementById('vv-cat-vidro')?.textContent  || '0');
-        const kommoRes = await fetch(`https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/financeiro`, {
+        const kommoRes = await fetch(`https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/kommo`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ valorNFProduto, valorNFServico, valorFatDireto })
+          body: JSON.stringify({ campos: { kommo_valor_nf_produto: valorNFProduto, kommo_valor_nf_servico: valorNFServico, kommo_valor_fat_direto: valorFatDireto } })
         });
         if (!kommoRes.ok) {
           let errMsg = `HTTP ${kommoRes.status}`;
@@ -3716,10 +3716,10 @@ async function tentarEnviarComissoes(payload){
 
         console.log('[KOMMO] Enviando financeiro — Produto:', valorNFProduto, '| Serviço:', valorNFServico, '| Fat. Direto:', valorFatDireto);
 
-        fetch(`https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/financeiro`, {
+        fetch(`https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/kommo`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ valorNFProduto, valorNFServico, valorFatDireto })
+          body: JSON.stringify({ campos: { kommo_valor_nf_produto: valorNFProduto, kommo_valor_nf_servico: valorNFServico, kommo_valor_fat_direto: valorFatDireto } })
         })
         .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
         .then(res => console.log('[KOMMO] Financeiro atualizado na Kommo:', res))
