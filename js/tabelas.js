@@ -135,8 +135,8 @@ function montarLinhaProduto(idSuffix, produto) {
       <span class="formula-result" data-formula="" data-group-id="${idSuffix}" onclick="tornarCampoEditavel(this)">1</span>
     </td>
     <td>
-      <button class="btn btn-danger btn-sm d-block mb-1" onclick="this.closest('tr').remove()">Remover</button>
-      <button class="btn btn-secondary btn-sm d-block" onclick="abrirSubstituirProduto(this)">Substituir</button>
+      <button class="btn btn-danger btn-sm me-1" onclick="this.closest('tr').remove()">Remover</button>
+      <button class="btn btn-secondary btn-sm" onclick="abrirSubstituirProduto(this)">Substituir</button>
     </td>
   `;
 

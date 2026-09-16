@@ -727,8 +727,8 @@ ${item.descricao_utilizacao || "Utilização Preencher"}
               value="${valorOriginal}" data-formula="${formula}" data-group-id="${idSuffix}">
           </td>
           <td>
-            <button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">Remover</button>
-            <button class="btn btn-secondary btn-sm mt-1" onclick="abrirSubstituirProduto(this)">Substituir</button>
+            <button class="btn btn-danger btn-sm me-1" onclick="this.closest('tr').remove()">Remover</button>
+            <button class="btn btn-secondary btn-sm" onclick="abrirSubstituirProduto(this)">Substituir</button>
           </td>
         `;
 
