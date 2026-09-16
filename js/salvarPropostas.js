@@ -916,6 +916,19 @@ async function marcarAprovadoPeloGestor() {
   }
   mostrarCarregando();
   await atualizarStatus("Aprovado Pelo Gestor");
+
+  const idProposta = new URLSearchParams(window.location.search).get("id");
+  if (idProposta) {
+    try {
+      await fetch(
+        `https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/aprovar-gestor`,
+        { method: "POST", headers: { "Content-Type": "application/json" } }
+      );
+    } catch (e) {
+      console.warn("[aprovar-gestor] Kommo não atualizado:", e);
+    }
+  }
+
   ocultarCarregando();
 }
 
