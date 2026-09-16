@@ -8411,7 +8411,15 @@ async function enviarOSServico({
     console.groupEnd();
 
     if (!resp.ok || data?.ok === false) {
-      const motivo = extrairMensagemOmie(data, resp.status) || `HTTP ${resp.status}`;
+      const motivo =
+        data?.faultstring ||
+        data?.omieRaw?.faultstring ||
+        data?.error ||
+        data?.erro ||
+        data?.msg ||
+        data?.message ||
+        data?.mensagem ||
+        `HTTP ${resp.status}`;
 
       mostrarPopupCustomizado(
         "❌ Erro ao enviar OS de Serviços",

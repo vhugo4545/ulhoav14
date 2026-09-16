@@ -8,6 +8,8 @@
   const PROTECTED_ORIGINS = [
     "https://ulhoa-0a02024d350a.herokuapp.com",
     "https://kommo-server-9f1243cbe450.herokuapp.com",
+    "https://ulhoa-servico-ec4e1aa95355.herokuapp.com",
+    "https://ulhoa-vidros-1ae0adcf5f73.herokuapp.com",
   ];
 
   // Rotas que NÃO exigem token (login, register, refresh)
