@@ -8576,6 +8576,12 @@ async function sincronizarPDVparaKommo() {
 
   const campos = {};
 
+  // ── Captura financeiro AGORA (popup ainda aberto) ──
+  // Esses elementos saem do DOM quando o popup fecha; capturamos antes de qualquer await.
+  const _vvProduto = parseBRL(document.getElementById("vv-cat-produto")?.textContent || "0");
+  const _vvServico = parseBRL(document.getElementById("vv-cat-servico")?.textContent || "0");
+  const _vvVidro   = parseBRL(document.getElementById("vv-cat-vidro")?.textContent   || "0");
+
   // ── Nome / Razão Social ───────────────────────────
   const nomeRazaoSocial = document.querySelector(".razaoSocial")?.value?.trim()
     || document.querySelector(".razaoSocial")?.getAttribute("data-valor-original")?.trim();
@@ -8657,14 +8663,10 @@ async function sincronizarPDVparaKommo() {
   if (bairroObra)      campos.kommo_bairro_cobranca       = bairroObra;
   if (cidadeObra)      campos.kommo_cidade_cobranca       = cidadeObra;
 
-  // ── Financeiro ────────────────────────────────────
-  const valorNFProduto = parseBRL(document.getElementById("vv-cat-produto")?.textContent || "0");
-  const valorNFServico = parseBRL(document.getElementById("vv-cat-servico")?.textContent || "0");
-  const valorFatDireto = parseBRL(document.getElementById("vv-cat-vidro")?.textContent   || "0");
-
-  campos.kommo_valor_nf_produto = valorNFProduto || 0;
-  campos.kommo_valor_nf_servico = valorNFServico || 0;
-  campos.kommo_valor_fat_direto = valorFatDireto || 0;
+  // ── Financeiro (valores capturados no início, antes de qualquer await) ──
+  campos.kommo_valor_nf_produto = _vvProduto || 0;
+  campos.kommo_valor_nf_servico = _vvServico || 0;
+  campos.kommo_valor_fat_direto = _vvVidro   || 0;
 
   // ── Vencimento Entrada = data da primeira parcela ───
   const todasDatasParcelas = [...document.querySelectorAll("#listaParcelas .data-parcela")]
