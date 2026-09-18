@@ -263,7 +263,10 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
   blocos.forEach(bloco => {
     const blocoId = bloco.id;
     const valores = calcularValoresFinanceirosDiretoDaTabela(blocoId);
-    if (!valores) return;
+    if (!valores) {
+      bloco.querySelectorAll(".resumo-totalizador-interno").forEach(el => el.remove());
+      return;
+    }
 
     const inputAmbiente = document.querySelector(
       `input[placeholder='Ambiente'][data-id-grupo='${blocoId}']`
@@ -443,8 +446,17 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
 // MONITORAR MUDANÇAS NOS AMBIENTES
 // =========================
 function monitorarMudancasAmbientes() {
+  const CAMPOS_FINANCEIROS = [
+    "margem_lucro", "impostos", "gasto_operacional",
+    "margem_negociacao", "margem_seguranca", "comissao_arquiteta", "miudezas"
+  ];
+
   document.addEventListener("input", (e) => {
-    if (e.target.matches("input[placeholder='Ambiente'][data-id-grupo]")) {
+    const nome = e.target.name;
+    const ehAmbiente = e.target.matches("input[placeholder='Ambiente'][data-id-grupo]");
+    const ehFinanceiro = CAMPOS_FINANCEIROS.includes(nome);
+
+    if (ehAmbiente || ehFinanceiro) {
       clearTimeout(window.__timeoutAmbienteTotalizador);
       window.__timeoutAmbienteTotalizador = setTimeout(() => {
         adicionarTotalizadoresPorAmbienteComAgrupamento();

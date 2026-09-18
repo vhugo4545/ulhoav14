@@ -44,6 +44,10 @@ function preencherValoresFinanceiros(blocoId) {
   
   // Obter total da tabela (soma da coluna "Valor de Custo Final")
   const tabela = bloco.querySelector("table");
+  if (!tabela) {
+    adicionarTotalizadoresPorAmbienteComAgrupamento();
+    return;
+  }
   let materialBase = 0;
   tabela.querySelectorAll("tbody tr").forEach(linha => {
     const valorStr = linha.querySelector(".custo-unitario")?.textContent?.replace("R$", "").replace(",", ".");
@@ -58,6 +62,7 @@ function preencherValoresFinanceiros(blocoId) {
   const divisor = 1 - (gastosTotais + margemLucro + impostos);
   if (divisor <= 0) {
     console.error("❌ Erro: soma dos percentuais maior ou igual a 100%");
+    adicionarTotalizadoresPorAmbienteComAgrupamento();
     return;
   }
 
@@ -516,7 +521,9 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
   const estaEditandoModelo = window.location.pathname.includes("editarModelo.html");
 
   const camposFinanceiros = [
-    { label: "Custo Total de Material", name: "custoTotalMaterial" }
+    { label: "Custo Total de Material", name: "custoTotalMaterial" },
+    { label: "Valor Mínimo",            name: "precoMinimo"        },
+    { label: "Valor Sugerido",          name: "precoSugerido"      },
   ];
 
   const bloco = document.createElement("div");
