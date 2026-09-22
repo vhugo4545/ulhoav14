@@ -481,7 +481,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
   const multilineToBR = (txt) => {
     const t = String(txt || "").trim();
     if (!t) return "";
-    return t.replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
+    return parseBold(t).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
   };
   const formatarReal = (n) => {
     try {
@@ -946,7 +946,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   const multilineToBR = (txt) => {
     const t = String(txt || "").trim();
     if (!t) return "-";
-    return t.replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
+    return parseBold(t).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
   };
 
   const formatarDataBR = (iso) => {
@@ -2152,7 +2152,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
   const multilineToBR = (txt) => {
     const t = String(txt || "").trim();
     if (!t) return "-";
-    return t.replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
+    return parseBold(t).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
   };
 
   const formatarDataBR = (iso) => {
@@ -3441,7 +3441,7 @@ async function gerarFolha4RelatorioEntrega() {
   const multilineToBR = (txt) => {
     const t = String(txt || "").trim();
     if (!t) return "-";
-    return escapeHtml(t).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
+    return parseBold(escapeHtml(t)).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
   };
 
   const logoBase64 = await carregarLogoBase64("../js/logo.jpg");
@@ -4011,7 +4011,7 @@ async function gerarHistoricoDeProducaoParaImpressao() {
   const multilineToBR = (txt) => {
     const t = String(txt || "").trim();
     if (!t) return "-";
-    return escapeHtml(t).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
+    return parseBold(escapeHtml(t)).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
   };
 
   const logoBase64 = await carregarLogoBase64("../js/logo.jpg");
@@ -4526,7 +4526,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
   const multilineToBR = (txt) => {
     const t = String(txt || "").trim();
     if (!t) return "-";
-    return t.replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
+    return parseBold(t).replace(/\r\n/g, "\n").replace(/\n/g, "<br>");
   };
 
   const formatarDataBR = (iso) => {
