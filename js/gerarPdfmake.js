@@ -213,8 +213,16 @@ async function gerarPDFComPdfmake(gruposOcultarProduto, totais = {}) {
   const TOP_MARGIN = 70;
 
   const headerFn = (currentPage, pageCount) => {
-    // Página 1 já tem o cabeçalho completo no conteúdo — não duplicar
-    if (currentPage === 1) return {};
+    // Página 1: só numeração no canto direito (cabeçalho completo está no conteúdo)
+    if (currentPage === 1) {
+      return {
+        margin: [30, 6, 30, 0],
+        columns: [
+          { text: '', width: '*' },
+          { text: `Pág. ${currentPage} / ${pageCount}`, alignment: 'right', fontSize: 8, color: '#64748b', margin: [0, 4, 0, 0] }
+        ]
+      };
+    }
 
     const logoCol = logoBase64
       ? { image: logoBase64, fit: [130, 45], margin: [0, 0, 6, 0] }
@@ -614,7 +622,15 @@ async function gerarOrdemDeServicoPdfmake(gruposOcultarProduto) {
 
   // ── header compacto (págs 2+) ──────────────────────────────────────────────
   const headerFn = (currentPage, pageCount) => {
-    if (currentPage === 1) return {};
+    if (currentPage === 1) {
+      return {
+        margin: [30, 4, 30, 0],
+        columns: [
+          { text: '', width: '*' },
+          { text: `Pág. ${currentPage} / ${pageCount}`, fontSize: 7, alignment: 'right', color: '#64748b', margin: [0, 4, 0, 0] }
+        ]
+      };
+    }
     const logoCol = logoBase64
       ? { image: logoBase64, fit: [110, 38], margin: [0, 20, 6, 0] }
       : { text: 'FERREIRA ULHOA', bold: true, fontSize: 8, margin: [0, 46, 0, 0] };
