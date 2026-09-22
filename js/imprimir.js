@@ -2054,6 +2054,18 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   height: calc(100% / 8);     /* 8 linhas preenchendo igualmente */
 }
 
+      /* Número de página */
+      .pg-num {
+        text-align: left;
+        margin: 0 0 10px 0;
+        padding: 0;
+        clear: both;
+        font-size: 16px;
+        font-weight: 900;
+        font-family: Arial, sans-serif;
+        color: #111;
+        letter-spacing: 0.5px;
+      }
       </style>
     </head>
 
@@ -2065,7 +2077,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
 
           ${pagina2HTML}
 
-        
+
           ${pagina3HTML}
 
           ${pagina4ProcessosInstalacaoHTML}
@@ -2078,6 +2090,24 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
       <script>
         window.onload = function () {
           setTimeout(function () {
+            var pageBreaks = document.querySelectorAll('.page-break');
+            var totalPags = pageBreaks.length + 1;
+
+            var vvPageInner = document.querySelector('.vv-page > div');
+            if (vvPageInner) {
+              var pg1 = document.createElement('div');
+              pg1.className = 'pg-num';
+              pg1.textContent = 'Pág. 1 / ' + totalPags;
+              vvPageInner.insertBefore(pg1, vvPageInner.firstChild);
+            }
+
+            pageBreaks.forEach(function (pb, i) {
+              var pgDiv = document.createElement('div');
+              pgDiv.className = 'pg-num';
+              pgDiv.textContent = 'Pág. ' + (i + 2) + ' / ' + totalPags;
+              pb.insertAdjacentElement('afterend', pgDiv);
+            });
+
             window.focus();
             window.print();
           }, 250);
@@ -3288,6 +3318,18 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
   break-inside: auto;
 }
 
+      /* Número de página */
+      .pg-num {
+        text-align: left;
+        margin: 0 0 10px 0;
+        padding: 0;
+        clear: both;
+        font-size: 16px;
+        font-weight: 900;
+        font-family: Arial, sans-serif;
+        color: #111;
+        letter-spacing: 0.5px;
+      }
       </style>
     </head>
 
@@ -3299,7 +3341,7 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
 
           ${pagina2HTML}
 
-        
+
           ${pagina3HTML}
 
           ${pagina4ProcessosInstalacaoHTML}
@@ -3312,6 +3354,24 @@ body { padding: 40px; font-family: Arial, sans-serif; font-size: 13px; }
       <script>
         window.onload = function () {
           setTimeout(function () {
+            var pageBreaks = document.querySelectorAll('.page-break');
+            var totalPags = pageBreaks.length + 1;
+
+            var vvPageInner = document.querySelector('.vv-page > div');
+            if (vvPageInner) {
+              var pg1 = document.createElement('div');
+              pg1.className = 'pg-num';
+              pg1.textContent = 'Pág. 1 / ' + totalPags;
+              vvPageInner.insertBefore(pg1, vvPageInner.firstChild);
+            }
+
+            pageBreaks.forEach(function (pb, i) {
+              var pgDiv = document.createElement('div');
+              pgDiv.className = 'pg-num';
+              pgDiv.textContent = 'Pág. ' + (i + 2) + ' / ' + totalPags;
+              pb.insertAdjacentElement('afterend', pgDiv);
+            });
+
             window.focus();
             window.print();
           }, 250);

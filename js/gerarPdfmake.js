@@ -1062,7 +1062,15 @@ async function gerarRelatorioEntregaPdfmake() {
   // ── header compacto (págs 2+) ──────────────────────────────────────────────
   const TITULO = 'RELATÓRIO DE ENTREGA / INSTALAÇÃO';
   const headerFn = (currentPage, pageCount) => {
-    if (currentPage === 1) return {};
+    if (currentPage === 1) {
+      return {
+        margin: [30, 4, 30, 0],
+        columns: [
+          { text: '', width: '*' },
+          { text: `Pág. ${currentPage} / ${pageCount}`, fontSize: 7, alignment: 'right', color: '#64748b', margin: [0, 4, 0, 0] }
+        ]
+      };
+    }
     const logoCol = logoBase64
       ? { image: logoBase64, fit: [110, 38], margin: [0, 2, 6, 0] }
       : { text: 'FERREIRA ULHOA', bold: true, fontSize: 8 };
@@ -1306,7 +1314,15 @@ async function gerarEtapasDProcessoPdfmake() {
 
   // ── header compacto (págs 2+) ──────────────────────────────────────────────
   const headerFn = (currentPage, pageCount) => {
-    if (currentPage === 1) return {};
+    if (currentPage === 1) {
+      return {
+        margin: [30, 4, 30, 0],
+        columns: [
+          { text: '', width: '*' },
+          { text: `Pág. ${currentPage} / ${pageCount}`, fontSize: 7, alignment: 'right', color: '#64748b', margin: [0, 4, 0, 0] }
+        ]
+      };
+    }
     const logoCol = logoBase64
       ? { image: logoBase64, fit: [110, 38], margin: [0, 2, 6, 0] }
       : { text: 'FERREIRA ULHOA', bold: true, fontSize: 8 };
