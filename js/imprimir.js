@@ -4672,10 +4672,11 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
       .map((tr) => {
         const tds = Array.from(tr.querySelectorAll("td"));
 
-        let utilizacao =
+        let utilizacao = parseBold(
           getTextOrValue(tds[0]?.querySelector("textarea")) ||
           (tds[0]?.textContent || "").trim() ||
-          "-";
+          "-"
+        );
 
         let descricao = (tds[1]?.textContent || "").trim();
         if (!descricao) {
@@ -4698,7 +4699,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
       })
       .filter((x) => x.descricao && x.descricao !== "-");
 
-    const informacoesProduto = document.querySelector(`#${grupoId}-aba3 textarea[name="informacoesProduto"]`)?.value?.trim() || "";
+    const informacoesProduto = parseBold(document.querySelector(`#${grupoId}-aba3 textarea[name="informacoesProduto"]`)?.value?.trim() || "");
     const previsaoEntrega = document.querySelector(`#${grupoId}-aba3 input[name="previsaoEntrega"]`)?.value?.trim() || "";
 
     gruposDados.push({

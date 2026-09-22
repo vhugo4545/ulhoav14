@@ -402,7 +402,7 @@ async function gerarPDFComPdfmake(gruposOcultarProduto, totais = {}) {
       ];
 
       if (g.resumo) {
-        bodyRows.push([{}, { text: g.resumo, fontSize: 8, italics: true, color: '#444', colSpan: 2 }, {}]);
+        bodyRows.push([{}, { text: parseBoldPdf(g.resumo, {}), fontSize: 8, italics: true, color: '#444', colSpan: 2 }, {}]);
       }
 
       if (g.prazoGrupo || g.infosProd) {
@@ -410,7 +410,7 @@ async function gerarPDFComPdfmake(gruposOcultarProduto, totais = {}) {
           g.prazoGrupo ? `Prazo Previsto: ${g.prazoGrupo}` : '',
           g.infosProd  ? g.infosProd : ''
         ].filter(Boolean).join('  |  ');
-        bodyRows.push([{}, { text: prazoTxt, fontSize: 8, bold: true, alignment: 'center', colSpan: 2 }, {}]);
+        bodyRows.push([{}, { text: parseBoldPdf(prazoTxt, {}), fontSize: 8, bold: true, alignment: 'center', colSpan: 2 }, {}]);
       }
 
       content.push({
@@ -482,13 +482,13 @@ async function gerarPDFComPdfmake(gruposOcultarProduto, totais = {}) {
       widths: ['*'],
       body: [
         [{ text: 'PRAZO PREVISTO:',          bold: true, fontSize: 9, fillColor: COR_HEADER }],
-        [{ text: dados.prazos || '-',          fontSize: 9, preserveLeadingSpaces: true }],
+        [{ text: parseBoldPdf(dados.prazos || '-', {}), fontSize: 9, preserveLeadingSpaces: true }],
         ...(parcelas.length === 0 ? [
           [{ text: 'CONDIÇÕES DE PAGAMENTO:',   bold: true, fontSize: 9, fillColor: COR_HEADER }],
           [{ text: condicaoTexto,                fontSize: 9, preserveLeadingSpaces: true }],
         ] : []),
         [{ text: 'CONDIÇÕES GERAIS:',         bold: true, fontSize: 9, fillColor: COR_HEADER }],
-        [{ text: dados.condicoesGerais || '-', fontSize: 9, preserveLeadingSpaces: true }],
+        [{ text: parseBoldPdf(dados.condicoesGerais || '-', {}), fontSize: 9, preserveLeadingSpaces: true }],
       ]
     },
     layout: 'lightHorizontalLines',
@@ -801,7 +801,7 @@ async function gerarOrdemDeServicoPdfmake(gruposOcultarProduto) {
       widths: ['*'],
       body: [
         [{ text: 'Prazo Previsto por Área:', bold: true, fontSize: 10, fillColor: COR_HEADER, margin: [0, 2, 0, 2] }],
-        [{ text: prazos || '-', fontSize: 11, bold: true, preserveLeadingSpaces: true }]
+        [{ text: parseBoldPdf(prazos || '-', {}), fontSize: 11, bold: true, preserveLeadingSpaces: true }]
       ]
     },
     layout: { defaultBorder: true },
@@ -881,7 +881,7 @@ async function gerarOrdemDeServicoPdfmake(gruposOcultarProduto) {
     itensExibir.forEach(it => {
       bodyRows.push([
         { text: '',             fontSize: 9, alignment: 'center' },
-        { text: it.utilizacao,  fontSize: 9 },
+        { text: parseBoldPdf(it.utilizacao, {}), fontSize: 9 },
         { text: it.descricao,   fontSize: 9 },
         { text: it.qtd,         fontSize: 9, alignment: 'center' }
       ]);
@@ -889,7 +889,7 @@ async function gerarOrdemDeServicoPdfmake(gruposOcultarProduto) {
 
     // Footer: Prazo | Pedido | ITEM N
     bodyRows.push([
-      { text: `Prazo Previsto: ${prazoTexto}   |   Pedido: ${numeroPedido}   |   ITEM ${num}`, bold: true, fontSize: 9, fillColor: '#f0f0f0', colSpan: 4, alignment: 'center', margin: [0, 4, 0, 4] }, {}, {}, {}
+      { text: parseBoldPdf(`Prazo Previsto: ${prazoTexto}   |   Pedido: ${numeroPedido}   |   ITEM ${num}`, { bold: true, fontSize: 9 }), fillColor: '#f0f0f0', colSpan: 4, alignment: 'center', margin: [0, 4, 0, 4] }, {}, {}, {}
     ]);
 
     if (g.resumoGrupo) {
@@ -1183,12 +1183,12 @@ async function gerarRelatorioEntregaPdfmake() {
         { text: String(p.seq), fontSize: 9, alignment: 'center', bold: true },
         { text: p.titulo, fontSize: 9 },
         { text: p.qtd, fontSize: 9, alignment: 'center' },
-        { text: p.descricao, fontSize: 8 }
+        { text: parseBoldPdf(p.descricao, {}), fontSize: 8 }
       ];
       if (!p.prazo) return [linhaItem];
       const linhaPrazo = [
         { text: '', fontSize: 9 },
-        { text: [{ text: 'Prazo Previsto: ', bold: true, fontSize: 11 }, { text: p.prazo, bold: true, fontSize: 11 }], colSpan: 3 },
+        { text: [{ text: 'Prazo Previsto: ', bold: true, fontSize: 11 }, ...parseBoldPdf(p.prazo, { bold: true, fontSize: 11 })], colSpan: 3 },
         {}, {}
       ];
       return [linhaItem, linhaPrazo];
@@ -1434,7 +1434,7 @@ async function gerarEtapasDProcessoPdfmake() {
       { text: String(i + 1), fontSize: 9, alignment: 'center', bold: true },
       { text: p.titulo, fontSize: 9 },
       { text: p.qtd, fontSize: 9, alignment: 'center' },
-      { text: p.descricao, fontSize: 8 }
+      { text: parseBoldPdf(p.descricao, {}), fontSize: 8 }
     ])
   ];
 
