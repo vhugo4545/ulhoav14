@@ -1,5 +1,10 @@
 let contadorGlobal = 1;
 
+function parseBold(text) {
+  if (!text) return text;
+  return String(text).replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
+}
+
 // ── Validação compartilhada: itens com custo zero ────────────────────────────
 async function validarItensZeradosParaImpressao() {
   const _idAtual = new URLSearchParams(window.location.search).get("id");
@@ -538,7 +543,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
     const nomeAmbiente = inputAmbiente?.value.trim() || "Sem Ambiente";
     const linhaProduto = tabela.querySelector("tbody tr");
     let resumoGrupo = document.getElementById(`resumo-${grupoId}`)?.value?.trim() || "";
-    resumoGrupo = resumoGrupo.replace(/\n/g, "<br>");
+    resumoGrupo = parseBold(resumoGrupo).replace(/\n/g, "<br>");
     const totalGrupoTexto =
       tabela.querySelector("tfoot td[colspan='6'] strong")?.textContent || "R$ 0,00";
     const totalGrupo = parseBRL(totalGrupoTexto);
@@ -546,7 +551,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
     let descricao = colunas?.[1]?.textContent.trim() || "-";
     let qtd = linhaProduto?.querySelector("input.quantidade")?.value || "1";
     const ocultar = !!(gruposOcultarProduto && gruposOcultarProduto[grupoId]);
-    const informacoesProduto = document.querySelector(`#${grupoId}-aba3 textarea[name="informacoesProduto"]`)?.value?.trim() || "";
+    const informacoesProduto = parseBold(document.querySelector(`#${grupoId}-aba3 textarea[name="informacoesProduto"]`)?.value?.trim() || "");
     const previsaoEntrega = document.querySelector(`#${grupoId}-aba3 input[name="previsaoEntrega"]`)?.value?.trim() || "";
     gruposDados.push({
       grupoId,
@@ -1054,7 +1059,7 @@ function gerarOrdemDeServicoParaImpressao(gruposOcultarProduto) {
     const nomeAmbiente = inputAmbiente?.value?.trim() || "Sem Ambiente";
 
     let resumoGrupo = document.getElementById(`resumo-${grupoId}`)?.value?.trim() || "";
-    resumoGrupo = resumoGrupo ? resumoGrupo.replace(/\r\n/g, "\n").replace(/\n/g, "<br>") : "";
+    resumoGrupo = resumoGrupo ? parseBold(resumoGrupo).replace(/\r\n/g, "\n").replace(/\n/g, "<br>") : "";
 
     const linhas = Array.from(tabela.querySelectorAll("tbody tr"))
       .filter((tr) => {
@@ -2258,7 +2263,7 @@ const data = dataOrc !== "-" ? formatarDataBR(dataOrc) : "-";
     const nomeAmbiente = inputAmbiente?.value?.trim() || "Sem Ambiente";
 
     let resumoGrupo = document.getElementById(`resumo-${grupoId}`)?.value?.trim() || "";
-    resumoGrupo = resumoGrupo ? resumoGrupo.replace(/\r\n/g, "\n").replace(/\n/g, "<br>") : "";
+    resumoGrupo = resumoGrupo ? parseBold(resumoGrupo).replace(/\r\n/g, "\n").replace(/\n/g, "<br>") : "";
 
     const linhas = Array.from(tabela.querySelectorAll("tbody tr"))
       .filter((tr) => {
@@ -4651,7 +4656,7 @@ async function gerarFolha1OrdemDeServico(gruposOcultarProduto) {
     const nomeAmbiente = inputAmbiente?.value?.trim() || "Sem Ambiente";
 
     let resumoGrupo = document.getElementById(`resumo-${grupoId}`)?.value?.trim() || "";
-    resumoGrupo = resumoGrupo ? resumoGrupo.replace(/\r\n/g, "\n").replace(/\n/g, "<br>") : "";
+    resumoGrupo = resumoGrupo ? parseBold(resumoGrupo).replace(/\r\n/g, "\n").replace(/\n/g, "<br>") : "";
 
     const linhas = Array.from(tabela.querySelectorAll("tbody tr"))
       .filter((tr) => {

@@ -1,5 +1,19 @@
 ﻿// gerarPdfmake.js — geração de PDF do orçamento via pdfmake
 
+function parseBoldPdf(text, baseOpts) {
+  if (!text) return [{ text: '', ...baseOpts }];
+  const parts = text.split(/\*([^*\n]+)\*/g);
+  if (parts.length === 1) return [{ text: text, ...baseOpts }];
+  const result = [];
+  for (let i = 0; i < parts.length; i++) {
+    if (!parts[i]) continue;
+    result.push(i % 2 === 0
+      ? { text: parts[i], ...baseOpts }
+      : { text: parts[i], ...baseOpts, bold: true });
+  }
+  return result;
+}
+
 async function carregarPdfmake() {
   if (window.pdfMake) return;
   await new Promise((resolve, reject) => {
@@ -874,7 +888,7 @@ async function gerarOrdemDeServicoPdfmake(gruposOcultarProduto) {
 
     if (g.resumoGrupo) {
       bodyRows.push([
-        { text: [{ text: 'Observações: ', bold: true, fontSize: 9 }, { text: g.resumoGrupo, italics: true, fontSize: 9 }], fillColor: '#fefce8', colSpan: 4, color: '#333', preserveLeadingSpaces: true, margin: [4, 4, 4, 4] }, {}, {}, {}
+        { text: [{ text: 'Observações: ', bold: true, fontSize: 9 }, ...parseBoldPdf(g.resumoGrupo, { italics: true, fontSize: 9 })], fillColor: '#fefce8', colSpan: 4, color: '#333', preserveLeadingSpaces: true, margin: [4, 4, 4, 4] }, {}, {}, {}
       ]);
     }
 
