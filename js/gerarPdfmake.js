@@ -2,16 +2,22 @@
 
 function parseBoldPdf(text, baseOpts) {
   if (!text) return [{ text: '', ...baseOpts }];
-  const parts = text.split(/\*([^*\n]+)\*/g);
-  if (parts.length === 1) return [{ text: text, ...baseOpts }];
+  const re = /(\*[^*\n]+\*|~~[^~\n]+~~|__[^_\n]+__|_[^_\n]+_)/g;
   const result = [];
-  for (let i = 0; i < parts.length; i++) {
-    if (!parts[i]) continue;
-    result.push(i % 2 === 0
-      ? { text: parts[i], ...baseOpts }
-      : { text: parts[i], ...baseOpts, bold: true });
+  let last = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) result.push({ text: text.slice(last, m.index), ...baseOpts });
+    const s = m[0];
+    let inner, extra;
+    if (s[0] === '*')        { inner = s.slice(1, -1);  extra = { bold: true }; }
+    else if (s[0] === '~')   { inner = s.slice(2, -2);  extra = { decoration: 'lineThrough' }; }
+    else if (s.startsWith('__')) { inner = s.slice(2, -2); extra = { decoration: 'underline' }; }
+    else                     { inner = s.slice(1, -1);  extra = { italics: true }; }
+    result.push({ text: inner, ...baseOpts, ...extra });
+    last = m.index + s.length;
   }
-  return result;
+  if (last < text.length) result.push({ text: text.slice(last), ...baseOpts });
+  return result.length ? result : [{ text: text, ...baseOpts }];
 }
 
 async function carregarPdfmake() {
