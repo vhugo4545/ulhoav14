@@ -3,10 +3,10 @@ let contadorGlobal = 1;
 function parseBold(text) {
   if (!text) return text;
   return String(text)
-    .replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>')
-    .replace(/~~([^~\n]+)~~/g, '<s>$1</s>')
-    .replace(/__([^_\n]+)__/g, '<u>$1</u>')
-    .replace(/_([^_\n]+)_/g, '<em>$1</em>');
+    .replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
+    .replace(/~~([^~]+)~~/g, '<s>$1</s>')
+    .replace(/__([^_]+)__/g, '<u>$1</u>')
+    .replace(/_([^_]+)_/g, '<em>$1</em>');
 }
 
 // ── Validação compartilhada: itens com custo zero ────────────────────────────

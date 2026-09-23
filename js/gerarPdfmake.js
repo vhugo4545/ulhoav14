@@ -2,7 +2,7 @@
 
 function parseBoldPdf(text, baseOpts) {
   if (!text) return [{ text: '', ...baseOpts }];
-  const re = /(\*[^*\n]+\*|~~[^~\n]+~~|__[^_\n]+__|_[^_\n]+_)/g;
+  const re = /(\*[^*]+\*|~~[^~]+~~|__[^_]+__|_[^_]+_)/g;
   const result = [];
   let last = 0, m;
   while ((m = re.exec(text)) !== null) {
