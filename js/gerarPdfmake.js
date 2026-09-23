@@ -332,7 +332,7 @@ async function gerarPDFComPdfmake(gruposOcultarProduto, totais = {}) {
 
   // ─── tabela de contatos (somente se houver mais de 1) ────────────────────
   if (clientes.length > 1) {
-    content.push({ text: 'Clientes', style: 'secTitle' });
+    content.push({ text: 'Contatos', style: 'secTitle' });
     content.push({
       table: {
         headerRows: 1,
