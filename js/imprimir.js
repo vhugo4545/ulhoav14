@@ -707,7 +707,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
   // ==========================
   const tabelaContatosHTML = (dados.contatos && dados.contatos.length)
     ? `
-      <h6 class="mt-3 text-center fw-bold">Clientes & Contatos</h6>
+      <h6 class="mt-3 text-center fw-bold">Clientes</h6>
       <table class="table table-bordered table-sm w-100">
         <thead class="table-light">
           <tr>
