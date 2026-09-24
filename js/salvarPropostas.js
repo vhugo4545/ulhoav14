@@ -129,6 +129,12 @@ async function salvarPropostaEditavel() {
     const textoSelecionado = select?.options[select.selectedIndex]?.text || "";
 
     async function preencherNumeroOrcamento() {
+      const campoNumero = document.getElementById("numeroOrcamento");
+      const numeroExistente = campoNumero?.value?.trim();
+      if (numeroExistente && numeroExistente !== "ERRO") {
+        return numeroExistente;
+      }
+
       try {
         const res = await fetch("https://contator-ulhoa-3d28d89efa68.herokuapp.com/orcamento");
 
@@ -138,8 +144,6 @@ async function salvarPropostaEditavel() {
 
         const data = await res.json();
         const numFormatado = String(data.numero).padStart(5, "0");
-
-        const campoNumero = document.getElementById("numeroOrcamento");
 
         if (!campoNumero) {
           console.error("Campo #numeroOrcamento não encontrado no HTML.");
@@ -151,7 +155,6 @@ async function salvarPropostaEditavel() {
       } catch (err) {
         console.error("Erro ao buscar número do orçamento:", err);
 
-        const campoNumero = document.getElementById("numeroOrcamento");
         if (campoNumero) {
           campoNumero.value = "ERRO";
         }
