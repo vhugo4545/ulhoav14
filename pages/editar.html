@@ -2105,7 +2105,7 @@ window.atualizarPropostaEditavel = async function () {
       });
     });
     if (_itensZeradosEditar.length > 0) {
-      await new Promise(resolve => {
+      const _cancelado = await new Promise(resolve => {
         const _div = document.createElement("div");
         _div.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;";
         _div.innerHTML = `<div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18);">
@@ -2119,10 +2119,10 @@ window.atualizarPropostaEditavel = async function () {
           </div>
         </div>`;
         document.body.appendChild(_div);
-        _div.querySelector("#_zero_ok2").onclick = () => { document.body.removeChild(_div); resolve(); };
-        _div.querySelector("#_zero_cancel2").onclick = () => { document.body.removeChild(_div); resolve("cancelar"); };
-      }).then(r => { if (r === "cancelar") return Promise.reject("cancelar"); });
-      return;
+        _div.querySelector("#_zero_ok2").onclick = () => { document.body.removeChild(_div); resolve(false); };
+        _div.querySelector("#_zero_cancel2").onclick = () => { document.body.removeChild(_div); resolve(true); };
+      });
+      if (_cancelado) return;
     }
   }
   try {
