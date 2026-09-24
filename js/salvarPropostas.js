@@ -694,6 +694,15 @@ window.atualizarPropostaEditavel = async function () {
       criarBotaoUltimaAtualizacao(new Date());
     }, 2000);
 
+    try {
+      await fetch(
+        `https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/sync-fields`,
+        { method: "POST", headers: { "Content-Type": "application/json" } }
+      );
+    } catch (e) {
+      console.warn("[sync-fields] Kommo não sincronizado:", e);
+    }
+
     return resultado;
   } catch (erro) {
     console.error("❌ Erro ao atualizar proposta:", erro);
