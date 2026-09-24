@@ -2301,6 +2301,16 @@ window.atualizarPropostaEditavel = async function () {
     ocultarCarregando();
     mostrarPopupCustomizado("✅ Sucesso", "Proposta atualizada com sucesso!", "success");
     ocultarCarregando();
+
+    try {
+      await fetch(
+        `https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/sync-fields`,
+        { method: "POST", headers: { "Content-Type": "application/json" } }
+      );
+    } catch (e) {
+      console.warn("[sync-fields] Kommo não sincronizado:", e);
+    }
+
     return resultado;
 
   } catch (erro) {
@@ -2477,6 +2487,16 @@ console.log("🔍 Desconto informado:", propostaAtualizada.camposFormulario.desc
     console.log("✅ Proposta atualizada com sucesso:", resultado);
     mostrarPopupCustomizado("✅ Sucesso", "Proposta atualizada com sucesso!", "success");
     marcarPendenteAprovacao();
+
+    try {
+      await fetch(
+        `https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/sync-fields`,
+        { method: "POST", headers: { "Content-Type": "application/json" } }
+      );
+    } catch (e) {
+      console.warn("[sync-fields] Kommo não sincronizado:", e);
+    }
+
     return resultado;
 
   } catch (erro) {
