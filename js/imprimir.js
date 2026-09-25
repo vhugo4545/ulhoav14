@@ -70,6 +70,7 @@ async function carregarLogoBase64(src) {
 
 async function gerarOrcamentoParaImpressaoCompleta() {
   if (!await validarItensZeradosParaImpressao()) return;
+  if (typeof validarValorMinimoPermitido === "function" && !await validarValorMinimoPermitido()) return;
   const logoAbsUrl = new URL("../js/logo.jpg", window.location.href).href;
   const logoBase64 = await carregarLogoBase64(logoAbsUrl) || logoAbsUrl;
   function moedaBRParaNumero(valor) {
