@@ -958,20 +958,8 @@ async function marcarAprovadoPeloGestor() {
 // 4️⃣ Enviado Para o Cliente
 async function marcarEnviadoParaCliente() {
   mostrarCarregando();
+  if (!await validarValorMinimoPermitido()) { ocultarCarregando(); return; }
   await atualizarStatus("Enviado Para o Cliente");
-
-  const idProposta = new URLSearchParams(window.location.search).get("id");
-  if (idProposta) {
-    try {
-      await fetch(
-        `https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/enviar-proposta`,
-        { method: "POST", headers: { "Content-Type": "application/json" } }
-      );
-    } catch (e) {
-      console.warn("[enviar-proposta] Kommo não atualizado:", e);
-    }
-  }
-
   gerarOrcamentoParaImpressaoCompleta();
   ocultarCarregando();
 }

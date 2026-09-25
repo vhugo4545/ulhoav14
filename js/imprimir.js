@@ -71,6 +71,13 @@ async function carregarLogoBase64(src) {
 async function gerarOrcamentoParaImpressaoCompleta() {
   if (!await validarItensZeradosParaImpressao()) return;
   if (typeof validarValorMinimoPermitido === "function" && !await validarValorMinimoPermitido()) return;
+
+  const idProposta = new URLSearchParams(window.location.search).get("id");
+  if (idProposta) {
+    fetch(`https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/enviar-proposta`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+    }).catch(e => console.warn("[enviar-proposta] Kommo não atualizado:", e));
+  }
   const logoAbsUrl = new URL("../js/logo.jpg", window.location.href).href;
   const logoBase64 = await carregarLogoBase64(logoAbsUrl) || logoAbsUrl;
   function moedaBRParaNumero(valor) {
