@@ -979,9 +979,21 @@ async function marcarEnviadoParaCliente() {
 
 // 5️⃣ Orçamento Aprovado pelo Cliente
 async function marcarAprovadoPeloCliente() {
-  mostrarCarregando()
+  mostrarCarregando();
   await atualizarStatus("Orçamento Aprovado pelo Cliente");
-  ocultarCarregando() 
+  const idProposta = new URLSearchParams(window.location.search).get("id");
+  if (idProposta) {
+    try {
+      await fetch(`https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/aprovado-cliente`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+    } catch (e) {
+      console.warn('[APROVADO-CLIENTE] Erro ao mover lead na Kommo:', e?.message || e);
+    }
+  }
+  ocultarCarregando();
 }
 
 // 6️⃣ Pedido Enviado para a Omie
