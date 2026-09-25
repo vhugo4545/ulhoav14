@@ -8696,6 +8696,14 @@ async function sincronizarPDVparaKommo() {
   if (dataProjetoEnviado)  campos.kommo_projeto_enviado    = dataProjetoEnviado;
   if (dataProjetoAssinado) campos.kommo_assinatura_projeto = dataProjetoAssinado;
 
+  // ── Origem do cliente ────────────────────────────
+  const origemCliente = document.getElementById("origemCliente")?.value?.trim();
+  if (origemCliente) campos.kommo_origem = origemCliente;
+
+  // ── Condições Gerais / Observação ─────────────────
+  const condicoesGerais = document.getElementById("condicoesGerais")?.value?.trim();
+  if (condicoesGerais) campos.kommo_observacao = condicoesGerais;
+
   // Sempre envia o ID da proposta para vincular/manter o lead correto na Kommo
   campos.kommo_id_pdv = idProposta;
 
