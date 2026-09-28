@@ -344,6 +344,10 @@ async function salvarPropostaEditavel() {
       };
     }
 
+    // Limpa o campo para forçar geração de número novo em ordem correta (evita reusar número da proposta original)
+    const _campoNum = document.getElementById("numeroOrcamento");
+    if (_campoNum) _campoNum.value = "";
+
     // ✅ Só busca/gera (e queima) o número do orçamento depois que passou em TODAS as validações
     const numeroOrcamento = await preencherNumeroOrcamento();
     camposFormulario.numeroOrcamento = numeroOrcamento;
