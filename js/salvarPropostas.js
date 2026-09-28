@@ -530,10 +530,8 @@ window.atualizarPropostaEditavel = async function () {
     numeroOrcamentoEl?.getAttribute("data-valor-original")?.trim() ||
     "",
 
-  numeroPedido:
-    numeroPedidoEl?.value?.trim() ||
-    numeroPedidoEl?.getAttribute("data-valor-original")?.trim() ||
-    "",
+  // Sem fallback em data-valor-original — limpeza intencional pelo usuário deve passar
+  numeroPedido: numeroPedidoEl?.value?.trim() ?? "",
 
   dataOrcamento: document.getElementById("dataOrcamento")?.value || "",
   origemCliente: document.getElementById("origemCliente")?.value || "",
@@ -674,7 +672,7 @@ window.atualizarPropostaEditavel = async function () {
     }
 
     const numeroProposta = camposFormulario.numeroOrcamento || Date.now().toString();
-    const numeroPedido = camposFormulario.numeroPedido || "";
+    const numeroPedido = camposFormulario.numeroPedido ?? "";
 
     const propostaAtualizada = {
       tipoProposta: "editavel",
