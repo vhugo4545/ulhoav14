@@ -8616,12 +8616,13 @@ async function sincronizarPDVparaKommo({ skipNumeroPedido = false } = {}) {
     }
   }
 
-  if (numeroPedido) campos.kommo_numero_pedido = numeroPedido;
+  // Sempre envia (vazio = limpa o campo na Kommo)
+  campos.kommo_numero_pedido = numeroPedido || "";
 
   // ── Número Orçamento ──────────────────────────────
   const numeroOrcamento = document.getElementById("numeroOrcamento")?.value?.trim()
     || document.getElementById("numeroOrcamento")?.getAttribute("data-valor-original")?.trim();
-  if (numeroOrcamento) campos.kommo_numero_orcamento = numeroOrcamento;
+  campos.kommo_numero_orcamento = numeroOrcamento || "";
 
   // ── TAG Omie ──────────────────────────────────────
   const tagOmie = document.getElementById("tagOmie")?.value?.trim();
