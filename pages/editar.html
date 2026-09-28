@@ -132,7 +132,7 @@ function destravarCampos() {
   <span class="material-icons-outlined">print</span> Folhas de Impressão
 </button>
 
-<button id="btn-sincronizar-kommo" class="sidebar-button" onclick="sincronizarPDVparaKommo()">
+<button id="btn-sincronizar-kommo" class="sidebar-button" onclick="sincronizarPDVparaKommo({ skipNumeroPedido: true })">
   <span class="material-icons-outlined">sync</span>Enviar Pedido (Kommo)
 </button>
 
@@ -2303,7 +2303,7 @@ window.atualizarPropostaEditavel = async function () {
     ocultarCarregando();
 
     if (typeof sincronizarPDVparaKommo === "function") {
-      sincronizarPDVparaKommo().catch(e => console.warn("[SYNC] Kommo (background):", e?.message || e));
+      sincronizarPDVparaKommo({ skipNumeroPedido: true }).catch(e => console.warn("[SYNC] Kommo (background):", e?.message || e));
     }
 
     return resultado;
@@ -2484,7 +2484,7 @@ console.log("🔍 Desconto informado:", propostaAtualizada.camposFormulario.desc
     marcarPendenteAprovacao();
 
     if (typeof sincronizarPDVparaKommo === "function") {
-      sincronizarPDVparaKommo().catch(e => console.warn("[SYNC] Kommo (background):", e?.message || e));
+      sincronizarPDVparaKommo({ skipNumeroPedido: true }).catch(e => console.warn("[SYNC] Kommo (background):", e?.message || e));
     }
 
     return resultado;
