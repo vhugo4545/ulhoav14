@@ -8557,9 +8557,9 @@ function mostrarPopupSync(texto, tipo = "sucesso") {
   overlay.classList.add("aberto");
 }
 
-async function sincronizarPDVparaKommo() {
+async function sincronizarPDVparaKommo({ skipNumeroPedido = false } = {}) {
   const idProposta = new URLSearchParams(window.location.search).get("id");
-  preencherNumeroPedidoKommo()
+  if (!skipNumeroPedido) preencherNumeroPedidoKommo();
   if (!idProposta) {
     console.warn("[SYNC] ID da proposta não encontrado na URL.");
     return;
@@ -8595,7 +8595,7 @@ async function sincronizarPDVparaKommo() {
   let numeroPedido = document.getElementById("numeroPedido")?.value?.trim()
     || document.getElementById("numeroPedido")?.getAttribute("data-valor-original")?.trim();
 
-  if (!numeroPedido) {
+  if (!numeroPedido && !skipNumeroPedido) {
     console.log("[SYNC] numeroPedido vazio, buscando próximo número no contador...");
     try {
       const contadorRes = await fetch("https://contator-ulhoa-3d28d89efa68.herokuapp.com/pedido");

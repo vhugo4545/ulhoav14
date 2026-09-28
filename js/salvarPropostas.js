@@ -695,7 +695,7 @@ window.atualizarPropostaEditavel = async function () {
     }, 2000);
 
     if (typeof sincronizarPDVparaKommo === "function") {
-      sincronizarPDVparaKommo().catch(e => console.warn("[SYNC] Kommo (background):", e?.message || e));
+      sincronizarPDVparaKommo({ skipNumeroPedido: true }).catch(e => console.warn("[SYNC] Kommo (background):", e?.message || e));
     }
 
     return resultado;
@@ -877,11 +877,11 @@ console.log("🔍 Desconto informado:", propostaAtualizada.camposFormulario.desc
     mostrarPopupCustomizado("✅ Sucesso", "Proposta atualizada com sucesso!", "success");
 
     if (typeof sincronizarPDVparaKommo === "function") {
-      sincronizarPDVparaKommo().catch(e => console.warn("[SYNC] Kommo (background):", e?.message || e));
+      sincronizarPDVparaKommo({ skipNumeroPedido: true }).catch(e => console.warn("[SYNC] Kommo (background):", e?.message || e));
     }
 
     return resultado;
-  
+
   } catch (erro) {
     console.error("❌ Erro ao atualizar proposta:", erro);
     alert("Erro ao atualizar proposta. Verifique o console.");
