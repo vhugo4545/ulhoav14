@@ -8592,8 +8592,8 @@ async function sincronizarPDVparaKommo({ skipNumeroPedido = false } = {}) {
   if (nomeRazaoSocial) campos.kommo_nome_razao_social = nomeRazaoSocial;
 
   // ── Nº do Pedido ──────────────────────────────────
-  let numeroPedido = document.getElementById("numeroPedido")?.value?.trim()
-    || document.getElementById("numeroPedido")?.getAttribute("data-valor-original")?.trim();
+  // Sem fallback data-valor-original — limpeza intencional deve passar para a Kommo
+  let numeroPedido = document.getElementById("numeroPedido")?.value?.trim() ?? "";
 
   if (!numeroPedido && !skipNumeroPedido) {
     console.log("[SYNC] numeroPedido vazio, buscando próximo número no contador...");
