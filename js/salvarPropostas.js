@@ -321,6 +321,26 @@ async function salvarPropostaEditavel() {
       });
     }
 
+    // Se Comissão Arquiteta > 0 é obrigatório ter pelo menos 2 clientes vinculados com função
+    {
+      const _cards = [...document.querySelectorAll('.col')];
+      let _comArqVal = 0;
+      for (const _card of _cards) {
+        const _titulo = _card.querySelector('.text-muted.small')?.textContent || '';
+        if (/Comissão\s*Arquiteta/i.test(_titulo.replace(/\s+/g, ' '))) {
+          const _bold = _card.querySelector('.fw-bold')?.textContent || '0';
+          const _limpo = _bold.replace(/R\$\s*/g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+          _comArqVal = parseFloat(_limpo) || 0;
+          break;
+        }
+      }
+      if (_comArqVal > 0 && clientes.length < 2) {
+        errosObrigatorios.push(
+          "Comissão Arquiteta está preenchida: é obrigatório vincular pelo menos 2 clientes com Função preenchida."
+        );
+      }
+    }
+
     const containerProdutos = document.getElementById("blocosProdutosContainer");
     const linhasProdutos = containerProdutos
       ? containerProdutos.querySelectorAll("table tbody tr:not(.extra-summary-row)").length
