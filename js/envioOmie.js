@@ -6303,6 +6303,30 @@ async function atualizarNaOmie() {
     }
   }
 
+  // ── VALIDAÇÃO: Comissão Arquiteta exige pelo menos 2 clientes ────
+  {
+    let _comArqVal = 0;
+    document.querySelectorAll('.tot-card').forEach(_card => {
+      const _titulo = _card.querySelector('.tot-label')?.textContent || '';
+      if (/Comissão\s*Arquiteta/i.test(_titulo.trim())) {
+        const _bold = _card.querySelector('.tot-value')?.textContent || '0';
+        const _limpo = _bold.replace(/R\$\s*/g, '').replace(/ /g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+        _comArqVal = Math.max(_comArqVal, parseFloat(_limpo) || 0);
+      }
+    });
+    if (_comArqVal > 0) {
+      const _clientes = document.querySelectorAll('.cliente-item');
+      if (_clientes.length < 2) {
+        mostrarPopupCustomizado(
+          "⚠️ Campos obrigatórios",
+          "Comissão Arquiteta está preenchida: é obrigatório vincular pelo menos 2 clientes com Função preenchida.",
+          "warning"
+        );
+        return;
+      }
+    }
+  }
+
   // ── VALIDAÇÃO: parcelas devem bater com o total antes de enviar ───
   if (typeof parcelasValidas === "function" && !parcelasValidas()) return;
   if (typeof parcelasCompletasParaOmie === "function" && !parcelasCompletasParaOmie()) return;

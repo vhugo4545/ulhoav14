@@ -321,24 +321,6 @@ async function salvarPropostaEditavel() {
       });
     }
 
-    // Se Comissão Arquiteta > 0 é obrigatório ter pelo menos 2 clientes vinculados com função
-    {
-      let _comArqVal = 0;
-      document.querySelectorAll('.tot-card').forEach(_card => {
-        const _titulo = _card.querySelector('.tot-label')?.textContent || '';
-        if (/Comissão\s*Arquiteta/i.test(_titulo.trim())) {
-          const _bold = _card.querySelector('.tot-value')?.textContent || '0';
-          const _limpo = _bold.replace(/R\$\s*/g, '').replace(/ /g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
-          _comArqVal = Math.max(_comArqVal, parseFloat(_limpo) || 0);
-        }
-      });
-      if (_comArqVal > 0 && clientes.length < 2) {
-        errosObrigatorios.push(
-          "Comissão Arquiteta está preenchida: é obrigatório vincular pelo menos 2 clientes com Função preenchida."
-        );
-      }
-    }
-
     const containerProdutos = document.getElementById("blocosProdutosContainer");
     const linhasProdutos = containerProdutos
       ? containerProdutos.querySelectorAll("table tbody tr:not(.extra-summary-row)").length
@@ -687,28 +669,6 @@ window.atualizarPropostaEditavel = async function () {
       ocultarCarregando();
       mostrarPopupCustomizado("⚠️ Atenção", "Nenhum grupo ou item foi adicionado à proposta.", "warning");
       return { erro: "Nenhum produto informado." };
-    }
-
-    // Se Comissão Arquiteta > 0 é obrigatório ter pelo menos 2 clientes vinculados
-    {
-      let _comArqVal = 0;
-      document.querySelectorAll('.tot-card').forEach(_card => {
-        const _titulo = _card.querySelector('.tot-label')?.textContent || '';
-        if (/Comissão\s*Arquiteta/i.test(_titulo.trim())) {
-          const _bold = _card.querySelector('.tot-value')?.textContent || '0';
-          const _limpo = _bold.replace(/R\$\s*/g, '').replace(/ /g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
-          _comArqVal = Math.max(_comArqVal, parseFloat(_limpo) || 0);
-        }
-      });
-      if (_comArqVal > 0 && clientes.length < 2) {
-        ocultarCarregando();
-        mostrarPopupCustomizado(
-          "⚠️ Campos obrigatórios",
-          "Comissão Arquiteta está preenchida: é obrigatório vincular pelo menos 2 clientes com Função preenchida.",
-          "warning"
-        );
-        return { erro: "Comissão Arquiteta requer pelo menos 2 clientes." };
-      }
     }
 
     const numeroProposta = camposFormulario.numeroOrcamento || Date.now().toString();
