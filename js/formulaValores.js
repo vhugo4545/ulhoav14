@@ -519,6 +519,7 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
   }
 
   const estaEditandoModelo = window.location.pathname.includes("editarModelo.html");
+  const isAdmin = (localStorage.getItem("usuarioTipo") || "") === "admin";
 
   const camposFinanceiros = [
     { label: "Custo Total de Material", name: "custoTotalMaterial" },
@@ -628,6 +629,67 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
         data-valor-original=""
         style="font-size:11px;resize:none;"
       ></textarea>
+    </div>
+
+    <!-- Separador -->
+    <div class="col-12"><hr class="my-1" style="border-color:#e0e0e0;"></div>
+
+    <!-- Datas de referência por item -->
+    <div class="col-12">
+      <label class="form-label fw-semibold mb-2" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#555;">Datas de Referência</label>
+      <div class="d-flex flex-column gap-2">
+
+        <div>
+          <label style="font-size:11px;color:#555;display:block;margin-bottom:2px;">
+            Assinatura do cliente no projeto
+            <span style="font-size:10px;color:#888;font-weight:400;">(Clicksign / Kommo)</span>
+          </label>
+          <input type="date" name="dataAssinaturaCliente"
+            class="form-control form-control-sm"
+            ${!isAdmin ? "readonly style='background:#f3f3f3;'" : ""}>
+        </div>
+
+        <div>
+          <label style="font-size:11px;color:#555;display:block;margin-bottom:2px;">
+            Instalação da estrutura finalizada
+            <span style="font-size:10px;color:#888;font-weight:400;">(Sistema de Produção)</span>
+          </label>
+          <input type="date" name="dataInstalacaoEstrutura"
+            class="form-control form-control-sm"
+            readonly style="background:#f3f3f3;">
+        </div>
+
+        <div>
+          <label style="font-size:11px;color:#555;display:block;margin-bottom:2px;">
+            Último pagamento do cliente (vidros / calha)
+            <span style="font-size:10px;color:#888;font-weight:400;">(Produção / Compras)</span>
+          </label>
+          <input type="date" name="dataPagamentoVidros"
+            class="form-control form-control-sm"
+            readonly style="background:#f3f3f3;">
+        </div>
+
+        <div>
+          <label style="font-size:11px;color:#555;display:block;margin-bottom:2px;">
+            Liberação do material pelo fornecedor
+            <span style="font-size:10px;color:#888;font-weight:400;">(Produção / Compras)</span>
+          </label>
+          <input type="date" name="dataLiberacaoFornecedor"
+            class="form-control form-control-sm"
+            readonly style="background:#f3f3f3;">
+        </div>
+
+        <div>
+          <label style="font-size:11px;color:#555;display:block;margin-bottom:2px;">
+            Assinatura do contrato pelo cliente
+            <span style="font-size:10px;color:#888;font-weight:400;">(igual p/ todos os itens)</span>
+          </label>
+          <input type="date" name="dataAssinaturaContrato"
+            class="form-control form-control-sm"
+            readonly style="background:#f3f3f3;">
+        </div>
+
+      </div>
     </div>
 
   </form>
