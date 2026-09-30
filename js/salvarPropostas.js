@@ -1024,6 +1024,7 @@ async function atualizarStatus(novoStatus, { recarregarAoFinal = false } = {}) {
 
     const onClose = recarregarAoFinal ? () => location.reload() : null;
     mostrarPopupCustomizado("✅ Sucesso", `Status atualizado para "${novoStatus}".`, "success", onClose);
+    if (recarregarAoFinal) setTimeout(() => location.reload(), 1800);
     return resultado;
 
   } catch (erro) {
