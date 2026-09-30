@@ -1250,7 +1250,9 @@
     if (rodape) rodape.style.display = "none";
 
     try {
-      const res = await fetch(`${DU_API}/api/propostas`, { headers: nuAuthHeader() });
+      // limit=10000 garante que todas as propostas são carregadas de uma vez
+      // (o controller permite até 10000; default seria 20, causando detecção incompleta)
+      const res = await fetch(`${DU_API}/api/propostas?limit=10000&tipoProposta=editavel`, { headers: nuAuthHeader() });
       const data = await res.json();
       if (!res.ok) throw new Error(data.msg || `HTTP ${res.status}`);
 
