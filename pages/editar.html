@@ -792,39 +792,70 @@ const PARAMS_CONFIG = [
 function abrirPopupPreencherParams() {
   if (document.getElementById("popup-params-overlay")) return;
 
-  // Lê valores do primeiro bloco como referência
   const primeiroBloco = document.querySelector(".main-container");
   function lerValorRef(name) {
-    return primeiroBloco?.querySelector(`input[name="${name}"]`)?.value || "";
+    return primeiroBloco?.querySelector(`input[name="${name}"], textarea[name="${name}"]`)?.value || "";
   }
 
   const overlay = document.createElement("div");
   overlay.id = "popup-params-overlay";
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;";
 
+  const condicoesHTML = [
+    ["Assinatura do cliente",    "dias úteis após assinatura do cliente no projeto desse respectivo item."],
+    ["Instalação da estrutura",  "dias úteis após instalação da estrutura desse respectivo item ser finalizada."],
+    ["Pagamento do(s) vidro(s)", "dias úteis após pagamento pelo cliente de todo(s) o(s) vidro(s) desse respectivo item."],
+    ["Liberação do fornecedor",  "dias úteis após liberação/entrega do material pelo fornecedor à Ferreira Ulhoa."],
+    ["Assinatura do contrato",   "dias úteis após assinatura do contrato pelo cliente."],
+  ].map(([lbl, txt]) =>
+    `<button type="button" data-condicao="${txt}" style="border:1px solid #d1d5db;background:#fff;border-radius:6px;padding:5px 8px;cursor:pointer;font-size:11px;text-align:left;line-height:1.3;">${lbl}</button>`
+  ).join("") +
+  `<button type="button" data-condicao="personalizado" style="border:1px solid #3b82f6;background:#eff6ff;color:#1d4ed8;border-radius:6px;padding:5px 8px;cursor:pointer;font-size:11px;text-align:left;line-height:1.3;">✏️ Personalizado</button>`;
+
   overlay.innerHTML = `
-    <div style="background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.25);padding:24px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;">
+    <div style="background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.25);padding:24px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h3 style="margin:0;font-size:17px;font-weight:700;">Preencher Parâmetros em Todos os Grupos</h3>
+        <h3 style="margin:0;font-size:17px;font-weight:700;">Preencher em Todos os Grupos</h3>
         <button onclick="document.getElementById('popup-params-overlay').remove()" style="border:none;background:#e5e7eb;border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600;">✕</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:20px;">
-        ${PARAMS_CONFIG.map(p => `
+      <div style="display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin-bottom:16px;">
+        <button data-popup-tab="params" style="border:none;background:none;padding:8px 18px;font-size:13px;font-weight:600;color:#2563eb;border-bottom:2px solid #2563eb;margin-bottom:-2px;cursor:pointer;">Parâmetros</button>
+        <button data-popup-tab="prazos" style="border:none;background:none;padding:8px 18px;font-size:13px;font-weight:600;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;">Prazos</button>
+      </div>
+      <div id="popup-panel-params">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:20px;">
+          ${PARAMS_CONFIG.map(p => `
+            <div>
+              <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:3px;">${p.label}</label>
+              <div style="display:flex;gap:4px;align-items:center;">
+                <input type="text" data-param="${p.name}" value="${lerValorRef(p.name)}" placeholder="${p.readonly ? "calculado" : "deixe vazio p/ ignorar"}" ${p.readonly ? 'style="background:#f3f3f3;flex:1;" readonly' : 'style="flex:1;"'} class="form-control form-control-sm">
+                ${!p.readonly ? `<button type="button" data-apply="${p.name}" title="Aplicar só este campo" style="border:none;background:#e0f2fe;color:#0369a1;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;white-space:nowrap;">Aplicar</button>` : ""}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+      <div id="popup-panel-prazos" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:20px;">
           <div>
-            <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:3px;">${p.label}</label>
-            <div style="display:flex;gap:4px;align-items:center;">
-              <input
-                type="text"
-                data-param="${p.name}"
-                value="${lerValorRef(p.name)}"
-                placeholder="${p.readonly ? "calculado" : "deixe vazio p/ ignorar"}"
-                ${p.readonly ? 'style="background:#f3f3f3;flex:1;" readonly' : 'style="flex:1;"'}
-                class="form-control form-control-sm"
-              >
-              ${!p.readonly ? `<button type="button" data-apply="${p.name}" title="Aplicar só este campo" style="border:none;background:#e0f2fe;color:#0369a1;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;white-space:nowrap;">Aplicar</button>` : ''}
+            <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Prazo (dias úteis)</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="number" data-param="previsaoEntrega" value="${lerValorRef("previsaoEntrega")}" placeholder="Ex: 15" min="1" class="form-control form-control-sm" style="max-width:90px;">
+              <span style="font-size:11px;color:#666;">dias úteis</span>
+              <button type="button" data-apply-prazo="previsaoEntrega" style="border:none;background:#e0f2fe;color:#0369a1;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;white-space:nowrap;margin-left:auto;">Aplicar</button>
             </div>
           </div>
-        `).join("")}
+          <div>
+            <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:6px;">Condição de Prazo</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px;">
+              ${condicoesHTML}
+            </div>
+            <div style="display:flex;gap:4px;align-items:flex-start;">
+              <textarea data-param="informacoesProduto" rows="3" placeholder="Texto da condição de prazo" class="form-control form-control-sm" style="font-size:11px;resize:none;flex:1;">${lerValorRef("informacoesProduto")}</textarea>
+              <button type="button" data-apply-prazo="informacoesProduto" style="border:none;background:#e0f2fe;color:#0369a1;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;white-space:nowrap;">Aplicar</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div style="display:flex;justify-content:flex-end;gap:10px;">
         <button onclick="document.getElementById('popup-params-overlay').remove()" style="border:1px solid #d1d5db;background:#fff;border-radius:8px;padding:8px 18px;cursor:pointer;font-weight:600;">Cancelar</button>
@@ -836,43 +867,94 @@ function abrirPopupPreencherParams() {
   document.body.appendChild(overlay);
   overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
 
-  // Simula digitação campo a campo (dispara eventos para fórmulas reagirem)
-  function simularDigitacao(input, valor) {
-    input.focus();
-    input.value = "";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    // digita caractere por caractere
+  // Troca de abas
+  overlay.querySelectorAll("[data-popup-tab]").forEach(tabBtn => {
+    tabBtn.addEventListener("click", () => {
+      const target = tabBtn.dataset.popupTab;
+      overlay.querySelectorAll("[data-popup-tab]").forEach(b => {
+        const active = b.dataset.popupTab === target;
+        b.style.color = active ? "#2563eb" : "#6b7280";
+        b.style.borderBottomColor = active ? "#2563eb" : "transparent";
+      });
+      document.getElementById("popup-panel-params").style.display = target === "params" ? "" : "none";
+      document.getElementById("popup-panel-prazos").style.display = target === "prazos" ? "" : "none";
+    });
+  });
+
+  // Botões de condição → preenche textarea do popup
+  const condicaoTA = overlay.querySelector("[data-param='informacoesProduto']");
+  overlay.querySelectorAll("[data-condicao]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const val = btn.dataset.condicao;
+      if (val === "personalizado") {
+        condicaoTA.value = "";
+        condicaoTA.focus();
+      } else {
+        const dias = overlay.querySelector("[data-param='previsaoEntrega']")?.value || "___";
+        condicaoTA.value = `${dias} ${val}`;
+      }
+      overlay.querySelectorAll("[data-condicao]").forEach(b => {
+        const isPersonalizado = b.dataset.condicao === "personalizado";
+        b.style.background = b === btn ? "#dbeafe" : (isPersonalizado ? "#eff6ff" : "#fff");
+        b.style.borderColor = b === btn ? "#2563eb" : (isPersonalizado ? "#3b82f6" : "#d1d5db");
+        b.style.color = b === btn ? "#1d4ed8" : (isPersonalizado ? "#1d4ed8" : "");
+      });
+    });
+  });
+
+  function simularDigitacao(el, valor) {
+    el.focus();
+    el.value = "";
+    el.dispatchEvent(new Event("input", { bubbles: true }));
     for (const ch of String(valor)) {
-      input.value += ch;
-      input.dispatchEvent(new Event("input", { bubbles: true }));
+      el.value += ch;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
     }
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-    input.blur();
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    el.blur();
   }
 
-  function aplicarCampo(name, valor) {
+  function aplicarCampo(valor, selector) {
     if (valor === "" || valor === null || valor === undefined) return;
-    document.querySelectorAll(`.main-container input[name="${name}"]`).forEach(inp => {
-      if (!inp.readOnly) simularDigitacao(inp, valor);
+    document.querySelectorAll(selector).forEach(el => {
+      if (!el.readOnly) simularDigitacao(el, valor);
     });
   }
 
-  // Botões de aplicar campo individual
+  // Aplicar individual — Parâmetros
   overlay.querySelectorAll("[data-apply]").forEach(btn => {
     btn.addEventListener("click", () => {
       const name = btn.dataset.apply;
       const inp = overlay.querySelector(`input[data-param="${name}"]`);
-      aplicarCampo(name, inp?.value || "");
+      aplicarCampo(inp?.value || "", `.main-container input[name="${name}"]`);
     });
   });
 
-  // Botão aplicar todos
+  // Aplicar individual — Prazos
+  overlay.querySelectorAll("[data-apply-prazo]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const name = btn.dataset.applyPrazo;
+      if (name === "informacoesProduto") {
+        const ta = overlay.querySelector(`textarea[data-param="${name}"]`);
+        aplicarCampo(ta?.value || "", `.main-container textarea[name="${name}"]`);
+      } else {
+        const inp = overlay.querySelector(`input[data-param="${name}"]`);
+        aplicarCampo(inp?.value || "", `.main-container input[name="${name}"]`);
+      }
+    });
+  });
+
+  // Substituir em Todos os Grupos
   document.getElementById("btn-aplicar-todos-params").addEventListener("click", () => {
     PARAMS_CONFIG.forEach(p => {
       if (p.readonly) return;
       const inp = overlay.querySelector(`input[data-param="${p.name}"]`);
-      aplicarCampo(p.name, inp?.value || "");
+      aplicarCampo(inp?.value || "", `.main-container input[name="${p.name}"]`);
     });
+    const diasVal = overlay.querySelector("[data-param='previsaoEntrega']")?.value || "";
+    aplicarCampo(diasVal, `.main-container input[name="previsaoEntrega"]`);
+    const taVal = overlay.querySelector("[data-param='informacoesProduto']")?.value || "";
+    aplicarCampo(taVal, `.main-container textarea[name="informacoesProduto"]`);
     overlay.remove();
   });
 }
