@@ -1234,6 +1234,18 @@
   let duTodos = [];
   let duExibindo = DU_LIMIT;
 
+  // Campos corretos conforme propostaModel.js:
+  // - nome cliente: camposFormulario.clientes[0].nome_razao_social || nome (root)
+  // - nº orçamento: camposFormulario.numeroOrcamento (protegido no PUT normal)
+  // - nº pedido:    numeroPedido (root)
+  // - nº proposta:  numeroProposta (root, imutável — exibido como referência)
+  function duNomeCliente(p) {
+    return p?.camposFormulario?.clientes?.[0]?.nome_razao_social || p?.nome || "";
+  }
+  function duNumOrc(p) {
+    return p?.camposFormulario?.numeroOrcamento ?? "";
+  }
+
   async function duCarregar() {
     const tbody = document.getElementById("du-tbody");
     const rodape = document.getElementById("du-rodape");
@@ -1248,8 +1260,8 @@
 
       const lista = Array.isArray(data) ? data : (data.propostas || data.data || []);
       lista.sort((a, b) => {
-        const na = Number(a.numeroOrcamento) || 0;
-        const nb = Number(b.numeroOrcamento) || 0;
+        const na = Number(duNumOrc(a)) || 0;
+        const nb = Number(duNumOrc(b)) || 0;
         return nb - na;
       });
       duTodos = lista;
@@ -1265,10 +1277,12 @@
     duExibindo = DU_LIMIT;
 
     const filtrados = duTodos.filter(p => {
-      const cliente = (p.nomeCliente || p.nome || "").toLowerCase();
-      const num = String(p.numeroOrcamento || p.numeroPedido || "").toLowerCase();
+      const cliente = duNomeCliente(p).toLowerCase();
+      const numOrc = String(duNumOrc(p)).toLowerCase();
+      const numPed = String(p.numeroPedido || "").toLowerCase();
+      const numProp = String(p.numeroProposta || "").toLowerCase();
       const st = (p.statusOrcamento || "").toLowerCase();
-      const ok = !busca || cliente.includes(busca) || num.includes(busca) || st.includes(busca);
+      const ok = !busca || cliente.includes(busca) || numOrc.includes(busca) || numPed.includes(busca) || numProp.includes(busca);
       const okSt = !statusFiltro || st === statusFiltro;
       return ok && okSt;
     });
@@ -1280,10 +1294,11 @@
     const busca = (document.getElementById("du-busca")?.value || "").toLowerCase().trim();
     const statusFiltro = (document.getElementById("du-filtro-status")?.value || "").toLowerCase();
     const filtrados = duTodos.filter(p => {
-      const cliente = (p.nomeCliente || p.nome || "").toLowerCase();
-      const num = String(p.numeroOrcamento || p.numeroPedido || "").toLowerCase();
+      const cliente = duNomeCliente(p).toLowerCase();
+      const numOrc = String(duNumOrc(p)).toLowerCase();
+      const numPed = String(p.numeroPedido || "").toLowerCase();
       const st = (p.statusOrcamento || "").toLowerCase();
-      const ok = !busca || cliente.includes(busca) || num.includes(busca) || st.includes(busca);
+      const ok = !busca || cliente.includes(busca) || numOrc.includes(busca) || numPed.includes(busca);
       const okSt = !statusFiltro || st === statusFiltro;
       return ok && okSt;
     });
@@ -1310,31 +1325,37 @@
     tbody.innerHTML = slice.map((p, idx) => {
       const bg = idx % 2 === 0 ? "#fff" : "#f8fafc";
       const statusColor = duCorStatus(p.statusOrcamento || "");
+      const nome = duNomeCliente(p) || "—";
+      const numOrc = duNumOrc(p);
+      const numPed = p.numeroPedido ?? "";
+      const numProp = p.numeroProposta ?? "";
+
       return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;" id="du-row-${p._id}">
-        <td style="padding:10px 16px;color:#1e293b;font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${duEsc(p.nomeCliente || p.nome || '')}">
-          ${duEsc(p.nomeCliente || p.nome || "—")}
+        <td style="padding:10px 16px;min-width:0;">
+          <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px;" title="${duEsc(nome)}">${duEsc(nome)}</div>
+          ${numProp ? `<div style="font-size:10px;color:#94a3b8;margin-top:1px;">Proposta nº ${duEsc(String(numProp))}</div>` : ""}
         </td>
-        <td style="padding:10px 16px;">
-          <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:${statusColor.bg};color:${statusColor.text};white-space:nowrap;">
+        <td style="padding:10px 16px;white-space:nowrap;">
+          <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:${statusColor.bg};color:${statusColor.text};">
             ${duEsc(p.statusOrcamento || "—")}
           </span>
         </td>
         <td style="padding:10px 16px;text-align:center;">
-          <input type="number" data-id="${p._id}" data-field="numeroOrcamento"
-            value="${p.numeroOrcamento ?? ""}" min="0"
-            style="width:80px;text-align:center;padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-variant-numeric:tabular-nums;outline:none;transition:border .15s;background:#fff;"
-            onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='#e2e8f0'">
+          <input type="text" inputmode="numeric" data-field="numeroOrcamento"
+            value="${duEsc(String(numOrc))}"
+            style="width:84px;text-align:center;padding:5px 6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;transition:border .15s;background:#fff;color:#0f172a;"
+            onfocus="this.style.borderColor='#64748b';this.style.background='#fff'" onblur="this.style.borderColor='#e2e8f0'">
         </td>
         <td style="padding:10px 16px;text-align:center;">
-          <input type="number" data-id="${p._id}" data-field="numeroPedido"
-            value="${p.numeroPedido ?? ""}" min="0"
-            style="width:80px;text-align:center;padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-variant-numeric:tabular-nums;outline:none;transition:border .15s;background:#fff;"
-            onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='#e2e8f0'">
+          <input type="text" inputmode="numeric" data-field="numeroPedido"
+            value="${duEsc(String(numPed))}"
+            style="width:84px;text-align:center;padding:5px 6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;transition:border .15s;background:#fff;color:#0f172a;"
+            onfocus="this.style.borderColor='#64748b';this.style.background='#fff'" onblur="this.style.borderColor='#e2e8f0'">
         </td>
         <td style="padding:10px 16px;text-align:center;">
           <button onclick="duSalvar('${p._id}', this)"
-            style="border:none;background:#0f172a;color:#fff;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap;"
-            onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='#0f172a'">
+            style="border:none;background:#0f172a;color:#fff;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap;"
+            onmouseover="this.style.background='#334155'" onmouseout="this.style.background='#0f172a'">
             Salvar
           </button>
         </td>
@@ -1353,14 +1374,19 @@
     const row = document.getElementById(`du-row-${id}`);
     if (!row) return;
 
-    const numOrc = row.querySelector("input[data-field='numeroOrcamento']")?.value;
-    const numPed = row.querySelector("input[data-field='numeroPedido']")?.value;
+    const valOrc = row.querySelector("input[data-field='numeroOrcamento']")?.value?.trim();
+    const valPed = row.querySelector("input[data-field='numeroPedido']")?.value?.trim();
 
+    // numeroOrcamento fica em camposFormulario e é protegido no controller quando enviado
+    // como objeto aninhado. Usar chave com ponto vai para $set direto no MongoDB,
+    // contornando a proteção sem alterar o restante do documento.
     const body = {};
-    if (numOrc !== "" && numOrc !== null && numOrc !== undefined) body.numeroOrcamento = Number(numOrc);
-    if (numPed !== "" && numPed !== null && numPed !== undefined) body.numeroPedido = Number(numPed);
+    if (valOrc !== "" && valOrc !== undefined) body["camposFormulario.numeroOrcamento"] = valOrc;
+    if (valPed !== "" && valPed !== undefined) body.numeroPedido = valPed;
 
-    const orig = btn.textContent;
+    if (Object.keys(body).length === 0) return;
+
+    const orig = btn.innerHTML;
     btn.textContent = "Salvando…";
     btn.disabled = true;
 
@@ -1371,20 +1397,22 @@
         body: JSON.stringify(body)
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.msg || `HTTP ${res.status}`);
-      btn.textContent = "Salvo ✓";
-      btn.style.background = "#15803d";
-      setTimeout(() => { btn.textContent = orig; btn.style.background = ""; btn.style.background = "#0f172a"; btn.disabled = false; }, 1800);
+      if (!res.ok) throw new Error(data.msg || data.erro || `HTTP ${res.status}`);
+
+      btn.innerHTML = '<span style="color:#4ade80">✓</span> Salvo';
+      btn.style.background = "#14532d";
+      setTimeout(() => { btn.innerHTML = orig; btn.style.background = "#0f172a"; btn.disabled = false; }, 2000);
 
       const idx = duTodos.findIndex(p => p._id === id);
       if (idx !== -1) {
-        if (body.numeroOrcamento !== undefined) duTodos[idx].numeroOrcamento = body.numeroOrcamento;
-        if (body.numeroPedido !== undefined) duTodos[idx].numeroPedido = body.numeroPedido;
+        if (valOrc !== undefined && duTodos[idx].camposFormulario)
+          duTodos[idx].camposFormulario.numeroOrcamento = valOrc;
+        if (valPed !== undefined) duTodos[idx].numeroPedido = valPed;
       }
     } catch(e) {
       btn.textContent = "Erro";
-      btn.style.background = "#ef4444";
-      setTimeout(() => { btn.textContent = orig; btn.style.background = "#0f172a"; btn.disabled = false; }, 2500);
+      btn.style.background = "#7f1d1d";
+      setTimeout(() => { btn.innerHTML = orig; btn.style.background = "#0f172a"; btn.disabled = false; }, 2500);
       alert("Erro ao salvar: " + e.message);
     }
   }
@@ -1396,6 +1424,7 @@
       "Aprovado Pelo Gestor":            { bg:"#dcfce7", text:"#166534" },
       "Enviado Para o Cliente":          { bg:"#dbeafe", text:"#1e40af" },
       "Orçamento Aprovado pelo Cliente": { bg:"#d1fae5", text:"#065f46" },
+      "Pedido Enviado para a Omie":      { bg:"#ede9fe", text:"#5b21b6" },
       "Pedido Finalizado":               { bg:"#e0e7ff", text:"#3730a3" },
     };
     return m[st] || { bg:"#f1f5f9", text:"#64748b" };
