@@ -251,7 +251,7 @@ async function verificarSePedidoFoiFinalizado() {
 }
 
 // Status que travam a edição para não-admins
-const STATUS_TRAVADO_VENDEDOR = ["Aprovado Pelo Gestor", "Pendente de aprovação"];
+const STATUS_TRAVADO_VENDEDOR = ["Pendente de aprovação"];
 
 async function verificarBloqueioAprovacaoGestor() {
   const idProposta = new URLSearchParams(window.location.search).get("id");

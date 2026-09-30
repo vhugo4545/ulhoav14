@@ -66,7 +66,7 @@ async function controlarBotoesSidebar() {
   // Na página de edição: mostra todos os botões e aplica configuração de visibilidade
   if (paginaAtual === "editar.html") {
     // Quando travado para vendedor, mostra APENAS Duplicar
-    const STATUS_TRAVADO = ["Aprovado Pelo Gestor", "Pendente de aprovação"];
+    const STATUS_TRAVADO = ["Pendente de aprovação"];
     if (STATUS_TRAVADO.includes(status) && tipoUsuario !== "admin") {
       esconderTodos();
       if (botoes.criar) botoes.criar.style.display = "block";
