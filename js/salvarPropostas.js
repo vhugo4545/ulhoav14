@@ -917,7 +917,7 @@ async function marcarOrcamentoIniciado() {
 // 2️⃣ Pendente de aprovação
 async function marcarPendenteAprovacao() {
   mostrarCarregando();
-  await atualizarStatus("Pendente de aprovação");
+  await atualizarStatus("Pendente de aprovação", { recarregarAoFinal: true });
 
   const idProposta = new URLSearchParams(window.location.search).get("id");
   if (idProposta) {
@@ -942,7 +942,7 @@ async function marcarAprovadoPeloGestor() {
     return;
   }
   mostrarCarregando();
-  await atualizarStatus("Aprovado Pelo Gestor");
+  await atualizarStatus("Aprovado Pelo Gestor", { recarregarAoFinal: true });
 
   const idProposta = new URLSearchParams(window.location.search).get("id");
   if (idProposta) {
@@ -999,7 +999,7 @@ async function marcarPedidoEnviadoParaOmie() {
 
 
 // 🔁 Função base reutilizável
-async function atualizarStatus(novoStatus) {
+async function atualizarStatus(novoStatus, { recarregarAoFinal = false } = {}) {
   try {
     const id = getIdDaURL();
     if (!id) {
@@ -1021,9 +1021,10 @@ async function atualizarStatus(novoStatus) {
 
     const resultado = await resposta.json();
     console.log(`✅ Status atualizado para "${novoStatus}":`, resultado);
-   
- mostrarPopupCustomizado("✅ Sucesso", `Status atualizado para "${novoStatus}".`, "success");
-   return resultado;
+
+    const onClose = recarregarAoFinal ? () => location.reload() : null;
+    mostrarPopupCustomizado("✅ Sucesso", `Status atualizado para "${novoStatus}".`, "success", onClose);
+    return resultado;
 
   } catch (erro) {
     console.error("❌ Erro ao atualizar status:", erro);
@@ -1033,7 +1034,7 @@ async function atualizarStatus(novoStatus) {
 }
 
 
-function mostrarPopupCustomizado(titulo, mensagem, tipo = "info") {
+function mostrarPopupCustomizado(titulo, mensagem, tipo = "info", onClose = null) {
   if (typeof ocultarCarregando === "function") ocultarCarregando();
   const popupExistente = document.getElementById("popup-status-omie");
   if (popupExistente) popupExistente.remove();
@@ -1078,7 +1079,7 @@ function mostrarPopupCustomizado(titulo, mensagem, tipo = "info") {
   botao.style.color = "#fff";
   botao.style.borderRadius = "4px";
   botao.style.cursor = "pointer";
-  botao.addEventListener("click", () => overlay.remove());
+  botao.addEventListener("click", () => { overlay.remove(); if (typeof onClose === "function") onClose(); });
 
   box.appendChild(tituloEl);
   box.appendChild(mensagemEl);
