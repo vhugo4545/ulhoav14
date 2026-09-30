@@ -553,7 +553,7 @@
             <tr style="background:#f1f5f9;border-bottom:2px solid #e2e8f0;">
               <th style="text-align:left;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Cliente</th>
               <th style="text-align:left;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;width:140px;">Status</th>
-              <th style="text-align:center;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;width:130px;">Nº Orçamento</th>
+              <th style="text-align:center;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;width:130px;">Nº Proposta</th>
               <th style="text-align:center;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;width:130px;">Nº Pedido</th>
               <th style="text-align:center;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;width:90px;">Ação</th>
             </tr>
@@ -1235,8 +1235,9 @@
   function duNomeCliente(p) {
     return p?.camposFormulario?.clientes?.[0]?.nome_razao_social || p?.nome || "";
   }
-  function duNumOrc(p) {
-    return String(p?.camposFormulario?.numeroOrcamento ?? "").trim();
+  // numeroProposta (raiz) é o número exibido na listagem — é o que pode estar duplicado
+  function duNumProp(p) {
+    return String(p?.numeroProposta ?? "").trim();
   }
   function duNumPed(p) {
     return String(p?.numeroPedido ?? "").trim();
@@ -1265,33 +1266,27 @@
 
   function duAgrupar(lista) {
     // monta mapas número → [propostas]
-    const byOrc = {}, byPed = {};
+    // numeroProposta (raiz) = número exibido na listagem ("Nº PROPOSTA")
+    // numeroPedido   (raiz) = número do pedido
+    const byProp = {}, byPed = {};
     lista.forEach(p => {
-      const o = duNumOrc(p);
-      const d = duNumPed(p);
-      if (o) { if (!byOrc[o]) byOrc[o] = []; byOrc[o].push(p); }
-      if (d) { if (!byPed[d]) byPed[d] = []; byPed[d].push(p); }
+      const prop = duNumProp(p);
+      const ped  = duNumPed(p);
+      if (prop) { if (!byProp[prop]) byProp[prop] = []; byProp[prop].push(p); }
+      if (ped)  { if (!byPed[ped])   byPed[ped]   = []; byPed[ped].push(p); }
     });
 
-    // ids já exibidos (para não repetir proposta em grupos de orçamento E pedido)
-    const seen = new Set();
     const grupos = [];
 
-    Object.entries(byOrc)
+    Object.entries(byProp)
       .filter(([, ps]) => ps.length > 1)
       .sort(([a], [b]) => Number(a) - Number(b))
-      .forEach(([num, ps]) => {
-        grupos.push({ tipo: "orcamento", numero: num, props: ps });
-        ps.forEach(p => seen.add(p._id));
-      });
+      .forEach(([num, ps]) => grupos.push({ tipo: "proposta", numero: num, props: ps }));
 
     Object.entries(byPed)
       .filter(([, ps]) => ps.length > 1)
       .sort(([a], [b]) => Number(a) - Number(b))
-      .forEach(([num, ps]) => {
-        // inclui mesmo que já apareça em grupo de orçamento — pode precisar ajustar pedido também
-        grupos.push({ tipo: "pedido", numero: num, props: ps });
-      });
+      .forEach(([num, ps]) => grupos.push({ tipo: "pedido", numero: num, props: ps }));
 
     return grupos;
   }
@@ -1302,10 +1297,10 @@
 
     const filtrados = duTodos.filter(p => {
       const cliente = duNomeCliente(p).toLowerCase();
-      const orc = duNumOrc(p).toLowerCase();
-      const ped = duNumPed(p).toLowerCase();
-      const st = (p.statusOrcamento || "").toLowerCase();
-      const okBusca = !busca || cliente.includes(busca) || orc.includes(busca) || ped.includes(busca);
+      const prop = duNumProp(p).toLowerCase();
+      const ped  = duNumPed(p).toLowerCase();
+      const st   = (p.statusOrcamento || "").toLowerCase();
+      const okBusca = !busca || cliente.includes(busca) || prop.includes(busca) || ped.includes(busca);
       const okSt = !statusFiltro || st === statusFiltro;
       return okBusca && okSt;
     });
@@ -1339,12 +1334,12 @@
     let totalPropostas = 0;
     const html = grupos.map(grupo => {
       totalPropostas += grupo.props.length;
-      const isOrc = grupo.tipo === "orcamento";
-      const corBg   = isOrc ? "#fff7ed" : "#fdf2f8";
-      const corBord = isOrc ? "#fed7aa" : "#f9a8d4";
-      const corText = isOrc ? "#9a3412" : "#86198f";
-      const corIcon = isOrc ? "#ea580c" : "#c026d3";
-      const label   = isOrc ? "Nº Orçamento" : "Nº Pedido";
+      const isProp = grupo.tipo === "proposta";
+      const corBg   = isProp ? "#fff7ed" : "#fdf2f8";
+      const corBord = isProp ? "#fed7aa" : "#f9a8d4";
+      const corText = isProp ? "#9a3412" : "#86198f";
+      const corIcon = isProp ? "#ea580c" : "#c026d3";
+      const label   = isProp ? "Nº Proposta/Orçamento" : "Nº Pedido";
 
       const header = `<tr>
         <td colspan="5" style="padding:0;">
@@ -1360,26 +1355,25 @@
         const bg = idx % 2 === 0 ? "#fff" : "#fafafa";
         const sc = duCorStatus(p.statusOrcamento || "");
         const nome = duNomeCliente(p) || "—";
-        const numProp = p.numeroProposta ?? "";
         return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;" id="du-row-${p._id}-${grupo.tipo}-${grupo.numero}">
           <td style="padding:9px 16px 9px 24px;min-width:0;">
             <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;" title="${duEsc(nome)}">${duEsc(nome)}</div>
-            ${numProp ? `<div style="font-size:10px;color:#94a3b8;margin-top:1px;">Proposta nº ${duEsc(String(numProp))}</div>` : ""}
+            <div style="font-size:10px;color:#94a3b8;margin-top:1px;">${duEsc(p._id)}</div>
           </td>
           <td style="padding:9px 16px;white-space:nowrap;">
             <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:${sc.bg};color:${sc.text};">${duEsc(p.statusOrcamento || "—")}</span>
           </td>
           <td style="padding:9px 16px;text-align:center;">
-            <input type="text" inputmode="numeric" data-id="${p._id}" data-field="numeroOrcamento"
-              value="${duEsc(duNumOrc(p))}"
-              style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${isOrc ? "#fed7aa" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:#fff;color:#0f172a;transition:border .15s;"
-              onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${isOrc ? "#fed7aa" : "#e2e8f0"}'">
+            <input type="text" inputmode="numeric" data-field="numeroProposta"
+              value="${duEsc(duNumProp(p))}"
+              style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${isProp ? "#fed7aa" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:#fff;color:#0f172a;transition:border .15s;"
+              onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${isProp ? "#fed7aa" : "#e2e8f0"}'">
           </td>
           <td style="padding:9px 16px;text-align:center;">
-            <input type="text" inputmode="numeric" data-id="${p._id}" data-field="numeroPedido"
+            <input type="text" inputmode="numeric" data-field="numeroPedido"
               value="${duEsc(duNumPed(p))}"
-              style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${!isOrc ? "#f9a8d4" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:#fff;color:#0f172a;transition:border .15s;"
-              onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${!isOrc ? "#f9a8d4" : "#e2e8f0"}'">
+              style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${!isProp ? "#f9a8d4" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:#fff;color:#0f172a;transition:border .15s;"
+              onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${!isProp ? "#f9a8d4" : "#e2e8f0"}'">
           </td>
           <td style="padding:9px 16px;text-align:center;">
             <button onclick="duSalvar('${p._id}', this)"
@@ -1405,19 +1399,15 @@
   }
 
   async function duSalvar(id, btn) {
-    // inputs ficam na mesma <tr> do botão
     const row = btn.closest("tr");
     if (!row) return;
 
-    const valOrc = row.querySelector("input[data-field='numeroOrcamento']")?.value?.trim();
-    const valPed = row.querySelector("input[data-field='numeroPedido']")?.value?.trim();
+    const valProp = row.querySelector("input[data-field='numeroProposta']")?.value?.trim();
+    const valPed  = row.querySelector("input[data-field='numeroPedido']")?.value?.trim();
 
-    // numeroOrcamento fica em camposFormulario e é protegido no controller quando enviado
-    // como objeto aninhado. Usar chave com ponto vai para $set direto no MongoDB,
-    // contornando a proteção sem alterar o restante do documento.
     const body = {};
-    if (valOrc !== "" && valOrc !== undefined) body["camposFormulario.numeroOrcamento"] = valOrc;
-    if (valPed !== "" && valPed !== undefined) body.numeroPedido = valPed;
+    if (valProp !== "" && valProp !== undefined) body.numeroProposta = valProp;
+    if (valPed  !== "" && valPed  !== undefined) body.numeroPedido   = valPed;
 
     if (Object.keys(body).length === 0) return;
 
@@ -1426,8 +1416,9 @@
     btn.disabled = true;
 
     try {
-      const res = await fetch(`${DU_API}/api/propostas/${id}`, {
-        method: "PUT",
+      // Rota dedicada que permite alterar numeroProposta (campo protegido no PUT normal)
+      const res = await fetch(`${DU_API}/api/propostas/${id}/corrigir-numero`, {
+        method: "PATCH",
         headers: nuAuthHeader(),
         body: JSON.stringify(body)
       });
@@ -1440,9 +1431,8 @@
 
       const idx = duTodos.findIndex(p => p._id === id);
       if (idx !== -1) {
-        if (valOrc !== undefined && duTodos[idx].camposFormulario)
-          duTodos[idx].camposFormulario.numeroOrcamento = valOrc;
-        if (valPed !== undefined) duTodos[idx].numeroPedido = valPed;
+        if (body.numeroProposta) duTodos[idx].numeroProposta = body.numeroProposta;
+        if (body.numeroPedido)   duTodos[idx].numeroPedido   = body.numeroPedido;
       }
     } catch(e) {
       btn.textContent = "Erro";
