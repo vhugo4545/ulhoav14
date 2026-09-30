@@ -571,8 +571,8 @@
 
         <!-- Rodapé -->
         <div id="du-rodape" style="padding:7px 16px;border-top:1px solid #f1f5f9;font-size:11px;color:#94a3b8;background:#fafafa;display:none;">
-          Exibindo <strong id="du-count" style="color:#475569;">0</strong> de <span id="du-total">0</span>
-          <span id="du-ver-todos-wrap"> — <button onclick="duMostrarTodos()" style="border:none;background:none;color:#0369a1;font-size:11px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline;">ver todos</button></span>
+          <strong id="du-count" style="color:#475569;">0</strong> <span id="du-total">grupos de duplicatas</span>
+          <span id="du-ver-todos-wrap" style="display:none;"></span>
         </div>
       </div>
 
@@ -1230,20 +1230,16 @@
 
   /* ─── Orçamentos e Pedidos Duplicados ─── */
   const DU_API = "https://ulhoa-0a02024d350a.herokuapp.com";
-  const DU_LIMIT = 30;
   let duTodos = [];
-  let duExibindo = DU_LIMIT;
 
-  // Campos corretos conforme propostaModel.js:
-  // - nome cliente: camposFormulario.clientes[0].nome_razao_social || nome (root)
-  // - nº orçamento: camposFormulario.numeroOrcamento (protegido no PUT normal)
-  // - nº pedido:    numeroPedido (root)
-  // - nº proposta:  numeroProposta (root, imutável — exibido como referência)
   function duNomeCliente(p) {
     return p?.camposFormulario?.clientes?.[0]?.nome_razao_social || p?.nome || "";
   }
   function duNumOrc(p) {
-    return p?.camposFormulario?.numeroOrcamento ?? "";
+    return String(p?.camposFormulario?.numeroOrcamento ?? "").trim();
+  }
+  function duNumPed(p) {
+    return String(p?.numeroPedido ?? "").trim();
   }
 
   async function duCarregar() {
@@ -1258,55 +1254,68 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.msg || `HTTP ${res.status}`);
 
-      const lista = Array.isArray(data) ? data : (data.propostas || data.data || []);
-      lista.sort((a, b) => {
-        const na = Number(duNumOrc(a)) || 0;
-        const nb = Number(duNumOrc(b)) || 0;
-        return nb - na;
-      });
-      duTodos = lista;
+      duTodos = Array.isArray(data) ? data : (data.propostas || data.data || []);
       duFiltrar();
     } catch(e) {
       tbody.innerHTML = `<tr><td colspan="5" style="padding:24px;text-align:center;color:#ef4444;">Erro ao carregar: ${e.message}</td></tr>`;
     }
   }
 
+  function duAgrupar(lista) {
+    // monta mapas número → [propostas]
+    const byOrc = {}, byPed = {};
+    lista.forEach(p => {
+      const o = duNumOrc(p);
+      const d = duNumPed(p);
+      if (o) { if (!byOrc[o]) byOrc[o] = []; byOrc[o].push(p); }
+      if (d) { if (!byPed[d]) byPed[d] = []; byPed[d].push(p); }
+    });
+
+    // ids já exibidos (para não repetir proposta em grupos de orçamento E pedido)
+    const seen = new Set();
+    const grupos = [];
+
+    Object.entries(byOrc)
+      .filter(([, ps]) => ps.length > 1)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .forEach(([num, ps]) => {
+        grupos.push({ tipo: "orcamento", numero: num, props: ps });
+        ps.forEach(p => seen.add(p._id));
+      });
+
+    Object.entries(byPed)
+      .filter(([, ps]) => ps.length > 1)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .forEach(([num, ps]) => {
+        // inclui mesmo que já apareça em grupo de orçamento — pode precisar ajustar pedido também
+        grupos.push({ tipo: "pedido", numero: num, props: ps });
+      });
+
+    return grupos;
+  }
+
   function duFiltrar() {
     const busca = (document.getElementById("du-busca")?.value || "").toLowerCase().trim();
     const statusFiltro = (document.getElementById("du-filtro-status")?.value || "").toLowerCase();
-    duExibindo = DU_LIMIT;
 
     const filtrados = duTodos.filter(p => {
       const cliente = duNomeCliente(p).toLowerCase();
-      const numOrc = String(duNumOrc(p)).toLowerCase();
-      const numPed = String(p.numeroPedido || "").toLowerCase();
-      const numProp = String(p.numeroProposta || "").toLowerCase();
+      const orc = duNumOrc(p).toLowerCase();
+      const ped = duNumPed(p).toLowerCase();
       const st = (p.statusOrcamento || "").toLowerCase();
-      const ok = !busca || cliente.includes(busca) || numOrc.includes(busca) || numPed.includes(busca) || numProp.includes(busca);
+      const okBusca = !busca || cliente.includes(busca) || orc.includes(busca) || ped.includes(busca);
       const okSt = !statusFiltro || st === statusFiltro;
-      return ok && okSt;
+      return okBusca && okSt;
     });
 
-    duRenderizar(filtrados);
+    const grupos = duAgrupar(filtrados);
+    duRenderizar(grupos, filtrados.length);
   }
 
-  function duMostrarTodos() {
-    const busca = (document.getElementById("du-busca")?.value || "").toLowerCase().trim();
-    const statusFiltro = (document.getElementById("du-filtro-status")?.value || "").toLowerCase();
-    const filtrados = duTodos.filter(p => {
-      const cliente = duNomeCliente(p).toLowerCase();
-      const numOrc = String(duNumOrc(p)).toLowerCase();
-      const numPed = String(p.numeroPedido || "").toLowerCase();
-      const st = (p.statusOrcamento || "").toLowerCase();
-      const ok = !busca || cliente.includes(busca) || numOrc.includes(busca) || numPed.includes(busca);
-      const okSt = !statusFiltro || st === statusFiltro;
-      return ok && okSt;
-    });
-    duExibindo = filtrados.length;
-    duRenderizar(filtrados);
-  }
+  // stub mantido para compatibilidade com o botão "ver todos" (não mais usado, mas não quebra)
+  function duMostrarTodos() { duFiltrar(); }
 
-  function duRenderizar(lista) {
+  function duRenderizar(grupos, totalFiltrado) {
     const tbody = document.getElementById("du-tbody");
     const rodape = document.getElementById("du-rodape");
     const countEl = document.getElementById("du-count");
@@ -1314,64 +1323,88 @@
     const verTodosWrap = document.getElementById("du-ver-todos-wrap");
     if (!tbody) return;
 
-    const slice = lista.slice(0, duExibindo);
-
-    if (slice.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="padding:32px;text-align:center;color:#94a3b8;">Nenhum resultado encontrado.</td></tr>';
+    if (grupos.length === 0) {
+      const semFiltro = !document.getElementById("du-busca")?.value && !document.getElementById("du-filtro-status")?.value;
+      tbody.innerHTML = `<tr><td colspan="5" style="padding:32px;text-align:center;">
+        <span class="material-icons-outlined" style="font-size:28px;color:#4ade80;display:block;margin-bottom:6px;">check_circle</span>
+        <span style="font-size:13px;font-weight:600;color:#15803d;">Nenhuma duplicata encontrada</span>
+        ${semFiltro ? '<br><span style="font-size:11px;color:#94a3b8;margin-top:2px;display:block;">Todos os números de orçamento e pedido são únicos</span>' : ""}
+      </td></tr>`;
       if (rodape) rodape.style.display = "none";
       return;
     }
 
-    tbody.innerHTML = slice.map((p, idx) => {
-      const bg = idx % 2 === 0 ? "#fff" : "#f8fafc";
-      const statusColor = duCorStatus(p.statusOrcamento || "");
-      const nome = duNomeCliente(p) || "—";
-      const numOrc = duNumOrc(p);
-      const numPed = p.numeroPedido ?? "";
-      const numProp = p.numeroProposta ?? "";
+    let totalPropostas = 0;
+    const html = grupos.map(grupo => {
+      totalPropostas += grupo.props.length;
+      const isOrc = grupo.tipo === "orcamento";
+      const corBg   = isOrc ? "#fff7ed" : "#fdf2f8";
+      const corBord = isOrc ? "#fed7aa" : "#f9a8d4";
+      const corText = isOrc ? "#9a3412" : "#86198f";
+      const corIcon = isOrc ? "#ea580c" : "#c026d3";
+      const label   = isOrc ? "Nº Orçamento" : "Nº Pedido";
 
-      return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;" id="du-row-${p._id}">
-        <td style="padding:10px 16px;min-width:0;">
-          <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px;" title="${duEsc(nome)}">${duEsc(nome)}</div>
-          ${numProp ? `<div style="font-size:10px;color:#94a3b8;margin-top:1px;">Proposta nº ${duEsc(String(numProp))}</div>` : ""}
-        </td>
-        <td style="padding:10px 16px;white-space:nowrap;">
-          <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:${statusColor.bg};color:${statusColor.text};">
-            ${duEsc(p.statusOrcamento || "—")}
-          </span>
-        </td>
-        <td style="padding:10px 16px;text-align:center;">
-          <input type="text" inputmode="numeric" data-field="numeroOrcamento"
-            value="${duEsc(String(numOrc))}"
-            style="width:84px;text-align:center;padding:5px 6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;transition:border .15s;background:#fff;color:#0f172a;"
-            onfocus="this.style.borderColor='#64748b';this.style.background='#fff'" onblur="this.style.borderColor='#e2e8f0'">
-        </td>
-        <td style="padding:10px 16px;text-align:center;">
-          <input type="text" inputmode="numeric" data-field="numeroPedido"
-            value="${duEsc(String(numPed))}"
-            style="width:84px;text-align:center;padding:5px 6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;transition:border .15s;background:#fff;color:#0f172a;"
-            onfocus="this.style.borderColor='#64748b';this.style.background='#fff'" onblur="this.style.borderColor='#e2e8f0'">
-        </td>
-        <td style="padding:10px 16px;text-align:center;">
-          <button onclick="duSalvar('${p._id}', this)"
-            style="border:none;background:#0f172a;color:#fff;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap;"
-            onmouseover="this.style.background='#334155'" onmouseout="this.style.background='#0f172a'">
-            Salvar
-          </button>
+      const header = `<tr>
+        <td colspan="5" style="padding:0;">
+          <div style="display:flex;align-items:center;gap:8px;padding:9px 16px;background:${corBg};border-top:2px solid ${corBord};border-bottom:1px solid ${corBord};">
+            <span class="material-icons-outlined" style="font-size:16px;color:${corIcon};">content_copy</span>
+            <span style="font-size:12px;font-weight:700;color:${corText};">${label} <strong>${duEsc(grupo.numero)}</strong></span>
+            <span style="font-size:11px;color:${corText};opacity:.75;margin-left:2px;">— ${grupo.props.length} propostas com o mesmo número</span>
+          </div>
         </td>
       </tr>`;
+
+      const rows = grupo.props.map((p, idx) => {
+        const bg = idx % 2 === 0 ? "#fff" : "#fafafa";
+        const sc = duCorStatus(p.statusOrcamento || "");
+        const nome = duNomeCliente(p) || "—";
+        const numProp = p.numeroProposta ?? "";
+        return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;" id="du-row-${p._id}-${grupo.tipo}-${grupo.numero}">
+          <td style="padding:9px 16px 9px 24px;min-width:0;">
+            <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;" title="${duEsc(nome)}">${duEsc(nome)}</div>
+            ${numProp ? `<div style="font-size:10px;color:#94a3b8;margin-top:1px;">Proposta nº ${duEsc(String(numProp))}</div>` : ""}
+          </td>
+          <td style="padding:9px 16px;white-space:nowrap;">
+            <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:${sc.bg};color:${sc.text};">${duEsc(p.statusOrcamento || "—")}</span>
+          </td>
+          <td style="padding:9px 16px;text-align:center;">
+            <input type="text" inputmode="numeric" data-id="${p._id}" data-field="numeroOrcamento"
+              value="${duEsc(duNumOrc(p))}"
+              style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${isOrc ? "#fed7aa" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:#fff;color:#0f172a;transition:border .15s;"
+              onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${isOrc ? "#fed7aa" : "#e2e8f0"}'">
+          </td>
+          <td style="padding:9px 16px;text-align:center;">
+            <input type="text" inputmode="numeric" data-id="${p._id}" data-field="numeroPedido"
+              value="${duEsc(duNumPed(p))}"
+              style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${!isOrc ? "#f9a8d4" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:#fff;color:#0f172a;transition:border .15s;"
+              onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${!isOrc ? "#f9a8d4" : "#e2e8f0"}'">
+          </td>
+          <td style="padding:9px 16px;text-align:center;">
+            <button onclick="duSalvar('${p._id}', this)"
+              style="border:none;background:#0f172a;color:#fff;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;"
+              onmouseover="this.style.background='#334155'" onmouseout="this.style.background='#0f172a'">
+              Salvar
+            </button>
+          </td>
+        </tr>`;
+      }).join("");
+
+      return header + rows;
     }).join("");
+
+    tbody.innerHTML = html;
 
     if (rodape) {
       rodape.style.display = "";
-      if (countEl) countEl.textContent = slice.length;
-      if (totalEl) totalEl.textContent = lista.length;
-      if (verTodosWrap) verTodosWrap.style.display = lista.length > duExibindo ? "" : "none";
+      if (countEl) countEl.textContent = grupos.length;
+      if (totalEl) totalEl.textContent = `${grupos.length} grupo${grupos.length !== 1 ? "s" : ""} de duplicatas (${totalPropostas} propostas)`;
+      if (verTodosWrap) verTodosWrap.style.display = "none";
     }
   }
 
   async function duSalvar(id, btn) {
-    const row = document.getElementById(`du-row-${id}`);
+    // inputs ficam na mesma <tr> do botão
+    const row = btn.closest("tr");
     if (!row) return;
 
     const valOrc = row.querySelector("input[data-field='numeroOrcamento']")?.value?.trim();
