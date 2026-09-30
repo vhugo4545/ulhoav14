@@ -514,6 +514,68 @@
         </div>
       </div>
 
+      <!-- Card: Ajuste de Números de Orçamento/Pedido -->
+      <div class="card" style="grid-column: 1 / -1; padding:0; overflow:hidden;">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);background:var(--bg);">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="material-icons-outlined" style="font-size:18px;color:#475569;">content_copy</span>
+            <span style="font-size:13px;font-weight:700;color:#1e293b;letter-spacing:.01em;">Ajuste de Orçamentos e Pedidos Duplicados</span>
+          </div>
+          <button onclick="duCarregar()" title="Atualizar lista" style="border:none;background:#f1f5f9;color:#475569;border-radius:8px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;transition:background .15s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+            <span class="material-icons-outlined" style="font-size:15px;">refresh</span> Atualizar
+          </button>
+        </div>
+
+        <!-- Barra de busca -->
+        <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;background:#fff;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <div style="position:relative;flex:1;min-width:200px;">
+            <span class="material-icons-outlined" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:16px;color:#94a3b8;pointer-events:none;">search</span>
+            <input id="du-busca" type="text" placeholder="Buscar por nome do cliente, Nº orçamento ou status…"
+              oninput="duFiltrar()"
+              style="width:100%;box-sizing:border-box;padding:7px 10px 7px 32px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;outline:none;background:#f8fafc;color:#1e293b;transition:border .15s;"
+              onfocus="this.style.borderColor='#64748b';this.style.background='#fff'" onblur="this.style.borderColor='#e2e8f0';this.style.background='#f8fafc'">
+          </div>
+          <select id="du-filtro-status" onchange="duFiltrar()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;outline:none;background:#f8fafc;color:#1e293b;cursor:pointer;">
+            <option value="">Todos os status</option>
+            <option>Orçamento Iniciado</option>
+            <option>Pendente de aprovação</option>
+            <option>Aprovado Pelo Gestor</option>
+            <option>Enviado Para o Cliente</option>
+            <option>Orçamento Aprovado pelo Cliente</option>
+            <option>Pedido Finalizado</option>
+          </select>
+        </div>
+
+        <!-- Cabeçalho fixo -->
+        <table style="width:100%;border-collapse:collapse;font-size:12px;flex-shrink:0;">
+          <thead>
+            <tr style="background:#f1f5f9;border-bottom:2px solid #e2e8f0;">
+              <th style="text-align:left;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Cliente</th>
+              <th style="text-align:left;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;width:140px;">Status</th>
+              <th style="text-align:center;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;width:130px;">Nº Orçamento</th>
+              <th style="text-align:center;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;width:130px;">Nº Pedido</th>
+              <th style="text-align:center;padding:10px 16px;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;width:90px;">Ação</th>
+            </tr>
+          </thead>
+        </table>
+
+        <!-- Corpo com scroll -->
+        <div style="overflow-y:auto;max-height:380px;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <tbody id="du-tbody">
+              <tr><td colspan="5" style="padding:32px;text-align:center;color:#94a3b8;">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Rodapé -->
+        <div id="du-rodape" style="padding:7px 16px;border-top:1px solid #f1f5f9;font-size:11px;color:#94a3b8;background:#fafafa;display:none;">
+          Exibindo <strong id="du-count" style="color:#475569;">0</strong> de <span id="du-total">0</span>
+          <span id="du-ver-todos-wrap"> — <button onclick="duMostrarTodos()" style="border:none;background:none;color:#0369a1;font-size:11px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline;">ver todos</button></span>
+        </div>
+      </div>
+
       <!-- Restaurar padrão -->
       <div style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center;">
         <button class="cfg-reset-btn" onclick="cfgResetar()">Restaurar padrão</button>
@@ -1165,6 +1227,185 @@
   }
 
   document.addEventListener("DOMContentLoaded", nuCarregar);
+
+  /* ─── Orçamentos e Pedidos Duplicados ─── */
+  const DU_API = "https://ulhoa-0a02024d350a.herokuapp.com";
+  const DU_LIMIT = 30;
+  let duTodos = [];
+  let duExibindo = DU_LIMIT;
+
+  async function duCarregar() {
+    const tbody = document.getElementById("du-tbody");
+    const rodape = document.getElementById("du-rodape");
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:32px;text-align:center;color:#94a3b8;">Carregando…</td></tr>';
+    if (rodape) rodape.style.display = "none";
+
+    try {
+      const res = await fetch(`${DU_API}/api/propostas`, { headers: nuAuthHeader() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.msg || `HTTP ${res.status}`);
+
+      const lista = Array.isArray(data) ? data : (data.propostas || data.data || []);
+      lista.sort((a, b) => {
+        const na = Number(a.numeroOrcamento) || 0;
+        const nb = Number(b.numeroOrcamento) || 0;
+        return nb - na;
+      });
+      duTodos = lista;
+      duFiltrar();
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="5" style="padding:24px;text-align:center;color:#ef4444;">Erro ao carregar: ${e.message}</td></tr>`;
+    }
+  }
+
+  function duFiltrar() {
+    const busca = (document.getElementById("du-busca")?.value || "").toLowerCase().trim();
+    const statusFiltro = (document.getElementById("du-filtro-status")?.value || "").toLowerCase();
+    duExibindo = DU_LIMIT;
+
+    const filtrados = duTodos.filter(p => {
+      const cliente = (p.nomeCliente || p.nome || "").toLowerCase();
+      const num = String(p.numeroOrcamento || p.numeroPedido || "").toLowerCase();
+      const st = (p.statusOrcamento || "").toLowerCase();
+      const ok = !busca || cliente.includes(busca) || num.includes(busca) || st.includes(busca);
+      const okSt = !statusFiltro || st === statusFiltro;
+      return ok && okSt;
+    });
+
+    duRenderizar(filtrados);
+  }
+
+  function duMostrarTodos() {
+    const busca = (document.getElementById("du-busca")?.value || "").toLowerCase().trim();
+    const statusFiltro = (document.getElementById("du-filtro-status")?.value || "").toLowerCase();
+    const filtrados = duTodos.filter(p => {
+      const cliente = (p.nomeCliente || p.nome || "").toLowerCase();
+      const num = String(p.numeroOrcamento || p.numeroPedido || "").toLowerCase();
+      const st = (p.statusOrcamento || "").toLowerCase();
+      const ok = !busca || cliente.includes(busca) || num.includes(busca) || st.includes(busca);
+      const okSt = !statusFiltro || st === statusFiltro;
+      return ok && okSt;
+    });
+    duExibindo = filtrados.length;
+    duRenderizar(filtrados);
+  }
+
+  function duRenderizar(lista) {
+    const tbody = document.getElementById("du-tbody");
+    const rodape = document.getElementById("du-rodape");
+    const countEl = document.getElementById("du-count");
+    const totalEl = document.getElementById("du-total");
+    const verTodosWrap = document.getElementById("du-ver-todos-wrap");
+    if (!tbody) return;
+
+    const slice = lista.slice(0, duExibindo);
+
+    if (slice.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="padding:32px;text-align:center;color:#94a3b8;">Nenhum resultado encontrado.</td></tr>';
+      if (rodape) rodape.style.display = "none";
+      return;
+    }
+
+    tbody.innerHTML = slice.map((p, idx) => {
+      const bg = idx % 2 === 0 ? "#fff" : "#f8fafc";
+      const statusColor = duCorStatus(p.statusOrcamento || "");
+      return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;" id="du-row-${p._id}">
+        <td style="padding:10px 16px;color:#1e293b;font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${duEsc(p.nomeCliente || p.nome || '')}">
+          ${duEsc(p.nomeCliente || p.nome || "—")}
+        </td>
+        <td style="padding:10px 16px;">
+          <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:${statusColor.bg};color:${statusColor.text};white-space:nowrap;">
+            ${duEsc(p.statusOrcamento || "—")}
+          </span>
+        </td>
+        <td style="padding:10px 16px;text-align:center;">
+          <input type="number" data-id="${p._id}" data-field="numeroOrcamento"
+            value="${p.numeroOrcamento ?? ""}" min="0"
+            style="width:80px;text-align:center;padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-variant-numeric:tabular-nums;outline:none;transition:border .15s;background:#fff;"
+            onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='#e2e8f0'">
+        </td>
+        <td style="padding:10px 16px;text-align:center;">
+          <input type="number" data-id="${p._id}" data-field="numeroPedido"
+            value="${p.numeroPedido ?? ""}" min="0"
+            style="width:80px;text-align:center;padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-variant-numeric:tabular-nums;outline:none;transition:border .15s;background:#fff;"
+            onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='#e2e8f0'">
+        </td>
+        <td style="padding:10px 16px;text-align:center;">
+          <button onclick="duSalvar('${p._id}', this)"
+            style="border:none;background:#0f172a;color:#fff;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap;"
+            onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='#0f172a'">
+            Salvar
+          </button>
+        </td>
+      </tr>`;
+    }).join("");
+
+    if (rodape) {
+      rodape.style.display = "";
+      if (countEl) countEl.textContent = slice.length;
+      if (totalEl) totalEl.textContent = lista.length;
+      if (verTodosWrap) verTodosWrap.style.display = lista.length > duExibindo ? "" : "none";
+    }
+  }
+
+  async function duSalvar(id, btn) {
+    const row = document.getElementById(`du-row-${id}`);
+    if (!row) return;
+
+    const numOrc = row.querySelector("input[data-field='numeroOrcamento']")?.value;
+    const numPed = row.querySelector("input[data-field='numeroPedido']")?.value;
+
+    const body = {};
+    if (numOrc !== "" && numOrc !== null && numOrc !== undefined) body.numeroOrcamento = Number(numOrc);
+    if (numPed !== "" && numPed !== null && numPed !== undefined) body.numeroPedido = Number(numPed);
+
+    const orig = btn.textContent;
+    btn.textContent = "Salvando…";
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(`${DU_API}/api/propostas/${id}`, {
+        method: "PUT",
+        headers: nuAuthHeader(),
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.msg || `HTTP ${res.status}`);
+      btn.textContent = "Salvo ✓";
+      btn.style.background = "#15803d";
+      setTimeout(() => { btn.textContent = orig; btn.style.background = ""; btn.style.background = "#0f172a"; btn.disabled = false; }, 1800);
+
+      const idx = duTodos.findIndex(p => p._id === id);
+      if (idx !== -1) {
+        if (body.numeroOrcamento !== undefined) duTodos[idx].numeroOrcamento = body.numeroOrcamento;
+        if (body.numeroPedido !== undefined) duTodos[idx].numeroPedido = body.numeroPedido;
+      }
+    } catch(e) {
+      btn.textContent = "Erro";
+      btn.style.background = "#ef4444";
+      setTimeout(() => { btn.textContent = orig; btn.style.background = "#0f172a"; btn.disabled = false; }, 2500);
+      alert("Erro ao salvar: " + e.message);
+    }
+  }
+
+  function duCorStatus(st) {
+    const m = {
+      "Orçamento Iniciado":              { bg:"#f1f5f9", text:"#475569" },
+      "Pendente de aprovação":           { bg:"#fef3c7", text:"#92400e" },
+      "Aprovado Pelo Gestor":            { bg:"#dcfce7", text:"#166534" },
+      "Enviado Para o Cliente":          { bg:"#dbeafe", text:"#1e40af" },
+      "Orçamento Aprovado pelo Cliente": { bg:"#d1fae5", text:"#065f46" },
+      "Pedido Finalizado":               { bg:"#e0e7ff", text:"#3730a3" },
+    };
+    return m[st] || { bg:"#f1f5f9", text:"#64748b" };
+  }
+
+  function duEsc(str) {
+    return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  document.addEventListener("DOMContentLoaded", duCarregar);
   </script>
 </body>
 </html>
