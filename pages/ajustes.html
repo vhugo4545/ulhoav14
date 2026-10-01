@@ -1296,8 +1296,12 @@
     const statusFiltro = (document.getElementById("du-filtro-status")?.value || "").toLowerCase();
 
     const filtrados = duTodos.filter(p => {
+      // Exclui propostas com numeroProposta inválido (mais de 5 dígitos — ex: timestamp Date.now())
+      const numProp = duNumProp(p);
+      if (numProp && numProp.replace(/\D/g, "").length > 5) return false;
+
       const cliente = duNomeCliente(p).toLowerCase();
-      const prop = duNumProp(p).toLowerCase();
+      const prop = numProp.toLowerCase();
       const ped  = duNumPed(p).toLowerCase();
       const st   = (p.statusOrcamento || "").toLowerCase();
       const okBusca = !busca || cliente.includes(busca) || prop.includes(busca) || ped.includes(busca);
