@@ -415,10 +415,10 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
       if (!avisoEl) {
         avisoEl = document.createElement("div");
         avisoEl.className = "tot-aviso-minimo";
-        avisoEl.style.cssText = "color:#dc2626;font-size:12px;font-weight:600;margin-top:6px;";
+        avisoEl.style.cssText = "display:flex;align-items:center;gap:5px;justify-content:center;color:#dc2626;font-size:12px;font-weight:600;margin-top:8px;letter-spacing:0.01em;";
         final.appendChild(avisoEl);
       }
-      avisoEl.textContent = `⚠️ Valor abaixo do mínimo (${totalMinimo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})`;
+      avisoEl.innerHTML = `<span class="material-icons-outlined" style="font-size:15px;">warning</span> Valor abaixo do mínimo permitido &nbsp;·&nbsp; ${totalMinimo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
     } else if (avisoEl) {
       avisoEl.remove();
     }
