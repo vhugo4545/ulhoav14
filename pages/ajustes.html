@@ -1584,7 +1584,7 @@
       // Filtra propostas válidas (numeroProposta ≤ 5 dígitos) e ordena por criado_em asc
       const validas = lista
         .filter(p => {
-          const n = (p.numeroProposta || "").replace(/\D/g, "");
+          const n = String(p.numeroProposta ?? "").replace(/\D/g, "");
           return n.length > 0 && n.length <= 5;
         })
         .sort((a, b) => {
@@ -1598,18 +1598,17 @@
       // Detecta quais números aparecem mais de uma vez
       const contagem = {};
       validas.forEach(p => {
-        const n = p.numeroProposta;
+        const n = String(p.numeroProposta ?? "");
         contagem[n] = (contagem[n] || 0) + 1;
       });
 
       // Monta as duas colunas
       let rowsCorreta = "", rowsAtual = "";
-      let seqNum = 1;
       // Para a lista "correta", calculamos o número esperado baseado no primeiro número da série
-      const primeiroNum = validas.length > 0 ? parseInt((validas[0].numeroProposta || "1").replace(/\D/g,""), 10) : 1;
+      const primeiroNum = validas.length > 0 ? parseInt(String(validas[0].numeroProposta ?? "1").replace(/\D/g,""), 10) : 1;
 
       validas.forEach((p, i) => {
-        const numAtual = p.numeroProposta || "—";
+        const numAtual = String(p.numeroProposta ?? "") || "—";
         const numEsperado = String(primeiroNum + i).padStart(5, "0");
         const isDup = contagem[numAtual] > 1;
         const nome = (
