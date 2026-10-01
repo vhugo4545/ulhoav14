@@ -116,6 +116,8 @@ function renderLista(filtro = "") {
   const tr = document.createElement("tr");
   tr.dataset.idSuffix = ultimoBloco.id;
 
+ const unidadeItem = item.unidade || (window._produtosUnidadeMap && window._produtosUnidadeMap[String(item.codigo_omie || "").trim()]) || "—";
+
  tr.innerHTML = `
  <td>
   <textarea class="form-control form-control-sm" rows="3">
@@ -128,6 +130,7 @@ ${item.descricao_utilizacao|| "Utilização Barra de pesquisa"}
   <td class="custo-unitario">R$ ${valorTotal.toFixed(2)}</td>
   <td class="venda-unitaria">R$ ${custoUnitario.toFixed(2)}</td>
   <td>${item.codigo_omie || ""}</td>
+  <td class="unidade-medida">${unidadeItem}</td>
   <td>
     <input type="number" class="form-control form-control-sm quantidade"
            value="${quantidadeArredondada}" min="1">
@@ -232,12 +235,16 @@ async function atualizarPrecosOmieNaDOM() {
 
     const listaAPI = window._produtosOmieCache;
 
-    // Monta dicionário por código
+    // Monta dicionários por código: preço e unidade de medida
     const lookup = {};
+    if (!window._produtosUnidadeMap) window._produtosUnidadeMap = {};
     listaAPI.forEach((p) => {
       const codigo = String(p.codigo_produto || p.codigo || "").trim();
       const preco = p.preco_unitario ?? p.valor_unitario ?? p.preco ?? p.price ?? 0;
-      if (codigo) lookup[codigo] = toNumber(preco);
+      if (codigo) {
+        lookup[codigo] = toNumber(preco);
+        window._produtosUnidadeMap[codigo] = p.unidade || "";
+      }
     });
 
     const linhasCorrigidas = [];
@@ -246,7 +253,7 @@ async function atualizarPrecosOmieNaDOM() {
       const codigoCell = tr.querySelector("td:nth-child(5)");
       const custoTd = tr.querySelector("td:nth-child(3)");
       const unitarioTd = tr.querySelector("td:nth-child(4)");
-      const inputQtd = tr.querySelector("td:nth-child(6) input");
+      const inputQtd = tr.querySelector("td:nth-child(7) input");
 
       if (!codigoCell || !unitarioTd || !custoTd || !inputQtd) return;
 
