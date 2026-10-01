@@ -84,6 +84,11 @@ function _mostrarPreviewPDF(docDef, nomeArquivo) {
 async function gerarPDFComPdfmake(gruposOcultarProduto, totais = {}) {
   mostrarCarregando && mostrarCarregando();
 
+  if (typeof validarValorMinimoPermitido === "function") {
+    const valido = await validarValorMinimoPermitido();
+    if (!valido) { ocultarCarregando && ocultarCarregando(); return; }
+  }
+
   try { await carregarPdfmake(); }
   catch (e) {
     ocultarCarregando && ocultarCarregando();
