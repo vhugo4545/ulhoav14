@@ -576,6 +576,24 @@
         </div>
       </div>
 
+      <!-- Card: Diagnóstico da Sequência Completa -->
+      <div class="card" style="grid-column: 1 / -1; padding:0; overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);background:var(--bg);">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="material-icons-outlined" style="font-size:18px;color:#475569;">format_list_numbered</span>
+            <span style="font-size:13px;font-weight:700;color:#1e293b;letter-spacing:.01em;">Diagnóstico da Sequência de Números</span>
+          </div>
+          <button onclick="diagCarregar()" id="diag-btn-carregar"
+            style="border:none;background:#0f172a;color:#fff;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:11px;font-weight:600;transition:background .15s;"
+            onmouseover="this.style.background='#334155'" onmouseout="this.style.background='#0f172a'">
+            <span class="material-icons-outlined" style="font-size:14px;vertical-align:middle;margin-right:4px;">visibility</span>Carregar Lista Completa
+          </button>
+        </div>
+        <div id="diag-container" style="padding:24px;text-align:center;color:#94a3b8;font-size:12px;">
+          Clique em "Carregar Lista Completa" para ver todas as propostas em ordem cronológica.
+        </div>
+      </div>
+
       <!-- Restaurar padrão -->
       <div style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center;">
         <button class="cfg-reset-btn" onclick="cfgResetar()">Restaurar padrão</button>
@@ -1544,6 +1562,138 @@
   }
 
   document.addEventListener("DOMContentLoaded", duCarregar);
+
+  // ── Diagnóstico da Sequência Completa ──────────────────────────────────────
+  async function diagCarregar() {
+    const container = document.getElementById("diag-container");
+    const btn = document.getElementById("diag-btn-carregar");
+    if (!container) return;
+
+    container.innerHTML = `<div style="padding:32px;text-align:center;">
+      <div class="spinner-border text-primary" role="status" style="width:20px;height:20px;border-width:2px;"></div>
+      <span style="margin-left:10px;font-size:12px;color:#64748b;">Carregando todas as propostas…</span>
+    </div>`;
+    if (btn) { btn.disabled = true; btn.textContent = "Carregando…"; }
+
+    try {
+      const res = await fetch(`${DU_API}/api/propostas?limit=10000`, { headers: nuAuthHeader() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const lista = (Array.isArray(data) ? data : (data.propostas || []));
+
+      // Filtra propostas válidas (numeroProposta ≤ 5 dígitos) e ordena por criado_em asc
+      const validas = lista
+        .filter(p => {
+          const n = (p.numeroProposta || "").replace(/\D/g, "");
+          return n.length > 0 && n.length <= 5;
+        })
+        .sort((a, b) => {
+          const tsA = a.criado_em ? new Date(a.criado_em).getTime()
+            : (a._id ? parseInt(a._id.substring(0, 8), 16) * 1000 : 0);
+          const tsB = b.criado_em ? new Date(b.criado_em).getTime()
+            : (b._id ? parseInt(b._id.substring(0, 8), 16) * 1000 : 0);
+          return tsA - tsB;
+        });
+
+      // Detecta quais números aparecem mais de uma vez
+      const contagem = {};
+      validas.forEach(p => {
+        const n = p.numeroProposta;
+        contagem[n] = (contagem[n] || 0) + 1;
+      });
+
+      // Monta as duas colunas
+      let rowsCorreta = "", rowsAtual = "";
+      let seqNum = 1;
+      // Para a lista "correta", calculamos o número esperado baseado no primeiro número da série
+      const primeiroNum = validas.length > 0 ? parseInt((validas[0].numeroProposta || "1").replace(/\D/g,""), 10) : 1;
+
+      validas.forEach((p, i) => {
+        const numAtual = p.numeroProposta || "—";
+        const numEsperado = String(primeiroNum + i).padStart(5, "0");
+        const isDup = contagem[numAtual] > 1;
+        const nome = (
+          p.camposFormulario?.clientes?.[0]?.nome_razao_social ||
+          p.camposFormulario?.clientes?.[0]?.razaoSocial ||
+          p.camposFormulario?.nomeEvento || "—"
+        );
+        const dataCriacao = p.criado_em
+          ? new Date(p.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'2-digit'})
+          : (p._id ? new Date(parseInt(p._id.substring(0,8),16)*1000).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : "—");
+
+        const bgAtual = isDup ? "#fff1f2" : "#f0fdf4";
+        const corNumAtual = isDup ? "#dc2626" : "#15803d";
+        const iconAtual = isDup
+          ? `<span style="color:#dc2626;margin-right:4px;">✗</span>`
+          : `<span style="color:#15803d;margin-right:4px;">✓</span>`;
+        const numAtualMatch = numAtual === numEsperado;
+        const bgEsperado = numAtualMatch ? "#f0fdf4" : "#fffbeb";
+        const corEsperado = numAtualMatch ? "#15803d" : "#92400e";
+
+        rowsAtual += `<tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:5px 10px;font-size:10px;color:#94a3b8;text-align:center;font-variant-numeric:tabular-nums;">${i+1}</td>
+          <td style="padding:5px 10px;font-size:10px;color:#64748b;white-space:nowrap;">${dataCriacao}</td>
+          <td style="padding:5px 10px;font-size:11px;color:#1e293b;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${duEsc(nome)}">${duEsc(nome)}</td>
+          <td style="padding:5px 10px;text-align:center;background:${bgAtual};">
+            ${iconAtual}<strong style="font-size:12px;color:${corNumAtual};font-variant-numeric:tabular-nums;">${duEsc(numAtual)}</strong>
+            ${isDup ? `<div style="font-size:9px;color:#dc2626;">DUPLICATA</div>` : ""}
+          </td>
+        </tr>`;
+
+        rowsCorreta += `<tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:5px 10px;font-size:10px;color:#94a3b8;text-align:center;font-variant-numeric:tabular-nums;">${i+1}</td>
+          <td style="padding:5px 10px;font-size:10px;color:#64748b;white-space:nowrap;">${dataCriacao}</td>
+          <td style="padding:5px 10px;font-size:11px;color:#1e293b;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${duEsc(nome)}">${duEsc(nome)}</td>
+          <td style="padding:5px 10px;text-align:center;background:${bgEsperado};">
+            <strong style="font-size:12px;color:${corEsperado};font-variant-numeric:tabular-nums;">${duEsc(numEsperado)}</strong>
+            ${!numAtualMatch ? `<div style="font-size:9px;color:#92400e;">atual: ${duEsc(numAtual)}</div>` : ""}
+          </td>
+        </tr>`;
+      });
+
+      const totalDup = Object.values(contagem).filter(v => v > 1).reduce((acc, v) => acc + v, 0);
+      const thead = `<thead><tr style="background:#f1f5f9;">
+        <th style="padding:6px 10px;font-size:10px;color:#64748b;text-align:center;">#</th>
+        <th style="padding:6px 10px;font-size:10px;color:#64748b;">Data</th>
+        <th style="padding:6px 10px;font-size:10px;color:#64748b;">Cliente</th>
+        <th style="padding:6px 10px;font-size:10px;color:#64748b;text-align:center;">Nº</th>
+      </tr></thead>`;
+
+      container.innerHTML = `
+        <div style="padding:16px 20px 8px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <span style="font-size:12px;color:#475569;">
+            <strong>${validas.length}</strong> propostas válidas ·
+            <strong style="color:#dc2626;">${totalDup}</strong> com número duplicado
+          </span>
+          <button onclick="diagCarregar()" style="border:none;background:#f1f5f9;color:#475569;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">
+            <span class="material-icons-outlined" style="font-size:13px;vertical-align:middle;">refresh</span> Recarregar
+          </button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;overflow-x:auto;">
+          <div style="border-right:2px solid #e2e8f0;">
+            <div style="padding:10px 16px;background:#fef2f2;border-bottom:1px solid #fecaca;">
+              <span style="font-size:12px;font-weight:700;color:#dc2626;">Lista Atual (com erros marcados)</span>
+            </div>
+            <div style="overflow-y:auto;max-height:420px;">
+              <table style="width:100%;border-collapse:collapse;">${thead}<tbody>${rowsAtual}</tbody></table>
+            </div>
+          </div>
+          <div>
+            <div style="padding:10px 16px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;">
+              <span style="font-size:12px;font-weight:700;color:#15803d;">Lista Correta (sequência esperada)</span>
+            </div>
+            <div style="overflow-y:auto;max-height:420px;">
+              <table style="width:100%;border-collapse:collapse;">${thead}<tbody>${rowsCorreta}</tbody></table>
+            </div>
+          </div>
+        </div>`;
+
+    } catch(e) {
+      container.innerHTML = `<div style="padding:24px;text-align:center;color:#dc2626;font-size:12px;">Erro ao carregar: ${duEsc(e.message)}</div>`;
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-outlined" style="font-size:14px;vertical-align:middle;margin-right:4px;">visibility</span>Carregar Lista Completa'; }
+    }
+  }
   </script>
 </body>
 </html>
