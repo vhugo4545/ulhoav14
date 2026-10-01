@@ -1576,7 +1576,7 @@
     if (btn) { btn.disabled = true; btn.textContent = "Carregando…"; }
 
     try {
-      const res = await fetch(`${DU_API}/api/propostas?limit=10000`, { headers: nuAuthHeader() });
+      const res = await fetch(`${DU_API}/api/propostas?limit=10000&campos=numeroProposta,criado_em,camposFormulario.clientes`, { headers: nuAuthHeader() });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const lista = (Array.isArray(data) ? data : (data.propostas || []));
