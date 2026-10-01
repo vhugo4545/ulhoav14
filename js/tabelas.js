@@ -1,7 +1,7 @@
-﻿
+
 const produtosMapeados = new Map();
 let todosProdutos = [];
-const sugestoesTemp = {}; // armazenamento temporÃ¡rio por bloco
+const sugestoesTemp = {}; // armazenamento temporário por bloco
 
 document.addEventListener('DOMContentLoaded', carregarProdutos);
 
@@ -24,7 +24,7 @@ function atualizarTituloAccordion(idSuffix, nome) {
   const titulo = document.getElementById(`titulo-accordion-${idSuffix}`);
   if (titulo) {
     const nomeLimpo = nome.trim();
-    titulo.textContent = nomeLimpo || `ParÃ¢metros e Produtos (${idSuffix})`;
+    titulo.textContent = nomeLimpo || `Parâmetros e Produtos (${idSuffix})`;
   }
 }
 
@@ -41,14 +41,14 @@ function incluirProduto(idSuffix) {
   // Tenta encontrar o produto correspondente na lista de todos os produtos
   const produto = todosProdutos.find(p => (p.descricao || '').trim().toLowerCase() === termo);
   if (!produto) {
-    alert("Produto nÃ£o encontrado.");
+    alert("Produto não encontrado.");
     return;
   }
 
   // Inclui diretamente via montagem da linha (sempre)
   montarLinhaProduto(idSuffix, produto);
 
-  // Limpa campo de busca e sugestÃµes
+  // Limpa campo de busca e sugestões
   document.getElementById(`input-${idSuffix}`).value = '';
   limparSugestoes(idSuffix);
 }
@@ -70,20 +70,20 @@ function abrirSubstituirProduto(botao) {
   const idSuffix = linha?.dataset?.idSuffix;
 
   if (!idSuffix) {
-    console.warn("âŒ ID do grupo (idSuffix) nÃ£o encontrado na linha.");
+    console.warn("❌ ID do grupo (idSuffix) não encontrado na linha.");
     return;
   }
 
-  // Evita abrir mais de uma linha de substituiÃ§Ã£o
+  // Evita abrir mais de uma linha de substituição
   if (linha.nextElementSibling?.classList.contains("linha-substituir")) return;
 
-  // Cria nova linha de substituiÃ§Ã£o
+  // Cria nova linha de substituição
   const novaLinha = document.createElement("tr");
   novaLinha.classList.add("linha-substituir");
   novaLinha.dataset.idSuffix = idSuffix;
 
   novaLinha.innerHTML = `
-    <td colspan="9">
+    <td colspan="8">
       <div class="position-relative">
         <div class="d-flex gap-2">
           <input type="text"
@@ -106,7 +106,7 @@ function abrirSubstituirProduto(botao) {
 
 function incluirProdutoPeloIndice(idSuffix, index) {
   const lista = sugestoesTemp[idSuffix];
-  if (!lista || !lista[index]) return alert("Produto nÃ£o encontrado.");
+  if (!lista || !lista[index]) return alert("Produto não encontrado.");
   montarLinhaProduto(idSuffix, lista[index]);
 }
 
@@ -121,7 +121,6 @@ function montarLinhaProduto(idSuffix, produto) {
   const utilizacao    = decodeHTMLEntities(produto.utilizacao || "Uso");
   const valorUnitario = parseFloat(produto.valor_unitario || 0).toFixed(2);
   const codigo        = produto.codigo_produto || produto.codigo || "COD";
-  const unidade       = produto.unidade || "â€”";
 
   linha.innerHTML = `
     <td>${utilizacao}</td>
@@ -129,7 +128,6 @@ function montarLinhaProduto(idSuffix, produto) {
     <td class="custo-unitario" data-valor-original="${valorUnitario}">R$ ${valorUnitario}</td>
     <td class="venda-unitaria" data-valor-original="${valorUnitario}">R$ ${valorUnitario}</td>
     <td>${codigo}</td>
-    <td class="unidade-medida">${unidade}</td>
     <td>
       <input type="number" class="form-control form-control-sm quantidade" value="1">
     </td>
@@ -146,7 +144,7 @@ function montarLinhaProduto(idSuffix, produto) {
 }
 
 
-// Limpa sugestÃµes (principal ou sub)
+// Limpa sugestões (principal ou sub)
 function limparSugestoes(idSuffix, sub=false) {
   const sel = sub ? `#sugestoes-${idSuffix}-sub` : `#sugestoes-${idSuffix}`;
   const div = document.querySelector(sel);
@@ -163,7 +161,7 @@ function abrirSubstituirProduto(botao, idSuffix) {
   novaLinha.dataset.idSuffix = idSuffix;
 
   novaLinha.innerHTML = `
-    <td colspan="9">
+    <td colspan="8">
       <div class="position-relative">
         <div class="d-flex gap-2">
           <input type="text"
@@ -186,7 +184,7 @@ function abrirSubstituirProduto(botao, idSuffix) {
 function substituirProdutoPeloIndice(idSuffix, index) {
   const key = `${idSuffix}-sub`;
   const lista = sugestoesTemp[key];
-  if (!lista || !lista[index]) return alert("Produto nÃ£o encontrado.");
+  if (!lista || !lista[index]) return alert("Produto não encontrado.");
 
   const prod = lista[index];
 
@@ -205,7 +203,7 @@ function substituirProdutoPeloIndice(idSuffix, index) {
   const tdVenda     = linhaOrig.querySelector(".venda-unitaria");
   const tdCodigo    = linhaOrig.children[4];
 
-  // Atualiza diretamente os valores visÃ­veis
+  // Atualiza diretamente os valores visíveis
   if (tdDescricao) tdDescricao.textContent = decodeHTMLEntities(prod.descricao || "");
   if (tdCusto)     tdCusto.textContent     = `R$ ${parseFloat(prod.valor_unitario || 0).toFixed(2)}`;
   if (tdVenda) {
@@ -218,9 +216,9 @@ function substituirProdutoPeloIndice(idSuffix, index) {
   // Zera a quantidade manual
   if (inputQuantidade) inputQuantidade.value = 0;
 
-  // â— NÃƒO altera a cÃ©lula quantidade-desejada (mantÃ©m input + fÃ³rmula + valor)
+  // ❗ NÃO altera a célula quantidade-desejada (mantém input + fórmula + valor)
 
-  // Remove linha de substituiÃ§Ã£o e limpa sugestÃµes
+  // Remove linha de substituição e limpa sugestões
   linhaSub.remove();
   limparSugestoes(idSuffix, true);
 
@@ -230,10 +228,10 @@ function substituirProdutoPeloIndice(idSuffix, index) {
   const inputSub = document.getElementById(`input-${idSuffix}-sub`);
   if (inputSub) inputSub.value = "";
 
-  // Limpa linhas Ã³rfÃ£s
+  // Limpa linhas órfãs
   document.querySelectorAll(".linha-substituir")?.forEach(e => e.remove());
 
-  // Reativa blur/eval global se necessÃ¡rio
+  // Reativa blur/eval global se necessário
   if (typeof simularFocusEBlurEmTodosCamposFormula === "function") {
     simularFocusEBlurEmTodosCamposFormula();
   }
@@ -262,19 +260,19 @@ function limparFormulaHTML(f) {
 }
 
 function confirmarSubstituicao(botao) {
-   alert("funÃ§Ã£o")
+   alert("função")
   const linhaSub = botao.closest("tr");
   const idSuffix = linhaSub.dataset.idSuffix;
   const input = linhaSub.querySelector("input");
   const desc = input.value.trim().toLowerCase();
-  if (!desc) return alert("Produto invÃ¡lido.");
+  if (!desc) return alert("Produto inválido.");
 
   const prod = produtosMapeados.get(desc);
-  if (!prod) return alert("Produto nÃ£o encontrado.");
+  if (!prod) return alert("Produto não encontrado.");
 
   const linhaOrig = linhaSub.previousElementSibling;
 
-  // ReferÃªncias Ã s cÃ©lulas da linha original
+  // Referências às células da linha original
   const celulaQtdDesejada = linhaOrig.querySelector(".quantidade-desejada");
   const tdUtilizacao = linhaOrig.children[0];
   const tdDescricao  = linhaOrig.children[1];
@@ -283,7 +281,7 @@ function confirmarSubstituicao(botao) {
   const tdCodigo     = linhaOrig.children[4];
   const inputQtd     = linhaOrig.querySelector("input.quantidade");
 
-  // Atualiza conteÃºdo das cÃ©lulas
+  // Atualiza conteúdo das células
   if (tdUtilizacao) tdUtilizacao.textContent = prod.utilizacao || "Uso";
   if (tdDescricao)  tdDescricao.textContent  = prod.descricao || "";
 
@@ -297,15 +295,15 @@ function confirmarSubstituicao(botao) {
   if (tdCodigo) tdCodigo.textContent = prod.codigo_produto || "COD";
   if (inputQtd) inputQtd.value = 0; // Zera a quantidade manual
 
-  // Avalia fÃ³rmula da quantidade desejada e atualiza a cÃ©lula com <span>
+  // Avalia fórmula da quantidade desejada e atualiza a célula com <span>
   let formula = "";
   if (celulaQtdDesejada) {
     const campo = celulaQtdDesejada.querySelector("input, span");
     formula = campo?.dataset?.formula || campo?.value || celulaQtdDesejada?.textContent || "";
   }
 
-  // Prepara fÃ³rmula
-  formula = formula.replace(/,/g, "."); // troca vÃ­rgulas por ponto
+  // Prepara fórmula
+  formula = formula.replace(/,/g, "."); // troca vírgulas por ponto
   if (typeof limparFormulaHTML === "function") {
     formula = limparFormulaHTML(formula);
   }
@@ -325,11 +323,11 @@ function confirmarSubstituicao(botao) {
 
     }
   } catch (erro) {
-    console.error("âŒ Erro ao avaliar fÃ³rmula:", formula, erro);
+    console.error("❌ Erro ao avaliar fórmula:", formula, erro);
     celulaQtdDesejada.innerHTML = `<span class="text-danger">Erro</span>`;
   }
 
-  // Remove a linha de substituiÃ§Ã£o e limpa sugestÃµes
+  // Remove a linha de substituição e limpa sugestões
   linhaSub.remove();
   limparSugestoes(idSuffix, true);
 
@@ -347,7 +345,7 @@ function normalizarTextoRanking(texto) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")      // Remove acentos
-    .replace(/[^a-z0-9 x\/"\-]+/g, " ")   // MantÃ©m X, /, " e hÃ­fen
+    .replace(/[^a-z0-9 x\/"\-]+/g, " ")   // Mantém X, /, " e hífen
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -365,7 +363,7 @@ function mostrarSugestoes(input, idSuffix) {
   const container = document.getElementById(`sugestoes-${idSuffix}`);
   if (!container) return;
 
-  // Ranking: mais compatÃ­veis vÃªm primeiro
+  // Ranking: mais compatíveis vêm primeiro
   const resultadosPontuados = todosProdutos.map(prod => {
     const descNorm = normalizarTextoRanking(prod.descricao);
 
@@ -378,10 +376,10 @@ function mostrarSugestoes(input, idSuffix) {
     // Peso 4: Quantos termos batem (quanto mais, melhor)
     const termosPresentes = termos.filter(term => descNorm.includes(term)).length * 10;
 
-    // PontuaÃ§Ã£o final
+    // Pontuação final
     let score = exato + substring + todosPresentes + termosPresentes;
 
-    // Penaliza se nÃ£o tiver pelo menos metade dos termos presentes
+    // Penaliza se não tiver pelo menos metade dos termos presentes
     if (termosPresentes < termos.length * 5) score -= 5000;
 
     return { prod, score };
@@ -389,7 +387,7 @@ function mostrarSugestoes(input, idSuffix) {
 
   // Ordena por score decrescente (melhor primeiro)
   const resultados = resultadosPontuados
-    .filter(obj => obj.score > 0) // SÃ³ resultados relevantes
+    .filter(obj => obj.score > 0) // Só resultados relevantes
     .sort((a, b) => b.score - a.score)
     .map(obj => obj.prod);
 
@@ -405,7 +403,7 @@ function mostrarSugestoes(input, idSuffix) {
                 <td>${prod.descricao || "-"}</td>
                 <td>R$ ${parseFloat(prod.valor_unitario||0).toFixed(2)}</td>
                 <td><button class="btn btn-success btn-sm"
-                            onclick="incluirProdutoPeloIndice('${idSuffix}', ${i})">âž•</button></td>
+                            onclick="incluirProdutoPeloIndice('${idSuffix}', ${i})">➕</button></td>
               </tr>`).join("")}
           </tbody>
         </table>
@@ -419,7 +417,7 @@ function normalizarTexto(texto) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")        // Remove acentos
-    .replace(/[^a-z0-9 x\/"\-]+/g, " ")     // MantÃ©m X, /, " e hÃ­fen para cÃ³digos tÃ©cnicos
+    .replace(/[^a-z0-9 x\/"\-]+/g, " ")     // Mantém X, /, " e hífen para códigos técnicos
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -433,7 +431,7 @@ function mostrarSugestoesSub(input, idSuffix) {
     return;
   }
 
-  // Normaliza termo e descriÃ§Ã£o mantendo sÃ­mbolos tÃ©cnicos
+  // Normaliza termo e descrição mantendo símbolos técnicos
   const termoNorm = normalizarTexto(termo);
 
   // 1. Prioriza igualdade exata
@@ -441,7 +439,7 @@ function mostrarSugestoesSub(input, idSuffix) {
     normalizarTexto(prod.descricao) === termoNorm
   );
 
-  // 2. Busca por partes (cada palavra do termo aparece na descriÃ§Ã£o, incluindo sÃ­mbolos tÃ©cnicos!)
+  // 2. Busca por partes (cada palavra do termo aparece na descrição, incluindo símbolos técnicos!)
   const termos = termoNorm.split(' ').filter(Boolean);
   const similares = todosProdutos.filter(prod => {
     const descNorm = normalizarTexto(prod.descricao);
@@ -464,7 +462,6 @@ function mostrarSugestoesSub(input, idSuffix) {
       }</tbody></table>`
     : `<div class="text-muted px-2">Nenhum resultado encontrado</div>`;
 }
-
 
 
 

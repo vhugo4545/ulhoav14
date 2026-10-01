@@ -713,7 +713,6 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                         <th>Valor de Custo Final</th>
                         <th>Custo Unitário</th>
                         <th>Código Omie</th>
-                        <th>Unidade</th>
                         <th>Quantidade</th>
                         <th>Qtd. Desejada</th>
                         <th>Ação</th>

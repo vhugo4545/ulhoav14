@@ -718,7 +718,6 @@ ${item.descricao_utilizacao || "Utilização Preencher"}
           <td class="custo-unitario">R$ ${parseFloat(item.custo || 0).toFixed(2)}</td>
           <td class="venda-unitaria">R$ ${parseFloat(item.preco || 0).toFixed(2)}</td>
           <td>${item.codigo_omie || ""}</td>
-          <td class="unidade-medida">${item.unidade || (window._produtosUnidadeMap && window._produtosUnidadeMap[String(item.codigo_omie || "").trim()]) || "—"}</td>
           <td>
             <input type="number" class="form-control form-control-sm quantidade"
               value="${window.location.pathname.includes("editarModelo.html") ? "0" : item.quantidade}">
