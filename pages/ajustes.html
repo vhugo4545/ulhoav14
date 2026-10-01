@@ -1276,17 +1276,31 @@
       if (ped)  { if (!byPed[ped])   byPed[ped]   = []; byPed[ped].push(p); }
     });
 
+    // Ordena as propostas de um grupo por data de criação (mais antiga primeiro).
+    // Usa criado_em se disponível; caso contrário, extrai timestamp do _id (ObjectId).
+    function ordenarPorCriacao(ps) {
+      return [...ps].sort((a, b) => {
+        const tsA = a.criado_em
+          ? new Date(a.criado_em).getTime()
+          : (a._id ? parseInt(a._id.substring(0, 8), 16) * 1000 : 0);
+        const tsB = b.criado_em
+          ? new Date(b.criado_em).getTime()
+          : (b._id ? parseInt(b._id.substring(0, 8), 16) * 1000 : 0);
+        return tsA - tsB;
+      });
+    }
+
     const grupos = [];
 
     Object.entries(byProp)
       .filter(([, ps]) => ps.length > 1)
       .sort(([a], [b]) => Number(a) - Number(b))
-      .forEach(([num, ps]) => grupos.push({ tipo: "proposta", numero: num, props: ps }));
+      .forEach(([num, ps]) => grupos.push({ tipo: "proposta", numero: num, props: ordenarPorCriacao(ps) }));
 
     Object.entries(byPed)
       .filter(([, ps]) => ps.length > 1)
       .sort(([a], [b]) => Number(a) - Number(b))
-      .forEach(([num, ps]) => grupos.push({ tipo: "pedido", numero: num, props: ps }));
+      .forEach(([num, ps]) => grupos.push({ tipo: "pedido", numero: num, props: ordenarPorCriacao(ps) }));
 
     return grupos;
   }
@@ -1335,6 +1349,17 @@
       return;
     }
 
+    // Calcula próximo número disponível para sugestão automática nas duplicatas
+    const todosNumsProp = duTodos
+      .map(p => { const n = duNumProp(p); return n ? parseInt(n.replace(/\D/g, ""), 10) : 0; })
+      .filter(n => !isNaN(n) && n > 0 && n <= 99999);
+    let proximoNumProp = todosNumsProp.length > 0 ? Math.max(...todosNumsProp) + 1 : 1;
+
+    const todosNumsPed = duTodos
+      .map(p => { const n = duNumPed(p); return n ? parseInt(n.replace(/\D/g, ""), 10) : 0; })
+      .filter(n => !isNaN(n) && n > 0 && n <= 99999);
+    let proximoNumPed = todosNumsPed.length > 0 ? Math.max(...todosNumsPed) + 1 : 1;
+
     let totalPropostas = 0;
     const html = grupos.map(grupo => {
       totalPropostas += grupo.props.length;
@@ -1359,25 +1384,45 @@
         const bg = idx % 2 === 0 ? "#fff" : "#fafafa";
         const sc = duCorStatus(p.statusOrcamento || "");
         const nome = duNomeCliente(p) || "—";
+        const isOriginal = idx === 0;
+
+        // Badge ORIGINAL / DUPLICATA
+        const badge = isOriginal
+          ? `<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;background:#dcfce7;color:#15803d;margin-left:5px;vertical-align:middle;">ORIGINAL</span>`
+          : `<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;background:#fee2e2;color:#991b1b;margin-left:5px;vertical-align:middle;">DUPLICATA</span>`;
+
+        // Data de criação formatada
+        let dataCriacao = "—";
+        if (p.criado_em) {
+          dataCriacao = new Date(p.criado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+        } else if (p._id && p._id.length >= 8) {
+          const ts = parseInt(p._id.substring(0, 8), 16) * 1000;
+          dataCriacao = new Date(ts).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+        }
+
+        // Sugestão de novo número para duplicatas
+        const valProposta = (!isOriginal && isProp) ? String(proximoNumProp++) : duNumProp(p);
+        const valPedido   = (!isOriginal && !isProp) ? String(proximoNumPed++) : duNumPed(p);
+
         return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;" id="du-row-${p._id}-${grupo.tipo}-${grupo.numero}">
           <td style="padding:9px 16px 9px 24px;min-width:0;">
-            <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;" title="${duEsc(nome)}">${duEsc(nome)}</div>
-            <div style="font-size:10px;color:#94a3b8;margin-top:1px;">${duEsc(p._id)}</div>
+            <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px;" title="${duEsc(nome)}">${duEsc(nome)} ${badge}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Criado: ${dataCriacao} · ${duEsc(p._id)}</div>
           </td>
           <td style="padding:9px 16px;white-space:nowrap;">
             <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:${sc.bg};color:${sc.text};">${duEsc(p.statusOrcamento || "—")}</span>
           </td>
           <td style="padding:9px 16px;text-align:center;">
             <input type="text" inputmode="numeric" data-field="numeroProposta"
-              value="${duEsc(duNumProp(p))}"
-              style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${isProp ? "#fed7aa" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:#fff;color:#0f172a;transition:border .15s;"
-              onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${isProp ? "#fed7aa" : "#e2e8f0"}'">
+              value="${duEsc(valProposta)}"
+              style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${isProp && !isOriginal ? "#fca5a5" : isProp ? "#fed7aa" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:${isProp && !isOriginal ? "#fff7f7" : "#fff"};color:#0f172a;transition:border .15s;"
+              onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${isProp && !isOriginal ? "#fca5a5" : isProp ? "#fed7aa" : "#e2e8f0"}'">
           </td>
           <td style="padding:9px 16px;text-align:center;">
             <input type="text" inputmode="numeric" data-field="numeroPedido"
-              value="${duEsc(duNumPed(p))}"
-              style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${!isProp ? "#f9a8d4" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:#fff;color:#0f172a;transition:border .15s;"
-              onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${!isProp ? "#f9a8d4" : "#e2e8f0"}'">
+              value="${duEsc(valPedido)}"
+              style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${!isProp && !isOriginal ? "#fca5a5" : !isProp ? "#f9a8d4" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:${!isProp && !isOriginal ? "#fff7f7" : "#fff"};color:#0f172a;transition:border .15s;"
+              onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${!isProp && !isOriginal ? "#fca5a5" : !isProp ? "#f9a8d4" : "#e2e8f0"}'">
           </td>
           <td style="padding:9px 16px;text-align:center;">
             <button onclick="duSalvar('${p._id}', this)"
