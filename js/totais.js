@@ -415,10 +415,16 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
       if (!avisoEl) {
         avisoEl = document.createElement("div");
         avisoEl.className = "tot-aviso-minimo";
-        avisoEl.style.cssText = "display:flex;align-items:center;gap:5px;justify-content:center;color:#dc2626;font-size:12px;font-weight:600;margin-top:8px;letter-spacing:0.01em;";
+        avisoEl.style.cssText = "display:flex;justify-content:center;margin-top:12px;";
         final.appendChild(avisoEl);
       }
-      avisoEl.innerHTML = `<span class="material-icons-outlined" style="font-size:15px;">warning</span> Valor abaixo do mínimo permitido &nbsp;·&nbsp; ${totalMinimo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
+      avisoEl.innerHTML = `
+        <div style="display:inline-flex;align-items:center;gap:8px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:8px 16px;box-shadow:0 1px 4px rgba(220,38,38,.10);">
+          <span class="material-icons-outlined" style="font-size:17px;color:#dc2626;">warning</span>
+          <span style="font-size:12px;font-weight:700;color:#b91c1c;letter-spacing:0.02em;text-transform:uppercase;">Abaixo do mínimo</span>
+          <span style="width:1px;height:14px;background:#fca5a5;display:inline-block;"></span>
+          <span style="font-size:12px;font-weight:600;color:#dc2626;">${totalMinimo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+        </div>`;
     } else if (avisoEl) {
       avisoEl.remove();
     }
