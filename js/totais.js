@@ -380,11 +380,13 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
 
   const calcularTotalFinal = () => {
     let total = 0;
+    let totalMinimo = 0;
 
     for (const checkbox of containerResumo.querySelectorAll(".ambiente-toggle")) {
       if (checkbox.checked) {
         const ambienteId = checkbox.dataset.ambiente;
-        total += Number(checkboxes[ambienteId]?.campoValorFinal) || 0;
+        total       += Number(checkboxes[ambienteId]?.campoValorFinal)   || 0;
+        totalMinimo += Number(checkboxes[ambienteId]?.campoValorMinimo)  || 0;
       }
     }
 
@@ -404,6 +406,22 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
       style: "currency",
       currency: "BRL"
     });
+
+    // Aviso se desconto leva abaixo do valor mínimo
+    let avisoEl = final.querySelector(".tot-aviso-minimo");
+    const abaixoMinimo = desconto && totalMinimo > 0 && total < totalMinimo;
+    finalValor.style.color = abaixoMinimo ? "#dc2626" : "";
+    if (abaixoMinimo) {
+      if (!avisoEl) {
+        avisoEl = document.createElement("div");
+        avisoEl.className = "tot-aviso-minimo";
+        avisoEl.style.cssText = "color:#dc2626;font-size:12px;font-weight:600;margin-top:6px;";
+        final.appendChild(avisoEl);
+      }
+      avisoEl.textContent = `⚠️ Valor abaixo do mínimo (${totalMinimo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})`;
+    } else if (avisoEl) {
+      avisoEl.remove();
+    }
 
     if (typeof atualizarValoresParcelas === "function") {
       atualizarValoresParcelas();
