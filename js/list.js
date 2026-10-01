@@ -246,16 +246,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     ocultarCarregando();
     tableBody.innerHTML = "";
 
+    // Detecta numeroProposta repetido nos resultados atuais
+    // Para cada número duplicado, ordena por createdAt asc e atribui ORIGINAL / CÓPIA N
+    const labelMap = {};
+    const grupos = {};
+    list.forEach(item => {
+      const n = String(item.numeroProposta ?? "");
+      if (!n || n === "--") return;
+      if (!grupos[n]) grupos[n] = [];
+      grupos[n].push(item);
+    });
+    Object.entries(grupos).forEach(([n, items]) => {
+      if (items.length < 2) return;
+      const sorted = [...items].sort((a, b) => a.createdAt - b.createdAt);
+      sorted.forEach((item, i) => {
+        labelMap[item._id] = i === 0
+          ? `<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;background:#dcfce7;color:#15803d;margin-left:5px;vertical-align:middle;">ORIGINAL</span>`
+          : `<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;background:#fee2e2;color:#991b1b;margin-left:5px;vertical-align:middle;">CÓPIA ${i}</span>`;
+      });
+    });
+
     let html = "";
     list.forEach((item, index) => {
       const total = calcularTotalFinalProposta(item.campos, item.grupos);
       const value = `R$ ${total.toFixed(2)}`;
       const numeroExibido = (currentPage - 1) * rowsPerPage + index + 1;
+      const dupBadge = labelMap[item._id] || "";
 
       html += `
         <tr>
           <td>${numeroExibido}</td>
-          <td>${item.numeroProposta}</td>
+          <td>${item.numeroProposta}${dupBadge}</td>
           <td>${item.numeroPedido}</td>
           <td>${item.date}</td>
           <td>${item.vendedor}</td>
