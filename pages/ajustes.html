@@ -1349,17 +1349,6 @@
       return;
     }
 
-    // Calcula próximo número disponível para sugestão automática nas duplicatas
-    const todosNumsProp = duTodos
-      .map(p => { const n = duNumProp(p); return n ? parseInt(n.replace(/\D/g, ""), 10) : 0; })
-      .filter(n => !isNaN(n) && n > 0 && n <= 99999);
-    let proximoNumProp = todosNumsProp.length > 0 ? Math.max(...todosNumsProp) + 1 : 1;
-
-    const todosNumsPed = duTodos
-      .map(p => { const n = duNumPed(p); return n ? parseInt(n.replace(/\D/g, ""), 10) : 0; })
-      .filter(n => !isNaN(n) && n > 0 && n <= 99999);
-    let proximoNumPed = todosNumsPed.length > 0 ? Math.max(...todosNumsPed) + 1 : 1;
-
     let totalPropostas = 0;
     const html = grupos.map(grupo => {
       totalPropostas += grupo.props.length;
@@ -1400,9 +1389,21 @@
           dataCriacao = new Date(ts).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
         }
 
-        // Sugestão de novo número para duplicatas
-        const valProposta = (!isOriginal && isProp) ? String(proximoNumProp++) : duNumProp(p);
-        const valPedido   = (!isOriginal && !isProp) ? String(proximoNumPed++) : duNumPed(p);
+        // ORIGINAL: input readonly (mantém o número). DUPLICATA: campo editável + botão "Obter Nº"
+        const valProposta = duNumProp(p);
+        const valPedido   = duNumPed(p);
+
+        // Botão "Obter Nº" só aparece nas duplicatas, no campo que representa o tipo do grupo
+        const btnObterProp = (!isOriginal && isProp)
+          ? `<button onclick="duObterNumero(this,'numeroProposta')"
+               style="margin-top:4px;border:none;background:#2563eb;color:#fff;border-radius:5px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;width:84px;"
+               onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">Obter Nº</button>`
+          : "";
+        const btnObterPed = (!isOriginal && !isProp)
+          ? `<button onclick="duObterNumero(this,'numeroPedido')"
+               style="margin-top:4px;border:none;background:#2563eb;color:#fff;border-radius:5px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;width:84px;"
+               onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">Obter Nº</button>`
+          : "";
 
         return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;" id="du-row-${p._id}-${grupo.tipo}-${grupo.numero}">
           <td style="padding:9px 16px 9px 24px;min-width:0;">
@@ -1415,14 +1416,16 @@
           <td style="padding:9px 16px;text-align:center;">
             <input type="text" inputmode="numeric" data-field="numeroProposta"
               value="${duEsc(valProposta)}"
-              style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${isProp && !isOriginal ? "#fca5a5" : isProp ? "#fed7aa" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:${isProp && !isOriginal ? "#fff7f7" : "#fff"};color:#0f172a;transition:border .15s;"
-              onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${isProp && !isOriginal ? "#fca5a5" : isProp ? "#fed7aa" : "#e2e8f0"}'">
+              ${isOriginal ? 'readonly style="width:84px;text-align:center;padding:5px 6px;border:1px solid #fed7aa;border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:#fffbf5;color:#78350f;cursor:default;"'
+                           : `style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${isProp ? "#fca5a5" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:${isProp ? "#fff7f7" : "#fff"};color:#0f172a;transition:border .15s;" onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${isProp ? "#fca5a5" : "#e2e8f0"}'"`}>
+            ${btnObterProp}
           </td>
           <td style="padding:9px 16px;text-align:center;">
             <input type="text" inputmode="numeric" data-field="numeroPedido"
               value="${duEsc(valPedido)}"
-              style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${!isProp && !isOriginal ? "#fca5a5" : !isProp ? "#f9a8d4" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:${!isProp && !isOriginal ? "#fff7f7" : "#fff"};color:#0f172a;transition:border .15s;"
-              onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${!isProp && !isOriginal ? "#fca5a5" : !isProp ? "#f9a8d4" : "#e2e8f0"}'">
+              ${isOriginal ? 'readonly style="width:84px;text-align:center;padding:5px 6px;border:1px solid #f9a8d4;border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:#fdf2f8;color:#701a75;cursor:default;"'
+                           : `style="width:84px;text-align:center;padding:5px 6px;border:1px solid ${!isProp ? "#fca5a5" : "#e2e8f0"};border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;background:${!isProp ? "#fff7f7" : "#fff"};color:#0f172a;transition:border .15s;" onfocus="this.style.borderColor='#64748b'" onblur="this.style.borderColor='${!isProp ? "#fca5a5" : "#e2e8f0"}'"`}>
+            ${btnObterPed}
           </td>
           <td style="padding:9px 16px;text-align:center;">
             <button onclick="duSalvar('${p._id}', this)"
@@ -1444,6 +1447,38 @@
       if (countEl) countEl.textContent = grupos.length;
       if (totalEl) totalEl.textContent = `${grupos.length} grupo${grupos.length !== 1 ? "s" : ""} de duplicatas (${totalPropostas} propostas)`;
       if (verTodosWrap) verTodosWrap.style.display = "none";
+    }
+  }
+
+  async function duObterNumero(btn, campo) {
+    const td = btn.closest("td");
+    const input = td?.querySelector(`input[data-field="${campo}"]`);
+    if (!input) return;
+
+    const origText = btn.textContent;
+    btn.textContent = "…";
+    btn.disabled = true;
+
+    try {
+      const res = await fetch("https://contator-ulhoa-3d28d89efa68.herokuapp.com/orcamento");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const numFormatado = String(data.numero).padStart(5, "0");
+      input.value = numFormatado;
+      input.style.background = "#f0fdf4";
+      input.style.borderColor = "#4ade80";
+      btn.textContent = "✓ " + numFormatado;
+      btn.style.background = "#15803d";
+      setTimeout(() => {
+        btn.textContent = origText;
+        btn.style.background = "#2563eb";
+        btn.disabled = false;
+      }, 2500);
+    } catch (e) {
+      btn.textContent = "Erro";
+      btn.style.background = "#7f1d1d";
+      setTimeout(() => { btn.textContent = origText; btn.style.background = "#2563eb"; btn.disabled = false; }, 2500);
+      alert("Erro ao obter número: " + e.message);
     }
   }
 
