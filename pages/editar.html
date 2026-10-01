@@ -828,7 +828,7 @@ function abrirPopupPreencherParams() {
             <div>
               <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:3px;">${p.label}</label>
               <div style="display:flex;gap:4px;align-items:center;">
-                <input type="text" data-param="${p.name}" value="${lerValorRef(p.name)}" placeholder="${p.readonly ? "calculado" : "deixe vazio p/ ignorar"}" ${p.readonly ? 'style="background:#f3f3f3;flex:1;" readonly' : 'style="flex:1;"'} class="form-control form-control-sm">
+                <input type="text" data-param="${p.name}" value="" placeholder="${p.readonly ? "calculado" : (lerValorRef(p.name) ? "atual: " + lerValorRef(p.name) : "deixe vazio p/ ignorar")}" ${p.readonly ? 'style="background:#f3f3f3;flex:1;" readonly' : 'style="flex:1;"'} class="form-control form-control-sm">
                 ${!p.readonly ? `<button type="button" data-apply="${p.name}" title="Aplicar só este campo" style="border:none;background:#e0f2fe;color:#0369a1;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;white-space:nowrap;">Aplicar</button>` : ""}
               </div>
             </div>
@@ -840,7 +840,7 @@ function abrirPopupPreencherParams() {
           <div>
             <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Prazo (dias úteis)</label>
             <div style="display:flex;gap:6px;align-items:center;">
-              <input type="number" data-param="previsaoEntrega" value="${lerValorRef("previsaoEntrega")}" placeholder="Ex: 15" min="1" class="form-control form-control-sm" style="max-width:90px;">
+              <input type="number" data-param="previsaoEntrega" value="" placeholder="${lerValorRef("previsaoEntrega") ? "atual: " + lerValorRef("previsaoEntrega") : "Ex: 15"}" min="1" class="form-control form-control-sm" style="max-width:90px;">
               <span style="font-size:11px;color:#666;">dias úteis</span>
               <button type="button" data-apply-prazo="previsaoEntrega" style="border:none;background:#e0f2fe;color:#0369a1;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;white-space:nowrap;margin-left:auto;">Aplicar</button>
             </div>
@@ -851,7 +851,7 @@ function abrirPopupPreencherParams() {
               ${condicoesHTML}
             </div>
             <div style="display:flex;gap:4px;align-items:flex-start;">
-              <textarea data-param="informacoesProduto" rows="3" placeholder="Texto da condição de prazo" class="form-control form-control-sm" style="font-size:11px;resize:none;flex:1;">${lerValorRef("informacoesProduto")}</textarea>
+              <textarea data-param="informacoesProduto" rows="3" placeholder="Texto da condição de prazo" class="form-control form-control-sm" style="font-size:11px;resize:none;flex:1;"></textarea>
               <button type="button" data-apply-prazo="informacoesProduto" style="border:none;background:#e0f2fe;color:#0369a1;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;white-space:nowrap;">Aplicar</button>
             </div>
           </div>
@@ -2957,7 +2957,7 @@ async function marcarPrecosDivergentesOmie() {
       const codigoCell = tr.querySelector("td:nth-child(5)");
       const custoTd = tr.querySelector("td:nth-child(3)");
       const unitarioTd = tr.querySelector("td:nth-child(4)");
-      const inputQtd = tr.querySelector("td:nth-child(6) input");
+      const inputQtd = tr.querySelector("input.quantidade");
 
       if (!codigoCell || !unitarioTd || !custoTd || !inputQtd) return;
 

@@ -125,7 +125,7 @@ const nomesUnicos = new Set();
             });
 
             const tabela = ultimoBloco.querySelector(`table tbody`);
-            const totalTd = ultimoBloco.querySelector(`table tfoot td[colspan="6"], table tfoot td:last-child`);
+            const totalTd = ultimoBloco.querySelector(`table tfoot td[colspan="7"], table tfoot td:last-child`);
             tabela.innerHTML = "";
 
             let total = 0;

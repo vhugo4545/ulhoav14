@@ -7009,10 +7009,9 @@ window.getListaInsumosGrupo = function (grupoId) {
     if (txt.includes('valor de custo final'))               idxValorCustoFinal = i;
   });
 
-  // ðŸ'‡ Força os índices conforme você informou:
-  // 3ª coluna = valor, 6ª coluna = quantidade
+  // 3ª coluna = valor, 7ª coluna = quantidade (col 6 é unidade de medida)
   if (ths.length >= 3) idxValorCustoFinal = 2;  // índice 2 = 3ª coluna
-  if (ths.length >= 6) idxQuantidade      = 5;  // índice 5 = 6ª coluna
+  if (ths.length >= 7) idxQuantidade      = 6;  // índice 6 = 7ª coluna
 
   if (idxQuantidade === -1) {
     console.warn(

@@ -718,6 +718,7 @@ ${item.descricao_utilizacao || "Utilização Preencher"}
           <td class="custo-unitario">R$ ${parseFloat(item.custo || 0).toFixed(2)}</td>
           <td class="venda-unitaria">R$ ${parseFloat(item.preco || 0).toFixed(2)}</td>
           <td>${item.codigo_omie || ""}</td>
+          <td class="unidade-medida">${item.unidade || (window._produtosUnidadeMap && window._produtosUnidadeMap[String(item.codigo_omie || "").trim()]) || "—"}</td>
           <td>
             <input type="number" class="form-control form-control-sm quantidade"
               value="${window.location.pathname.includes("editarModelo.html") ? "0" : item.quantidade}">
@@ -751,6 +752,22 @@ ${item.descricao_utilizacao || "Utilização Preencher"}
     if (typeof renderizarTudo === "function") renderizarTudo();
     if (typeof ativarRecalculoEmTodasTabelas === "function") ativarRecalculoEmTodasTabelas();
     if (typeof simularFocusEBlurEmTodosCamposFormula === "function") simularFocusEBlurEmTodosCamposFormula();
+
+    if (typeof carregarMapaUnidades === "function") {
+      carregarMapaUnidades().then(() => {
+        document.querySelectorAll("table[id^='tabela-'] tbody tr").forEach((tr) => {
+          const codigoCell = tr.querySelector("td:nth-child(5)");
+          const unidadeCell = tr.querySelector(".unidade-medida");
+          if (!codigoCell || !unidadeCell) return;
+          const codigo = String(codigoCell.textContent || "").trim();
+          if (!codigo) return;
+          const unidade = window._produtosUnidadeMap && window._produtosUnidadeMap[codigo];
+          if (unidade && (!unidadeCell.textContent.trim() || unidadeCell.textContent.trim() === "—")) {
+            unidadeCell.textContent = unidade;
+          }
+        });
+      });
+    }
 
     if (window.location.pathname.includes("editarModelo.html")) {
       const form = document.getElementById("novoOrcamentoForm");

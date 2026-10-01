@@ -81,7 +81,7 @@ function preencherValoresFinanceiros(blocoId) {
   if (inputCusto) inputCusto.value = custoMaterial.toFixed(2);
 
   // Atualizar total no rodapé da tabela
-  const totalRodape = bloco.querySelector('table tfoot td[colspan="6"] strong');
+  const totalRodape = bloco.querySelector('table tfoot td[colspan="7"] strong');
   if (totalRodape) totalRodape.textContent = `R$ ${precoSugerido.toFixed(2)}`;
 
   // Mostrar no console os valores detalhados
@@ -710,11 +710,12 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                       <tr>
                         <th>Utilização</th>
                         <th>Descrição</th>
-                        <th>Valor de Custo Final</th>
-                        <th>Custo Unitário</th>
+                        <th>Custo Final</th>
+                        <th>Custo Unit.</th>
                         <th>Código Omie</th>
-                        <th>Quantidade</th>
-                        <th>Qtd. Desejada</th>
+                        <th>Unidade</th>
+                        <th>Qtd.</th>
+                        <th>Qtd. Des.</th>
                         <th>Ação</th>
                       </tr>
                     </thead>
@@ -722,7 +723,7 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                     <tfoot>
                       <tr>
                         <td colspan="2"><strong>Total</strong></td>
-                        <td colspan="6"><strong>R$ 0,00</strong></td>
+                        <td colspan="7"><strong>R$ 0,00</strong></td>
                       </tr>
                     </tfoot>
                   </table>

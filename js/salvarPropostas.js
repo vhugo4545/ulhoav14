@@ -242,6 +242,7 @@ async function salvarPropostaEditavel() {
           custo,
           preco,
           codigo_omie,
+          unidade: tr.querySelector(".unidade-medida")?.textContent?.trim() || "",
           quantidade,
           quantidade_desejada,
           formula_quantidade,
@@ -624,6 +625,7 @@ window.atualizarPropostaEditavel = async function () {
           custo,
           preco,
           codigo_omie,
+          unidade: tr.querySelector(".unidade-medida")?.textContent?.trim() || "",
           quantidade,
           quantidade_desejada,
           formula_quantidade,
@@ -797,6 +799,7 @@ const camposFormulario = {
         const custo = parseFloat(custoStr.replace(",", ".")) || 0;
         const preco = parseFloat(precoStr.replace(",", ".")) || 0;
         const codigo_omie = tr.querySelector("td:nth-child(5)")?.textContent?.trim() || "";
+        const unidade = tr.querySelector(".unidade-medida")?.textContent?.trim() || "";
         const quantidade = tr.querySelector("input.quantidade")?.value || "";
         const inputQtdDesejada = tr.querySelector("input.quantidade-desejada");
         const quantidade_desejada = inputQtdDesejada?.value || "";
@@ -809,6 +812,7 @@ const camposFormulario = {
           custo,
           preco,
           codigo_omie,
+          unidade,
           quantidade,
           quantidade_desejada,
           formula_quantidade,
@@ -1208,7 +1212,7 @@ async function marcarPrecosDivergentesOmie() {
       const codigoCell = tr.querySelector("td:nth-child(5)");
       const custoTd = tr.querySelector("td:nth-child(3)");
       const unitarioTd = tr.querySelector("td:nth-child(4)");
-      const inputQtd = tr.querySelector("td:nth-child(6) input");
+      const inputQtd = tr.querySelector("input.quantidade");
 
       if (!codigoCell || !unitarioTd || !custoTd || !inputQtd) return;
 

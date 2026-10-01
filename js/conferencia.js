@@ -82,7 +82,7 @@ function gerarPlanilhaCustos() {
     });
 
     const totalGrupo = parseFloat(
-      tabela.querySelector("tfoot td[colspan='6'] strong")?.textContent.replace(/[^\d,\.]/g, '').replace(',', '.') || "0"
+      tabela.querySelector("tfoot td[colspan='7'] strong")?.textContent.replace(/[^\d,\.]/g, '').replace(',', '.') || "0"
     );
 
     const resumoGrupo = document.getElementById(`resumo-${grupoId}`)?.value?.trim() || "";
