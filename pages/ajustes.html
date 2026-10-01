@@ -1564,6 +1564,8 @@
   document.addEventListener("DOMContentLoaded", duCarregar);
 
   // ── Diagnóstico da Sequência Completa ──────────────────────────────────────
+  let _diagDados = null; // cache para não rebuscar ao mudar primeiroNum
+
   async function diagCarregar() {
     const container = document.getElementById("diag-container");
     const btn = document.getElementById("diag-btn-carregar");
@@ -1576,13 +1578,13 @@
     if (btn) { btn.disabled = true; btn.textContent = "Carregando…"; }
 
     try {
-      const res = await fetch(`${DU_API}/api/propostas?limit=10000&campos=numeroProposta,criado_em,camposFormulario.clientes`, { headers: nuAuthHeader() });
+      const res = await fetch(`${DU_API}/api/propostas?limit=10000&campos=numeroProposta,criado_em,camposFormulario.clientes,statusOrcamento`, { headers: nuAuthHeader() });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const lista = (Array.isArray(data) ? data : (data.propostas || []));
 
       // Filtra propostas válidas (numeroProposta ≤ 5 dígitos) e ordena por criado_em asc
-      const validas = lista
+      _diagDados = lista
         .filter(p => {
           const n = String(p.numeroProposta ?? "").replace(/\D/g, "");
           return n.length > 0 && n.length <= 5;
@@ -1595,103 +1597,134 @@
           return tsA - tsB;
         });
 
-      // Detecta quais números aparecem mais de uma vez
-      const contagem = {};
-      validas.forEach(p => {
-        const n = String(p.numeroProposta ?? "");
-        contagem[n] = (contagem[n] || 0) + 1;
-      });
-
-      // Monta as duas colunas
-      let rowsCorreta = "", rowsAtual = "";
-      // Para a lista "correta", calculamos o número esperado baseado no primeiro número da série
-      const primeiroNum = validas.length > 0 ? parseInt(String(validas[0].numeroProposta ?? "1").replace(/\D/g,""), 10) : 1;
-
-      validas.forEach((p, i) => {
-        const numAtual = String(p.numeroProposta ?? "") || "—";
-        const numEsperado = String(primeiroNum + i).padStart(5, "0");
-        const isDup = contagem[numAtual] > 1;
-        const nome = (
-          p.camposFormulario?.clientes?.[0]?.nome_razao_social ||
-          p.camposFormulario?.clientes?.[0]?.razaoSocial ||
-          p.camposFormulario?.nomeEvento || "—"
-        );
-        const dataCriacao = p.criado_em
-          ? new Date(p.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'2-digit'})
-          : (p._id ? new Date(parseInt(p._id.substring(0,8),16)*1000).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : "—");
-
-        const bgAtual = isDup ? "#fff1f2" : "#f0fdf4";
-        const corNumAtual = isDup ? "#dc2626" : "#15803d";
-        const iconAtual = isDup
-          ? `<span style="color:#dc2626;margin-right:4px;">✗</span>`
-          : `<span style="color:#15803d;margin-right:4px;">✓</span>`;
-        const numAtualMatch = numAtual === numEsperado;
-        const bgEsperado = numAtualMatch ? "#f0fdf4" : "#fffbeb";
-        const corEsperado = numAtualMatch ? "#15803d" : "#92400e";
-
-        rowsAtual += `<tr style="border-bottom:1px solid #f1f5f9;">
-          <td style="padding:5px 10px;font-size:10px;color:#94a3b8;text-align:center;font-variant-numeric:tabular-nums;">${i+1}</td>
-          <td style="padding:5px 10px;font-size:10px;color:#64748b;white-space:nowrap;">${dataCriacao}</td>
-          <td style="padding:5px 10px;font-size:11px;color:#1e293b;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${duEsc(nome)}">${duEsc(nome)}</td>
-          <td style="padding:5px 10px;text-align:center;background:${bgAtual};">
-            ${iconAtual}<strong style="font-size:12px;color:${corNumAtual};font-variant-numeric:tabular-nums;">${duEsc(numAtual)}</strong>
-            ${isDup ? `<div style="font-size:9px;color:#dc2626;">DUPLICATA</div>` : ""}
-          </td>
-        </tr>`;
-
-        rowsCorreta += `<tr style="border-bottom:1px solid #f1f5f9;">
-          <td style="padding:5px 10px;font-size:10px;color:#94a3b8;text-align:center;font-variant-numeric:tabular-nums;">${i+1}</td>
-          <td style="padding:5px 10px;font-size:10px;color:#64748b;white-space:nowrap;">${dataCriacao}</td>
-          <td style="padding:5px 10px;font-size:11px;color:#1e293b;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${duEsc(nome)}">${duEsc(nome)}</td>
-          <td style="padding:5px 10px;text-align:center;background:${bgEsperado};">
-            <strong style="font-size:12px;color:${corEsperado};font-variant-numeric:tabular-nums;">${duEsc(numEsperado)}</strong>
-            ${!numAtualMatch ? `<div style="font-size:9px;color:#92400e;">atual: ${duEsc(numAtual)}</div>` : ""}
-          </td>
-        </tr>`;
-      });
-
-      const totalDup = Object.values(contagem).filter(v => v > 1).reduce((acc, v) => acc + v, 0);
-      const thead = `<thead><tr style="background:#f1f5f9;">
-        <th style="padding:6px 10px;font-size:10px;color:#64748b;text-align:center;">#</th>
-        <th style="padding:6px 10px;font-size:10px;color:#64748b;">Data</th>
-        <th style="padding:6px 10px;font-size:10px;color:#64748b;">Cliente</th>
-        <th style="padding:6px 10px;font-size:10px;color:#64748b;text-align:center;">Nº</th>
-      </tr></thead>`;
-
-      container.innerHTML = `
-        <div style="padding:16px 20px 8px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-          <span style="font-size:12px;color:#475569;">
-            <strong>${validas.length}</strong> propostas válidas ·
-            <strong style="color:#dc2626;">${totalDup}</strong> com número duplicado
-          </span>
-          <button onclick="diagCarregar()" style="border:none;background:#f1f5f9;color:#475569;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">
-            <span class="material-icons-outlined" style="font-size:13px;vertical-align:middle;">refresh</span> Recarregar
-          </button>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;overflow-x:auto;">
-          <div style="border-right:2px solid #e2e8f0;">
-            <div style="padding:10px 16px;background:#fef2f2;border-bottom:1px solid #fecaca;">
-              <span style="font-size:12px;font-weight:700;color:#dc2626;">Lista Atual (com erros marcados)</span>
-            </div>
-            <div style="overflow-y:auto;max-height:420px;">
-              <table style="width:100%;border-collapse:collapse;">${thead}<tbody>${rowsAtual}</tbody></table>
-            </div>
-          </div>
-          <div>
-            <div style="padding:10px 16px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;">
-              <span style="font-size:12px;font-weight:700;color:#15803d;">Lista Correta (sequência esperada)</span>
-            </div>
-            <div style="overflow-y:auto;max-height:420px;">
-              <table style="width:100%;border-collapse:collapse;">${thead}<tbody>${rowsCorreta}</tbody></table>
-            </div>
-          </div>
-        </div>`;
-
+      diagRenderizar(17607);
     } catch(e) {
       container.innerHTML = `<div style="padding:24px;text-align:center;color:#dc2626;font-size:12px;">Erro ao carregar: ${duEsc(e.message)}</div>`;
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-outlined" style="font-size:14px;vertical-align:middle;margin-right:4px;">visibility</span>Carregar Lista Completa'; }
     }
+  }
+
+  function diagRenderizar(primeiroNumInicial) {
+    const container = document.getElementById("diag-container");
+    if (!container || !_diagDados) return;
+    const validas = _diagDados;
+
+    const primeiroNum = parseInt(primeiroNumInicial, 10) || 17607;
+
+    // Detecta quais números aparecem mais de uma vez
+    const contagem = {};
+    validas.forEach(p => {
+      const n = String(p.numeroProposta ?? "");
+      contagem[n] = (contagem[n] || 0) + 1;
+    });
+
+    let rowsAtual = "", rowsCorreta = "";
+    let errados = 0, duplicatas = 0;
+
+    validas.forEach((p, i) => {
+      const numAtual   = String(p.numeroProposta ?? "") || "—";
+      const numEsperado = String(primeiroNum + i).padStart(5, "0");
+      const isDup      = contagem[numAtual] > 1;
+      const isOK       = numAtual === numEsperado;
+      if (isDup) duplicatas++;
+      else if (!isOK) errados++;
+
+      const nome = (
+        p.camposFormulario?.clientes?.[0]?.nome_razao_social ||
+        p.camposFormulario?.clientes?.[0]?.razaoSocial ||
+        p.camposFormulario?.nomeEvento || "—"
+      );
+      const status = p.statusOrcamento || "";
+      const dataCriacao = p.criado_em
+        ? new Date(p.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'2-digit'})
+        : (p._id ? new Date(parseInt(p._id.substring(0,8),16)*1000).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : "—");
+
+      // Tags para Lista Atual
+      let tagAtual = "";
+      if (isDup) {
+        tagAtual = `<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;background:#fee2e2;color:#991b1b;margin-left:4px;">◈ DUPLICATA</span>`;
+      } else if (!isOK) {
+        tagAtual = `<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;background:#fef3c7;color:#92400e;margin-left:4px;">✗ ERRADO</span>`;
+      } else {
+        tagAtual = `<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;background:#dcfce7;color:#15803d;margin-left:4px;">✓ OK</span>`;
+      }
+
+      // Tags para Lista Correta
+      let tagCorreta = "";
+      if (isOK) {
+        tagCorreta = `<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;background:#dcfce7;color:#15803d;margin-left:4px;">✓ OK</span>`;
+      } else {
+        tagCorreta = `<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;background:#fef3c7;color:#92400e;margin-left:4px;">⚠ CORRIGIR</span>`;
+      }
+
+      const trStyle = `border-bottom:1px solid #f1f5f9;${!isOK || isDup ? "background:#fffbf5;" : ""}`;
+      const tdNome = `<td style="padding:5px 8px;font-size:10px;color:#1e293b;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${duEsc(nome)}">${duEsc(nome)}</td>`;
+      const tdData = `<td style="padding:5px 8px;font-size:10px;color:#64748b;white-space:nowrap;">${dataCriacao}</td>`;
+      const tdIdx  = `<td style="padding:5px 8px;font-size:10px;color:#94a3b8;text-align:center;">${i+1}</td>`;
+
+      rowsAtual += `<tr style="${trStyle}">
+        ${tdIdx}${tdData}${tdNome}
+        <td style="padding:5px 8px;text-align:center;white-space:nowrap;">
+          <strong style="font-size:12px;font-variant-numeric:tabular-nums;color:${isDup?"#dc2626":isOK?"#15803d":"#92400e"};">${duEsc(numAtual)}</strong>
+          ${tagAtual}
+          ${status ? `<div style="font-size:9px;color:#94a3b8;margin-top:1px;">${duEsc(status)}</div>` : ""}
+        </td>
+      </tr>`;
+
+      rowsCorreta += `<tr style="${trStyle}">
+        ${tdIdx}${tdData}${tdNome}
+        <td style="padding:5px 8px;text-align:center;white-space:nowrap;">
+          <strong style="font-size:12px;font-variant-numeric:tabular-nums;color:${isOK?"#15803d":"#2563eb"};">${duEsc(numEsperado)}</strong>
+          ${tagCorreta}
+          ${!isOK ? `<div style="font-size:9px;color:#94a3b8;margin-top:1px;">atual: ${duEsc(numAtual)}</div>` : ""}
+        </td>
+      </tr>`;
+    });
+
+    const totalDup = Object.values(contagem).filter(v=>v>1).reduce((a,v)=>a+v,0);
+    const thead = `<thead style="position:sticky;top:0;z-index:1;"><tr style="background:#f1f5f9;">
+      <th style="padding:6px 8px;font-size:10px;color:#64748b;text-align:center;">#</th>
+      <th style="padding:6px 8px;font-size:10px;color:#64748b;">Data</th>
+      <th style="padding:6px 8px;font-size:10px;color:#64748b;">Cliente</th>
+      <th style="padding:6px 8px;font-size:10px;color:#64748b;text-align:center;">Nº / Tag</th>
+    </tr></thead>`;
+
+    container.innerHTML = `
+      <div style="padding:12px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <span style="font-size:12px;color:#475569;"><strong>${validas.length}</strong> propostas ·
+            <strong style="color:#dc2626;">${totalDup}</strong> duplicatas ·
+            <strong style="color:#92400e;">${errados}</strong> número errado</span>
+          <span style="font-size:11px;color:#64748b;">Primeiro nº correto:
+            <input id="diag-primeiro-num" type="number" value="${primeiroNum}"
+              style="width:72px;padding:3px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;">
+            <button onclick="diagRenderizar(document.getElementById('diag-primeiro-num').value)"
+              style="margin-left:4px;border:none;background:#0f172a;color:#fff;border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;">Aplicar</button>
+          </span>
+        </div>
+        <button onclick="diagCarregar()" style="border:none;background:#f1f5f9;color:#475569;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">
+          <span class="material-icons-outlined" style="font-size:13px;vertical-align:middle;">refresh</span> Recarregar
+        </button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;overflow-x:auto;">
+        <div style="border-right:2px solid #e2e8f0;">
+          <div style="padding:8px 14px;background:#fef2f2;border-bottom:1px solid #fecaca;position:sticky;top:0;z-index:2;">
+            <span style="font-size:11px;font-weight:700;color:#dc2626;">Lista Atual (com erros marcados)</span>
+          </div>
+          <div id="diag-scroll-atual" style="overflow-y:auto;max-height:500px;" onscroll="document.getElementById('diag-scroll-correta').scrollTop=this.scrollTop">
+            <table style="width:100%;border-collapse:collapse;">${thead}<tbody>${rowsAtual}</tbody></table>
+          </div>
+        </div>
+        <div>
+          <div style="padding:8px 14px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;position:sticky;top:0;z-index:2;">
+            <span style="font-size:11px;font-weight:700;color:#15803d;">Lista Correta (sequência a partir de ${primeiroNum})</span>
+          </div>
+          <div id="diag-scroll-correta" style="overflow-y:auto;max-height:500px;" onscroll="document.getElementById('diag-scroll-atual').scrollTop=this.scrollTop">
+            <table style="width:100%;border-collapse:collapse;">${thead}<tbody>${rowsCorreta}</tbody></table>
+          </div>
+        </div>
+      </div>`;
   }
   </script>
 </body>
