@@ -1053,6 +1053,11 @@
       if (s && Object.keys(s).length) return s;
       try { return JSON.parse(localStorage.getItem("cfg_botoes_kommo")) || {}; } catch { return {}; }
     })();
+    const cfgModificacoes = (() => {
+      const s = window.CFgAPI?.obter()?.travamentoModificacoes;
+      if (s && Object.keys(s).length) return s;
+      try { return JSON.parse(localStorage.getItem("cfg_travamento_modificacoes")) || {}; } catch { return {}; }
+    })();
 
     pipelines.forEach(pipeline => {
       if (!pipeline.etapas || !pipeline.etapas.length) return;
@@ -1120,11 +1125,24 @@
         cbOmieLabel.appendChild(cbOmie);
         cbOmieLabel.appendChild(Object.assign(document.createElement("span"), { textContent: "Omie" }));
 
+        // Checkbox Bloquear Modificações
+        const cbModLabel = document.createElement("label");
+        cbModLabel.style.cssText = "display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:#b45309;white-space:nowrap;margin-left:4px;";
+        const cbMod = document.createElement("input");
+        cbMod.type = "checkbox";
+        cbMod.dataset.stageId = stageKey;
+        cbMod.dataset.modFlag = "1";
+        cbMod.style.cssText = "width:13px;height:13px;cursor:pointer;accent-color:#b45309;";
+        cbMod.checked = !!cfgModificacoes[stageKey];
+        cbModLabel.appendChild(cbMod);
+        cbModLabel.appendChild(Object.assign(document.createElement("span"), { textContent: "Modificação" }));
+
         row.appendChild(cb);
         row.appendChild(dot);
         row.appendChild(labelWrap);
         row.appendChild(sel);
         row.appendChild(cbOmieLabel);
+        row.appendChild(cbModLabel);
 
         // Sub-linha com checkboxes por botão PDF
         const btnRow = document.createElement("div");
@@ -1186,9 +1204,10 @@
   }
 
   async function salvarTravamentoKommo() {
-    const cfg       = {};
-    const cfgOmie   = {};
-    const cfgBotoes = {};
+    const cfg              = {};
+    const cfgOmie          = {};
+    const cfgBotoes        = {};
+    const cfgModificacoes  = {};
 
     document.querySelectorAll("#kommo-trav-container input[type=checkbox]").forEach(cb => {
       if (cb.dataset.btnFlag) {
@@ -1196,6 +1215,8 @@
         cfgBotoes[cb.dataset.stageId][cb.dataset.btnId] = cb.checked;
       } else if (cb.dataset.omieFlag) {
         cfgOmie[cb.dataset.stageId] = cb.checked;
+      } else if (cb.dataset.modFlag) {
+        cfgModificacoes[cb.dataset.stageId] = cb.checked;
       } else {
         if (cb.checked) {
           const sel = document.querySelector(`select[data-stage-id="${cb.dataset.stageId}"][data-tipo-bloqueio]`);
@@ -1214,14 +1235,16 @@
     localStorage.setItem(TRAV_KOMMO_LS_KEY, JSON.stringify(cfg));
     localStorage.setItem("cfg_omie_etapas", JSON.stringify(cfgOmie));
     localStorage.setItem("cfg_botoes_kommo", JSON.stringify(cfgBotoes));
+    localStorage.setItem("cfg_travamento_modificacoes", JSON.stringify(cfgModificacoes));
 
     const statusEl = document.getElementById("cfg-status-travamento-kommo");
     if (statusEl) statusEl.textContent = "Salvando…";
 
     const cfgParcial = Object.assign({}, window.CFgAPI?.obter() || {}, {
-      travamentoKommo: cfg,
-      omieEtapas:      cfgOmie,
-      botoesKommo:     cfgBotoes,
+      travamentoKommo:        cfg,
+      omieEtapas:             cfgOmie,
+      botoesKommo:            cfgBotoes,
+      travamentoModificacoes: cfgModificacoes,
     });
     const ok = await window.CFgAPI?.salvar(cfgParcial);
 

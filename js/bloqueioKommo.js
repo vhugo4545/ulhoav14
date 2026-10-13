@@ -96,6 +96,11 @@ function verificarBloqueioKommo() {
       ? cfgBotoesServer
       : (() => { try { return JSON.parse(localStorage.getItem("cfg_botoes_kommo")) || {}; } catch { return {}; } })();
 
+    const cfgModServer = window.CFgAPI?.obter()?.travamentoModificacoes;
+    const cfgModificacoes = (cfgModServer && Object.keys(cfgModServer).length)
+      ? cfgModServer
+      : (() => { try { return JSON.parse(localStorage.getItem("cfg_travamento_modificacoes")) || {}; } catch { return {}; } })();
+
     const token = localStorage.getItem("accessToken") || "";
 
     Promise.all([
@@ -123,6 +128,18 @@ function verificarBloqueioKommo() {
 
       mostrarBanner(bloqueado, nomeEtapa, bloquearPdfs);
       if (bloqueado) aplicarBloqueio(bloquearPdfs, isSuperUser);
+
+      // Bloqueia botão "Salvar Proposta" conforme config de modificação
+      if (cfgModificacoes[statusId] && !isSuperUser) {
+        const btnEditar = document.getElementById("btn-editar");
+        if (btnEditar) {
+          btnEditar.disabled = true;
+          btnEditar.style.pointerEvents = "none";
+          btnEditar.style.opacity = "0.6";
+          btnEditar.style.cursor = "not-allowed";
+          btnEditar.title = "Modificações bloqueadas nesta etapa";
+        }
+      }
 
       // Controla botão "Enviar para Omie" conforme permissão da etapa
       const omiePermitido = !!cfgOmie[statusId];
