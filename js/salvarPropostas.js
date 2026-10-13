@@ -902,6 +902,23 @@ console.log("🔍 Desconto informado:", propostaAtualizada.camposFormulario.desc
 async function marcarPedidoFinalizado() {
   mostrarCarregando();
   await atualizarStatus("Pedido Finalizado");
+
+  // Sincroniza Data de Finalização com a Kommo (fire-and-forget)
+  try {
+    const _idProp = new URLSearchParams(window.location.search).get("id");
+    const _tk     = localStorage.getItem("accessToken") || localStorage.getItem("token") || "";
+    const _hoje   = new Date().toISOString().slice(0, 10);
+    if (_idProp) {
+      fetch(`https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${_idProp}/kommo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(_tk ? { Authorization: "Bearer " + _tk } : {}) },
+        body: JSON.stringify({ campos: { kommo_data_finalizacao: _hoje } })
+      }).catch(e => console.warn("[dataFinalizacao→Kommo]", e.message));
+    }
+  } catch (e) {
+    console.warn("[dataFinalizacao→Kommo]", e.message);
+  }
+
   ocultarCarregando();
 }
 
