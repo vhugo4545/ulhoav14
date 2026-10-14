@@ -1128,6 +1128,129 @@
     const gruposObrig = {};
     CAMPOS_OBRIG_DEF.forEach(c => { if (!gruposObrig[c.grupo]) gruposObrig[c.grupo] = []; gruposObrig[c.grupo].push(c); });
 
+    // ── Card Global "Aplicar a todas as etapas" ───────────────────────────────
+    const globalCard = document.createElement("div");
+    globalCard.id = "kommo-global-obrig";
+    globalCard.style.cssText = "border:2px solid #6d28d9;border-radius:10px;margin-bottom:20px;overflow:hidden;";
+
+    const globalHead = document.createElement("div");
+    globalHead.style.cssText = "display:flex;align-items:center;gap:8px;padding:11px 16px;cursor:pointer;background:#ede9fe;user-select:none;";
+    const globalArrowEl = document.createElement("span");
+    globalArrowEl.className = "material-icons-outlined";
+    globalArrowEl.style.cssText = "font-size:16px;color:#7c3aed;transition:transform .2s;transform:rotate(90deg);";
+    globalArrowEl.textContent = "chevron_right";
+    const globalTitleEl = document.createElement("span");
+    globalTitleEl.style.cssText = "font-size:12px;font-weight:700;color:#4c1d95;flex:1;";
+    globalTitleEl.textContent = "Aplicar a todas as etapas";
+    const globalHintEl = document.createElement("span");
+    globalHintEl.style.cssText = "font-size:10px;color:#7c3aed;font-weight:500;";
+    globalHintEl.textContent = "Marcar aqui aplica o campo em TODAS as etapas";
+    globalHead.append(globalArrowEl, globalTitleEl, globalHintEl);
+
+    const globalBody = document.createElement("div");
+    globalBody.style.cssText = "padding:10px 14px;background:#faf5ff;";
+
+    let globalExpanded = true;
+    const applyGlobalExpand = () => {
+      globalBody.style.display = globalExpanded ? "block" : "none";
+      globalArrowEl.style.transform = globalExpanded ? "rotate(90deg)" : "";
+    };
+    applyGlobalExpand();
+    globalHead.addEventListener("click", () => { globalExpanded = !globalExpanded; applyGlobalExpand(); });
+
+    Object.entries(gruposObrig).forEach(([grupoNome, campos]) => {
+      const gWrap = document.createElement("div");
+      gWrap.style.cssText = "margin-bottom:6px;border:1px solid #ddd6fe;border-radius:8px;overflow:hidden;";
+      const gHead = document.createElement("div");
+      gHead.style.cssText = "display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;background:#f5f3ff;user-select:none;";
+      const gArrow = document.createElement("span");
+      gArrow.className = "material-icons-outlined";
+      gArrow.style.cssText = "font-size:14px;color:#7c3aed;transition:transform .2s;";
+      gArrow.textContent = "chevron_right";
+      const gLabel = document.createElement("span");
+      gLabel.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5b21b6;flex:1;";
+      gLabel.textContent = grupoNome;
+      const gBadge = document.createElement("span");
+      gBadge.style.cssText = "font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;white-space:nowrap;";
+      gBadge.textContent = `0/${campos.length}`;
+      gHead.append(gArrow, gLabel, gBadge);
+      const gGrid = document.createElement("div");
+      gGrid.style.cssText = "display:none;flex-wrap:wrap;gap:6px;padding:10px;background:#fff;";
+      let gOpen = false;
+      const applyGState = () => { gGrid.style.display = gOpen ? "flex" : "none"; gArrow.style.transform = gOpen ? "rotate(90deg)" : ""; };
+      applyGState();
+      gHead.addEventListener("click", () => { gOpen = !gOpen; applyGState(); });
+
+      campos.forEach(campo => {
+        const lbl = document.createElement("label");
+        lbl.style.cssText = "display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #ddd6fe;cursor:pointer;font-size:11px;font-weight:500;background:#f5f3ff;color:#5b21b6;transition:all .15s;user-select:none;";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.dataset.globalKey = campo.key;
+        cb.style.accentColor = "#6d28d9";
+        const spanTxt = document.createElement("span");
+        spanTxt.textContent = campo.label;
+        const applyGlbStyle = () => {
+          const active = cb.checked || cb.indeterminate;
+          lbl.style.background  = active ? "#ede9fe" : "#f5f3ff";
+          lbl.style.borderColor = active ? "#a78bfa" : "#ddd6fe";
+          lbl.style.color       = active ? "#4c1d95" : "#5b21b6";
+          const checkedN = Array.from(gGrid.querySelectorAll("input[data-global-key]")).filter(c => c.checked || c.indeterminate).length;
+          gBadge.textContent    = `${checkedN}/${campos.length}`;
+          gBadge.style.background  = checkedN ? "#ede9fe" : "#f1f5f9";
+          gBadge.style.color       = checkedN ? "#6d28d9" : "#94a3b8";
+          gBadge.style.borderColor = checkedN ? "#c4b5fd" : "#e2e8f0";
+        };
+        applyGlbStyle();
+        cb.addEventListener("change", () => {
+          cb.indeterminate = false;
+          applyGlbStyle();
+          container.querySelectorAll(`input[data-field-key="${campo.key}"]`).forEach(stageCb => {
+            if (stageCb.checked !== cb.checked) {
+              stageCb.checked = cb.checked;
+              stageCb.dispatchEvent(new Event("change"));
+            }
+          });
+        });
+        lbl.append(cb, spanTxt);
+        gGrid.appendChild(lbl);
+      });
+      gWrap.append(gHead, gGrid);
+      globalBody.appendChild(gWrap);
+    });
+
+    globalCard.append(globalHead, globalBody);
+    container.appendChild(globalCard);
+
+    function syncGlobalCheckboxes() {
+      container.querySelectorAll("input[data-global-key]").forEach(gcb => {
+        const key = gcb.dataset.globalKey;
+        const stageCbs = Array.from(container.querySelectorAll(`input[data-field-key="${key}"]`));
+        if (!stageCbs.length) return;
+        const n = stageCbs.filter(c => c.checked).length;
+        gcb.indeterminate = n > 0 && n < stageCbs.length;
+        gcb.checked       = n === stageCbs.length;
+        const lbl = gcb.closest("label");
+        if (lbl) {
+          const active = gcb.checked || gcb.indeterminate;
+          lbl.style.background  = active ? "#ede9fe" : "#f5f3ff";
+          lbl.style.borderColor = active ? "#a78bfa" : "#ddd6fe";
+          lbl.style.color       = active ? "#4c1d95" : "#5b21b6";
+        }
+      });
+      globalCard.querySelectorAll("div[style*='flex-wrap']").forEach(gGrid => {
+        const badge = gGrid.closest("div").previousElementSibling?.querySelector("span:last-child");
+        if (!badge) return;
+        const all = Array.from(gGrid.querySelectorAll("input[data-global-key]"));
+        const n = all.filter(c => c.checked || c.indeterminate).length;
+        badge.textContent    = `${n}/${all.length}`;
+        badge.style.background  = n ? "#ede9fe" : "#f1f5f9";
+        badge.style.color       = n ? "#6d28d9" : "#94a3b8";
+        badge.style.borderColor = n ? "#c4b5fd" : "#e2e8f0";
+      });
+    }
+    // ────────────────────────────────────────────────────────────────────────────
+
     function mkPill(text, color, bg, border) {
       const s = document.createElement("span");
       s.style.cssText = `font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${bg};color:${color};border:1px solid ${border};white-space:nowrap;`;
@@ -1408,10 +1531,31 @@
       container.appendChild(pipeGroup);
     });
 
-    // Listener: propagar mudança de nome igual entre pipelines
+    // Sincroniza estado inicial dos checkboxes globais com as etapas já carregadas
+    syncGlobalCheckboxes();
+
+    // Listener: atualiza global quando uma etapa individual muda + propaga nomes iguais
     container.addEventListener("change", function(e) {
       const cb = e.target;
-      if (cb.type !== "checkbox" || !cb.dataset.stageName) return;
+      if (cb.type !== "checkbox") return;
+      if (cb.dataset.fieldKey) {
+        // Atualiza o global correspondente
+        const gcb = container.querySelector(`input[data-global-key="${cb.dataset.fieldKey}"]`);
+        if (gcb) {
+          const stageCbs = Array.from(container.querySelectorAll(`input[data-field-key="${cb.dataset.fieldKey}"]`));
+          const n = stageCbs.filter(c => c.checked).length;
+          gcb.indeterminate = n > 0 && n < stageCbs.length;
+          gcb.checked       = n === stageCbs.length;
+          const lbl = gcb.closest("label");
+          if (lbl) {
+            const active = gcb.checked || gcb.indeterminate;
+            lbl.style.background  = active ? "#ede9fe" : "#f5f3ff";
+            lbl.style.borderColor = active ? "#a78bfa" : "#ddd6fe";
+            lbl.style.color       = active ? "#4c1d95" : "#5b21b6";
+          }
+        }
+      }
+      if (!cb.dataset.stageName) return;
       const nome = cb.dataset.stageName;
       const novoEstado = cb.checked;
       const outras = Array.from(container.querySelectorAll("input[data-stage-name]"))
