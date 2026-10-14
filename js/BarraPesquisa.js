@@ -241,8 +241,10 @@ function _mostrarUltimaAtualizacaoOmie() {
 
   const tipoUsuario = localStorage.getItem("usuarioTipo") || "usuario";
   const isGestor = ["admin", "gestor"].includes(tipoUsuario);
+  if (!isGestor) { btn.style.display = "none"; return; }
+
   const aprovado = !!window.propostaAtual?.aprovadoPeloGestor;
-  const cur = isGestor ? "pointer" : "default";
+  const cur = "pointer";
 
   btn.innerHTML =
     `<span>Atualização de valores Omie: ${new Date(ts).toLocaleString("pt-BR")}</span>` +
