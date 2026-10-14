@@ -1295,13 +1295,6 @@
         const head = document.createElement("div");
         head.style.cssText = "display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;background:#fff;user-select:none;flex-wrap:wrap;";
 
-        const dotsWrap = document.createElement("span");
-        dotsWrap.style.cssText = "display:flex;gap:3px;align-items:center;flex-shrink:0;";
-        list.forEach(({ etapa }) => {
-          const d = document.createElement("span");
-          d.style.cssText = `width:9px;height:9px;border-radius:50%;background:${etapa.cor || "#94a3b8"};display:inline-block;box-shadow:0 0 0 2px ${etapa.cor ? etapa.cor + "33" : "#e2e8f0"};`;
-          dotsWrap.appendChild(d);
-        });
 
         const nameWrap = document.createElement("div");
         nameWrap.style.cssText = "display:flex;flex-direction:column;flex:1;min-width:120px;";
@@ -1398,7 +1391,7 @@
         expandBtnM.innerHTML = `<span class="material-icons-outlined" style="font-size:18px;">expand_more</span>`;
         controls.appendChild(expandBtnM);
 
-        head.append(dotsWrap, nameWrap, controls, shadows);
+        head.append(nameWrap, controls, shadows);
 
         // — Body —
         const bodyM = document.createElement("div");
