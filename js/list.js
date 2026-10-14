@@ -39,37 +39,33 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function carregarBadgesKommo(ids) {
     if (!ids.length) return;
-    const pipelines = await getKommoPipelines();
+    const [pipelines, batchResult] = await Promise.all([
+      getKommoPipelines(),
+      fetch(`${KOMMO_SERVER}/proposta/batch-leads`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+      }).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+    ]);
 
-    await Promise.allSettled(ids.map(async id => {
-      try {
-        const r = await fetch(`${KOMMO_SERVER}/proposta/${id}/lead`, {
-          headers: { Authorization: `Bearer ${TOKEN}` }
-        });
-        const cell = document.querySelector(`td[data-kommo-id="${id}"]`);
-        if (!cell) return;
-
-        if (!r.ok) { cell.innerHTML = kommoSemBadge(); return; }
-        const lead = await r.json();
-        if (!lead || !lead.status_id) { cell.innerHTML = kommoSemBadge(); return; }
-
-        const etapa = kommoEtapaInfo(lead.status_id, pipelines);
-        const nome  = etapa?.nome || `ID ${lead.status_id}`;
-        const cor   = etapa?.cor  || "#94a3b8";
-        cell.innerHTML = `
-          <span title="${nome}" style="
-            display:inline-flex;align-items:center;gap:4px;
-            padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;
-            background:${cor}22;color:${cor};border:1px solid ${cor}55;white-space:nowrap;
-          ">
-            <span style="width:6px;height:6px;border-radius:50%;background:${cor};flex-shrink:0;"></span>
-            ${nome}
-          </span>`;
-      } catch {
-        const cell = document.querySelector(`td[data-kommo-id="${id}"]`);
-        if (cell) cell.innerHTML = kommoSemBadge();
-      }
-    }));
+    for (const id of ids) {
+      const cell = document.querySelector(`td[data-kommo-id="${id}"]`);
+      if (!cell) continue;
+      const lead = batchResult[id];
+      if (!lead || !lead.status_id) { cell.innerHTML = kommoSemBadge(); continue; }
+      const etapa = kommoEtapaInfo(lead.status_id, pipelines);
+      const nome  = etapa?.nome || `ID ${lead.status_id}`;
+      const cor   = etapa?.cor  || "#94a3b8";
+      cell.innerHTML = `
+        <span title="${nome}" style="
+          display:inline-flex;align-items:center;gap:4px;
+          padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;
+          background:${cor}22;color:${cor};border:1px solid ${cor}55;white-space:nowrap;
+        ">
+          <span style="width:6px;height:6px;border-radius:50%;background:${cor};flex-shrink:0;"></span>
+          ${nome}
+        </span>`;
+    }
   }
 
   function kommoSemBadge() {
