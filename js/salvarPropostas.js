@@ -476,9 +476,35 @@ window.atualizarPropostaEditavel = async function () {
         const LABELS_OBRIG = {
           dataOrcamento:                 "Data do Orçamento",
           origemCliente:                 "Origem do Cliente",
-          _temProdutos:                        "Ao menos 1 produto adicionado",
-          _todosBloco_previsaoEntrega:         "Prazo (dias úteis) em todos os itens",
-          _todosBloco_informacoesProduto:      "Condição de prazo em todos os itens",
+          _temProdutos:                              "Ao menos 1 produto adicionado",
+          // Bloco — Parâmetros
+          _todosBloco_margem_seguranca:             "Margem de Segurança (todos os itens)",
+          _todosBloco_comissao_arquiteta:           "Comissão Arquiteta (todos os itens)",
+          _todosBloco_margem_negociacao:            "Margem de Negociação (todos os itens)",
+          _todosBloco_numero_montantes:             "Nº de Montantes / Fixações (todos os itens)",
+          _todosBloco_altura_montante:              "Altura do Montante (todos os itens)",
+          _todosBloco_numero_protecoes:             "Nº de Proteções / Altura do Vidro (todos os itens)",
+          _todosBloco_margem_lucro:                 "Margem de Lucro (todos os itens)",
+          _todosBloco_descricao:                    "Metragem / Unidade(s) (todos os itens)",
+          _todosBloco_equipe_mo_botao:              "Equipe MO Botão (todos os itens)",
+          _todosBloco_ritmo_mo_botao:               "Ritmo MO Botão (todos os itens)",
+          _todosBloco_equipe_mo_garra:              "Equipe MO Garra (todos os itens)",
+          _todosBloco_ritmo_mo_garra:               "Ritmo MO Garra (todos os itens)",
+          _todosBloco_equipe_mo_calha:              "Equipe MO Calha Infinity (todos os itens)",
+          _todosBloco_ritmo_mo_calha:               "Ritmo MO Calha Infinity (todos os itens)",
+          _todosBloco_equipe_mo_vidro_bg:           "Equipe MO Vidro Botão/Garra (todos os itens)",
+          _todosBloco_ritmo_mo_vidro_bg:            "Ritmo MO Vidro Botão/Garra (todos os itens)",
+          _todosBloco_equipe_mo_vidro_h:            "Equipe MO Vidro Montante H (todos os itens)",
+          _todosBloco_ritmo_mo_vidro_h:             "Ritmo MO Vidro Montante H (todos os itens)",
+          _todosBloco_equipe_mo_vidro_ci:           "Equipe MO Vidro Calha Infinity (todos os itens)",
+          _todosBloco_ritmo_mo_vidro_ci:            "Ritmo MO Vidro Calha Infinity (todos os itens)",
+          // Bloco — Prazos
+          _todosBloco_previsaoEntrega:              "Prazo (dias úteis) em todos os itens",
+          _todosBloco_informacoesProduto:           "Condição de prazo em todos os itens",
+          _todosBloco_dataAssinaturaCliente:        "Data Assinatura do Cliente (todos os itens)",
+          _todosBloco_dataInstalacaoEstrutura:      "Data Instalação da Estrutura (todos os itens)",
+          _todosBloco_dataPagamentoVidros:          "Data Pagamento Vidros / Calha (todos os itens)",
+          _todosBloco_dataLiberacaoFornecedor:      "Data Liberação do Fornecedor (todos os itens)",
           "clientes[0].razaoSocial":     "Nome / Razão Social",
           "clientes[0].cpfCnpj":         "CPF / CNPJ do cliente",
           "clientes[0].nomeContato":     "Nome do Contato",
@@ -516,14 +542,12 @@ window.atualizarPropostaEditavel = async function () {
             const c = document.getElementById("blocosProdutosContainer");
             return c && c.querySelectorAll("table tbody tr:not(.extra-summary-row)").length > 0 ? "ok" : "";
           }
-          if (key === "_todosBloco_previsaoEntrega") {
-            const campos = document.querySelectorAll("#blocosProdutosContainer input[name='previsaoEntrega']");
+          if (key.startsWith("_todosBloco_")) {
+            const nome = key.replace("_todosBloco_", "");
+            const campos = document.querySelectorAll(
+              `#blocosProdutosContainer input[name='${nome}'], #blocosProdutosContainer textarea[name='${nome}']`
+            );
             if (!campos.length) return "ok"; // sem blocos: _temProdutos já cobre
-            return Array.from(campos).every(c => c.value.trim()) ? "ok" : "";
-          }
-          if (key === "_todosBloco_informacoesProduto") {
-            const campos = document.querySelectorAll("#blocosProdutosContainer textarea[name='informacoesProduto']");
-            if (!campos.length) return "ok";
             return Array.from(campos).every(c => c.value.trim()) ? "ok" : "";
           }
           if (key.startsWith("clientes[0].")) {
