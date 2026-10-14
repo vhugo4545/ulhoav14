@@ -713,6 +713,7 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                         <th>Unidade</th>
                         <th>Qtd.</th>
                         <th>Qtd. Des.</th>
+                        <th style="white-space:nowrap;">Dt. Alt.</th>
                         <th>Ação</th>
                       </tr>
                     </thead>
@@ -720,7 +721,7 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
                     <tfoot>
                       <tr>
                         <td colspan="2"><strong>Total</strong></td>
-                        <td colspan="7"><strong>R$ 0,00</strong></td>
+                        <td colspan="8"><strong>R$ 0,00</strong></td>
                       </tr>
                     </tfoot>
                   </table>

@@ -15,6 +15,14 @@ async function carregarProdutos() {
         produtosMapeados.set(produto.descricao.trim().toLowerCase(), produto);
       }
     });
+    // Resolve datas de alteração em células já renderizadas (itens carregados antes dos produtos)
+    document.querySelectorAll('td.data-alt-omie[data-codigo]').forEach(td => {
+      if (td.textContent === '—' || !td.textContent.trim()) {
+        const cod = String(td.dataset.codigo || '');
+        const p = todosProdutos.find(p => String(p.codigo_produto || p.codigo || '') === cod);
+        if (p?.data_alt) td.textContent = p.data_alt;
+      }
+    });
   } catch (error) {
     console.error('Erro ao carregar produtos:', error);
   }
@@ -83,7 +91,7 @@ function abrirSubstituirProduto(botao) {
   novaLinha.dataset.idSuffix = idSuffix;
 
   novaLinha.innerHTML = `
-    <td colspan="9">
+    <td colspan="10">
       <div class="position-relative">
         <div class="d-flex gap-2">
           <input type="text"
@@ -124,6 +132,7 @@ function montarLinhaProduto(idSuffix, produto) {
   const unidade       = produto.unidade ||
     (window._produtosUnidadeMap && window._produtosUnidadeMap[String(codigo).trim()]) || "\u2014";
 
+  const dataAlt = produto.data_alt || "—";
   linha.innerHTML = `
     <td>${utilizacao}</td>
     <td>${descricao}</td>
@@ -137,6 +146,7 @@ function montarLinhaProduto(idSuffix, produto) {
     <td class="quantidade-desejada">
       <span class="formula-result" data-formula="" data-group-id="${idSuffix}" onclick="tornarCampoEditavel(this)">1</span>
     </td>
+    <td class="data-alt-omie" style="white-space:nowrap;font-size:11px;color:#555;" data-codigo="${codigo}">${dataAlt}</td>
     <td>
       <button class="btn btn-danger btn-sm me-1" onclick="this.closest('tr').remove()">Remover</button>
       <button class="btn btn-secondary btn-sm" onclick="abrirSubstituirProduto(this)">Substituir</button>
@@ -164,7 +174,7 @@ function abrirSubstituirProduto(botao, idSuffix) {
   novaLinha.dataset.idSuffix = idSuffix;
 
   novaLinha.innerHTML = `
-    <td colspan="9">
+    <td colspan="10">
       <div class="position-relative">
         <div class="d-flex gap-2">
           <input type="text"

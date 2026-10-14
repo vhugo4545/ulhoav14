@@ -724,6 +724,13 @@ async function carregarPropostaEditavel(proposta) {
 
         console.log(item.formula_custo);
 
+        const _codigoOmie = String(item.codigo_omie || "");
+        const _dtAlt = (() => {
+          if (!_codigoOmie || !window.todosProdutos?.length) return "—";
+          const p = window.todosProdutos.find(p => String(p.codigo_produto || p.codigo || "") === _codigoOmie);
+          return p?.data_alt || "—";
+        })();
+
         tr.innerHTML = `
           <td>
             <textarea class="form-control form-control-sm" rows="3">
@@ -733,8 +740,8 @@ ${item.descricao_utilizacao || "Utilização Preencher"}
           <td>${item.nome_produto || ""}</td>
           <td class="custo-unitario">R$ ${parseFloat(item.custo || 0).toFixed(2)}</td>
           <td class="venda-unitaria">R$ ${parseFloat(item.preco || 0).toFixed(2)}</td>
-          <td>${item.codigo_omie || ""}</td>
-          <td class="unidade-medida">${item.unidade || (window._produtosUnidadeMap && window._produtosUnidadeMap[String(item.codigo_omie || "").trim()]) || "—"}</td>
+          <td>${_codigoOmie}</td>
+          <td class="unidade-medida">${item.unidade || (window._produtosUnidadeMap && window._produtosUnidadeMap[_codigoOmie.trim()]) || "—"}</td>
           <td>
             <input type="number" class="form-control form-control-sm quantidade"
               value="${window.location.pathname.includes("editarModelo.html") ? "0" : item.quantidade}">
@@ -743,6 +750,7 @@ ${item.descricao_utilizacao || "Utilização Preencher"}
             <input type="text" class="form-control form-control-sm quantidade-desejada"
               value="${valorOriginal}" data-formula="${formula}" data-group-id="${idSuffix}">
           </td>
+          <td class="data-alt-omie" style="white-space:nowrap;font-size:11px;color:#555;" data-codigo="${_codigoOmie}">${_dtAlt}</td>
           <td>
             <button class="btn btn-danger btn-sm me-1" onclick="this.closest('tr').remove()">Remover</button>
             <button class="btn btn-secondary btn-sm" onclick="abrirSubstituirProduto(this)">Substituir</button>
