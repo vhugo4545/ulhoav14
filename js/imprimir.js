@@ -168,7 +168,7 @@ async function gerarOrcamentoParaImpressaoCompleta() {
     }
 
     const totalGrupoTexto =
-      tabela.querySelector("tfoot td[colspan='7'] strong")?.textContent || "R$ 0,00";
+      tabela.querySelector("tfoot td[colspan='8'] strong")?.textContent || "R$ 0,00";
 
     const totalGrupo = moedaBRParaNumero(totalGrupoTexto);
 
@@ -558,7 +558,7 @@ function gerarHTMLParaImpressao(gruposOcultarProduto, totais = {}) {
     let resumoGrupo = document.getElementById(`resumo-${grupoId}`)?.value?.trim() || "";
     resumoGrupo = parseBold(resumoGrupo).replace(/\n/g, "<br>");
     const totalGrupoTexto =
-      tabela.querySelector("tfoot td[colspan='7'] strong")?.textContent || "R$ 0,00";
+      tabela.querySelector("tfoot td[colspan='8'] strong")?.textContent || "R$ 0,00";
     const totalGrupo = parseBRL(totalGrupoTexto);
     let colunas = linhaProduto?.querySelectorAll("td");
     let descricao = colunas?.[1]?.textContent.trim() || "-";

@@ -191,7 +191,7 @@ async function gerarPDFComPdfmake(gruposOcultarProduto, totais = {}, { skipValor
     const resumo       = sanitize(document.getElementById(`resumo-${grupoId}`)?.value?.trim() || '');
     const infosProd    = sanitize(document.querySelector(`#${grupoId}-aba3 textarea[name="informacoesProduto"]`)?.value?.trim() || '');
     const prazoGrupo   = sanitize(document.querySelector(`#${grupoId}-aba3 input[name="previsaoEntrega"]`)?.value?.trim() || '');
-    const totalTexto   = tabela.querySelector("tfoot td[colspan='7'] strong")?.textContent || 'R$ 0,00';
+    const totalTexto   = tabela.querySelector("tfoot td[colspan='8'] strong")?.textContent || 'R$ 0,00';
     const totalGrupo   = parseBRL(totalTexto);
     const ocultar      = !!(gruposOcultarProduto && gruposOcultarProduto[grupoId]);
     gruposDados.push({ grupoId, nomeAmbiente, totalGrupo, descricao, qtd, unidade, resumo, infosProd, prazoGrupo, ocultar });

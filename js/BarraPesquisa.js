@@ -101,7 +101,7 @@ function renderLista(filtro = "") {
             });
 
             const tabela = ultimoBloco.querySelector(`table tbody`);
-            const totalTd = ultimoBloco.querySelector(`table tfoot td[colspan="7"], table tfoot td:last-child`);
+            const totalTd = ultimoBloco.querySelector(`table tfoot td[colspan="8"], table tfoot td:last-child`);
             tabela.innerHTML = "";
 
             let total = 0;

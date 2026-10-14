@@ -81,7 +81,7 @@ function preencherValoresFinanceiros(blocoId) {
   if (inputCusto) inputCusto.value = custoMaterial.toFixed(2);
 
   // Atualizar total no rodapé da tabela
-  const totalRodape = bloco.querySelector('table tfoot td[colspan="7"] strong');
+  const totalRodape = bloco.querySelector('table tfoot td[colspan="8"] strong');
   if (totalRodape) totalRodape.textContent = `R$ ${precoSugerido.toFixed(2)}`;
 
   // Mostrar no console os valores detalhados
