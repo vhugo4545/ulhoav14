@@ -225,6 +225,10 @@ async function carregarPropostaEditavel(proposta) {
     setIfExists("dataPedidoEnviadoCliente", dados.dataPedidoEnviadoCliente);
     setIfExists("meioEnvioPedido", dados.meioEnvioPedido);
     setIfExists("dataPedidoAssinado", dados.dataPedidoAssinado);
+    (() => {
+      const el = document.getElementById("dataPedidoAssinado");
+      if (el && dados.dataPedidoAssinado) el.dataset.valorOriginal = dados.dataPedidoAssinado;
+    })();
     setIfExists("dataEntregaProjeto", dados.dataEntregaProjeto);
     setIfExists("dataInicioProjeto", dados.dataInicioProjeto);
     setIfExists("prazoPrevisto", dados.prazoPrevisto);
@@ -760,6 +764,16 @@ ${item.descricao_utilizacao || "Utilização Preencher"}
         }
       }
     }
+
+    // Propaga dataPedidoAssinado para todos os grupos após renderização completa
+    (() => {
+      const el = document.getElementById("dataPedidoAssinado");
+      if (el && el.value) {
+        document.querySelectorAll('.tab-pane input[name="dataPedidoAssinado"]').forEach(inp => {
+          inp.value = el.value;
+        });
+      }
+    })();
 
     if (typeof renderizarTudo === "function") renderizarTudo();
     if (typeof ativarRecalculoEmTodasTabelas === "function") ativarRecalculoEmTodasTabelas();
