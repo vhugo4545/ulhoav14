@@ -15,6 +15,67 @@ document.addEventListener("DOMContentLoaded", async () => {
   const API_BASE = "https://ulhoa-0a02024d350a.herokuapp.com";
   const TOKEN = localStorage.getItem("accessToken");
 
+  const KOMMO_SERVER = "https://kommo-server-9f1243cbe450.herokuapp.com";
+  let _kommoPipelines = null; // cache local de pipelines
+
+  async function getKommoPipelines() {
+    if (_kommoPipelines) return _kommoPipelines;
+    try {
+      const r = await fetch(`${KOMMO_SERVER}/kommo/pipelines`, {
+        headers: { Authorization: `Bearer ${TOKEN}` }
+      });
+      _kommoPipelines = r.ok ? await r.json() : [];
+    } catch { _kommoPipelines = []; }
+    return _kommoPipelines;
+  }
+
+  function kommoEtapaInfo(statusId, pipelines) {
+    for (const p of (pipelines || [])) {
+      const etapa = (p.etapas || []).find(e => String(e.status_id) === String(statusId));
+      if (etapa) return { nome: etapa.nome, cor: etapa.cor || "#94a3b8" };
+    }
+    return null;
+  }
+
+  async function carregarBadgesKommo(ids) {
+    if (!ids.length) return;
+    const pipelines = await getKommoPipelines();
+
+    await Promise.allSettled(ids.map(async id => {
+      try {
+        const r = await fetch(`${KOMMO_SERVER}/proposta/${id}/lead`, {
+          headers: { Authorization: `Bearer ${TOKEN}` }
+        });
+        const cell = document.querySelector(`td[data-kommo-id="${id}"]`);
+        if (!cell) return;
+
+        if (!r.ok) { cell.innerHTML = kommoSemBadge(); return; }
+        const lead = await r.json();
+        if (!lead || !lead.status_id) { cell.innerHTML = kommoSemBadge(); return; }
+
+        const etapa = kommoEtapaInfo(lead.status_id, pipelines);
+        const nome  = etapa?.nome || `ID ${lead.status_id}`;
+        const cor   = etapa?.cor  || "#94a3b8";
+        cell.innerHTML = `
+          <span title="${nome}" style="
+            display:inline-flex;align-items:center;gap:4px;
+            padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;
+            background:${cor}22;color:${cor};border:1px solid ${cor}55;white-space:nowrap;
+          ">
+            <span style="width:6px;height:6px;border-radius:50%;background:${cor};flex-shrink:0;"></span>
+            ${nome}
+          </span>`;
+      } catch {
+        const cell = document.querySelector(`td[data-kommo-id="${id}"]`);
+        if (cell) cell.innerHTML = kommoSemBadge();
+      }
+    }));
+  }
+
+  function kommoSemBadge() {
+    return `<span style="font-size:10px;color:#cbd5e1;">—</span>`;
+  }
+
   // ===== Estado =====
   let currentPage = 1;
   let totalPages = 1;
@@ -283,6 +344,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           <td>${item.cliente}</td>
           <td>${item.cnpjCpf}</td>
           <td><span class="status ${String(item.status).toLowerCase().replace(/\s/g, "-")}">${item.status}</span></td>
+          <td data-kommo-id="${item._id}" style="white-space:nowrap;">
+            <span style="font-size:10px;color:#cbd5e1;">⋯</span>
+          </td>
           <td>
             <span title="Validade da proposta">${item.validade}</span>
             ${item.vencida ? '<br><span style="color:red; font-weight:bold;">VENCIDA</span>' : ""}
@@ -303,6 +367,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     nextPageBtn.disabled = currentPage >= totalPages;
 
     addActionEventListeners();
+
+    // Carrega badges Kommo em background (não bloqueia render)
+    carregarBadgesKommo(list.map(i => i._id));
   }
 
   function renderAlertas(vencidas, prestesAVencer) {
