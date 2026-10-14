@@ -6296,13 +6296,16 @@ async function atualizarNaOmie() {
     const _vFinal = _parseBRL(_elFinal?.textContent);
 
     if (_vMin > 0 && _vFinal < _vMin) {
-      const _fmtBRL = (n) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-      mostrarPopupCustomizado(
-        "⚠️ Valor abaixo do mínimo",
-        `O valor final <b>${_fmtBRL(_vFinal)}</b> está abaixo do valor mínimo permitido <b>${_fmtBRL(_vMin)}</b>.<br><br>Ajuste o desconto ou o valor antes de enviar para a Omie.`,
-        "error"
-      );
-      return;
+      const _aprovado = (window._solicitacoesAprovacaoMinimo || []).some(s => s.status === "aprovado");
+      if (!_aprovado) {
+        const _fmtBRL = (n) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        mostrarPopupCustomizado(
+          "⚠️ Valor abaixo do mínimo",
+          `O valor final <b>${_fmtBRL(_vFinal)}</b> está abaixo do valor mínimo permitido <b>${_fmtBRL(_vMin)}</b>.<br><br>Ajuste o desconto ou o valor antes de enviar para a Omie.`,
+          "error"
+        );
+        return;
+      }
     }
   }
 
