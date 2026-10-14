@@ -671,6 +671,28 @@
         </div>
       </div>
 
+      <!-- Card: Obrigatoriedade de Campos por Etapa da Kommo -->
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="card-title">
+          <span class="material-icons-outlined">checklist</span>
+          Obrigatoriedade de Campos por Etapa
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);margin:0 0 16px;">
+          Defina quais campos devem estar <strong>obrigatoriamente preenchidos</strong> em cada etapa da Kommo. Se o campo estiver vazio ao salvar, o sistema bloqueará o salvamento. Administradores <strong>não</strong> são bloqueados.
+        </p>
+
+        <div id="kommo-obrig-container" style="font-size:12px;color:#94a3b8;">
+          Carregando junto com as etapas acima…
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap;">
+          <button class="cfg-save-btn" onclick="salvarObrigatoriedadeCampos()">
+            <span class="material-icons-outlined">cloud_upload</span> Salvar
+          </button>
+          <span class="cfg-status" id="cfg-status-obrigatoriedade"></span>
+        </div>
+      </div>
+
       <!-- Card: Ajuste de Números de Orçamento/Pedido -->
       <div class="card" style="grid-column: 1 / -1; padding:0; overflow:hidden;">
 
@@ -1031,6 +1053,7 @@
   }
 
   function kommoTravRenderizar(pipelines) {
+    window._kommoLastPipelines = pipelines;
     const container = document.getElementById("kommo-trav-container");
     if (!container) return;
     container.style.color = "";
@@ -1181,6 +1204,8 @@
       container.appendChild(group);
     });
 
+    kommoObrigRenderizar(pipelines);
+
     // Após renderizar tudo: listener único para detectar nomes iguais em outros pipelines
     container.addEventListener("change", function(e) {
       const cb = e.target;
@@ -1245,6 +1270,208 @@
       omieEtapas:             cfgOmie,
       botoesKommo:            cfgBotoes,
       travamentoModificacoes: cfgModificacoes,
+    });
+    const ok = await window.CFgAPI?.salvar(cfgParcial);
+
+    if (statusEl) {
+      statusEl.textContent = ok === false ? "Salvo localmente" : "Salvo!";
+      setTimeout(() => statusEl.textContent = "", 3000);
+    }
+  }
+
+  // ── Obrigatoriedade de campos por etapa ────────────────────────────────────
+
+  const CAMPOS_OBRIG_LISTA = [
+    // Grupo: Dados do Cliente
+    { key: "clientes[0].cpfCnpj",          label: "CPF / CNPJ do cliente",      grupo: "Cliente" },
+    { key: "clientes[0].telefoneCliente",   label: "Telefone do cliente",         grupo: "Cliente" },
+    { key: "clientes[0].emailCliente",      label: "E-mail do cliente",           grupo: "Cliente" },
+    // Grupo: Endereço
+    { key: "cep",                           label: "CEP (obra)",                  grupo: "Endereço" },
+    { key: "rua",                           label: "Rua (obra)",                  grupo: "Endereço" },
+    { key: "cidade",                        label: "Cidade (obra)",               grupo: "Endereço" },
+    { key: "estado",                        label: "Estado (obra)",               grupo: "Endereço" },
+    // Grupo: Equipe
+    { key: "vendedorResponsavel",           label: "Vendedor Responsável",        grupo: "Equipe" },
+    // Grupo: Prazos e Condições
+    { key: "prazosArea",                    label: "Prazos por Área",             grupo: "Condições" },
+    { key: "condicaoPagamento",             label: "Condição de Pagamento",       grupo: "Condições" },
+    { key: "condicoesGerais",               label: "Condições Gerais",            grupo: "Condições" },
+    { key: "prazoEntrega",                  label: "Prazo de Entrega",            grupo: "Condições" },
+    // Grupo: Acompanhamento
+    { key: "dataPedidoEnviadoCliente",      label: "Data Envio ao Cliente",       grupo: "Acompanhamento" },
+    { key: "meioEnvioPedido",               label: "Meio de Envio",               grupo: "Acompanhamento" },
+    { key: "dataPedidoAssinado",            label: "Data Pedido Assinado",        grupo: "Acompanhamento" },
+    { key: "prazoPrevisto",                 label: "Prazo Previsto",              grupo: "Acompanhamento" },
+    { key: "dataLiberacaoConferencia",      label: "Data Liberação Conferência",  grupo: "Acompanhamento" },
+    { key: "dataConferencia",               label: "Data da Conferência",         grupo: "Acompanhamento" },
+    { key: "obraLiberada",                  label: "Obra Liberada?",              grupo: "Acompanhamento" },
+    { key: "dataLiberacaoObra",             label: "Data Liberação Obra",         grupo: "Acompanhamento" },
+    { key: "dataProjetoEnviado",            label: "Data Projeto Enviado",        grupo: "Acompanhamento" },
+    { key: "dataProjetoAssinado",           label: "Data Projeto Assinado",       grupo: "Acompanhamento" },
+    { key: "dataMedicaoRealizada",          label: "Data Medição Realizada",      grupo: "Acompanhamento" },
+  ];
+
+  function kommoObrigCarregarConfig() {
+    const s = window.CFgAPI?.obter()?.obrigatoriedadeCampos;
+    if (s && Object.keys(s).length) return s;
+    try { return JSON.parse(localStorage.getItem("cfg_obrigatoriedade_campos")) || {}; } catch { return {}; }
+  }
+
+  function kommoObrigRenderizar(pipelines) {
+    const container = document.getElementById("kommo-obrig-container");
+    if (!container) return;
+    container.style.color = "";
+    container.innerHTML = "";
+
+    if (!pipelines || !pipelines.length) {
+      container.style.color = "#94a3b8";
+      container.textContent = "Nenhum pipeline encontrado.";
+      return;
+    }
+
+    const cfg = kommoObrigCarregarConfig();
+
+    // Agrupa campos por grupo
+    const grupos = {};
+    CAMPOS_OBRIG_LISTA.forEach(c => {
+      if (!grupos[c.grupo]) grupos[c.grupo] = [];
+      grupos[c.grupo].push(c);
+    });
+
+    pipelines.forEach(pipeline => {
+      if (!pipeline.etapas || !pipeline.etapas.length) return;
+
+      const pipeGroup = document.createElement("div");
+      pipeGroup.style.cssText = "margin-bottom:20px;";
+
+      const pipeHeader = document.createElement("div");
+      pipeHeader.style.cssText = "font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid var(--border);";
+      pipeHeader.textContent = pipeline.pipeline_name || `Pipeline ${pipeline.pipeline_id}`;
+      pipeGroup.appendChild(pipeHeader);
+
+      pipeline.etapas.forEach(etapa => {
+        const stageKey = String(etapa.status_id);
+        const camposSelecionados = cfg[stageKey] || [];
+
+        // Linha da etapa (clicável para expandir)
+        const stageWrap = document.createElement("div");
+        stageWrap.style.cssText = "margin-bottom:6px;border:1px solid var(--border);border-radius:8px;overflow:hidden;";
+
+        const stageRow = document.createElement("div");
+        stageRow.style.cssText = "display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;background:var(--bg);transition:background .1s;user-select:none;";
+        stageRow.onmouseover = () => stageRow.style.background = "#f1f5f9";
+        stageRow.onmouseout  = () => stageRow.style.background = "";
+
+        const dot = document.createElement("span");
+        dot.style.cssText = `width:9px;height:9px;border-radius:50%;background:${etapa.cor || "#94a3b8"};flex-shrink:0;display:inline-block;`;
+
+        const stageLabel = document.createElement("span");
+        stageLabel.style.cssText = "font-size:12px;font-weight:600;color:#334155;flex:1;";
+        stageLabel.textContent = etapa.nome;
+
+        const badge = document.createElement("span");
+        badge.dataset.badgeStage = stageKey;
+        const n = camposSelecionados.length;
+        badge.style.cssText = `font-size:10px;font-weight:600;padding:2px 7px;border-radius:100px;background:${n ? "#dcfce7" : "#f1f5f9"};color:${n ? "#166534" : "#94a3b8"};border:1px solid ${n ? "#86efac" : "#e2e8f0"};`;
+        badge.textContent = n ? `${n} obrigatório${n > 1 ? "s" : ""}` : "Nenhum";
+
+        const arrow = document.createElement("span");
+        arrow.className = "material-icons-outlined";
+        arrow.style.cssText = "font-size:16px;color:#94a3b8;transition:transform .2s;";
+        arrow.textContent = "expand_more";
+
+        stageRow.appendChild(dot);
+        stageRow.appendChild(stageLabel);
+        stageRow.appendChild(badge);
+        stageRow.appendChild(arrow);
+
+        // Painel de campos (oculto por padrão)
+        const fieldsPanel = document.createElement("div");
+        fieldsPanel.style.cssText = "display:none;padding:12px 14px;border-top:1px solid var(--border);background:#fafafa;";
+
+        // Checkboxes por grupo de campos
+        Object.entries(grupos).forEach(([grupoNome, campos]) => {
+          const grupoDiv = document.createElement("div");
+          grupoDiv.style.cssText = "margin-bottom:10px;";
+
+          const grupoTitle = document.createElement("div");
+          grupoTitle.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:5px;";
+          grupoTitle.textContent = grupoNome;
+          grupoDiv.appendChild(grupoTitle);
+
+          const camposGrid = document.createElement("div");
+          camposGrid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px;";
+
+          campos.forEach(campo => {
+            const lbl = document.createElement("label");
+            lbl.style.cssText = "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#475569;padding:4px 6px;border-radius:5px;transition:background .1s;";
+            lbl.onmouseover = () => lbl.style.background = "#f1f5f9";
+            lbl.onmouseout  = () => lbl.style.background = "";
+
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.dataset.stageId  = stageKey;
+            cb.dataset.fieldKey = campo.key;
+            cb.style.cssText = "width:13px;height:13px;cursor:pointer;accent-color:#6366f1;flex-shrink:0;";
+            cb.checked = camposSelecionados.includes(campo.key);
+
+            cb.addEventListener("change", () => {
+              const allCbs = fieldsPanel.querySelectorAll("input[type=checkbox]");
+              const count  = Array.from(allCbs).filter(c => c.checked).length;
+              badge.textContent = count ? `${count} obrigatório${count > 1 ? "s" : ""}` : "Nenhum";
+              badge.style.background = count ? "#dcfce7" : "#f1f5f9";
+              badge.style.color      = count ? "#166534" : "#94a3b8";
+              badge.style.border     = `1px solid ${count ? "#86efac" : "#e2e8f0"}`;
+            });
+
+            lbl.appendChild(cb);
+            lbl.appendChild(document.createTextNode(campo.label));
+            camposGrid.appendChild(lbl);
+          });
+
+          grupoDiv.appendChild(camposGrid);
+          fieldsPanel.appendChild(grupoDiv);
+        });
+
+        // Toggle expand/collapse
+        stageRow.addEventListener("click", () => {
+          const open = fieldsPanel.style.display !== "none";
+          fieldsPanel.style.display = open ? "none" : "block";
+          arrow.style.transform = open ? "" : "rotate(180deg)";
+        });
+
+        stageWrap.appendChild(stageRow);
+        stageWrap.appendChild(fieldsPanel);
+        pipeGroup.appendChild(stageWrap);
+      });
+
+      container.appendChild(pipeGroup);
+    });
+  }
+
+  async function salvarObrigatoriedadeCampos() {
+    const container = document.getElementById("kommo-obrig-container");
+    if (!container) return;
+
+    const cfg = {};
+    container.querySelectorAll("input[type=checkbox][data-field-key]").forEach(cb => {
+      if (!cfg[cb.dataset.stageId]) cfg[cb.dataset.stageId] = [];
+      if (cb.checked) cfg[cb.dataset.stageId].push(cb.dataset.fieldKey);
+    });
+
+    if (!Object.keys(cfg).length) {
+      alert("Nenhuma etapa carregada. Recarregue as etapas acima primeiro.");
+      return;
+    }
+
+    localStorage.setItem("cfg_obrigatoriedade_campos", JSON.stringify(cfg));
+
+    const statusEl = document.getElementById("cfg-status-obrigatoriedade");
+    if (statusEl) statusEl.textContent = "Salvando…";
+
+    const cfgParcial = Object.assign({}, window.CFgAPI?.obter() || {}, {
+      obrigatoriedadeCampos: cfg
     });
     const ok = await window.CFgAPI?.salvar(cfgParcial);
 

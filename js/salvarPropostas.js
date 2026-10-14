@@ -456,6 +456,80 @@ window.atualizarPropostaEditavel = async function () {
   }
   } // fim else (não é modelo)
 
+  // ── Valida campos obrigatórios pela etapa Kommo atual ─────────────────────
+  {
+    const _statusAtual = window._kommoStatusAtual?.statusId;
+    const _isSuperUser = (() => {
+      const t = localStorage.getItem("usuarioTipo") || "";
+      return t === "admin" || t === "gestor";
+    })();
+
+    if (_statusAtual && !_isSuperUser) {
+      const _cfgObrig = (() => {
+        const s = window.CFgAPI?.obter()?.obrigatoriedadeCampos;
+        if (s && Object.keys(s).length) return s;
+        try { return JSON.parse(localStorage.getItem("cfg_obrigatoriedade_campos")) || {}; } catch { return {}; }
+      })();
+      const _camposReq = _cfgObrig[_statusAtual] || [];
+
+      if (_camposReq.length) {
+        const LABELS_OBRIG = {
+          "clientes[0].cpfCnpj":        "CPF / CNPJ do cliente",
+          "clientes[0].telefoneCliente": "Telefone do cliente",
+          "clientes[0].emailCliente":    "E-mail do cliente",
+          cep:                           "CEP (obra)",
+          rua:                           "Rua (obra)",
+          cidade:                        "Cidade (obra)",
+          estado:                        "Estado (obra)",
+          vendedorResponsavel:           "Vendedor Responsável",
+          prazosArea:                    "Prazos por Área",
+          condicaoPagamento:             "Condição de Pagamento",
+          condicoesGerais:               "Condições Gerais",
+          prazoEntrega:                  "Prazo de Entrega",
+          dataPedidoEnviadoCliente:      "Data Envio ao Cliente",
+          meioEnvioPedido:               "Meio de Envio",
+          dataPedidoAssinado:            "Data Pedido Assinado",
+          prazoPrevisto:                 "Prazo Previsto",
+          dataLiberacaoConferencia:      "Data Liberação Conferência",
+          dataConferencia:               "Data da Conferência",
+          obraLiberada:                  "Obra Liberada?",
+          dataLiberacaoObra:             "Data Liberação Obra",
+          dataProjetoEnviado:            "Data Projeto Enviado",
+          dataProjetoAssinado:           "Data Projeto Assinado",
+          dataMedicaoRealizada:          "Data Medição Realizada",
+        };
+
+        function _obterValorCampoObrig(key) {
+          if (key.startsWith("clientes[0].")) {
+            const campo = key.replace("clientes[0].", "");
+            const clienteEl = document.querySelector(".cliente-item");
+            const sels = { cpfCnpj: ".cpfCnpj", telefoneCliente: ".telefoneCliente", emailCliente: ".emailCliente" };
+            return clienteEl?.querySelector(sels[campo] || "")?.value?.trim() || "";
+          }
+          if (key === "vendedorResponsavel") {
+            const s = document.getElementById("vendedorResponsavel");
+            return s?.options[s.selectedIndex]?.value?.trim() || "";
+          }
+          return document.getElementById(key)?.value?.trim() || "";
+        }
+
+        const vazios = _camposReq.filter(k => !_obterValorCampoObrig(k));
+
+        if (vazios.length) {
+          const nomeEtapa = window._kommoStatusAtual?.nomeEtapa || _statusAtual;
+          const lista = vazios.map(k => `• ${LABELS_OBRIG[k] || k}`).join("<br>");
+          mostrarPopupCustomizado(
+            "🔒 Campos obrigatórios",
+            `Os seguintes campos são obrigatórios na etapa <strong>${nomeEtapa}</strong>:<br><br>${lista}`,
+            "warning"
+          );
+          return;
+        }
+      }
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   try {
     //abrirTodasSanfonas();
     mostrarCarregando();

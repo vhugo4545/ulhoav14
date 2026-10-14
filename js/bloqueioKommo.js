@@ -119,6 +119,7 @@ function verificarBloqueioKommo() {
         const etapa = (p.etapas || []).find(e => String(e.status_id) === statusId);
         if (etapa) { nomeEtapa = etapa.nome; break; }
       }
+      window._kommoStatusAtual = { statusId, nomeEtapa };
 
       const tipoBloqueio = cfgKommo[statusId]; // false | "ajustes" | "tudo"
       const bloqueado    = tipoBloqueio === "ajustes" || tipoBloqueio === "tudo";
