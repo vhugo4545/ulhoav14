@@ -1258,6 +1258,251 @@
       return s;
     }
 
+    // ── Detecta etapas com nome idêntico em pipelines diferentes ─────────────
+    const todosEtapas = [];
+    pipelines.forEach(p => (p.etapas || []).forEach(e => todosEtapas.push({ etapa: e, pipeline: p })));
+    const porNomeMap = {};
+    todosEtapas.forEach(({ etapa, pipeline }) => {
+      const k = etapa.nome.trim().toLowerCase();
+      if (!porNomeMap[k]) porNomeMap[k] = [];
+      porNomeMap[k].push({ etapa, pipeline });
+    });
+    const nomesMergeados = new Set(
+      Object.entries(porNomeMap).filter(([, l]) => l.length > 1).map(([k]) => k)
+    );
+
+    if (nomesMergeados.size > 0) {
+      const comumGroup = document.createElement("div");
+      comumGroup.style.cssText = "margin-bottom:24px;";
+      const comumTitle = document.createElement("div");
+      comumTitle.style.cssText = "font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:6px;";
+      comumTitle.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;color:#94a3b8;">merge_type</span>Etapas em Comum (${nomesMergeados.size})`;
+      comumGroup.appendChild(comumTitle);
+
+      Object.values(porNomeMap).filter(list => list.length > 1).forEach(list => {
+        const stageNome = list[0].etapa.nome;
+        const stageKeys = list.map(({ etapa }) => String(etapa.status_id));
+        const initCfgVal = stageKeys.map(k => cfg[k]).find(v => v && v !== false) ?? "";
+        const initOmie   = stageKeys.some(k => !!cfgOmie[k]);
+        const initMod    = stageKeys.some(k => !!cfgMod[k]);
+        const initObrigKeys = new Set(stageKeys.flatMap(k => cfgObrig[k] || []));
+
+        const card = document.createElement("div");
+        card.style.cssText = "border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;overflow:hidden;transition:box-shadow .2s;";
+        card.onmouseover = () => card.style.boxShadow = "0 2px 8px rgba(0,0,0,.07)";
+        card.onmouseout  = () => card.style.boxShadow = "";
+
+        const head = document.createElement("div");
+        head.style.cssText = "display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;background:#fff;user-select:none;flex-wrap:wrap;";
+
+        const dotsWrap = document.createElement("span");
+        dotsWrap.style.cssText = "display:flex;gap:3px;align-items:center;flex-shrink:0;";
+        list.forEach(({ etapa }) => {
+          const d = document.createElement("span");
+          d.style.cssText = `width:9px;height:9px;border-radius:50%;background:${etapa.cor || "#94a3b8"};display:inline-block;box-shadow:0 0 0 2px ${etapa.cor ? etapa.cor + "33" : "#e2e8f0"};`;
+          dotsWrap.appendChild(d);
+        });
+
+        const nameWrap = document.createElement("div");
+        nameWrap.style.cssText = "display:flex;flex-direction:column;flex:1;min-width:120px;";
+        const nameEl = document.createElement("span");
+        nameEl.style.cssText = "font-size:12px;font-weight:600;color:#1e293b;";
+        nameEl.textContent = stageNome;
+        const pipeEl = document.createElement("span");
+        pipeEl.style.cssText = "font-size:10px;color:#94a3b8;";
+        pipeEl.textContent = list.map(({ pipeline, etapa }) => `${pipeline.pipeline_name || "Pipeline"} · ID ${etapa.status_id}`).join("  /  ");
+        nameWrap.append(nameEl, pipeEl);
+
+        const controls = document.createElement("div");
+        controls.style.cssText = "display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto;";
+
+        // Container oculto com os inputs reais que salvarTravamentoKommo lê
+        const shadows = document.createElement("span");
+        shadows.style.display = "none";
+
+        // — Bloqueio —
+        const visLock = document.createElement("select");
+        visLock.style.cssText = `font-size:11px;font-weight:600;border:1px solid ${initCfgVal ? "#fca5a5" : "#e2e8f0"};border-radius:6px;padding:4px 8px;color:${initCfgVal ? "#b91c1c" : "#94a3b8"};background:${initCfgVal ? "#fff1f2" : "#f8fafc"};cursor:pointer;transition:all .15s;`;
+        visLock.innerHTML = `<option value="">○ Livre</option><option value="ajustes">🔒 Bloqueio</option><option value="tudo">🔒 Total</option>`;
+        visLock.value = initCfgVal;
+        stageKeys.forEach(sk => {
+          const sh = document.createElement("select");
+          sh.dataset.stageId = sk; sh.dataset.tipoBloqueio = "1"; sh.style.display = "none";
+          sh.innerHTML = visLock.innerHTML; sh.value = cfg[sk] || "";
+          shadows.appendChild(sh);
+          const cbL = document.createElement("input"); cbL.type = "checkbox";
+          cbL.dataset.stageId = sk; cbL.style.display = "none"; cbL.checked = !!cfg[sk];
+          shadows.appendChild(cbL);
+        });
+        visLock.addEventListener("change", e => {
+          e.stopPropagation();
+          const v = visLock.value;
+          visLock.style.border = v ? "1px solid #fca5a5" : "1px solid #e2e8f0";
+          visLock.style.color  = v ? "#b91c1c" : "#94a3b8";
+          visLock.style.background = v ? "#fff1f2" : "#f8fafc";
+          shadows.querySelectorAll("select[data-tipo-bloqueio]").forEach(s => s.value = v);
+        });
+        controls.appendChild(visLock);
+
+        // — Omie —
+        let omieOn = initOmie;
+        stageKeys.forEach(sk => {
+          const sh = document.createElement("input"); sh.type = "checkbox";
+          sh.dataset.stageId = sk; sh.dataset.omieFlag = "1"; sh.style.display = "none"; sh.checked = !!cfgOmie[sk];
+          shadows.appendChild(sh);
+        });
+        const omiePill = mkPill("Omie", omieOn ? "#fff" : "#0369a1", omieOn ? "#0369a1" : "#e0f2fe", omieOn ? "#0369a1" : "#bae6fd");
+        omiePill.style.cursor = "pointer";
+        omiePill.addEventListener("click", e => {
+          e.stopPropagation(); omieOn = !omieOn;
+          omiePill.style.background  = omieOn ? "#0369a1" : "#e0f2fe";
+          omiePill.style.color       = omieOn ? "#fff" : "#0369a1";
+          omiePill.style.borderColor = omieOn ? "#0369a1" : "#bae6fd";
+          shadows.querySelectorAll("input[data-omie-flag]").forEach(s => s.checked = omieOn);
+        });
+        controls.appendChild(omiePill);
+
+        // — Modif —
+        let modOn = initMod;
+        stageKeys.forEach(sk => {
+          const sh = document.createElement("input"); sh.type = "checkbox";
+          sh.dataset.stageId = sk; sh.dataset.modFlag = "1"; sh.style.display = "none"; sh.checked = !!cfgMod[sk];
+          shadows.appendChild(sh);
+        });
+        const modPill = mkPill("Modif.", modOn ? "#fff" : "#92400e", modOn ? "#b45309" : "#fef3c7", modOn ? "#b45309" : "#fde68a");
+        modPill.style.cursor = "pointer";
+        modPill.addEventListener("click", e => {
+          e.stopPropagation(); modOn = !modOn;
+          modPill.style.background  = modOn ? "#b45309" : "#fef3c7";
+          modPill.style.color       = modOn ? "#fff" : "#92400e";
+          modPill.style.borderColor = modOn ? "#b45309" : "#fde68a";
+          shadows.querySelectorAll("input[data-mod-flag]").forEach(s => s.checked = modOn);
+        });
+        controls.appendChild(modPill);
+
+        // — Obrig badge —
+        let obrigN = initObrigKeys.size;
+        const obrigBadgeMerged = document.createElement("span");
+        const updateObrigBadgeMerged = (n) => {
+          obrigN = n;
+          obrigBadgeMerged.textContent = n > 0 ? `${n} obrig.` : "Nenhum";
+          obrigBadgeMerged.style.cssText = `font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;cursor:pointer;background:${n ? "#ede9fe" : "#f1f5f9"};color:${n ? "#6d28d9" : "#94a3b8"};border:1px solid ${n ? "#c4b5fd" : "#e2e8f0"};`;
+        };
+        updateObrigBadgeMerged(obrigN);
+        controls.appendChild(obrigBadgeMerged);
+
+        // — Expand btn —
+        const expandBtnM = document.createElement("button");
+        expandBtnM.type = "button";
+        expandBtnM.style.cssText = "background:none;border:none;cursor:pointer;display:flex;align-items:center;padding:2px;color:#94a3b8;transition:transform .2s;";
+        expandBtnM.innerHTML = `<span class="material-icons-outlined" style="font-size:18px;">expand_more</span>`;
+        controls.appendChild(expandBtnM);
+
+        head.append(dotsWrap, nameWrap, controls, shadows);
+
+        // — Body —
+        const bodyM = document.createElement("div");
+        bodyM.style.cssText = "display:none;border-top:1px solid #f1f5f9;";
+
+        // Seção Campos Obrigatórios
+        const obrigSectionM = document.createElement("div");
+        obrigSectionM.style.cssText = "padding:12px 14px;";
+        const obrigTitleM = document.createElement("div");
+        obrigTitleM.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6d28d9;margin-bottom:10px;display:flex;align-items:center;gap:5px;";
+        obrigTitleM.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;">checklist</span> Campos obrigatórios para salvar`;
+        obrigSectionM.appendChild(obrigTitleM);
+
+        Object.entries(gruposObrig).forEach(([grupoNome, campos]) => {
+          const marcadosGrupo = campos.filter(c => initObrigKeys.has(c.key)).length;
+          const grupoWrap = document.createElement("div");
+          grupoWrap.style.cssText = "margin-bottom:6px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;";
+          const grupoHead = document.createElement("div");
+          grupoHead.style.cssText = "display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;background:#f8fafc;user-select:none;transition:background .1s;";
+          grupoHead.onmouseover = () => grupoHead.style.background = "#f1f5f9";
+          grupoHead.onmouseout  = () => grupoHead.style.background = "#f8fafc";
+          const grupoArrow = document.createElement("span");
+          grupoArrow.className = "material-icons-outlined";
+          grupoArrow.style.cssText = "font-size:14px;color:#94a3b8;transition:transform .2s;";
+          grupoArrow.textContent = "chevron_right";
+          const grupoLabel = document.createElement("span");
+          grupoLabel.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#475569;flex:1;";
+          grupoLabel.textContent = grupoNome;
+          const grupoBadge = document.createElement("span");
+          grupoBadge.style.cssText = `font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;background:${marcadosGrupo ? "#ede9fe" : "#f1f5f9"};color:${marcadosGrupo ? "#6d28d9" : "#94a3b8"};border:1px solid ${marcadosGrupo ? "#c4b5fd" : "#e2e8f0"};white-space:nowrap;`;
+          grupoBadge.textContent = `${marcadosGrupo}/${campos.length}`;
+          grupoHead.append(grupoArrow, grupoLabel, grupoBadge);
+          const grid = document.createElement("div");
+          grid.style.cssText = "flex-wrap:wrap;gap:6px;padding:10px;background:#fff;";
+          let grupoOpen = marcadosGrupo > 0;
+          const applyGrupoState = () => { grid.style.display = grupoOpen ? "flex" : "none"; grupoArrow.style.transform = grupoOpen ? "rotate(90deg)" : ""; };
+          applyGrupoState();
+          grupoHead.addEventListener("click", () => { grupoOpen = !grupoOpen; applyGrupoState(); });
+
+          campos.forEach(campo => {
+            const isChecked = initObrigKeys.has(campo.key);
+            // Shadow inputs para cada stageId (lidos pelo salvar)
+            stageKeys.forEach((sk, i) => {
+              if (i === 0) return; // o visual do stageKeys[0] já carrega data-field-key + data-stage-id
+              const sh = document.createElement("input"); sh.type = "checkbox";
+              sh.dataset.stageId = sk; sh.dataset.fieldKey = campo.key; sh.style.display = "none";
+              sh.checked = (cfgObrig[sk] || []).includes(campo.key);
+              shadows.appendChild(sh);
+            });
+            const lbl = document.createElement("label");
+            lbl.style.cssText = `display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid ${isChecked ? "#a78bfa" : "#e2e8f0"};cursor:pointer;font-size:11px;font-weight:500;background:${isChecked ? "#ede9fe" : "#fff"};color:${isChecked ? "#4c1d95" : "#64748b"};transition:all .15s;user-select:none;`;
+            const cb = document.createElement("input");
+            cb.type = "checkbox"; cb.checked = isChecked;
+            cb.dataset.stageId  = stageKeys[0]; // stageId principal
+            cb.dataset.fieldKey = campo.key;
+            cb.style.accentColor = "#7c3aed";
+            const applyStyle = () => {
+              lbl.style.background  = cb.checked ? "#ede9fe" : "#fff";
+              lbl.style.color       = cb.checked ? "#4c1d95" : "#64748b";
+              lbl.style.borderColor = cb.checked ? "#a78bfa" : "#e2e8f0";
+              const checkedGrupo = Array.from(grid.querySelectorAll("input[type=checkbox]")).filter(c => c.checked).length;
+              grupoBadge.textContent = `${checkedGrupo}/${campos.length}`;
+              grupoBadge.style.background  = checkedGrupo ? "#ede9fe" : "#f1f5f9";
+              grupoBadge.style.color       = checkedGrupo ? "#6d28d9" : "#94a3b8";
+              grupoBadge.style.borderColor = checkedGrupo ? "#c4b5fd" : "#e2e8f0";
+              const allVis = Array.from(bodyM.querySelectorAll("label input[type=checkbox]")).filter(c => c.checked).length;
+              updateObrigBadgeMerged(allVis);
+              // Sincroniza shadows dos demais stageIds
+              shadows.querySelectorAll(`input[data-field-key="${campo.key}"]`).forEach(s => s.checked = cb.checked);
+            };
+            applyStyle();
+            cb.addEventListener("change", applyStyle);
+            lbl.append(cb, Object.assign(document.createElement("span"), { textContent: campo.label }));
+            grid.appendChild(lbl);
+          });
+
+          grupoWrap.append(grupoHead, grid);
+          obrigSectionM.appendChild(grupoWrap);
+        });
+
+        bodyM.appendChild(obrigSectionM);
+
+        let expandedM = false;
+        const toggleExpandM = () => {
+          expandedM = !expandedM;
+          bodyM.style.display        = expandedM ? "block" : "none";
+          expandBtnM.style.transform = expandedM ? "rotate(180deg)" : "";
+          head.style.background      = expandedM ? "#f8fafc" : "#fff";
+        };
+        obrigBadgeMerged.addEventListener("click", e => { e.stopPropagation(); toggleExpandM(); });
+        head.addEventListener("click", e => {
+          if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.closest("label")) return;
+          toggleExpandM();
+        });
+        expandBtnM.addEventListener("click", e => { e.stopPropagation(); toggleExpandM(); });
+
+        card.append(head, bodyM);
+        comumGroup.appendChild(card);
+      });
+
+      container.appendChild(comumGroup);
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     pipelines.forEach(pipeline => {
       if (!pipeline.etapas || !pipeline.etapas.length) return;
 
@@ -1271,6 +1516,7 @@
       pipeGroup.appendChild(pipeTitle);
 
       pipeline.etapas.forEach(etapa => {
+        if (nomesMergeados.has(etapa.nome.trim().toLowerCase())) return;
         const stageKey  = String(etapa.status_id);
         const cfgVal    = cfg[stageKey];
         const obrigKeys = cfgObrig[stageKey] || [];
