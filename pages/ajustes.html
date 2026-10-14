@@ -1309,38 +1309,71 @@
         const obrigTitle = document.createElement("div");
         obrigTitle.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6d28d9;margin-bottom:10px;display:flex;align-items:center;gap:5px;";
         obrigTitle.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;">checklist</span> Campos obrigatórios para salvar`;
-
         obrigSection.appendChild(obrigTitle);
 
         Object.entries(gruposObrig).forEach(([grupoNome, campos]) => {
-          const grupoDiv = document.createElement("div");
-          grupoDiv.style.cssText = "margin-bottom:8px;";
+          // Conta quantos já estão marcados neste grupo
+          const marcadosGrupo = campos.filter(c => obrigKeys.includes(c.key)).length;
 
-          const grupoLabel = document.createElement("div");
-          grupoLabel.style.cssText = "font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;";
+          // ── Cabeçalho colapsável do grupo ───────────────────────────────
+          const grupoWrap = document.createElement("div");
+          grupoWrap.style.cssText = "margin-bottom:6px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;";
+
+          const grupoHead = document.createElement("div");
+          grupoHead.style.cssText = "display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;background:#f8fafc;user-select:none;transition:background .1s;";
+          grupoHead.onmouseover = () => grupoHead.style.background = "#f1f5f9";
+          grupoHead.onmouseout  = () => grupoHead.style.background = "#f8fafc";
+
+          const grupoArrow = document.createElement("span");
+          grupoArrow.className = "material-icons-outlined";
+          grupoArrow.style.cssText = "font-size:14px;color:#94a3b8;transition:transform .2s;flex-shrink:0;";
+          grupoArrow.textContent = "chevron_right";
+
+          const grupoLabel = document.createElement("span");
+          grupoLabel.style.cssText = "font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;flex:1;";
           grupoLabel.textContent = grupoNome;
-          grupoDiv.appendChild(grupoLabel);
 
+          const grupoBadge = document.createElement("span");
+          grupoBadge.style.cssText = `font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;background:${marcadosGrupo ? "#ede9fe" : "#f1f5f9"};color:${marcadosGrupo ? "#6d28d9" : "#94a3b8"};border:1px solid ${marcadosGrupo ? "#c4b5fd" : "#e2e8f0"};white-space:nowrap;`;
+          grupoBadge.textContent = marcadosGrupo ? `${marcadosGrupo}/${campos.length}` : `0/${campos.length}`;
+
+          grupoHead.append(grupoArrow, grupoLabel, grupoBadge);
+
+          // ── Grid de checkboxes (oculto por padrão) ──────────────────────
           const grid = document.createElement("div");
-          grid.style.cssText = "display:flex;flex-wrap:wrap;gap:5px;";
+          grid.style.cssText = "display:none;flex-wrap:wrap;gap:5px;padding:8px 10px;background:#fff;border-top:1px solid #f1f5f9;";
+
+          // Toggle do grupo
+          let grupoOpen = marcadosGrupo > 0; // abre se tem algum marcado
+          const applyGrupoState = () => {
+            grid.style.display        = grupoOpen ? "flex" : "none";
+            grupoArrow.style.transform = grupoOpen ? "rotate(90deg)" : "";
+          };
+          applyGrupoState();
+          grupoHead.addEventListener("click", () => { grupoOpen = !grupoOpen; applyGrupoState(); });
 
           campos.forEach(campo => {
             const lbl = document.createElement("label");
             lbl.style.cssText = "display:flex;align-items:center;gap:5px;cursor:pointer;padding:4px 9px;border-radius:6px;font-size:11px;font-weight:500;border:1px solid #e2e8f0;background:#fff;transition:all .15s;color:#64748b;";
             const cb = document.createElement("input");
-            cb.type            = "checkbox";
+            cb.type             = "checkbox";
             cb.dataset.stageId  = stageKey;
             cb.dataset.fieldKey = campo.key;
-            cb.style.cssText   = "width:12px;height:12px;cursor:pointer;accent-color:#6366f1;";
-            cb.checked         = obrigKeys.includes(campo.key);
+            cb.style.cssText    = "width:12px;height:12px;cursor:pointer;accent-color:#6366f1;";
+            cb.checked          = obrigKeys.includes(campo.key);
             const applyStyle = () => {
               lbl.style.background  = cb.checked ? "#ede9fe" : "#fff";
               lbl.style.color       = cb.checked ? "#4c1d95" : "#64748b";
               lbl.style.borderColor = cb.checked ? "#a78bfa" : "#e2e8f0";
-              // atualiza badge no header
+              // Atualiza badge do grupo
+              const checkedGrupo = Array.from(grid.querySelectorAll("input[data-field-key]")).filter(c => c.checked).length;
+              grupoBadge.textContent = checkedGrupo ? `${checkedGrupo}/${campos.length}` : `0/${campos.length}`;
+              grupoBadge.style.background  = checkedGrupo ? "#ede9fe" : "#f1f5f9";
+              grupoBadge.style.color       = checkedGrupo ? "#6d28d9" : "#94a3b8";
+              grupoBadge.style.borderColor = checkedGrupo ? "#c4b5fd" : "#e2e8f0";
+              // Atualiza badge global no header da etapa
               const allObrig = body.querySelectorAll("input[data-field-key]");
-              const count    = Array.from(allObrig).filter(c => c.checked).length;
-              updateBadge(count);
+              updateBadge(Array.from(allObrig).filter(c => c.checked).length);
             };
             applyStyle();
             cb.addEventListener("change", applyStyle);
@@ -1348,8 +1381,8 @@
             grid.appendChild(lbl);
           });
 
-          grupoDiv.appendChild(grid);
-          obrigSection.appendChild(grupoDiv);
+          grupoWrap.append(grupoHead, grid);
+          obrigSection.appendChild(grupoWrap);
         });
 
         body.append(pdfSection, obrigSection);
