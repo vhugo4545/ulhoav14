@@ -1,5 +1,10 @@
 // 📦 carregarProdutosModelo.js
 
+
+
+
+
+
 const loadingOverlay = document.createElement("div");
 loadingOverlay.id = "loadingOverlay";
 loadingOverlay.style.position = "fixed";
