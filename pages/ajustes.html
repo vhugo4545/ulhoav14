@@ -636,60 +636,56 @@
         </div>
       </div>
 
-      <!-- Card: Bloqueio por Etapa da Kommo -->
-      <div class="card" style="grid-column: 1 / -1;">
-        <div class="card-title">
-          <span class="material-icons-outlined">account_tree</span>
-          Bloqueio por Etapa da Kommo
-        </div>
-        <p style="font-size:12px;color:var(--text-muted);margin:0 0 16px;">
-          Marque as etapas em que o orçamento deve ficar <strong>bloqueado</strong> para usuários comuns. Etapas não marcadas permitem edição normalmente. Administradores nunca são bloqueados.
-        </p>
+      <!-- Card: Configuração por Etapa da Kommo (Bloqueio + Obrigatoriedade) -->
+      <div class="card" style="grid-column: 1 / -1; padding: 0; overflow: hidden;">
 
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <!-- Cabeçalho do card -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);background:var(--bg);">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="material-icons-outlined" style="font-size:20px;color:#6366f1;">account_tree</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text);">Configuração por Etapa da Kommo</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:1px;">Bloqueio, PDFs, Omie e campos obrigatórios — por etapa. Admins e gestores não são afetados.</div>
+            </div>
+          </div>
           <button onclick="kommoTravCarregar()" id="btn-kommo-reload"
-            style="border:none;background:#f1f5f9;color:#475569;border-radius:7px;padding:5px 12px;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600;transition:background .15s;"
+            style="border:none;background:#f1f5f9;color:#475569;border-radius:8px;padding:6px 14px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;transition:background .15s;white-space:nowrap;"
             onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
-            <span class="material-icons-outlined" style="font-size:15px;">refresh</span> Recarregar Etapas
+            <span class="material-icons-outlined" style="font-size:15px;">refresh</span>
+            Recarregar Etapas
           </button>
-          <span id="kommo-trav-loading" style="font-size:11px;color:#94a3b8;display:none;">Carregando…</span>
         </div>
 
-        <div id="kommo-trav-container" style="font-size:12px;color:#94a3b8;">
+        <!-- Legenda de ícones -->
+        <div style="display:flex;align-items:center;gap:16px;padding:10px 24px;background:#fafbfc;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+          <span id="kommo-trav-loading" style="font-size:11px;color:#94a3b8;display:none;align-items:center;gap:4px;">
+            <span class="material-icons-outlined" style="font-size:13px;animation:spin 1s linear infinite;">sync</span> Buscando…
+          </span>
+          <span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">
+            <span style="width:10px;height:10px;border-radius:3px;background:#ef4444;display:inline-block;"></span> Bloqueio de edição
+          </span>
+          <span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">
+            <span style="width:10px;height:10px;border-radius:3px;background:#0ea5e9;display:inline-block;"></span> Omie habilitado
+          </span>
+          <span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">
+            <span style="width:10px;height:10px;border-radius:3px;background:#f59e0b;display:inline-block;"></span> Modificação bloqueada
+          </span>
+          <span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">
+            <span style="width:10px;height:10px;border-radius:3px;background:#8b5cf6;display:inline-block;"></span> Campos obrigatórios
+          </span>
+        </div>
+
+        <!-- Container das etapas -->
+        <div id="kommo-trav-container" style="padding:16px 24px;font-size:12px;color:#94a3b8;">
           Clique em "Recarregar Etapas" para buscar os pipelines da Kommo.
         </div>
 
-        <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap;">
+        <!-- Rodapé com salvar -->
+        <div style="display:flex;gap:10px;align-items:center;padding:16px 24px;border-top:1px solid var(--border);background:var(--bg);">
           <button class="cfg-save-btn" onclick="salvarTravamentoKommo()">
-            <span class="material-icons-outlined">cloud_upload</span> Salvar
+            <span class="material-icons-outlined">cloud_upload</span> Salvar Configurações
           </button>
           <span class="cfg-status" id="cfg-status-travamento-kommo"></span>
-          <span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">
-            <span class="material-icons-outlined" style="font-size:14px;">info</span>
-            Afeta apenas usuários comuns. Administradores sempre podem editar.
-          </span>
-        </div>
-      </div>
-
-      <!-- Card: Obrigatoriedade de Campos por Etapa da Kommo -->
-      <div class="card" style="grid-column: 1 / -1;">
-        <div class="card-title">
-          <span class="material-icons-outlined">checklist</span>
-          Obrigatoriedade de Campos por Etapa
-        </div>
-        <p style="font-size:12px;color:var(--text-muted);margin:0 0 16px;">
-          Defina quais campos devem estar <strong>obrigatoriamente preenchidos</strong> em cada etapa da Kommo. Se o campo estiver vazio ao salvar, o sistema bloqueará o salvamento. Administradores <strong>não</strong> são bloqueados.
-        </p>
-
-        <div id="kommo-obrig-container" style="font-size:12px;color:#94a3b8;">
-          Carregando junto com as etapas acima…
-        </div>
-
-        <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap;">
-          <button class="cfg-save-btn" onclick="salvarObrigatoriedadeCampos()">
-            <span class="material-icons-outlined">cloud_upload</span> Salvar
-          </button>
-          <span class="cfg-status" id="cfg-status-obrigatoriedade"></span>
         </div>
       </div>
 
@@ -1065,191 +1061,322 @@
       return;
     }
 
-    const cfg      = kommoTravCarregarConfig();
-    const cfgOmie  = (() => {
-      const s = window.CFgAPI?.obter()?.omieEtapas;
-      if (s && Object.keys(s).length) return s;
-      try { return JSON.parse(localStorage.getItem("cfg_omie_etapas")) || {}; } catch { return {}; }
-    })();
-    const cfgBotoes = (() => {
-      const s = window.CFgAPI?.obter()?.botoesKommo;
-      if (s && Object.keys(s).length) return s;
-      try { return JSON.parse(localStorage.getItem("cfg_botoes_kommo")) || {}; } catch { return {}; }
-    })();
-    const cfgModificacoes = (() => {
-      const s = window.CFgAPI?.obter()?.travamentoModificacoes;
-      if (s && Object.keys(s).length) return s;
-      try { return JSON.parse(localStorage.getItem("cfg_travamento_modificacoes")) || {}; } catch { return {}; }
-    })();
+    const cfg          = kommoTravCarregarConfig();
+    const cfgOmie      = (() => { const s = window.CFgAPI?.obter()?.omieEtapas; if (s && Object.keys(s).length) return s; try { return JSON.parse(localStorage.getItem("cfg_omie_etapas")) || {}; } catch { return {}; } })();
+    const cfgBotoes    = (() => { const s = window.CFgAPI?.obter()?.botoesKommo; if (s && Object.keys(s).length) return s; try { return JSON.parse(localStorage.getItem("cfg_botoes_kommo")) || {}; } catch { return {}; } })();
+    const cfgMod       = (() => { const s = window.CFgAPI?.obter()?.travamentoModificacoes; if (s && Object.keys(s).length) return s; try { return JSON.parse(localStorage.getItem("cfg_travamento_modificacoes")) || {}; } catch { return {}; } })();
+    const cfgObrig     = (() => { const s = window.CFgAPI?.obter()?.obrigatoriedadeCampos; if (s && Object.keys(s).length) return s; try { return JSON.parse(localStorage.getItem("cfg_obrigatoriedade_campos")) || {}; } catch { return {}; } })();
+
+    const BOTOES_PDF = [
+      { id: "btn-visualizar-proposta", label: "Proposta"   },
+      { id: "btn-folhas-impressao",    label: "Folhas"     },
+      { id: "btn-folha-ordem-servico", label: "O.Serviço"  },
+      { id: "btn-etapas-processo",     label: "Etapas"     },
+      { id: "btn-historico-producao",  label: "Entrega"    },
+    ];
+
+    const CAMPOS_OBRIG_DEF = [
+      { key: "clientes[0].cpfCnpj",         label: "CPF / CNPJ",            grupo: "Cliente"       },
+      { key: "clientes[0].telefoneCliente",  label: "Telefone",              grupo: "Cliente"       },
+      { key: "clientes[0].emailCliente",     label: "E-mail",                grupo: "Cliente"       },
+      { key: "cep",                          label: "CEP",                   grupo: "Endereço"      },
+      { key: "rua",                          label: "Rua",                   grupo: "Endereço"      },
+      { key: "cidade",                       label: "Cidade",                grupo: "Endereço"      },
+      { key: "estado",                       label: "Estado",                grupo: "Endereço"      },
+      { key: "vendedorResponsavel",          label: "Vendedor",              grupo: "Equipe"        },
+      { key: "prazosArea",                   label: "Prazos por Área",       grupo: "Condições"     },
+      { key: "condicaoPagamento",            label: "Cond. Pagamento",       grupo: "Condições"     },
+      { key: "condicoesGerais",              label: "Cond. Gerais",          grupo: "Condições"     },
+      { key: "prazoEntrega",                 label: "Prazo Entrega",         grupo: "Condições"     },
+      { key: "dataPedidoEnviadoCliente",     label: "Data Envio Cliente",    grupo: "Acompanham."   },
+      { key: "meioEnvioPedido",              label: "Meio de Envio",         grupo: "Acompanham."   },
+      { key: "dataPedidoAssinado",           label: "Data Assinatura",       grupo: "Acompanham."   },
+      { key: "prazoPrevisto",                label: "Prazo Previsto",        grupo: "Acompanham."   },
+      { key: "dataLiberacaoConferencia",     label: "Lib. Conferência",      grupo: "Acompanham."   },
+      { key: "dataConferencia",              label: "Data Conferência",      grupo: "Acompanham."   },
+      { key: "obraLiberada",                 label: "Obra Liberada?",        grupo: "Acompanham."   },
+      { key: "dataLiberacaoObra",            label: "Lib. Obra",             grupo: "Acompanham."   },
+      { key: "dataProjetoEnviado",           label: "Projeto Enviado",       grupo: "Acompanham."   },
+      { key: "dataProjetoAssinado",          label: "Projeto Assinado",      grupo: "Acompanham."   },
+      { key: "dataMedicaoRealizada",         label: "Data Medição",          grupo: "Acompanham."   },
+    ];
+
+    const gruposObrig = {};
+    CAMPOS_OBRIG_DEF.forEach(c => { if (!gruposObrig[c.grupo]) gruposObrig[c.grupo] = []; gruposObrig[c.grupo].push(c); });
+
+    function mkPill(text, color, bg, border) {
+      const s = document.createElement("span");
+      s.style.cssText = `font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${bg};color:${color};border:1px solid ${border};white-space:nowrap;`;
+      s.textContent = text;
+      return s;
+    }
 
     pipelines.forEach(pipeline => {
       if (!pipeline.etapas || !pipeline.etapas.length) return;
 
-      const group = document.createElement("div");
-      group.style.cssText = "margin-bottom:18px;";
+      // ── Cabeçalho do pipeline ────────────────────────────────────────────
+      const pipeTitle = document.createElement("div");
+      pipeTitle.style.cssText = "font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:6px;";
+      pipeTitle.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;color:#94a3b8;">account_tree</span>${pipeline.pipeline_name || "Pipeline " + pipeline.pipeline_id}`;
 
-      const header = document.createElement("div");
-      header.style.cssText = "font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border);";
-      header.textContent = pipeline.pipeline_name || `Pipeline ${pipeline.pipeline_id}`;
-      group.appendChild(header);
+      const pipeGroup = document.createElement("div");
+      pipeGroup.style.cssText = "margin-bottom:24px;";
+      pipeGroup.appendChild(pipeTitle);
 
       pipeline.etapas.forEach(etapa => {
-        const stageKey = String(etapa.status_id);
-        const row = document.createElement("div");
-        row.style.cssText = "display:flex;align-items:center;gap:10px;padding:6px 4px;border-radius:5px;transition:background .1s;";
-        row.onmouseover = () => row.style.background = "rgba(99,102,241,.06)";
-        row.onmouseout  = () => row.style.background = "";
+        const stageKey  = String(etapa.status_id);
+        const cfgVal    = cfg[stageKey];
+        const obrigKeys = cfgObrig[stageKey] || [];
+        const cfgBtns   = (cfgBotoes[stageKey] && typeof cfgBotoes[stageKey] === "object") ? cfgBotoes[stageKey] : {};
 
-        const cfgVal = cfg[stageKey]; // false | "ajustes" | "tudo"
+        // ── Card da etapa ────────────────────────────────────────────────────
+        const card = document.createElement("div");
+        card.style.cssText = "border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;overflow:hidden;transition:box-shadow .2s;";
+        card.onmouseover = () => card.style.boxShadow = "0 2px 8px rgba(0,0,0,.07)";
+        card.onmouseout  = () => card.style.boxShadow = "";
 
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.dataset.stageId   = stageKey;
-        cb.dataset.stageName = etapa.nome;
-        cb.style.cssText = "width:15px;height:15px;cursor:pointer;flex-shrink:0;accent-color:#ef4444;";
-        cb.checked = !!cfgVal;
+        // ── Linha de cabeçalho da etapa ──────────────────────────────────────
+        const head = document.createElement("div");
+        head.style.cssText = "display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:#fff;user-select:none;flex-wrap:wrap;gap:8px;";
 
+        // Dot colorido
         const dot = document.createElement("span");
-        dot.style.cssText = `width:9px;height:9px;border-radius:50%;background:${etapa.cor || "#94a3b8"};flex-shrink:0;display:inline-block;`;
+        dot.style.cssText = `width:10px;height:10px;border-radius:50%;background:${etapa.cor || "#94a3b8"};flex-shrink:0;display:inline-block;box-shadow:0 0 0 2px ${etapa.cor ? etapa.cor + "33" : "#e2e8f0"};`;
 
-        const labelWrap = document.createElement("span");
-        labelWrap.style.cssText = "display:flex;flex-direction:column;flex:1;";
+        // Nome + ID
+        const nameWrap = document.createElement("div");
+        nameWrap.style.cssText = "display:flex;flex-direction:column;flex:1;min-width:120px;";
+        const nameEl = document.createElement("span");
+        nameEl.style.cssText = "font-size:12px;font-weight:600;color:#1e293b;";
+        nameEl.textContent = etapa.nome;
+        const idEl = document.createElement("span");
+        idEl.style.cssText = "font-size:10px;color:#94a3b8;font-family:monospace;";
+        idEl.textContent = "ID " + stageKey;
+        nameWrap.appendChild(nameEl);
+        nameWrap.appendChild(idEl);
 
-        const labelText = document.createElement("span");
-        labelText.style.cssText = "font-size:12px;color:#334155;";
-        labelText.textContent = etapa.nome;
+        // Controles direita
+        const controls = document.createElement("div");
+        controls.style.cssText = "display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto;";
 
-        const labelId = document.createElement("span");
-        labelId.style.cssText = "font-size:10px;color:#94a3b8;font-family:monospace;";
-        labelId.textContent = "ID: " + stageKey;
+        // — Bloqueio —
+        const cbLock = document.createElement("input");
+        cbLock.type = "checkbox";
+        cbLock.dataset.stageId   = stageKey;
+        cbLock.dataset.stageName = etapa.nome;
+        cbLock.style.cssText = "display:none;";
+        cbLock.checked = !!cfgVal;
 
-        labelWrap.appendChild(labelText);
-        labelWrap.appendChild(labelId);
-
-        const sel = document.createElement("select");
-        sel.dataset.stageId = stageKey;
-        sel.dataset.tipoBloqueio = "1";
-        sel.style.cssText = `font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:2px 6px;color:#475569;cursor:pointer;display:${cb.checked ? "inline-block" : "none"};`;
-        sel.innerHTML = `
-          <option value="ajustes" ${cfgVal === "ajustes" || !cfgVal ? "selected" : ""}>🔒 Ajustes (PDFs livres)</option>
-          <option value="tudo"    ${cfgVal === "tudo"    ? "selected" : ""}>🔒 Tudo (bloqueia PDFs)</option>
+        const selLock = document.createElement("select");
+        selLock.dataset.stageId     = stageKey;
+        selLock.dataset.tipoBloqueio = "1";
+        selLock.style.cssText = `font-size:11px;font-weight:600;border:1px solid ${cfgVal ? "#fca5a5" : "#e2e8f0"};border-radius:6px;padding:4px 8px;color:${cfgVal ? "#b91c1c" : "#94a3b8"};background:${cfgVal ? "#fff1f2" : "#f8fafc"};cursor:pointer;transition:all .15s;`;
+        selLock.innerHTML = `
+          <option value=""    ${!cfgVal              ? "selected" : ""}>○ Livre</option>
+          <option value="ajustes" ${cfgVal === "ajustes" ? "selected" : ""}>🔒 Bloqueio</option>
+          <option value="tudo"    ${cfgVal === "tudo"    ? "selected" : ""}>🔒 Total</option>
         `;
-        cb.addEventListener("change", () => { sel.style.display = cb.checked ? "inline-block" : "none"; });
+        selLock.addEventListener("change", () => {
+          const val = selLock.value;
+          cbLock.checked = !!val;
+          selLock.style.border     = val ? "1px solid #fca5a5" : "1px solid #e2e8f0";
+          selLock.style.color      = val ? "#b91c1c" : "#94a3b8";
+          selLock.style.background = val ? "#fff1f2" : "#f8fafc";
+        });
 
-        // Checkbox Omie
-        const cbOmieLabel = document.createElement("label");
-        cbOmieLabel.style.cssText = "display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:#0369a1;white-space:nowrap;margin-left:4px;";
+        // — Omie toggle —
+        const lblOmie = document.createElement("label");
+        lblOmie.style.cssText = "display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #e2e8f0;background:#f8fafc;transition:all .15s;";
         const cbOmie = document.createElement("input");
         cbOmie.type = "checkbox";
         cbOmie.dataset.stageId  = stageKey;
         cbOmie.dataset.omieFlag = "1";
-        cbOmie.style.cssText = "width:13px;height:13px;cursor:pointer;accent-color:#0369a1;";
-        cbOmie.checked = !!cfgOmie[stageKey];
-        cbOmieLabel.appendChild(cbOmie);
-        cbOmieLabel.appendChild(Object.assign(document.createElement("span"), { textContent: "Omie" }));
+        cbOmie.style.cssText    = "width:12px;height:12px;cursor:pointer;accent-color:#0ea5e9;";
+        cbOmie.checked          = !!cfgOmie[stageKey];
+        const applyOmieStyle = () => {
+          lblOmie.style.background  = cbOmie.checked ? "#e0f2fe" : "#f8fafc";
+          lblOmie.style.color       = cbOmie.checked ? "#0369a1" : "#94a3b8";
+          lblOmie.style.borderColor = cbOmie.checked ? "#7dd3fc" : "#e2e8f0";
+        };
+        applyOmieStyle();
+        cbOmie.addEventListener("change", applyOmieStyle);
+        lblOmie.appendChild(cbOmie);
+        lblOmie.appendChild(document.createTextNode("Omie"));
 
-        // Checkbox Bloquear Modificações
-        const cbModLabel = document.createElement("label");
-        cbModLabel.style.cssText = "display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:#b45309;white-space:nowrap;margin-left:4px;";
+        // — Modificação toggle —
+        const lblMod = document.createElement("label");
+        lblMod.style.cssText = "display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #e2e8f0;background:#f8fafc;transition:all .15s;";
         const cbMod = document.createElement("input");
         cbMod.type = "checkbox";
         cbMod.dataset.stageId = stageKey;
         cbMod.dataset.modFlag = "1";
-        cbMod.style.cssText = "width:13px;height:13px;cursor:pointer;accent-color:#b45309;";
-        cbMod.checked = !!cfgModificacoes[stageKey];
-        cbModLabel.appendChild(cbMod);
-        cbModLabel.appendChild(Object.assign(document.createElement("span"), { textContent: "Modificação" }));
+        cbMod.style.cssText   = "width:12px;height:12px;cursor:pointer;accent-color:#f59e0b;";
+        cbMod.checked         = !!cfgMod[stageKey];
+        const applyModStyle = () => {
+          lblMod.style.background  = cbMod.checked ? "#fffbeb" : "#f8fafc";
+          lblMod.style.color       = cbMod.checked ? "#b45309" : "#94a3b8";
+          lblMod.style.borderColor = cbMod.checked ? "#fcd34d" : "#e2e8f0";
+        };
+        applyModStyle();
+        cbMod.addEventListener("change", applyModStyle);
+        lblMod.appendChild(cbMod);
+        lblMod.appendChild(document.createTextNode("Modif."));
 
-        row.appendChild(cb);
-        row.appendChild(dot);
-        row.appendChild(labelWrap);
-        row.appendChild(sel);
-        row.appendChild(cbOmieLabel);
-        row.appendChild(cbModLabel);
+        // — Badge de campos obrigatórios —
+        const obrigBadge = document.createElement("span");
+        obrigBadge.dataset.badgeStage = stageKey;
+        const updateBadge = (n) => {
+          obrigBadge.textContent = n ? `${n} obrig.` : "Nenhum";
+          obrigBadge.style.cssText = `font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;background:${n ? "#ede9fe" : "#f1f5f9"};color:${n ? "#6d28d9" : "#94a3b8"};border:1px solid ${n ? "#c4b5fd" : "#e2e8f0"};cursor:default;white-space:nowrap;transition:all .15s;`;
+        };
+        updateBadge(obrigKeys.length);
 
-        // Sub-linha com checkboxes por botão PDF
-        const btnRow = document.createElement("div");
-        btnRow.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;padding:4px 6px 4px 28px;";
-        const BOTOES_IMPRESSAO = [
-          { id: "btn-visualizar-proposta",  label: "Proposta"      },
-          { id: "btn-folhas-impressao",     label: "Folhas"        },
-          { id: "btn-folha-ordem-servico",  label: "O. Serviço"    },
-          { id: "btn-etapas-processo",      label: "Etapas"        },
-          { id: "btn-historico-producao",   label: "Entrega"       },
-        ];
-        const cfgBotoesEtapa = (cfgBotoes[stageKey] && typeof cfgBotoes[stageKey] === "object") ? cfgBotoes[stageKey] : {};
-        BOTOES_IMPRESSAO.forEach(btn => {
+        // — Botão expand —
+        const expandBtn = document.createElement("button");
+        expandBtn.style.cssText = "border:none;background:transparent;cursor:pointer;padding:2px;display:flex;align-items:center;color:#94a3b8;transition:transform .2s;flex-shrink:0;";
+        expandBtn.innerHTML = `<span class="material-icons-outlined" style="font-size:18px;">expand_more</span>`;
+
+        controls.append(cbLock, selLock, lblOmie, lblMod, obrigBadge, expandBtn);
+        head.append(dot, nameWrap, controls);
+
+        // ── Painel expansível ────────────────────────────────────────────────
+        const body = document.createElement("div");
+        body.style.cssText = "display:none;border-top:1px solid #f1f5f9;background:#fafbfc;";
+
+        // Seção PDFs
+        const pdfSection = document.createElement("div");
+        pdfSection.style.cssText = "padding:12px 14px 8px;border-bottom:1px solid #f1f5f9;";
+
+        const pdfTitle = document.createElement("div");
+        pdfTitle.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#ef4444;margin-bottom:8px;display:flex;align-items:center;gap:5px;";
+        pdfTitle.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;">picture_as_pdf</span> PDFs bloqueados`;
+
+        const pdfChips = document.createElement("div");
+        pdfChips.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
+
+        BOTOES_PDF.forEach(btn => {
           const lbl = document.createElement("label");
-          lbl.title = btn.id;
-          lbl.style.cssText = "display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:#ef4444;white-space:nowrap;border:1px solid #fee2e2;border-radius:4px;padding:2px 5px;";
+          lbl.style.cssText = "display:flex;align-items:center;gap:5px;cursor:pointer;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:500;border:1px solid #e2e8f0;background:#fff;transition:all .15s;color:#64748b;";
           const cbBtn = document.createElement("input");
           cbBtn.type = "checkbox";
           cbBtn.dataset.stageId = stageKey;
           cbBtn.dataset.btnId   = btn.id;
           cbBtn.dataset.btnFlag = "1";
-          cbBtn.style.cssText = "width:11px;height:11px;cursor:pointer;accent-color:#ef4444;";
-          cbBtn.checked = !!cfgBotoesEtapa[btn.id];
+          cbBtn.style.cssText   = "width:12px;height:12px;cursor:pointer;accent-color:#ef4444;";
+          cbBtn.checked         = !!cfgBtns[btn.id];
+          const applyBtnStyle = () => {
+            lbl.style.background  = cbBtn.checked ? "#fff1f2" : "#fff";
+            lbl.style.color       = cbBtn.checked ? "#b91c1c" : "#64748b";
+            lbl.style.borderColor = cbBtn.checked ? "#fca5a5" : "#e2e8f0";
+          };
+          applyBtnStyle();
+          cbBtn.addEventListener("change", applyBtnStyle);
           lbl.appendChild(cbBtn);
-          lbl.appendChild(Object.assign(document.createElement("span"), { textContent: "🔒 " + btn.label }));
-          btnRow.appendChild(lbl);
+          lbl.appendChild(document.createTextNode("🔒 " + btn.label));
+          pdfChips.appendChild(lbl);
         });
 
-        const wrapStage = document.createElement("div");
-        wrapStage.style.cssText = "display:flex;flex-direction:column;";
-        wrapStage.appendChild(row);
-        wrapStage.appendChild(btnRow);
-        group.appendChild(wrapStage);
+        pdfSection.append(pdfTitle, pdfChips);
+
+        // Seção Campos Obrigatórios
+        const obrigSection = document.createElement("div");
+        obrigSection.style.cssText = "padding:12px 14px;";
+
+        const obrigTitle = document.createElement("div");
+        obrigTitle.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6d28d9;margin-bottom:10px;display:flex;align-items:center;gap:5px;";
+        obrigTitle.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;">checklist</span> Campos obrigatórios para salvar`;
+
+        obrigSection.appendChild(obrigTitle);
+
+        Object.entries(gruposObrig).forEach(([grupoNome, campos]) => {
+          const grupoDiv = document.createElement("div");
+          grupoDiv.style.cssText = "margin-bottom:8px;";
+
+          const grupoLabel = document.createElement("div");
+          grupoLabel.style.cssText = "font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;";
+          grupoLabel.textContent = grupoNome;
+          grupoDiv.appendChild(grupoLabel);
+
+          const grid = document.createElement("div");
+          grid.style.cssText = "display:flex;flex-wrap:wrap;gap:5px;";
+
+          campos.forEach(campo => {
+            const lbl = document.createElement("label");
+            lbl.style.cssText = "display:flex;align-items:center;gap:5px;cursor:pointer;padding:4px 9px;border-radius:6px;font-size:11px;font-weight:500;border:1px solid #e2e8f0;background:#fff;transition:all .15s;color:#64748b;";
+            const cb = document.createElement("input");
+            cb.type            = "checkbox";
+            cb.dataset.stageId  = stageKey;
+            cb.dataset.fieldKey = campo.key;
+            cb.style.cssText   = "width:12px;height:12px;cursor:pointer;accent-color:#6366f1;";
+            cb.checked         = obrigKeys.includes(campo.key);
+            const applyStyle = () => {
+              lbl.style.background  = cb.checked ? "#ede9fe" : "#fff";
+              lbl.style.color       = cb.checked ? "#4c1d95" : "#64748b";
+              lbl.style.borderColor = cb.checked ? "#a78bfa" : "#e2e8f0";
+              // atualiza badge no header
+              const allObrig = body.querySelectorAll("input[data-field-key]");
+              const count    = Array.from(allObrig).filter(c => c.checked).length;
+              updateBadge(count);
+            };
+            applyStyle();
+            cb.addEventListener("change", applyStyle);
+            lbl.append(cb, document.createTextNode(campo.label));
+            grid.appendChild(lbl);
+          });
+
+          grupoDiv.appendChild(grid);
+          obrigSection.appendChild(grupoDiv);
+        });
+
+        body.append(pdfSection, obrigSection);
+
+        // Toggle expand/collapse
+        let expanded = false;
+        const toggleExpand = () => {
+          expanded = !expanded;
+          body.style.display        = expanded ? "block" : "none";
+          expandBtn.style.transform = expanded ? "rotate(180deg)" : "";
+          head.style.background     = expanded ? "#f8fafc" : "#fff";
+        };
+        head.addEventListener("click", e => {
+          if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.closest("label")) return;
+          toggleExpand();
+        });
+        expandBtn.addEventListener("click", e => { e.stopPropagation(); toggleExpand(); });
+
+        card.append(head, body);
+        pipeGroup.appendChild(card);
       });
 
-      container.appendChild(group);
+      container.appendChild(pipeGroup);
     });
 
-    kommoObrigRenderizar(pipelines);
-
-    // Após renderizar tudo: listener único para detectar nomes iguais em outros pipelines
+    // Listener: propagar mudança de nome igual entre pipelines
     container.addEventListener("change", function(e) {
       const cb = e.target;
       if (cb.type !== "checkbox" || !cb.dataset.stageName) return;
-
-      const nome       = cb.dataset.stageName;
+      const nome = cb.dataset.stageName;
       const novoEstado = cb.checked;
-
-      const outras = Array.from(
-        container.querySelectorAll("input[type=checkbox][data-stage-name]")
-      ).filter(o => o !== cb && o.dataset.stageName === nome && o.checked !== novoEstado);
-
+      const outras = Array.from(container.querySelectorAll("input[data-stage-name]"))
+        .filter(o => o !== cb && o.dataset.stageName === nome && o.checked !== novoEstado);
       if (!outras.length) return;
-
-      const acao = novoEstado ? "marcar" : "desmarcar";
-      const ok = confirm(
-        `Existem ${outras.length} etapa(s) com o nome "${nome}" em outros pipelines.\n\nDeseja ${acao} todas também?`
-      );
-      if (ok) outras.forEach(o => { o.checked = novoEstado; });
+      if (confirm(`${outras.length} etapa(s) com o nome "${nome}" em outros pipelines.\nDeseja ${novoEstado ? "marcar" : "desmarcar"} todas?`))
+        outras.forEach(o => o.click());
     });
   }
 
   async function salvarTravamentoKommo() {
-    const cfg              = {};
-    const cfgOmie          = {};
-    const cfgBotoes        = {};
-    const cfgModificacoes  = {};
+    const container = document.getElementById("kommo-trav-container");
 
-    document.querySelectorAll("#kommo-trav-container input[type=checkbox]").forEach(cb => {
-      if (cb.dataset.btnFlag) {
-        if (!cfgBotoes[cb.dataset.stageId]) cfgBotoes[cb.dataset.stageId] = {};
-        cfgBotoes[cb.dataset.stageId][cb.dataset.btnId] = cb.checked;
-      } else if (cb.dataset.omieFlag) {
-        cfgOmie[cb.dataset.stageId] = cb.checked;
-      } else if (cb.dataset.modFlag) {
-        cfgModificacoes[cb.dataset.stageId] = cb.checked;
-      } else {
-        if (cb.checked) {
-          const sel = document.querySelector(`select[data-stage-id="${cb.dataset.stageId}"][data-tipo-bloqueio]`);
-          cfg[cb.dataset.stageId] = sel ? sel.value : "ajustes";
-        } else {
-          cfg[cb.dataset.stageId] = false;
-        }
-      }
+    const cfg             = {};
+    const cfgOmie         = {};
+    const cfgBotoes       = {};
+    const cfgModificacoes = {};
+    const cfgObrig        = {};
+
+    // Bloqueio: lido do <select data-tipo-bloqueio>
+    container.querySelectorAll("select[data-tipo-bloqueio]").forEach(sel => {
+      cfg[sel.dataset.stageId] = sel.value || false;
     });
 
     if (!Object.keys(cfg).length) {
@@ -1257,10 +1384,26 @@
       return;
     }
 
+    // Demais checkboxes
+    container.querySelectorAll("input[type=checkbox]").forEach(cb => {
+      if (cb.dataset.btnFlag) {
+        if (!cfgBotoes[cb.dataset.stageId]) cfgBotoes[cb.dataset.stageId] = {};
+        cfgBotoes[cb.dataset.stageId][cb.dataset.btnId] = cb.checked;
+      } else if (cb.dataset.omieFlag) {
+        cfgOmie[cb.dataset.stageId] = cb.checked;
+      } else if (cb.dataset.modFlag) {
+        cfgModificacoes[cb.dataset.stageId] = cb.checked;
+      } else if (cb.dataset.fieldKey) {
+        if (!cfgObrig[cb.dataset.stageId]) cfgObrig[cb.dataset.stageId] = [];
+        if (cb.checked) cfgObrig[cb.dataset.stageId].push(cb.dataset.fieldKey);
+      }
+    });
+
     localStorage.setItem(TRAV_KOMMO_LS_KEY, JSON.stringify(cfg));
     localStorage.setItem("cfg_omie_etapas", JSON.stringify(cfgOmie));
     localStorage.setItem("cfg_botoes_kommo", JSON.stringify(cfgBotoes));
     localStorage.setItem("cfg_travamento_modificacoes", JSON.stringify(cfgModificacoes));
+    localStorage.setItem("cfg_obrigatoriedade_campos", JSON.stringify(cfgObrig));
 
     const statusEl = document.getElementById("cfg-status-travamento-kommo");
     if (statusEl) statusEl.textContent = "Salvando…";
@@ -1270,208 +1413,7 @@
       omieEtapas:             cfgOmie,
       botoesKommo:            cfgBotoes,
       travamentoModificacoes: cfgModificacoes,
-    });
-    const ok = await window.CFgAPI?.salvar(cfgParcial);
-
-    if (statusEl) {
-      statusEl.textContent = ok === false ? "Salvo localmente" : "Salvo!";
-      setTimeout(() => statusEl.textContent = "", 3000);
-    }
-  }
-
-  // ── Obrigatoriedade de campos por etapa ────────────────────────────────────
-
-  const CAMPOS_OBRIG_LISTA = [
-    // Grupo: Dados do Cliente
-    { key: "clientes[0].cpfCnpj",          label: "CPF / CNPJ do cliente",      grupo: "Cliente" },
-    { key: "clientes[0].telefoneCliente",   label: "Telefone do cliente",         grupo: "Cliente" },
-    { key: "clientes[0].emailCliente",      label: "E-mail do cliente",           grupo: "Cliente" },
-    // Grupo: Endereço
-    { key: "cep",                           label: "CEP (obra)",                  grupo: "Endereço" },
-    { key: "rua",                           label: "Rua (obra)",                  grupo: "Endereço" },
-    { key: "cidade",                        label: "Cidade (obra)",               grupo: "Endereço" },
-    { key: "estado",                        label: "Estado (obra)",               grupo: "Endereço" },
-    // Grupo: Equipe
-    { key: "vendedorResponsavel",           label: "Vendedor Responsável",        grupo: "Equipe" },
-    // Grupo: Prazos e Condições
-    { key: "prazosArea",                    label: "Prazos por Área",             grupo: "Condições" },
-    { key: "condicaoPagamento",             label: "Condição de Pagamento",       grupo: "Condições" },
-    { key: "condicoesGerais",               label: "Condições Gerais",            grupo: "Condições" },
-    { key: "prazoEntrega",                  label: "Prazo de Entrega",            grupo: "Condições" },
-    // Grupo: Acompanhamento
-    { key: "dataPedidoEnviadoCliente",      label: "Data Envio ao Cliente",       grupo: "Acompanhamento" },
-    { key: "meioEnvioPedido",               label: "Meio de Envio",               grupo: "Acompanhamento" },
-    { key: "dataPedidoAssinado",            label: "Data Pedido Assinado",        grupo: "Acompanhamento" },
-    { key: "prazoPrevisto",                 label: "Prazo Previsto",              grupo: "Acompanhamento" },
-    { key: "dataLiberacaoConferencia",      label: "Data Liberação Conferência",  grupo: "Acompanhamento" },
-    { key: "dataConferencia",               label: "Data da Conferência",         grupo: "Acompanhamento" },
-    { key: "obraLiberada",                  label: "Obra Liberada?",              grupo: "Acompanhamento" },
-    { key: "dataLiberacaoObra",             label: "Data Liberação Obra",         grupo: "Acompanhamento" },
-    { key: "dataProjetoEnviado",            label: "Data Projeto Enviado",        grupo: "Acompanhamento" },
-    { key: "dataProjetoAssinado",           label: "Data Projeto Assinado",       grupo: "Acompanhamento" },
-    { key: "dataMedicaoRealizada",          label: "Data Medição Realizada",      grupo: "Acompanhamento" },
-  ];
-
-  function kommoObrigCarregarConfig() {
-    const s = window.CFgAPI?.obter()?.obrigatoriedadeCampos;
-    if (s && Object.keys(s).length) return s;
-    try { return JSON.parse(localStorage.getItem("cfg_obrigatoriedade_campos")) || {}; } catch { return {}; }
-  }
-
-  function kommoObrigRenderizar(pipelines) {
-    const container = document.getElementById("kommo-obrig-container");
-    if (!container) return;
-    container.style.color = "";
-    container.innerHTML = "";
-
-    if (!pipelines || !pipelines.length) {
-      container.style.color = "#94a3b8";
-      container.textContent = "Nenhum pipeline encontrado.";
-      return;
-    }
-
-    const cfg = kommoObrigCarregarConfig();
-
-    // Agrupa campos por grupo
-    const grupos = {};
-    CAMPOS_OBRIG_LISTA.forEach(c => {
-      if (!grupos[c.grupo]) grupos[c.grupo] = [];
-      grupos[c.grupo].push(c);
-    });
-
-    pipelines.forEach(pipeline => {
-      if (!pipeline.etapas || !pipeline.etapas.length) return;
-
-      const pipeGroup = document.createElement("div");
-      pipeGroup.style.cssText = "margin-bottom:20px;";
-
-      const pipeHeader = document.createElement("div");
-      pipeHeader.style.cssText = "font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid var(--border);";
-      pipeHeader.textContent = pipeline.pipeline_name || `Pipeline ${pipeline.pipeline_id}`;
-      pipeGroup.appendChild(pipeHeader);
-
-      pipeline.etapas.forEach(etapa => {
-        const stageKey = String(etapa.status_id);
-        const camposSelecionados = cfg[stageKey] || [];
-
-        // Linha da etapa (clicável para expandir)
-        const stageWrap = document.createElement("div");
-        stageWrap.style.cssText = "margin-bottom:6px;border:1px solid var(--border);border-radius:8px;overflow:hidden;";
-
-        const stageRow = document.createElement("div");
-        stageRow.style.cssText = "display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;background:var(--bg);transition:background .1s;user-select:none;";
-        stageRow.onmouseover = () => stageRow.style.background = "#f1f5f9";
-        stageRow.onmouseout  = () => stageRow.style.background = "";
-
-        const dot = document.createElement("span");
-        dot.style.cssText = `width:9px;height:9px;border-radius:50%;background:${etapa.cor || "#94a3b8"};flex-shrink:0;display:inline-block;`;
-
-        const stageLabel = document.createElement("span");
-        stageLabel.style.cssText = "font-size:12px;font-weight:600;color:#334155;flex:1;";
-        stageLabel.textContent = etapa.nome;
-
-        const badge = document.createElement("span");
-        badge.dataset.badgeStage = stageKey;
-        const n = camposSelecionados.length;
-        badge.style.cssText = `font-size:10px;font-weight:600;padding:2px 7px;border-radius:100px;background:${n ? "#dcfce7" : "#f1f5f9"};color:${n ? "#166534" : "#94a3b8"};border:1px solid ${n ? "#86efac" : "#e2e8f0"};`;
-        badge.textContent = n ? `${n} obrigatório${n > 1 ? "s" : ""}` : "Nenhum";
-
-        const arrow = document.createElement("span");
-        arrow.className = "material-icons-outlined";
-        arrow.style.cssText = "font-size:16px;color:#94a3b8;transition:transform .2s;";
-        arrow.textContent = "expand_more";
-
-        stageRow.appendChild(dot);
-        stageRow.appendChild(stageLabel);
-        stageRow.appendChild(badge);
-        stageRow.appendChild(arrow);
-
-        // Painel de campos (oculto por padrão)
-        const fieldsPanel = document.createElement("div");
-        fieldsPanel.style.cssText = "display:none;padding:12px 14px;border-top:1px solid var(--border);background:#fafafa;";
-
-        // Checkboxes por grupo de campos
-        Object.entries(grupos).forEach(([grupoNome, campos]) => {
-          const grupoDiv = document.createElement("div");
-          grupoDiv.style.cssText = "margin-bottom:10px;";
-
-          const grupoTitle = document.createElement("div");
-          grupoTitle.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:5px;";
-          grupoTitle.textContent = grupoNome;
-          grupoDiv.appendChild(grupoTitle);
-
-          const camposGrid = document.createElement("div");
-          camposGrid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px;";
-
-          campos.forEach(campo => {
-            const lbl = document.createElement("label");
-            lbl.style.cssText = "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#475569;padding:4px 6px;border-radius:5px;transition:background .1s;";
-            lbl.onmouseover = () => lbl.style.background = "#f1f5f9";
-            lbl.onmouseout  = () => lbl.style.background = "";
-
-            const cb = document.createElement("input");
-            cb.type = "checkbox";
-            cb.dataset.stageId  = stageKey;
-            cb.dataset.fieldKey = campo.key;
-            cb.style.cssText = "width:13px;height:13px;cursor:pointer;accent-color:#6366f1;flex-shrink:0;";
-            cb.checked = camposSelecionados.includes(campo.key);
-
-            cb.addEventListener("change", () => {
-              const allCbs = fieldsPanel.querySelectorAll("input[type=checkbox]");
-              const count  = Array.from(allCbs).filter(c => c.checked).length;
-              badge.textContent = count ? `${count} obrigatório${count > 1 ? "s" : ""}` : "Nenhum";
-              badge.style.background = count ? "#dcfce7" : "#f1f5f9";
-              badge.style.color      = count ? "#166534" : "#94a3b8";
-              badge.style.border     = `1px solid ${count ? "#86efac" : "#e2e8f0"}`;
-            });
-
-            lbl.appendChild(cb);
-            lbl.appendChild(document.createTextNode(campo.label));
-            camposGrid.appendChild(lbl);
-          });
-
-          grupoDiv.appendChild(camposGrid);
-          fieldsPanel.appendChild(grupoDiv);
-        });
-
-        // Toggle expand/collapse
-        stageRow.addEventListener("click", () => {
-          const open = fieldsPanel.style.display !== "none";
-          fieldsPanel.style.display = open ? "none" : "block";
-          arrow.style.transform = open ? "" : "rotate(180deg)";
-        });
-
-        stageWrap.appendChild(stageRow);
-        stageWrap.appendChild(fieldsPanel);
-        pipeGroup.appendChild(stageWrap);
-      });
-
-      container.appendChild(pipeGroup);
-    });
-  }
-
-  async function salvarObrigatoriedadeCampos() {
-    const container = document.getElementById("kommo-obrig-container");
-    if (!container) return;
-
-    const cfg = {};
-    container.querySelectorAll("input[type=checkbox][data-field-key]").forEach(cb => {
-      if (!cfg[cb.dataset.stageId]) cfg[cb.dataset.stageId] = [];
-      if (cb.checked) cfg[cb.dataset.stageId].push(cb.dataset.fieldKey);
-    });
-
-    if (!Object.keys(cfg).length) {
-      alert("Nenhuma etapa carregada. Recarregue as etapas acima primeiro.");
-      return;
-    }
-
-    localStorage.setItem("cfg_obrigatoriedade_campos", JSON.stringify(cfg));
-
-    const statusEl = document.getElementById("cfg-status-obrigatoriedade");
-    if (statusEl) statusEl.textContent = "Salvando…";
-
-    const cfgParcial = Object.assign({}, window.CFgAPI?.obter() || {}, {
-      obrigatoriedadeCampos: cfg
+      obrigatoriedadeCampos:  cfgObrig,
     });
     const ok = await window.CFgAPI?.salvar(cfgParcial);
 
