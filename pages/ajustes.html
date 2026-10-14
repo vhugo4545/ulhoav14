@@ -1076,21 +1076,38 @@
     ];
 
     const CAMPOS_OBRIG_DEF = [
-      { key: "clientes[0].cpfCnpj",         label: "CPF / CNPJ",            grupo: "Cliente"       },
+      // ── Proposta
+      { key: "dataOrcamento",                label: "Data do Orçamento",     grupo: "Proposta"      },
+      { key: "origemCliente",                label: "Origem do Cliente",     grupo: "Proposta"      },
+      // ── Produtos
+      { key: "_temProdutos",                 label: "Ao menos 1 produto",    grupo: "Produtos"      },
+      // ── Cliente
+      { key: "clientes[0].razaoSocial",      label: "Nome / Razão Social",   grupo: "Cliente"       },
+      { key: "clientes[0].cpfCnpj",          label: "CPF / CNPJ",            grupo: "Cliente"       },
+      { key: "clientes[0].nomeContato",      label: "Nome do Contato",       grupo: "Cliente"       },
       { key: "clientes[0].telefoneCliente",  label: "Telefone",              grupo: "Cliente"       },
       { key: "clientes[0].emailCliente",     label: "E-mail",                grupo: "Cliente"       },
+      // ── Endereço
       { key: "cep",                          label: "CEP",                   grupo: "Endereço"      },
       { key: "rua",                          label: "Rua",                   grupo: "Endereço"      },
+      { key: "numero",                       label: "Número",                grupo: "Endereço"      },
+      { key: "bairro",                       label: "Bairro",                grupo: "Endereço"      },
       { key: "cidade",                       label: "Cidade",                grupo: "Endereço"      },
       { key: "estado",                       label: "Estado",                grupo: "Endereço"      },
+      // ── Equipe
       { key: "vendedorResponsavel",          label: "Vendedor",              grupo: "Equipe"        },
+      { key: "operadorInterno",              label: "Operador Interno",      grupo: "Equipe"        },
+      // ── Condições
       { key: "prazosArea",                   label: "Prazos por Área",       grupo: "Condições"     },
       { key: "condicaoPagamento",            label: "Cond. Pagamento",       grupo: "Condições"     },
       { key: "condicoesGerais",              label: "Cond. Gerais",          grupo: "Condições"     },
       { key: "prazoEntrega",                 label: "Prazo Entrega",         grupo: "Condições"     },
+      // ── Acompanhamento
       { key: "dataPedidoEnviadoCliente",     label: "Data Envio Cliente",    grupo: "Acompanham."   },
       { key: "meioEnvioPedido",              label: "Meio de Envio",         grupo: "Acompanham."   },
       { key: "dataPedidoAssinado",           label: "Data Assinatura",       grupo: "Acompanham."   },
+      { key: "dataEntregaProjeto",           label: "Data Entrega Projeto",  grupo: "Acompanham."   },
+      { key: "dataInicioProjeto",            label: "Data Início Projeto",   grupo: "Acompanham."   },
       { key: "prazoPrevisto",                label: "Prazo Previsto",        grupo: "Acompanham."   },
       { key: "dataLiberacaoConferencia",     label: "Lib. Conferência",      grupo: "Acompanham."   },
       { key: "dataConferencia",              label: "Data Conferência",      grupo: "Acompanham."   },

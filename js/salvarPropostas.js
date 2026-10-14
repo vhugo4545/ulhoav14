@@ -474,14 +474,22 @@ window.atualizarPropostaEditavel = async function () {
 
       if (_camposReq.length) {
         const LABELS_OBRIG = {
-          "clientes[0].cpfCnpj":        "CPF / CNPJ do cliente",
+          dataOrcamento:                 "Data do Orçamento",
+          origemCliente:                 "Origem do Cliente",
+          _temProdutos:                  "Ao menos 1 produto adicionado",
+          "clientes[0].razaoSocial":     "Nome / Razão Social",
+          "clientes[0].cpfCnpj":         "CPF / CNPJ do cliente",
+          "clientes[0].nomeContato":     "Nome do Contato",
           "clientes[0].telefoneCliente": "Telefone do cliente",
           "clientes[0].emailCliente":    "E-mail do cliente",
           cep:                           "CEP (obra)",
           rua:                           "Rua (obra)",
+          numero:                        "Número (endereço)",
+          bairro:                        "Bairro (obra)",
           cidade:                        "Cidade (obra)",
           estado:                        "Estado (obra)",
           vendedorResponsavel:           "Vendedor Responsável",
+          operadorInterno:               "Operador Interno",
           prazosArea:                    "Prazos por Área",
           condicaoPagamento:             "Condição de Pagamento",
           condicoesGerais:               "Condições Gerais",
@@ -489,6 +497,8 @@ window.atualizarPropostaEditavel = async function () {
           dataPedidoEnviadoCliente:      "Data Envio ao Cliente",
           meioEnvioPedido:               "Meio de Envio",
           dataPedidoAssinado:            "Data Pedido Assinado",
+          dataEntregaProjeto:            "Data Entrega Projeto",
+          dataInicioProjeto:             "Data Início Projeto",
           prazoPrevisto:                 "Prazo Previsto",
           dataLiberacaoConferencia:      "Data Liberação Conferência",
           dataConferencia:               "Data da Conferência",
@@ -500,15 +510,29 @@ window.atualizarPropostaEditavel = async function () {
         };
 
         function _obterValorCampoObrig(key) {
+          if (key === "_temProdutos") {
+            const c = document.getElementById("blocosProdutosContainer");
+            return c && c.querySelectorAll("table tbody tr:not(.extra-summary-row)").length > 0 ? "ok" : "";
+          }
           if (key.startsWith("clientes[0].")) {
             const campo = key.replace("clientes[0].", "");
             const clienteEl = document.querySelector(".cliente-item");
-            const sels = { cpfCnpj: ".cpfCnpj", telefoneCliente: ".telefoneCliente", emailCliente: ".emailCliente" };
+            const sels = {
+              razaoSocial:      ".razaoSocial",
+              cpfCnpj:          ".cpfCnpj",
+              nomeContato:      ".nomeContato",
+              telefoneCliente:  ".telefoneCliente",
+              emailCliente:     ".emailCliente",
+            };
             return clienteEl?.querySelector(sels[campo] || "")?.value?.trim() || "";
           }
           if (key === "vendedorResponsavel") {
             const s = document.getElementById("vendedorResponsavel");
             return s?.options[s.selectedIndex]?.value?.trim() || "";
+          }
+          if (key === "operadorInterno") {
+            const s = document.getElementById("operadorInterno");
+            return s?.options?.[s.selectedIndex]?.value?.trim() || s?.value?.trim() || "";
           }
           return document.getElementById(key)?.value?.trim() || "";
         }
