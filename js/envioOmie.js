@@ -6296,7 +6296,21 @@ async function atualizarNaOmie() {
     const _vFinal = _parseBRL(_elFinal?.textContent);
 
     if (_vMin > 0 && _vFinal < _vMin) {
-      const _aprovado = (window._solicitacoesAprovacaoMinimo || []).some(s => s.status === "aprovado");
+      const _propostaId = new URLSearchParams(location.search).get("id");
+      const _tok = localStorage.getItem("accessToken") || "";
+      let _aprovado = false;
+      try {
+        const _r = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/aprovacoes-minimo?propostaId=${_propostaId}`, {
+          headers: { Authorization: `Bearer ${_tok}` }
+        });
+        if (_r.ok) {
+          const _docs = await _r.json();
+          window._solicitacoesAprovacaoMinimo = _docs || [];
+          _aprovado = (_docs || []).some(s => s.status === "aprovado");
+        }
+      } catch (_e) {
+        _aprovado = (window._solicitacoesAprovacaoMinimo || []).some(s => s.status === "aprovado");
+      }
       if (!_aprovado) {
         const _fmtBRL = (n) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
         mostrarPopupCustomizado(
