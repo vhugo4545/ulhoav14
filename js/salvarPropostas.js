@@ -476,7 +476,9 @@ window.atualizarPropostaEditavel = async function () {
         const LABELS_OBRIG = {
           dataOrcamento:                 "Data do Orçamento",
           origemCliente:                 "Origem do Cliente",
-          _temProdutos:                  "Ao menos 1 produto adicionado",
+          _temProdutos:                        "Ao menos 1 produto adicionado",
+          _todosBloco_previsaoEntrega:         "Prazo (dias úteis) em todos os itens",
+          _todosBloco_informacoesProduto:      "Condição de prazo em todos os itens",
           "clientes[0].razaoSocial":     "Nome / Razão Social",
           "clientes[0].cpfCnpj":         "CPF / CNPJ do cliente",
           "clientes[0].nomeContato":     "Nome do Contato",
@@ -513,6 +515,16 @@ window.atualizarPropostaEditavel = async function () {
           if (key === "_temProdutos") {
             const c = document.getElementById("blocosProdutosContainer");
             return c && c.querySelectorAll("table tbody tr:not(.extra-summary-row)").length > 0 ? "ok" : "";
+          }
+          if (key === "_todosBloco_previsaoEntrega") {
+            const campos = document.querySelectorAll("#blocosProdutosContainer input[name='previsaoEntrega']");
+            if (!campos.length) return "ok"; // sem blocos: _temProdutos já cobre
+            return Array.from(campos).every(c => c.value.trim()) ? "ok" : "";
+          }
+          if (key === "_todosBloco_informacoesProduto") {
+            const campos = document.querySelectorAll("#blocosProdutosContainer textarea[name='informacoesProduto']");
+            if (!campos.length) return "ok";
+            return Array.from(campos).every(c => c.value.trim()) ? "ok" : "";
           }
           if (key.startsWith("clientes[0].")) {
             const campo = key.replace("clientes[0].", "");
