@@ -103,22 +103,14 @@ function verificarBloqueioKommo() {
 
     const token = localStorage.getItem("accessToken") || "";
 
-    Promise.all([
-      fetch(`${KOMMO_SERVER}/proposta/${idProposta}/lead`, { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.ok ? r.json() : null),
-      fetch(`${KOMMO_SERVER}/kommo/pipelines`, { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.ok ? r.json() : [])
-    ])
-    .then(([lead, pipelines]) => {
+    fetch(`${KOMMO_SERVER}/proposta/${idProposta}/lead`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+    .then(lead => {
       if (!lead) { console.warn("[kommo-lock] Lead não encontrado."); return; }
       console.log("[kommo-lock] Resposta do lead:", lead);
 
       const statusId = String(lead.status_id);
-      let nomeEtapa  = statusId;
-      for (const p of (pipelines || [])) {
-        const etapa = (p.etapas || []).find(e => String(e.status_id) === statusId);
-        if (etapa) { nomeEtapa = etapa.nome; break; }
-      }
+      const nomeEtapa = lead.nomeEtapa || statusId;
       window._kommoStatusAtual = { statusId, nomeEtapa };
 
       const tipoBloqueio = cfgKommo[statusId]; // false | "ajustes" | "tudo"
