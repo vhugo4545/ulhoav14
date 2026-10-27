@@ -1013,6 +1013,250 @@
     { id: "btn-historico-producao",   label: "Rel. Entrega"         },
   ];
 
+  // ── Trava por Valor do Orçamento ────────────────────────────────────────────
+  // Config salva em CFG.limiteValor:
+  // { ativo, aprovadorId, aprovadorNome, aprovadorEmail,
+  //   global: { valorLimite, tipoBloqueio, pdfs:{btnId:true}, bloquearSalvar, bloquearOmie },
+  //   etapas: { [statusId]: { modo:"desativado" } | { modo:"personalizado", ...regra } } }  (ausente = herda global)
+  const LV_USUARIOS_URL = "https://ulhoa-0a02024d350a.herokuapp.com/api/auth/usuarios";
+  const LV_COR = { fg: "#c2410c", bg: "#fff7ed", border: "#fdba74", soft: "#ffedd5" };
+
+  const LV = {
+    estado: null,
+
+    regraVazia() {
+      return { valorLimite: 0, tipoBloqueio: "ajustes", pdfs: {}, bloquearSalvar: true, bloquearOmie: true };
+    },
+
+    carregar() {
+      const salvo = window.CFgAPI?.obter()?.limiteValor
+        || (() => { try { return JSON.parse(localStorage.getItem("cfg_limite_valor")); } catch { return null; } })()
+        || {};
+      LV.estado = {
+        ativo:          !!salvo.ativo,
+        aprovadorId:    salvo.aprovadorId    || "",
+        aprovadorNome:  salvo.aprovadorNome  || "",
+        aprovadorEmail: salvo.aprovadorEmail || "",
+        global:         { ...LV.regraVazia(), ...(salvo.global || {}) },
+        etapas:         JSON.parse(JSON.stringify(salvo.etapas || {})),
+      };
+    },
+
+    obterConfig() {
+      if (!LV.estado) LV.carregar();
+      return JSON.parse(JSON.stringify(LV.estado));
+    },
+
+    parseBRL(txt) {
+      const s = String(txt || "").replace(/[R$\s]/g, "").replace(/\./g, "").replace(",", ".");
+      const n = parseFloat(s);
+      return isNaN(n) ? 0 : n;
+    },
+
+    fmtBRL(n) {
+      return (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    },
+
+    chip(texto, ativo, onToggle) {
+      const lbl = document.createElement("label");
+      const cb  = document.createElement("input");
+      cb.type = "checkbox"; cb.checked = !!ativo;
+      cb.style.cssText = `width:12px;height:12px;cursor:pointer;accent-color:${LV_COR.fg};`;
+      const aplicar = () => {
+        lbl.style.cssText = `display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:500;transition:all .15s;user-select:none;border:1px solid ${cb.checked ? LV_COR.border : "#e2e8f0"};background:${cb.checked ? LV_COR.bg : "#fff"};color:${cb.checked ? LV_COR.fg : "#64748b"};`;
+      };
+      aplicar();
+      cb.addEventListener("change", e => { e.stopPropagation(); aplicar(); onToggle(cb.checked); });
+      lbl.append(cb, document.createTextNode(texto));
+      return lbl;
+    },
+
+    // Editor de uma regra (valor + o que bloquear). Edita o objeto `regra` no lugar.
+    criarEditorRegra(regra) {
+      const wrap = document.createElement("div");
+      wrap.style.cssText = "display:flex;flex-direction:column;gap:10px;";
+
+      const linha = document.createElement("div");
+      linha.style.cssText = "display:flex;align-items:center;gap:10px;flex-wrap:wrap;";
+
+      const lblValor = document.createElement("label");
+      lblValor.style.cssText = "display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#475569;";
+      lblValor.textContent = "Travar acima de";
+      const inpValor = document.createElement("input");
+      inpValor.type = "text"; inpValor.inputMode = "decimal";
+      inpValor.placeholder = "R$ 0,00";
+      inpValor.value = regra.valorLimite ? LV.fmtBRL(regra.valorLimite) : "";
+      inpValor.style.cssText = "width:150px;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-weight:600;color:#1e293b;outline:none;";
+      inpValor.addEventListener("input", () => { regra.valorLimite = LV.parseBRL(inpValor.value); });
+      inpValor.addEventListener("blur",  () => { inpValor.value = regra.valorLimite ? LV.fmtBRL(regra.valorLimite) : ""; });
+      lblValor.appendChild(inpValor);
+
+      const lblTipo = document.createElement("label");
+      lblTipo.style.cssText = "display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#475569;";
+      lblTipo.textContent = "Edição";
+      const selTipo = document.createElement("select");
+      selTipo.style.cssText = "font-size:11px;font-weight:600;border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;color:#1e293b;background:#fff;cursor:pointer;";
+      selTipo.innerHTML = `
+        <option value="">○ Livre (só o que estiver marcado abaixo)</option>
+        <option value="ajustes">🔒 Bloquear campos · PDFs conforme abaixo</option>
+        <option value="tudo">🔒 Total · campos e todos os PDFs</option>`;
+      selTipo.value = regra.tipoBloqueio || "";
+      lblTipo.appendChild(selTipo);
+
+      linha.append(lblValor, lblTipo);
+
+      const tituloPdf = document.createElement("div");
+      tituloPdf.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;";
+      tituloPdf.textContent = "PDFs e ações bloqueados";
+
+      const chips = document.createElement("div");
+      chips.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
+      const chipsPdf = BOTOES_IMPRESSAO.map(btn =>
+        LV.chip("🔒 " + btn.label, regra.pdfs?.[btn.id], v => {
+          regra.pdfs = regra.pdfs || {};
+          if (v) regra.pdfs[btn.id] = true; else delete regra.pdfs[btn.id];
+        })
+      );
+      chips.append(
+        ...chipsPdf,
+        LV.chip("🔒 Salvar proposta", regra.bloquearSalvar, v => { regra.bloquearSalvar = v; }),
+        LV.chip("🔒 Enviar para Omie", regra.bloquearOmie, v => { regra.bloquearOmie = v; }),
+      );
+
+      // "Total" bloqueia todos os PDFs: reflete nos chips e impede desmarcar
+      const sincronizarTotal = () => {
+        const total = selTipo.value === "tudo";
+        chipsPdf.forEach(lbl => {
+          const cb = lbl.querySelector("input");
+          cb.disabled = total;
+          lbl.style.opacity = total ? "0.6" : "";
+          if (total && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event("change")); }
+        });
+      };
+      selTipo.addEventListener("change", e => { e.stopPropagation(); regra.tipoBloqueio = selTipo.value; sincronizarTotal(); });
+      sincronizarTotal();
+
+      wrap.append(linha, tituloPdf, chips);
+      return wrap;
+    },
+
+    async preencherAprovadores(sel) {
+      try {
+        const res = await fetch(LV_USUARIOS_URL);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const users = await res.json();
+        const atual = LV.estado.aprovadorId;
+        sel.innerHTML = `<option value="">Selecione o aprovador…</option>` + users
+          .map(u => `<option value="${u._id}" data-nome="${(u.nome || "").replace(/"/g, "&quot;")}" data-email="${u.email || ""}"${u._id === atual ? " selected" : ""}>${u.nome || u.email} · ${u.tipo || "user"}</option>`)
+          .join("");
+        if (atual && !users.some(u => u._id === atual)) {
+          sel.insertAdjacentHTML("beforeend", `<option value="${atual}" selected>${LV.estado.aprovadorNome || atual} (não encontrado)</option>`);
+        }
+      } catch (e) {
+        sel.innerHTML = `<option value="${LV.estado.aprovadorId}">${LV.estado.aprovadorNome || "Erro ao carregar usuários"}</option>`;
+      }
+    },
+
+    criarCardGlobal() {
+      const card = document.createElement("div");
+      card.id = "kommo-limite-valor";
+      card.style.cssText = `border:2px solid ${LV_COR.fg};border-radius:10px;margin-bottom:20px;overflow:hidden;`;
+
+      const head = document.createElement("div");
+      head.style.cssText = `display:flex;align-items:center;gap:10px;padding:11px 16px;background:${LV_COR.soft};flex-wrap:wrap;`;
+      head.innerHTML = `
+        <span class="material-icons-outlined" style="font-size:18px;color:${LV_COR.fg};">price_check</span>
+        <div style="flex:1;min-width:200px;">
+          <div style="font-size:12px;font-weight:700;color:#7c2d12;">Trava por valor do orçamento</div>
+          <div style="font-size:10px;color:${LV_COR.fg};">Se o total passar do limite, o orçamento trava até o aprovador liberar. Admins e gestores não são afetados.</div>
+        </div>`;
+
+      const lblAtivo = LV.chip("Ativar", LV.estado.ativo, v => { LV.estado.ativo = v; aplicarAtivo(); });
+      head.appendChild(lblAtivo);
+
+      const body = document.createElement("div");
+      body.style.cssText = "padding:14px 16px;background:#fffdfb;display:flex;flex-direction:column;gap:14px;";
+
+      const linhaAprov = document.createElement("label");
+      linhaAprov.style.cssText = "display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:#475569;flex-wrap:wrap;";
+      linhaAprov.textContent = "Aprovador";
+      const selAprov = document.createElement("select");
+      selAprov.style.cssText = "font-size:12px;font-weight:600;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;color:#1e293b;background:#fff;cursor:pointer;min-width:240px;";
+      selAprov.innerHTML = `<option>Carregando usuários…</option>`;
+      selAprov.addEventListener("change", () => {
+        const opt = selAprov.selectedOptions[0];
+        LV.estado.aprovadorId    = selAprov.value;
+        LV.estado.aprovadorNome  = opt?.dataset.nome  || "";
+        LV.estado.aprovadorEmail = opt?.dataset.email || "";
+      });
+      linhaAprov.appendChild(selAprov);
+      LV.preencherAprovadores(selAprov);
+
+      const tituloRegra = document.createElement("div");
+      tituloRegra.style.cssText = `font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${LV_COR.fg};`;
+      tituloRegra.textContent = "Regra padrão (todas as etapas)";
+
+      body.append(linhaAprov, tituloRegra, LV.criarEditorRegra(LV.estado.global));
+
+      const aplicarAtivo = () => {
+        body.style.opacity = LV.estado.ativo ? "" : "0.5";
+        body.style.pointerEvents = LV.estado.ativo ? "" : "none";
+      };
+      aplicarAtivo();
+
+      card.append(head, body);
+      return card;
+    },
+
+    // Seção dentro do card da etapa: herdar / regra própria / sem trava
+    criarSecaoEtapa(stageKeys) {
+      const sec = document.createElement("div");
+      sec.style.cssText = "padding:12px 14px;border-bottom:1px solid #f1f5f9;";
+
+      const titulo = document.createElement("div");
+      titulo.style.cssText = `font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${LV_COR.fg};margin-bottom:8px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;`;
+      titulo.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;">price_check</span> Trava por valor nesta etapa`;
+
+      const sel = document.createElement("select");
+      sel.style.cssText = "font-size:11px;font-weight:600;border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;color:#1e293b;background:#fff;cursor:pointer;margin-left:6px;text-transform:none;letter-spacing:0;";
+      sel.innerHTML = `
+        <option value="">Usar regra padrão</option>
+        <option value="personalizado">Regra própria</option>
+        <option value="desativado">Sem trava por valor</option>`;
+      const atual = LV.estado.etapas[stageKeys[0]];
+      sel.value = atual?.modo || "";
+      titulo.appendChild(sel);
+
+      const editorWrap = document.createElement("div");
+
+      const renderEditor = () => {
+        editorWrap.innerHTML = "";
+        const modo = sel.value;
+        if (!modo) {
+          stageKeys.forEach(k => delete LV.estado.etapas[k]);
+          return;
+        }
+        if (modo === "desativado") {
+          stageKeys.forEach(k => { LV.estado.etapas[k] = { modo: "desativado" }; });
+          return;
+        }
+        // Regra própria: parte da regra salva da etapa, ou de uma cópia da padrão
+        const base = LV.estado.etapas[stageKeys[0]]?.modo === "personalizado"
+          ? LV.estado.etapas[stageKeys[0]]
+          : { ...JSON.parse(JSON.stringify(LV.estado.global)), modo: "personalizado" };
+        // Etapas em comum compartilham o mesmo objeto de regra
+        stageKeys.forEach(k => { LV.estado.etapas[k] = base; });
+        editorWrap.appendChild(LV.criarEditorRegra(base));
+      };
+      sel.addEventListener("change", e => { e.stopPropagation(); renderEditor(); });
+      renderEditor();
+
+      sec.append(titulo, editorWrap);
+      return sec;
+    },
+  };
+  window.LV = LV;
+
   function kommoTravCarregarConfig() {
     const cfgServer = window.CFgAPI?.obter()?.travamentoKommo;
     if (cfgServer && Object.keys(cfgServer).length) return cfgServer;
@@ -1062,6 +1306,7 @@
     }
 
     const cfg          = kommoTravCarregarConfig();
+    LV.carregar();
     const cfgOmie      = (() => { const s = window.CFgAPI?.obter()?.omieEtapas; if (s && Object.keys(s).length) return s; try { return JSON.parse(localStorage.getItem("cfg_omie_etapas")) || {}; } catch { return {}; } })();
     const cfgBotoes    = (() => { const s = window.CFgAPI?.obter()?.botoesKommo; if (s && Object.keys(s).length) return s; try { return JSON.parse(localStorage.getItem("cfg_botoes_kommo")) || {}; } catch { return {}; } })();
     const cfgMod       = (() => { const s = window.CFgAPI?.obter()?.travamentoModificacoes; if (s && Object.keys(s).length) return s; try { return JSON.parse(localStorage.getItem("cfg_travamento_modificacoes")) || {}; } catch { return {}; } })();
@@ -1220,6 +1465,7 @@
     });
 
     globalCard.append(globalHead, globalBody);
+    container.appendChild(LV.criarCardGlobal());
     container.appendChild(globalCard);
 
     function syncGlobalCheckboxes() {
@@ -1472,7 +1718,7 @@
           obrigSectionM.appendChild(grupoWrap);
         });
 
-        bodyM.appendChild(obrigSectionM);
+        bodyM.append(LV.criarSecaoEtapa(stageKeys), obrigSectionM);
 
         let expandedM = false;
         const toggleExpandM = () => {
@@ -1747,7 +1993,7 @@
           obrigSection.appendChild(grupoWrap);
         });
 
-        body.append(pdfSection, obrigSection);
+        body.append(pdfSection, LV.criarSecaoEtapa([stageKey]), obrigSection);
 
         // Toggle expand/collapse
         let expanded = false;
@@ -1808,6 +2054,13 @@
   async function salvarTravamentoKommo() {
     const container = document.getElementById("kommo-trav-container");
 
+    // Valida antes de gravar qualquer coisa, para não salvar parte das configurações
+    const cfgLimiteValor = LV.obterConfig();
+    if (cfgLimiteValor.ativo && (!cfgLimiteValor.aprovadorId || !(cfgLimiteValor.global?.valorLimite > 0))) {
+      alert("Trava por valor: escolha o aprovador e informe o valor-limite da regra padrão.");
+      return;
+    }
+
     const cfg             = {};
     const cfgOmie         = {};
     const cfgBotoes       = {};
@@ -1845,6 +2098,8 @@
     localStorage.setItem("cfg_travamento_modificacoes", JSON.stringify(cfgModificacoes));
     localStorage.setItem("cfg_obrigatoriedade_campos", JSON.stringify(cfgObrig));
 
+    localStorage.setItem("cfg_limite_valor", JSON.stringify(cfgLimiteValor));
+
     const statusEl = document.getElementById("cfg-status-travamento-kommo");
     if (statusEl) statusEl.textContent = "Salvando…";
 
@@ -1854,6 +2109,7 @@
       botoesKommo:            cfgBotoes,
       travamentoModificacoes: cfgModificacoes,
       obrigatoriedadeCampos:  cfgObrig,
+      limiteValor:            cfgLimiteValor,
     });
     const ok = await window.CFgAPI?.salvar(cfgParcial);
 
