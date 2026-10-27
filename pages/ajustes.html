@@ -1171,9 +1171,6 @@
           <div style="font-size:10px;color:${LV_COR.fg};">Se o total passar do limite, o orçamento trava até o aprovador liberar. Admins e gestores não são afetados.</div>
         </div>`;
 
-      const lblAtivo = LV.chip("Ativar", LV.estado.ativo, v => { LV.estado.ativo = v; aplicarAtivo(); });
-      head.appendChild(lblAtivo);
-
       const body = document.createElement("div");
       body.style.cssText = "padding:14px 16px;background:#fffdfb;display:flex;flex-direction:column;gap:14px;";
 
@@ -1198,29 +1195,14 @@
 
       const dicaAprov = document.createElement("div");
       dicaAprov.style.cssText = "font-size:10px;color:#64748b;margin-top:-8px;";
-      dicaAprov.textContent = "O aprovador também decide os pedidos de desbloqueio por etapa da Kommo, mesmo com a trava por valor desligada.";
+      dicaAprov.textContent = "O aprovador decide os pedidos de desbloqueio por valor e por etapa da Kommo.";
 
-      // Só a regra fica esmaecida com a trava desligada; o aprovador continua editável
       const regraWrap = document.createElement("div");
       regraWrap.style.cssText = "display:flex;flex-direction:column;gap:14px;";
       regraWrap.append(tituloRegra, LV.criarEditorRegra(LV.estado.global));
 
       body.append(linhaAprov, dicaAprov, regraWrap);
-
-      const aplicarAtivo = () => {
-        regraWrap.style.opacity = LV.estado.ativo ? "" : "0.5";
-        regraWrap.style.pointerEvents = LV.estado.ativo ? "" : "none";
-        document.querySelectorAll(".lv-aviso-desligado").forEach(el => { el.style.display = LV.estado.ativo ? "none" : ""; });
-      };
-      aplicarAtivo();
-      // Usado pelo salvar quando há regra configurada com a trava desligada
-      LV.ativar = () => {
-        LV.estado.ativo = true;
-        const cb = lblAtivo.querySelector("input");
-        if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new Event("change")); }
-        aplicarAtivo();
-        card.scrollIntoView({ behavior: "smooth", block: "center" });
-      };
+      LV.mostrarCard = () => card.scrollIntoView({ behavior: "smooth", block: "center" });
 
       card.append(head, body);
       return card;
@@ -1247,10 +1229,6 @@
 
       const editorWrap = document.createElement("div");
 
-      const avisoDesligado = document.createElement("div");
-      avisoDesligado.className = "lv-aviso-desligado";
-      avisoDesligado.style.cssText = `display:${LV.estado.ativo ? "none" : ""};font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:6px 10px;margin-bottom:8px;`;
-      avisoDesligado.textContent = "⚠ A trava por valor está desligada no card \"Trava por valor do orçamento\" (acima). Ative lá para esta regra valer.";
 
       const renderEditor = () => {
         editorWrap.innerHTML = "";
@@ -1274,7 +1252,7 @@
       sel.addEventListener("change", e => { e.stopPropagation(); renderEditor(); });
       renderEditor();
 
-      sec.append(titulo, avisoDesligado, editorWrap);
+      sec.append(titulo, editorWrap);
       return sec;
     },
   };
@@ -2078,18 +2056,13 @@
     const container = document.getElementById("kommo-trav-container");
 
     // Valida antes de gravar qualquer coisa, para não salvar parte das configurações
-    let cfgLimiteValor = LV.obterConfig();
-    const temRegraValor = cfgLimiteValor.global?.valorLimite > 0
+    // A trava por valor vale sempre que houver regra configurada (padrão ou por etapa)
+    const cfgLimiteValor = LV.obterConfig();
+    cfgLimiteValor.ativo = cfgLimiteValor.global?.valorLimite > 0
       || Object.values(cfgLimiteValor.etapas || {}).some(r => r.modo === "personalizado" && r.valorLimite > 0);
-    if (!cfgLimiteValor.ativo && temRegraValor) {
-      if (confirm("Há regra de trava por valor configurada, mas a trava está desligada.\n\nAtivar a trava por valor agora?")) {
-        LV.ativar?.();
-        cfgLimiteValor = LV.obterConfig();
-      }
-    }
     if (cfgLimiteValor.ativo && !cfgLimiteValor.aprovadorId) {
       alert("Trava por valor: escolha o aprovador no card \"Trava por valor do orçamento\" e salve de novo.");
-      LV.ativar?.();
+      LV.mostrarCard?.();
       return;
     }
 

@@ -49,8 +49,14 @@
   }
 
   // Regra da etapa atual da Kommo; sem etapa conhecida, vale a regra padrão
+  // A trava vale sempre que houver regra configurada (o antigo "Ativar" não é mais usado)
+  function temRegra(cfg) {
+    return Number(cfg?.global?.valorLimite) > 0
+      || Object.values(cfg?.etapas || {}).some(r => r?.modo === "personalizado" && Number(r.valorLimite) > 0);
+  }
+
   function obterRegra(cfg) {
-    if (!cfg?.ativo) return null;
+    if (!cfg) return null;
     const statusId = window._kommoStatusAtual?.statusId;
     const daEtapa = statusId ? cfg.etapas?.[statusId] : null;
     if (daEtapa?.modo === "desativado") return null;
@@ -330,6 +336,8 @@
     const negado = ultima?.status === "negado" ? ultima : null;
     const aprovador = isAprovador(cfg);
     const nomeAprovador = cfg.aprovadorNome || "o aprovador";
+    // Sem aprovador definido em Ajustes não há quem decida: não oferece o pedido
+    const podePedir = !isSuperUser && !!cfg.aprovadorId;
     const resumo = `Total ${fmtBRL(total)} · limite ${fmtBRL(limite)}`;
 
     if (liberacao) {
@@ -386,7 +394,7 @@
         tom: "negado",
         titulo: `⛔ Aprovação negada por ${negado.aprovador || nomeAprovador}`,
         detalhe: `${resumo}${negado.observacao ? " · Motivo: " + negado.observacao : ""}`,
-        acoes: isSuperUser ? [] : [solicitarAcao],
+        acoes: podePedir ? [solicitarAcao] : [],
       });
       return;
     }
@@ -408,16 +416,18 @@
         : `🔒 Orçamento travado: valor acima do limite`,
       detalhe: isSuperUser
         ? `${resumo} · usuários comuns precisam da aprovação de ${nomeAprovador}.`
-        : `${resumo} · precisa da aprovação de ${nomeAprovador}.${estado.camposTravados ? "" : " Salve a proposta antes de solicitar."}`,
-      acoes: isSuperUser ? [] : [solicitarAcao],
+        : cfg.aprovadorId
+          ? `${resumo} · precisa da aprovação de ${nomeAprovador}.${estado.camposTravados ? "" : " Salve a proposta antes de solicitar."}`
+          : `${resumo} · nenhum aprovador definido em Ajustes; fale com o gestor.`,
+      acoes: podePedir ? [solicitarAcao] : [],
     });
   }
 
   function iniciar(tentativa = 0) {
-    // Trava desligada em Ajustes: não faz nada nesta página. Verifica de novo uma vez,
-    // porque a config do servidor chega depois do cache local (configuracoes.js)
-    if (!obterConfig()?.ativo) {
-      if (tentativa === 0) setTimeout(() => iniciar(1), 5000);
+    // Sem regra em Ajustes: não faz nada nesta página. A config do servidor chega depois
+    // do cache local (configuracoes.js), então tenta de novo a cada 2s por até 30s
+    if (!temRegra(obterConfig())) {
+      if (tentativa < 15) setTimeout(() => iniciar(tentativa + 1), 2000);
       return;
     }
     buscarAprovacoes().then(avaliar);
@@ -426,6 +436,6 @@
     setInterval(() => { if (document.visibilityState === "visible") buscarAprovacoes(); }, 30000);
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => iniciar());
   else iniciar();
 })();

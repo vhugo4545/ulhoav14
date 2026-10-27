@@ -38,7 +38,7 @@ function verificarBloqueioKommo() {
     } else {
       aviso.innerHTML = `
         <div style="background:#dcfce7;color:#166534;border:1px solid #86efac;padding:14px 18px;border-radius:10px;margin-bottom:16px;font-weight:700;font-size:14px;">
-          🔓 Orçamento desbloqueado — etapa: <strong>${nomeEtapa}</strong>
+          🔓 ${liberadoPor ? "Etapa desbloqueada" : "Etapa sem bloqueio"} — etapa: <strong>${nomeEtapa}</strong>
           ${liberadoPor ? `<span style="font-weight:400;font-size:12px;margin-left:8px;">(${liberadoPor})</span>` : ""}
         </div>`;
     }
