@@ -588,6 +588,32 @@ input.form-control[placeholder="Ambiente"] {
 .main-container .table .btn-danger    { font-size: 11px; padding: 3px 8px; border-radius: 6px; }
 .main-container .table .btn-secondary { font-size: 11px; padding: 3px 8px; border-radius: 6px; }
 
+/* Tabela de produtos dos blocos: cabe na largura sem rolagem lateral */
+.table-responsive > table[id^="tabela-"] { table-layout: fixed; width: 100%; }
+.table-responsive > table[id^="tabela-"] thead th { white-space: normal; line-height: 1.2; padding: 8px 6px; font-size: 10.5px; vertical-align: middle; }
+.table-responsive > table[id^="tabela-"] tbody td { padding: 6px; font-size: 11.5px; overflow-wrap: anywhere; }
+.table-responsive > table[id^="tabela-"] th:nth-child(1)  { width: 13%; }  /* Utilização */
+.table-responsive > table[id^="tabela-"] th:nth-child(3),
+.table-responsive > table[id^="tabela-"] th:nth-child(4)  { width: 9%; }   /* Custo Final / Custo Unit. */
+.table-responsive > table[id^="tabela-"] th:nth-child(5)  { width: 8.5%; } /* Código Omie */
+.table-responsive > table[id^="tabela-"] th:nth-child(6)  { width: 6.5%; } /* Unidade */
+.table-responsive > table[id^="tabela-"] th:nth-child(7)  { width: 6%; }   /* Qtd. */
+.table-responsive > table[id^="tabela-"] th:nth-child(8)  { width: 7.5%; } /* Qtd. Des. */
+.table-responsive > table[id^="tabela-"] th:nth-child(9)  { width: 7%; }   /* Dt. Alt. */
+.table-responsive > table[id^="tabela-"] th:nth-child(10) { width: 8.5%; } /* Ação */
+.table-responsive > table[id^="tabela-"] td:nth-child(1) textarea { font-size: 11.5px; padding: 4px 6px; resize: vertical; }
+.table-responsive > table[id^="tabela-"] td input.form-control { font-size: 11.5px; padding: 3px 5px; width: 100%; min-width: 0; }
+.table-responsive > table[id^="tabela-"] td:nth-child(3),
+.table-responsive > table[id^="tabela-"] td:nth-child(4) { white-space: nowrap; overflow-wrap: normal; }
+.table-responsive > table[id^="tabela-"] td:nth-child(5) { font-size: 10.5px; }
+.table-responsive > table[id^="tabela-"] td:last-child .btn { display: block; width: 100%; margin: 0 0 4px 0 !important; padding: 2px 4px; font-size: 10.5px; }
+
+/* Em telas até 1600px: parâmetros em cima e tabela embaixo, com a largura toda */
+@media (max-width: 1599.98px) {
+  .accordion-body > .row > .col-lg-4:has(+ .grupo-tabela),
+  .accordion-body > .row > .grupo-tabela { flex: 0 0 100%; max-width: 100%; }
+}
+
 /* Botão detalhes financeiros */
 .btn-detalhes-financeiros {
   font-size: 11px !important;

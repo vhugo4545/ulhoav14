@@ -303,6 +303,56 @@ async function validarOmieAtualizado() {
 }
 window.validarOmieAtualizado = validarOmieAtualizado;
 
+// Regra de atualização de produto (Ajustes): bloqueia o PDF para vendedores se algum produto
+// da proposta tiver a data de alteração na Omie (coluna Dt. Alt.) com mais de N dias.
+async function validarDtAltProdutos() {
+  const regra = window.CFgAPI?.obter()?.regraAtualizacaoProduto;
+  if (!regra?.ativo) return true;
+  const tipo = localStorage.getItem("usuarioTipo") || "";
+  if (tipo === "admin" || tipo === "gestor") return true;
+  if (window.propostaAtual?.aprovadoPeloGestor) return true;
+  const limiteDias = Number(regra.dias) || 30;
+
+  // A lista de produtos da Omie (tabelas.js) pode ainda estar carregando: espera até 15s
+  for (let i = 0; i < 30 && !window.todosProdutos?.length; i++) {
+    await new Promise(r => setTimeout(r, 500));
+  }
+  if (!window.todosProdutos?.length) return true; // sem a lista, não bloqueia
+
+  let agora = new Date();
+  try {
+    const res = await fetch("https://ulhoa-0a02024d350a.herokuapp.com/api/server-time");
+    if (res.ok) agora = new Date((await res.json()).now);
+  } catch (e) { /* usa a hora local */ }
+
+  const porCodigo = new Map(window.todosProdutos.map(p => [String(p.codigo_produto || p.codigo || ""), p]));
+  const vencidos = new Map(); // codigo -> texto
+  document.querySelectorAll("td.data-alt-omie[data-codigo]").forEach(td => {
+    const codigo = String(td.dataset.codigo || "");
+    if (vencidos.has(codigo)) return;
+    const p = porCodigo.get(codigo);
+    const dAlt = p?.data_alt || p?.info?.dAlt || "";
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dAlt);
+    if (!m) return;
+    const diasDesde = Math.floor((agora - new Date(+m[3], +m[2] - 1, +m[1])) / 86400000);
+    if (diasDesde > limiteDias) {
+      const descricao = td.closest("tr")?.children[1]?.textContent.trim() || codigo;
+      vencidos.set(codigo, `• ${descricao} — alterado em ${dAlt} (${diasDesde} dias)`);
+    }
+  });
+
+  if (!vencidos.size) return true;
+  const linhas = [...vencidos.values()];
+  alert(
+    `⚠️ Não é possível gerar o PDF.\n\n` +
+    `${linhas.length} produto(s) estão com a data de alteração na Omie há mais de ${limiteDias} dias:\n\n` +
+    linhas.slice(0, 12).join("\n") + (linhas.length > 12 ? `\n… e mais ${linhas.length - 12}` : "") +
+    `\n\nAtualize os produtos ou peça a aprovação do gestor.`
+  );
+  return false;
+}
+window.validarDtAltProdutos = validarDtAltProdutos;
+
 async function _salvarAprovadoGestor(novoValor) {
   const id = new URLSearchParams(window.location.search).get("id") || window.propostaAtual?._id;
   if (!id) { alert("ID da proposta não encontrado."); return; }

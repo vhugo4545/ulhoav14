@@ -1098,6 +1098,7 @@ async function marcarAprovadoPeloGestor() {
 async function marcarEnviadoParaCliente() {
   // Valida ANTES do spinner para que o popup não fique atrás do overlay
   if (typeof validarOmieAtualizado === "function" && !await validarOmieAtualizado()) return;
+  if (typeof validarDtAltProdutos === "function" && !await validarDtAltProdutos()) return;
   if (typeof validarValorMinimoPermitido === "function") {
     if (!await validarValorMinimoPermitido()) return;
   }
