@@ -70,8 +70,19 @@
     return el ? parseBRL(el.textContent) : null;
   }
 
+  // id do usuário logado, lido do token (JWT) salvo no login
+  function idUsuarioLogado() {
+    try {
+      const t = localStorage.getItem("token") || localStorage.getItem("accessToken") || "";
+      const p = JSON.parse(atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+      return p?.id ? String(p.id) : "";
+    } catch { return ""; }
+  }
+
   function isAprovador(cfg) {
-    return !!emailUsuario && !!cfg?.aprovadorEmail && cfg.aprovadorEmail.toLowerCase() === emailUsuario;
+    const id = idUsuarioLogado();
+    return (!!id && String(cfg?.aprovadorId || "") === id)
+      || (!!emailUsuario && !!cfg?.aprovadorEmail && cfg.aprovadorEmail.toLowerCase() === emailUsuario);
   }
 
   // Liberação vigente para o total atual

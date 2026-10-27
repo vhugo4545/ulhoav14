@@ -12,7 +12,14 @@
 
   const emailUsuario = (localStorage.getItem("usuarioEmail") || "").toLowerCase();
   const nomeUsuario  = localStorage.getItem("usuarioNome") || "";
-  if (!emailUsuario) return;
+  const idUsuario    = (() => {
+    try {
+      const t = localStorage.getItem("token") || localStorage.getItem("accessToken") || "";
+      const p = JSON.parse(atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+      return p?.id ? String(p.id) : "";
+    } catch { return ""; }
+  })();
+  if (!emailUsuario && !idUsuario) return;
 
   const fmtBRL = n => (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const fmtData = d => d ? new Date(d).toLocaleString("pt-BR") : "";
@@ -301,8 +308,11 @@
     const cfg = await obterConfig();
     const lv = cfg?.limiteValor;
     // Sem aprovador definido não há para quem pedir (vale para trava por valor e por etapa)
-    if (!lv?.aprovadorEmail) return;
-    if ((lv.aprovadorEmail || "").toLowerCase() === emailUsuario) iniciarAprovador();
+    if (!lv?.aprovadorId && !lv?.aprovadorEmail) return;
+    // Reconhece o aprovador pelo id do login (token); o e-mail fica como alternativa
+    const ehAprovador = (!!idUsuario && String(lv.aprovadorId || "") === idUsuario)
+      || (!!emailUsuario && (lv.aprovadorEmail || "").toLowerCase() === emailUsuario);
+    if (ehAprovador) iniciarAprovador();
     else iniciarSolicitante();
   }
 

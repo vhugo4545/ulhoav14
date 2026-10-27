@@ -1149,6 +1149,12 @@
         sel.innerHTML = `<option value="">Selecione o aprovador…</option>` + users
           .map(u => `<option value="${u._id}" data-nome="${(u.nome || "").replace(/"/g, "&quot;")}" data-email="${u.email || ""}"${u._id === atual ? " selected" : ""}>${u.nome || u.email} · ${u.tipo || "user"}</option>`)
           .join("");
+        // Completa nome/e-mail do aprovador salvo a partir da lista (corrige configs sem e-mail)
+        const salvo = users.find(u => u._id === atual);
+        if (salvo) {
+          LV.estado.aprovadorNome  = salvo.nome  || LV.estado.aprovadorNome;
+          LV.estado.aprovadorEmail = salvo.email || LV.estado.aprovadorEmail;
+        }
         if (atual && !users.some(u => u._id === atual)) {
           sel.insertAdjacentHTML("beforeend", `<option value="${atual}" selected>${LV.estado.aprovadorNome || atual} (não encontrado)</option>`);
         }
