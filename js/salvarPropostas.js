@@ -482,7 +482,7 @@ window.atualizarPropostaEditavel = async function () {
           _todosBloco_informacoesProduto:           "Condição de prazo em todos os itens",
           _todosBloco_dataAssinaturaCliente:        "Data Assinatura do Cliente (todos os itens)",
           _todosBloco_dataInstalacaoEstrutura:      "Data Instalação da Estrutura (todos os itens)",
-          _todosBloco_dataPagamentoVidros:          "Data Pagamento Vidros / Calha (todos os itens)",
+          _todosBloco_dataPagamentoVidros:          "Data Último Pagamento Faturamento Direto (todos os itens)",
           _todosBloco_dataLiberacaoFornecedor:      "Data Liberação do Fornecedor (todos os itens)",
           "clientes[0].razaoSocial":     "Nome / Razão Social",
           "clientes[0].cpfCnpj":         "CPF / CNPJ do cliente",

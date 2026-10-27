@@ -659,7 +659,7 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
 
         <div>
           <label style="font-size:11px;color:#555;display:block;margin-bottom:2px;">
-            Último pagamento do cliente (vidros / calha)
+            Último pagamento (100% pago) do faturamento direto
             <span style="font-size:10px;color:#888;font-weight:400;">(Produção / Compras)</span>
           </label>
           <input type="date" name="dataPagamentoVidros"
