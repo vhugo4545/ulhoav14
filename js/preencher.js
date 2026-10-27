@@ -728,7 +728,7 @@ async function carregarPropostaEditavel(proposta) {
         const _dtAlt = (() => {
           if (!_codigoOmie || !window.todosProdutos?.length) return "—";
           const p = window.todosProdutos.find(p => String(p.codigo_produto || p.codigo || "") === _codigoOmie);
-          return p?.data_alt || "—";
+          return p?.data_alt || p?.info?.dAlt || "—";
         })();
 
         tr.innerHTML = `

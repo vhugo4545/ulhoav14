@@ -5,10 +5,16 @@ const sugestoesTemp = {}; // armazenamento temporÃ¡rio por bloco
 
 document.addEventListener('DOMContentLoaded', carregarProdutos);
 
+// Data de alteração do produto na Omie: vem em info.dAlt (dd/mm/aaaa) no ListarProdutos
+function dataAltProduto(p) {
+  return p?.data_alt || p?.info?.dAlt || "";
+}
+
 async function carregarProdutos() {
   try {
     const response = await fetch('https://ulhoa-0a02024d350a.herokuapp.com/produtos/visualizar');
     todosProdutos = (await response.json()).filter(p => p.inativo !== "S");
+    window.todosProdutos = todosProdutos; // usado pelo preencher.js ao montar a proposta salva
     produtosMapeados.clear();
     todosProdutos.forEach(produto => {
       if (produto.descricao) {
@@ -20,7 +26,7 @@ async function carregarProdutos() {
       if (td.textContent === '—' || !td.textContent.trim()) {
         const cod = String(td.dataset.codigo || '');
         const p = todosProdutos.find(p => String(p.codigo_produto || p.codigo || '') === cod);
-        if (p?.data_alt) td.textContent = p.data_alt;
+        if (dataAltProduto(p)) td.textContent = dataAltProduto(p);
       }
     });
   } catch (error) {
@@ -132,7 +138,7 @@ function montarLinhaProduto(idSuffix, produto) {
   const unidade       = produto.unidade ||
     (window._produtosUnidadeMap && window._produtosUnidadeMap[String(codigo).trim()]) || "\u2014";
 
-  const dataAlt = produto.data_alt || "—";
+  const dataAlt = dataAltProduto(produto) || "—";
   linha.innerHTML = `
     <td>${utilizacao}</td>
     <td>${descricao}</td>
