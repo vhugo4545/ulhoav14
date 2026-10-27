@@ -71,7 +71,7 @@
     wrap.id = "lv-aprov";
     wrap.innerHTML = `
       <style>
-        #lv-aprov-pill{position:fixed;left:24px;bottom:24px;z-index:99997;display:none;align-items:center;gap:8px;
+        #lv-aprov-pill{position:fixed;right:88px;bottom:30px;z-index:99997;display:none;align-items:center;gap:8px;
           background:#c2410c;color:#fff;border:none;border-radius:999px;padding:10px 16px;font-family:inherit;font-size:13px;font-weight:600;
           box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer}
         #lv-aprov-overlay{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;
@@ -173,6 +173,8 @@
     function render() {
       const n = pendentes.length;
       ui.pill.style.display = n ? "inline-flex" : "none";
+      // Fica ao lado do sino do gestor (notificacoesGestor.js, só admins); sem sino, encosta na direita
+      ui.pill.style.right = document.getElementById("ng-bell") ? "88px" : "24px";
       ui.pillTxt.textContent = n === 1 ? "1 aprovação pendente" : `${n} aprovações pendentes`;
       marcarTitulo(n);
       ui.titulo.textContent = n

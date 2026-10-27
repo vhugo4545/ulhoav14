@@ -1147,7 +1147,7 @@
         const users = await res.json();
         const atual = LV.estado.aprovadorId;
         sel.innerHTML = `<option value="">Selecione o aprovador…</option>` + users
-          .map(u => `<option value="${u._id}" data-nome="${(u.nome || "").replace(/"/g, "&quot;")}" data-email="${u.email || ""}"${u._id === atual ? " selected" : ""}>${u.nome || u.email} · ${u.tipo || "user"}</option>`)
+          .map(u => `<option value="${u._id}" data-nome="${(u.nome || "").replace(/"/g, "&quot;")}" data-email="${u.email || ""}"${u._id === atual ? " selected" : ""}>${u.nome || u.email} · ${u.email || "sem e-mail"} · ${u.tipo || "user"}</option>`)
           .join("");
         // Completa nome/e-mail do aprovador salvo a partir da lista (corrige configs sem e-mail)
         const salvo = users.find(u => u._id === atual);
