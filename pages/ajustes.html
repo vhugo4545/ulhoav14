@@ -1194,15 +1194,24 @@
 
       const tituloRegra = document.createElement("div");
       tituloRegra.style.cssText = `font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${LV_COR.fg};`;
-      tituloRegra.textContent = "Regra padrão (todas as etapas)";
+      tituloRegra.textContent = "Regra padrão (todas as etapas) — deixe o valor vazio para travar só nas etapas com regra própria";
 
       body.append(linhaAprov, tituloRegra, LV.criarEditorRegra(LV.estado.global));
 
       const aplicarAtivo = () => {
         body.style.opacity = LV.estado.ativo ? "" : "0.5";
         body.style.pointerEvents = LV.estado.ativo ? "" : "none";
+        document.querySelectorAll(".lv-aviso-desligado").forEach(el => { el.style.display = LV.estado.ativo ? "none" : ""; });
       };
       aplicarAtivo();
+      // Usado pelo salvar quando há regra configurada com a trava desligada
+      LV.ativar = () => {
+        LV.estado.ativo = true;
+        const cb = lblAtivo.querySelector("input");
+        if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new Event("change")); }
+        aplicarAtivo();
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+      };
 
       card.append(head, body);
       return card;
@@ -1229,6 +1238,11 @@
 
       const editorWrap = document.createElement("div");
 
+      const avisoDesligado = document.createElement("div");
+      avisoDesligado.className = "lv-aviso-desligado";
+      avisoDesligado.style.cssText = `display:${LV.estado.ativo ? "none" : ""};font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:6px 10px;margin-bottom:8px;`;
+      avisoDesligado.textContent = "⚠ A trava por valor está desligada no card \"Trava por valor do orçamento\" (acima). Ative lá para esta regra valer.";
+
       const renderEditor = () => {
         editorWrap.innerHTML = "";
         const modo = sel.value;
@@ -1251,7 +1265,7 @@
       sel.addEventListener("change", e => { e.stopPropagation(); renderEditor(); });
       renderEditor();
 
-      sec.append(titulo, editorWrap);
+      sec.append(titulo, avisoDesligado, editorWrap);
       return sec;
     },
   };
@@ -2055,9 +2069,18 @@
     const container = document.getElementById("kommo-trav-container");
 
     // Valida antes de gravar qualquer coisa, para não salvar parte das configurações
-    const cfgLimiteValor = LV.obterConfig();
-    if (cfgLimiteValor.ativo && (!cfgLimiteValor.aprovadorId || !(cfgLimiteValor.global?.valorLimite > 0))) {
-      alert("Trava por valor: escolha o aprovador e informe o valor-limite da regra padrão.");
+    let cfgLimiteValor = LV.obterConfig();
+    const temRegraValor = cfgLimiteValor.global?.valorLimite > 0
+      || Object.values(cfgLimiteValor.etapas || {}).some(r => r.modo === "personalizado" && r.valorLimite > 0);
+    if (!cfgLimiteValor.ativo && temRegraValor) {
+      if (confirm("Há regra de trava por valor configurada, mas a trava está desligada.\n\nAtivar a trava por valor agora?")) {
+        LV.ativar?.();
+        cfgLimiteValor = LV.obterConfig();
+      }
+    }
+    if (cfgLimiteValor.ativo && !cfgLimiteValor.aprovadorId) {
+      alert("Trava por valor: escolha o aprovador no card \"Trava por valor do orçamento\" e salve de novo.");
+      LV.ativar?.();
       return;
     }
 
