@@ -171,7 +171,7 @@
       ui.titulo.textContent = n
         ? (n === 1 ? "1 orçamento aguardando sua aprovação" : `${n} orçamentos aguardando sua aprovação`)
         : "Nenhuma aprovação pendente";
-      ui.dica.textContent = "Liberar para sempre: o orçamento não trava mais por valor. Liberar até o valor: trava de novo se o total subir.";
+      ui.dica.textContent = "Valor: \"até o valor\" trava de novo se o total subir. Etapa: \"só nesta etapa\" trava de novo se o lead mudar para outra etapa bloqueada.";
 
       if (!n) {
         ui.lista.innerHTML = `<div style="padding:24px;text-align:center;color:#64748b;font-size:13px;">Tudo em dia ✅</div>`;
@@ -182,15 +182,19 @@
         const item = document.createElement("div");
         item.className = "lv-item" + (novosIds.has(d._id) ? " novo" : "");
         const url = `editar.html?id=${encodeURIComponent(d.propostaId)}`;
+        const etapa = d.tipo === "etapa";
         item.innerHTML = `
           <div class="lv-top">
             <span class="lv-nome">${esc(d.numeroProposta || "Sem número")} · ${esc(d.nomeCliente || "Cliente")}${novosIds.has(d._id) ? ' <span style="font-size:10px;background:#c2410c;color:#fff;border-radius:999px;padding:1px 7px;vertical-align:middle;">NOVO</span>' : ""}</span>
-            <span class="lv-valor">${fmtBRL(d.valorTotal)}</span>
+            <span class="lv-valor">${etapa ? "Etapa: " + esc(d.nomeEtapa || d.statusId) : fmtBRL(d.valorTotal)}</span>
           </div>
-          <div class="lv-meta">Limite ${fmtBRL(d.valorLimite)} · pedido por ${esc(d.solicitante)} em ${fmtData(d.dataHora)}</div>
+          <div class="lv-meta">${etapa ? "Desbloqueio da etapa da Kommo" : `Valor acima do limite de ${fmtBRL(d.valorLimite)}`} · pedido por ${esc(d.solicitante)} em ${fmtData(d.dataHora)}</div>
+          ${d.justificativa ? `<div class="lv-meta" style="color:#334155;">💬 ${esc(d.justificativa)}</div>` : ""}
           <div class="lv-acoes">
             <button type="button" data-a="sempre" style="background:#16a34a;color:#fff;">Liberar para sempre</button>
-            <button type="button" data-a="valor" style="background:#0f766e;color:#fff;">Liberar até ${fmtBRL(d.valorTotal)}</button>
+            ${etapa
+              ? `<button type="button" data-a="etapa" style="background:#0f766e;color:#fff;">Liberar só nesta etapa</button>`
+              : `<button type="button" data-a="valor" style="background:#0f766e;color:#fff;">Liberar até ${fmtBRL(d.valorTotal)}</button>`}
             <button type="button" data-a="negar" style="background:#fff;color:#b91c1c;border-color:#fca5a5;">Negar</button>
             <a href="${url}" style="background:#f1f5f9;color:#334155;margin-left:auto;">Abrir orçamento</a>
           </div>
@@ -224,7 +228,7 @@
         const d = novos[0];
         notificarSistema(
           novos.length === 1 ? "Novo pedido de aprovação" : `${novos.length} novos pedidos de aprovação`,
-          `${d.numeroProposta || ""} ${d.nomeCliente || ""} · ${fmtBRL(d.valorTotal)} · por ${d.solicitante}`.trim(),
+          `${d.numeroProposta || ""} ${d.nomeCliente || ""} · ${d.tipo === "etapa" ? "etapa " + (d.nomeEtapa || "") : fmtBRL(d.valorTotal)} · por ${d.solicitante}`.trim(),
           location.href
         );
       }
@@ -264,7 +268,9 @@
       ui.dica.textContent = "";
       ui.lista.innerHTML = novas.map(d => {
         const ok = d.status === "aprovado";
-        const escopo = d.modo === "sempre" ? "para qualquer valor" : `até ${fmtBRL(d.valorAprovado)}`;
+        const escopo = d.tipo === "etapa"
+          ? (d.modo === "sempre" ? "em qualquer etapa" : `na etapa ${esc(d.nomeEtapa || "")}`)
+          : (d.modo === "sempre" ? "para qualquer valor" : `até ${fmtBRL(d.valorAprovado)}`);
         return `
           <div class="lv-item" style="border-color:${ok ? "#86efac" : "#fca5a5"};">
             <div class="lv-top">
@@ -294,7 +300,8 @@
   async function iniciar() {
     const cfg = await obterConfig();
     const lv = cfg?.limiteValor;
-    if (!lv?.ativo) return;
+    // Sem aprovador definido não há para quem pedir (vale para trava por valor e por etapa)
+    if (!lv?.aprovadorEmail) return;
     if ((lv.aprovadorEmail || "").toLowerCase() === emailUsuario) iniciarAprovador();
     else iniciarSolicitante();
   }

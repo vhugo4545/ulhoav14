@@ -1196,11 +1196,20 @@
       tituloRegra.style.cssText = `font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${LV_COR.fg};`;
       tituloRegra.textContent = "Regra padrão (todas as etapas) — deixe o valor vazio para travar só nas etapas com regra própria";
 
-      body.append(linhaAprov, tituloRegra, LV.criarEditorRegra(LV.estado.global));
+      const dicaAprov = document.createElement("div");
+      dicaAprov.style.cssText = "font-size:10px;color:#64748b;margin-top:-8px;";
+      dicaAprov.textContent = "O aprovador também decide os pedidos de desbloqueio por etapa da Kommo, mesmo com a trava por valor desligada.";
+
+      // Só a regra fica esmaecida com a trava desligada; o aprovador continua editável
+      const regraWrap = document.createElement("div");
+      regraWrap.style.cssText = "display:flex;flex-direction:column;gap:14px;";
+      regraWrap.append(tituloRegra, LV.criarEditorRegra(LV.estado.global));
+
+      body.append(linhaAprov, dicaAprov, regraWrap);
 
       const aplicarAtivo = () => {
-        body.style.opacity = LV.estado.ativo ? "" : "0.5";
-        body.style.pointerEvents = LV.estado.ativo ? "" : "none";
+        regraWrap.style.opacity = LV.estado.ativo ? "" : "0.5";
+        regraWrap.style.pointerEvents = LV.estado.ativo ? "" : "none";
         document.querySelectorAll(".lv-aviso-desligado").forEach(el => { el.style.display = LV.estado.ativo ? "none" : ""; });
       };
       aplicarAtivo();

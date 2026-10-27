@@ -12,7 +12,18 @@ function verificarBloqueioKommo() {
     return;
   }
 
-  function mostrarBanner(bloqueado, nomeEtapa, bloquearPdfs) {
+  // Pedidos de desbloqueio por etapa (decididos pelo aprovador definido em Ajustes)
+  const API_APROV = "https://ulhoa-0a02024d350a.herokuapp.com/api/aprovacoes-valor";
+  // Espera no máximo 4s: se a API demorar, o bloqueio por etapa não pode atrasar
+  function buscarAprovacoesEtapa() {
+    const busca = fetch(`${API_APROV}?propostaId=${idProposta}&tipo=etapa`)
+      .then(r => r.ok ? r.json() : [])
+      .catch(() => []);
+    const limite = new Promise(resolve => setTimeout(() => resolve([]), 4000));
+    return Promise.race([busca, limite]);
+  }
+
+  function mostrarBanner(bloqueado, nomeEtapa, bloquearPdfs, liberadoPor) {
     const existente = document.getElementById("aviso-bloqueio-kommo");
     if (existente) existente.remove();
     const aviso = document.createElement("div");
@@ -28,6 +39,7 @@ function verificarBloqueioKommo() {
       aviso.innerHTML = `
         <div style="background:#dcfce7;color:#166534;border:1px solid #86efac;padding:14px 18px;border-radius:10px;margin-bottom:16px;font-weight:700;font-size:14px;">
           🔓 Orçamento desbloqueado — etapa: <strong>${nomeEtapa}</strong>
+          ${liberadoPor ? `<span style="font-weight:400;font-size:12px;margin-left:8px;">(${liberadoPor})</span>` : ""}
         </div>`;
     }
     const main = document.querySelector("main") || document.body;
@@ -103,9 +115,12 @@ function verificarBloqueioKommo() {
 
     const token = localStorage.getItem("accessToken") || "";
 
-    fetch(`${KOMMO_SERVER}/proposta/${idProposta}/lead`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.json() : null)
-    .then(lead => {
+    Promise.all([
+      fetch(`${KOMMO_SERVER}/proposta/${idProposta}/lead`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null),
+      buscarAprovacoesEtapa(),
+    ])
+    .then(([lead, aprovacoes]) => {
       if (!lead) { console.warn("[kommo-lock] Lead não encontrado."); return; }
       console.log("[kommo-lock] Resposta do lead:", lead);
 
@@ -113,17 +128,38 @@ function verificarBloqueioKommo() {
       const nomeEtapa = lead.nomeEtapa || statusId;
       window._kommoStatusAtual = { statusId, nomeEtapa };
 
-      const tipoBloqueio = cfgKommo[statusId]; // false | "ajustes" | "tudo"
+      // Liberação aprovada: "sempre" vale em qualquer etapa; "etapa" só nesta etapa
+      const liberacao = (aprovacoes || []).find(a => a.status === "aprovado" &&
+        (a.modo === "sempre" || (a.modo === "etapa" && String(a.statusId) === statusId))) || null;
+      const liberado = !!liberacao && !isSuperUser;
+
+      const tipoBloqueio = liberado ? false : cfgKommo[statusId]; // false | "ajustes" | "tudo"
       const bloqueado    = tipoBloqueio === "ajustes" || tipoBloqueio === "tudo";
       const bloquearPdfs = tipoBloqueio === "tudo";
-      console.log(`[kommo-lock] Etapa: ${nomeEtapa} (${statusId}) — tipo: ${tipoBloqueio || "livre"}`);
+      console.log(`[kommo-lock] Etapa: ${nomeEtapa} (${statusId}) — tipo: ${tipoBloqueio || "livre"}${liberado ? " (liberado por aprovação)" : ""}`);
       console.log("[kommo-lock] Config travamentoKommo:", cfgKommo);
 
-      mostrarBanner(bloqueado, nomeEtapa, bloquearPdfs);
+      const liberadoPor = liberado
+        ? `liberado por ${liberacao.aprovador || "aprovador"} · ${liberacao.modo === "sempre" ? "em qualquer etapa" : "nesta etapa"}`
+        : "";
+      mostrarBanner(bloqueado, nomeEtapa, bloquearPdfs, liberadoPor);
       if (bloqueado) aplicarBloqueio(bloquearPdfs, isSuperUser);
 
+      // Estado para o botão flutuante de desbloqueio (desbloqueioFlutuante.js)
+      const botoesTravados = (cfgBotoes[statusId] && typeof cfgBotoes[statusId] === "object")
+        ? Object.values(cfgBotoes[statusId]).some(Boolean) : false;
+      const ultima = (aprovacoes || []).find(a => a.status !== "cancelado");
+      window._kommoBloqueio = {
+        statusId, nomeEtapa,
+        travado: !isSuperUser && !liberado && (bloqueado || !!cfgModificacoes[statusId] || botoesTravados),
+        liberacao,
+        pendente: (aprovacoes || []).find(a => a.status === "pendente") || null,
+        negado: ultima?.status === "negado" ? ultima : null,
+      };
+      document.dispatchEvent(new CustomEvent("kommo-bloqueio:atualizado"));
+
       // Bloqueia botão "Salvar Proposta" conforme config de modificação
-      if (cfgModificacoes[statusId] && !isSuperUser) {
+      if (cfgModificacoes[statusId] && !isSuperUser && !liberado) {
         const btnEditar = document.getElementById("btn-editar");
         if (btnEditar) {
           btnEditar.disabled = true;
@@ -150,7 +186,7 @@ function verificarBloqueioKommo() {
       }
 
       // Bloqueio por botão PDF individual
-      const botoesEtapa = (cfgBotoes[statusId] && typeof cfgBotoes[statusId] === "object") ? cfgBotoes[statusId] : {};
+      const botoesEtapa = (!liberado && cfgBotoes[statusId] && typeof cfgBotoes[statusId] === "object") ? cfgBotoes[statusId] : {};
       const TODOS_BOTOES_PDF = [
         "btn-visualizar-proposta",
         "btn-folhas-impressao",

@@ -80,7 +80,7 @@
 
   async function buscarAprovacoes() {
     try {
-      const r = await fetch(`${API_APROV}?propostaId=${idProposta}`);
+      const r = await fetch(`${API_APROV}?propostaId=${idProposta}&tipo=valor`);
       if (r.ok) estado.aprovacoes = (await r.json()) || [];
     } catch (_) {}
     estado.carregado = true;
@@ -154,7 +154,7 @@
     }
     if (!regra.bloquearOmie) livres.add("btn-gerar-pedido");
 
-    const dentroBanner = el => !!el.closest("#aviso-bloqueio-valor");
+    const dentroBanner = el => !!el.closest("#aviso-bloqueio-valor, #desbloqueio-flutuante");
     document.querySelectorAll("input, select, textarea, button").forEach(el => {
       if (livres.has(el.id) || dentroBanner(el)) return;
       el.disabled = true;
@@ -242,12 +242,14 @@
   }
 
   // ── Ações ────────────────────────────────────────────────────────────────
-  async function solicitar(total, regra) {
+  async function solicitar(total, regra, justificativa = "") {
     const proposta = window.propostaAtual || window.propostaEmEdicao || {};
     const r = await fetch(API_APROV, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        tipo:           "valor",
+        justificativa,
         propostaId:     idProposta,
         numeroProposta: proposta.numeroProposta || proposta.camposFormulario?.numeroOrcamento || "",
         nomeCliente:    proposta.camposFormulario?.clientes?.[0]?.nome_razao_social || "",
@@ -314,6 +316,7 @@
     estado.avaliadoNaAbertura = true;
 
     if (!regra || total === null || total <= Number(regra.valorLimite)) {
+      window._lvBloqueio = { travado: false };
       removerBanner();
       if (regra) aplicarBotoes(regra, false);
       return;
@@ -330,6 +333,7 @@
     const resumo = `Total ${fmtBRL(total)} · limite ${fmtBRL(limite)}`;
 
     if (liberacao) {
+      window._lvBloqueio = { travado: false, liberacao };
       aplicarBotoes(regra, false);
       const dt = liberacao.dataAprovacao ? new Date(liberacao.dataAprovacao).toLocaleString("pt-BR") : "";
       const escopo = liberacao.modo === "sempre" ? "para qualquer valor" : `até ${fmtBRL(liberacao.valorAprovado)}`;
@@ -343,6 +347,11 @@
 
     // Admin, gestor e o próprio aprovador seguem sem trava
     const isento = isSuperUser || aprovador;
+    // Estado para o botão flutuante de desbloqueio (desbloqueioFlutuante.js)
+    window._lvBloqueio = {
+      travado: !isento, total, limite, pendente: pendente || null, negado, nomeAprovador,
+      solicitar: justificativa => solicitar(total, regra, justificativa),
+    };
     if (!isento) {
       if (naAbertura) aplicarCampos(regra);
       aplicarBotoes(regra, true);
