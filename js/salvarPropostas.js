@@ -1062,9 +1062,18 @@ async function _moverEtapaKommo(rotaKommo) {
       `https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/${rotaKommo}`,
       { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", signal: AbortSignal.timeout(30000) }
     );
-    if (resp.ok) return "";
+    if (resp.ok) {
+      const ok = await resp.json().catch(() => ({}));
+      if (ok.campos_recusados) console.warn(`[${rotaKommo}] etapa movida, mas a Kommo recusou campos:`, ok.campos_recusados);
+      return "";
+    }
     const corpo = await resp.json().catch(() => ({}));
-    return corpo.error || `HTTP ${resp.status}`;
+    // Detalhe devolvido pela Kommo (ex.: { title, detail, "validation-errors": [{ errors: [{ path, detail }] }] })
+    const d = corpo.details || {};
+    const erroCampo = d["validation-errors"]?.[0]?.errors?.[0];
+    const detalhe = erroCampo ? `${erroCampo.path || ""} ${erroCampo.detail || erroCampo.code || ""}`.trim()
+      : (d.detail || d.title || "");
+    return [corpo.error || `HTTP ${resp.status}`, detalhe].filter(Boolean).join(" — ");
   } catch (e) {
     return e?.name === "TimeoutError" ? "a Kommo não respondeu em 30 segundos" : (e?.message || "erro de rede");
   }
