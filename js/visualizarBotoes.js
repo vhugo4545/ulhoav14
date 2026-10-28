@@ -185,6 +185,9 @@ document.addEventListener("DOMContentLoaded", function () {
 document.addEventListener("click", function (e) {
   const btn = e.target.closest("button, a");
   if (btn && btn.classList.contains("btn-bloqueado")) {
+    // Admin e gestor não têm trava: para eles o cadeado é só indicação visual
+    const tipo = localStorage.getItem("usuarioTipo") || "";
+    if (tipo === "admin" || tipo === "gestor") return;
     e.preventDefault();
     e.stopImmediatePropagation();
     alert("⚠️ Esta ação só está disponível após a proposta ser aprovada pelo gestor.");

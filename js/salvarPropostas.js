@@ -1049,24 +1049,51 @@ async function marcarOrcamentoIniciado() {
   ocultarCarregando() 
 }
 
-// 2️⃣ Pendente de aprovação
-async function marcarPendenteAprovacao() {
-  mostrarCarregando();
-  await atualizarStatus("Pendente de aprovação", { recarregarAoFinal: true });
-
+// Salva o status, espera a Kommo mover o lead e só então recarrega.
+// Antes a página recarregava 1,8s depois do status (ou ao fechar o aviso) e cortava
+// a chamada à Kommo no meio: o lead ficava na etapa antiga sem nenhum aviso.
+// Move o lead na Kommo pela rota do kommo-server e espera a resposta.
+// Retorna "" se deu certo ou o motivo da falha.
+async function _moverEtapaKommo(rotaKommo) {
   const idProposta = new URLSearchParams(window.location.search).get("id");
-  if (idProposta) {
-    try {
-      await fetch(
-        `https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/solicitar-aprovacao`,
-        { method: "POST", headers: { "Content-Type": "application/json" } }
-      );
-    } catch (e) {
-      console.warn("[solicitar-aprovacao] Kommo não atualizado:", e);
-    }
+  if (!idProposta) return "";
+  try {
+    const resp = await fetch(
+      `https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/${rotaKommo}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", signal: AbortSignal.timeout(30000) }
+    );
+    if (resp.ok) return "";
+    const corpo = await resp.json().catch(() => ({}));
+    return corpo.error || `HTTP ${resp.status}`;
+  } catch (e) {
+    return e?.name === "TimeoutError" ? "a Kommo não respondeu em 30 segundos" : (e?.message || "erro de rede");
   }
+}
+
+function _avisarFalhaKommo(novoStatus, rotaKommo, falhaKommo) {
+  console.warn(`[${rotaKommo}] Kommo não atualizada:`, falhaKommo);
+  alert(`Status salvo como "${novoStatus}", mas a etapa na Kommo não foi atualizada.
+
+Motivo: ${falhaKommo}`);
+}
+
+async function _statusKommoERecarregar(novoStatus, rotaKommo) {
+  mostrarCarregando();
+  const resultado = await atualizarStatus(novoStatus);
+  if (!resultado || resultado.erro) { ocultarCarregando(); return; }
+
+  const falhaKommo = await _moverEtapaKommo(rotaKommo);
 
   ocultarCarregando();
+  if (falhaKommo) {
+    _avisarFalhaKommo(novoStatus, rotaKommo, falhaKommo);
+  }
+  location.reload();
+}
+
+// 2️⃣ Pendente de aprovação
+async function marcarPendenteAprovacao() {
+  await _statusKommoERecarregar("Pendente de aprovação", "solicitar-aprovacao");
 }
 
 // 3️⃣ Aprovado Pelo Gestor
@@ -1076,22 +1103,7 @@ async function marcarAprovadoPeloGestor() {
     alert("❌ Apenas administradores podem aprovar propostas.");
     return;
   }
-  mostrarCarregando();
-  await atualizarStatus("Aprovado Pelo Gestor", { recarregarAoFinal: true });
-
-  const idProposta = new URLSearchParams(window.location.search).get("id");
-  if (idProposta) {
-    try {
-      await fetch(
-        `https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/aprovar-gestor`,
-        { method: "POST", headers: { "Content-Type": "application/json" } }
-      );
-    } catch (e) {
-      console.warn("[aprovar-gestor] Kommo não atualizado:", e);
-    }
-  }
-
-  ocultarCarregando();
+  await _statusKommoERecarregar("Aprovado Pelo Gestor", "aprovar-gestor");
 }
 
 // 4️⃣ Enviado Para o Cliente
@@ -1103,8 +1115,11 @@ async function marcarEnviadoParaCliente() {
     if (!await validarValorMinimoPermitido()) return;
   }
   mostrarCarregando();
-  await atualizarStatus("Enviado Para o Cliente");
+  const resultado = await atualizarStatus("Enviado Para o Cliente");
+  // Move o card na Kommo para AGUARDANDO RETORNO (desde 07/10 só o Visualizar movia)
+  const falhaKommo = (resultado && !resultado.erro) ? await _moverEtapaKommo("enviar-proposta") : "";
   ocultarCarregando();
+  if (falhaKommo) _avisarFalhaKommo("Enviado Para o Cliente", "enviar-proposta", falhaKommo);
   // Gera PDF sem validar valor mínimo novamente (já foi validado acima)
   if (typeof gerarPDFComPdfmake === "function") {
     gerarPDFComPdfmake(false, {}, { skipValorMinimo: true });
@@ -1115,20 +1130,10 @@ async function marcarEnviadoParaCliente() {
 // 5️⃣ Orçamento Aprovado pelo Cliente
 async function marcarAprovadoPeloCliente() {
   mostrarCarregando();
-  await atualizarStatus("Orçamento Aprovado pelo Cliente");
-  const idProposta = new URLSearchParams(window.location.search).get("id");
-  if (idProposta) {
-    try {
-      await fetch(`https://kommo-server-9f1243cbe450.herokuapp.com/proposta/${idProposta}/aprovado-cliente`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-    } catch (e) {
-      console.warn('[APROVADO-CLIENTE] Erro ao mover lead na Kommo:', e?.message || e);
-    }
-  }
+  const resultado = await atualizarStatus("Orçamento Aprovado pelo Cliente");
+  const falhaKommo = (resultado && !resultado.erro) ? await _moverEtapaKommo("aprovado-cliente") : "";
   ocultarCarregando();
+  if (falhaKommo) _avisarFalhaKommo("Orçamento Aprovado pelo Cliente", "aprovado-cliente", falhaKommo);
 }
 
 // 6️⃣ Pedido Enviado para a Omie
