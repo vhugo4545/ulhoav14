@@ -726,17 +726,10 @@
           <span id="kommo-trav-loading" style="font-size:11px;color:#94a3b8;display:none;align-items:center;gap:4px;">
             <span class="material-icons-outlined" style="font-size:13px;animation:spin 1s linear infinite;">sync</span> Buscando…
           </span>
-          <span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">
-            <span style="width:10px;height:10px;border-radius:3px;background:#ef4444;display:inline-block;"></span> Bloqueio de edição
-          </span>
-          <span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">
-            <span style="width:10px;height:10px;border-radius:3px;background:#0ea5e9;display:inline-block;"></span> Omie habilitado
-          </span>
-          <span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">
-            <span style="width:10px;height:10px;border-radius:3px;background:#f59e0b;display:inline-block;"></span> Modificação bloqueada
-          </span>
-          <span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">
-            <span style="width:10px;height:10px;border-radius:3px;background:#8b5cf6;display:inline-block;"></span> Campos obrigatórios
+          <span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:6px;">
+            <span style="padding:1px 8px;border-radius:6px;font-weight:600;border:1px solid #86efac;background:#f0fdf4;color:#15803d;">✓ Liberado</span>
+            <span style="padding:1px 8px;border-radius:6px;font-weight:600;border:1px solid #fca5a5;background:#fff1f2;color:#b91c1c;">🔒 Bloqueado</span>
+            Clique no status para trocar. Admin e gestor nunca são bloqueados na edição nem no salvar.
           </span>
         </div>
 
@@ -1579,12 +1572,58 @@
     }
     // ────────────────────────────────────────────────────────────────────────────
 
-    function mkPill(text, color, bg, border) {
-      const s = document.createElement("span");
-      s.style.cssText = `font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${bg};color:${color};border:1px solid ${border};white-space:nowrap;`;
-      s.textContent = text;
-      return s;
+    // Box padronizado com os controles da etapa: cada item diz o que controla e como está
+    function mkCaixaControles(itens) {
+      const box = document.createElement("div");
+      box.style.cssText = "display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:#e2e8f0;border-top:1px solid #e2e8f0;";
+      itens.forEach(({ titulo, icone, controle, dica }) => {
+        const cel = document.createElement("div");
+        cel.style.cssText = "background:#fff;padding:9px 12px;display:flex;flex-direction:column;gap:6px;align-items:flex-start;";
+        const tit = document.createElement("div");
+        tit.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#475569;display:flex;align-items:center;gap:4px;";
+        tit.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;color:#94a3b8;">${icone}</span>${titulo}`;
+        const d = document.createElement("div");
+        d.style.cssText = "font-size:10px;color:#94a3b8;line-height:1.35;";
+        d.textContent = dica;
+        cel.append(tit, controle, d);
+        box.appendChild(cel);
+      });
+      return box;
     }
+
+    // Chave "✓ Liberado / 🔒 Bloqueado". bloqueiaMarcado: o checkbox salvo significa bloqueio (true) ou liberação (false)
+    function mkChaveStatus(cb, bloqueiaMarcado, aoMudar) {
+      const lbl = document.createElement("label");
+      const txt = document.createElement("span");
+      cb.style.display = "none";
+      const aplicar = () => {
+        const bloq = cb.checked === bloqueiaMarcado;
+        txt.textContent = bloq ? "🔒 Bloqueado" : "✓ Liberado";
+        lbl.style.cssText = `display:inline-flex;align-items:center;cursor:pointer;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;user-select:none;transition:all .15s;border:1px solid ${bloq ? "#fca5a5" : "#86efac"};background:${bloq ? "#fff1f2" : "#f0fdf4"};color:${bloq ? "#b91c1c" : "#15803d"};`;
+      };
+      cb.addEventListener("change", () => { aplicar(); if (aoMudar) aoMudar(); });
+      lbl.append(cb, txt);
+      aplicar();
+      return lbl;
+    }
+
+    const OPCOES_EDICAO = `<option value="">✓ Liberado</option><option value="ajustes">🔒 Bloqueia campos</option><option value="tudo">🔒 Bloqueia campos e PDFs</option>`;
+    function estiloSelEdicao(sel) {
+      const bloq = !!sel.value;
+      sel.style.cssText = `font-size:11px;font-weight:600;border-radius:6px;padding:4px 8px;cursor:pointer;transition:all .15s;border:1px solid ${bloq ? "#fca5a5" : "#86efac"};background:${bloq ? "#fff1f2" : "#f0fdf4"};color:${bloq ? "#b91c1c" : "#15803d"};`;
+    }
+
+    function mkBadgeObrig(n, el) {
+      el.textContent = n ? `${n} campo(s) · editar ›` : "Nenhum · definir ›";
+      el.style.cssText = `font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap;cursor:pointer;transition:all .15s;background:${n ? "#ede9fe" : "#f8fafc"};color:${n ? "#6d28d9" : "#64748b"};border:1px solid ${n ? "#c4b5fd" : "#e2e8f0"};`;
+    }
+
+    const DICAS_ETAPA = {
+      edicao: "Liberado: todos editam. Bloqueia campos: vendedor não altera a proposta. Campos e PDFs: também não gera PDFs.",
+      omie:   "Botão “Enviar para Omie” nesta etapa. Vale para todos, inclusive admin.",
+      salvar: "Botão “Salvar Proposta”. Bloqueado: só admin e gestor salvam alterações.",
+      obrig:  "Campos que precisam estar preenchidos para salvar a proposta.",
+    };
 
     // ── Detecta etapas com nome idêntico em pipelines diferentes ─────────────
     const todosEtapas = [];
@@ -1643,9 +1682,9 @@
 
         // — Bloqueio —
         const visLock = document.createElement("select");
-        visLock.style.cssText = `font-size:11px;font-weight:600;border:1px solid ${initCfgVal ? "#fca5a5" : "#e2e8f0"};border-radius:6px;padding:4px 8px;color:${initCfgVal ? "#b91c1c" : "#94a3b8"};background:${initCfgVal ? "#fff1f2" : "#f8fafc"};cursor:pointer;transition:all .15s;`;
-        visLock.innerHTML = `<option value="">○ Livre</option><option value="ajustes">🔒 Bloqueio</option><option value="tudo">🔒 Total</option>`;
+        visLock.innerHTML = OPCOES_EDICAO;
         visLock.value = initCfgVal;
+        estiloSelEdicao(visLock);
         stageKeys.forEach(sk => {
           const sh = document.createElement("select");
           sh.dataset.stageId = sk; sh.dataset.tipoBloqueio = "1"; sh.style.display = "none";
@@ -1658,12 +1697,9 @@
         visLock.addEventListener("change", e => {
           e.stopPropagation();
           const v = visLock.value;
-          visLock.style.border = v ? "1px solid #fca5a5" : "1px solid #e2e8f0";
-          visLock.style.color  = v ? "#b91c1c" : "#94a3b8";
-          visLock.style.background = v ? "#fff1f2" : "#f8fafc";
+          estiloSelEdicao(visLock);
           shadows.querySelectorAll("select[data-tipo-bloqueio]").forEach(s => s.value = v);
         });
-        controls.appendChild(visLock);
 
         // — Omie —
         let omieOn = initOmie;
@@ -1672,16 +1708,10 @@
           sh.dataset.stageId = sk; sh.dataset.omieFlag = "1"; sh.style.display = "none"; sh.checked = !!cfgOmie[sk];
           shadows.appendChild(sh);
         });
-        const omiePill = mkPill("Omie", omieOn ? "#fff" : "#0369a1", omieOn ? "#0369a1" : "#e0f2fe", omieOn ? "#0369a1" : "#bae6fd");
-        omiePill.style.cursor = "pointer";
-        omiePill.addEventListener("click", e => {
-          e.stopPropagation(); omieOn = !omieOn;
-          omiePill.style.background  = omieOn ? "#0369a1" : "#e0f2fe";
-          omiePill.style.color       = omieOn ? "#fff" : "#0369a1";
-          omiePill.style.borderColor = omieOn ? "#0369a1" : "#bae6fd";
-          shadows.querySelectorAll("input[data-omie-flag]").forEach(s => s.checked = omieOn);
+        const omieCb = document.createElement("input"); omieCb.type = "checkbox"; omieCb.checked = omieOn;
+        const omieChave = mkChaveStatus(omieCb, false, () => {
+          shadows.querySelectorAll("input[data-omie-flag]").forEach(s => s.checked = omieCb.checked);
         });
-        controls.appendChild(omiePill);
 
         // — Modif —
         let modOn = initMod;
@@ -1690,27 +1720,19 @@
           sh.dataset.stageId = sk; sh.dataset.modFlag = "1"; sh.style.display = "none"; sh.checked = !!cfgMod[sk];
           shadows.appendChild(sh);
         });
-        const modPill = mkPill("Modif.", modOn ? "#fff" : "#92400e", modOn ? "#b45309" : "#fef3c7", modOn ? "#b45309" : "#fde68a");
-        modPill.style.cursor = "pointer";
-        modPill.addEventListener("click", e => {
-          e.stopPropagation(); modOn = !modOn;
-          modPill.style.background  = modOn ? "#b45309" : "#fef3c7";
-          modPill.style.color       = modOn ? "#fff" : "#92400e";
-          modPill.style.borderColor = modOn ? "#b45309" : "#fde68a";
-          shadows.querySelectorAll("input[data-mod-flag]").forEach(s => s.checked = modOn);
+        const modCb = document.createElement("input"); modCb.type = "checkbox"; modCb.checked = modOn;
+        const modChave = mkChaveStatus(modCb, true, () => {
+          shadows.querySelectorAll("input[data-mod-flag]").forEach(s => s.checked = modCb.checked);
         });
-        controls.appendChild(modPill);
 
         // — Obrig badge —
         let obrigN = initObrigKeys.size;
         const obrigBadgeMerged = document.createElement("span");
         const updateObrigBadgeMerged = (n) => {
           obrigN = n;
-          obrigBadgeMerged.textContent = n > 0 ? `${n} obrig.` : "Nenhum";
-          obrigBadgeMerged.style.cssText = `font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;cursor:pointer;background:${n ? "#ede9fe" : "#f1f5f9"};color:${n ? "#6d28d9" : "#94a3b8"};border:1px solid ${n ? "#c4b5fd" : "#e2e8f0"};`;
+          mkBadgeObrig(n, obrigBadgeMerged);
         };
         updateObrigBadgeMerged(obrigN);
-        controls.appendChild(obrigBadgeMerged);
 
         // — Expand btn —
         const expandBtnM = document.createElement("button");
@@ -1720,6 +1742,13 @@
         controls.appendChild(expandBtnM);
 
         head.append(nameWrap, controls, shadows);
+
+        const caixaM = mkCaixaControles([
+          { titulo: "Edição da proposta",  icone: "edit",        controle: visLock,          dica: DICAS_ETAPA.edicao },
+          { titulo: "Enviar para Omie",    icone: "send",        controle: omieChave,        dica: DICAS_ETAPA.omie },
+          { titulo: "Salvar alterações",   icone: "save",        controle: modChave,         dica: DICAS_ETAPA.salvar },
+          { titulo: "Campos obrigatórios", icone: "rule",        controle: obrigBadgeMerged, dica: DICAS_ETAPA.obrig },
+        ]);
 
         // — Body —
         const bodyM = document.createElement("div");
@@ -1852,7 +1881,7 @@
         });
         expandBtnM.addEventListener("click", e => { e.stopPropagation(); toggleExpandM(); });
 
-        card.append(head, bodyM);
+        card.append(head, caixaM, bodyM);
         comumGroup.appendChild(card);
       });
 
@@ -1920,64 +1949,35 @@
         const selLock = document.createElement("select");
         selLock.dataset.stageId     = stageKey;
         selLock.dataset.tipoBloqueio = "1";
-        selLock.style.cssText = `font-size:11px;font-weight:600;border:1px solid ${cfgVal ? "#fca5a5" : "#e2e8f0"};border-radius:6px;padding:4px 8px;color:${cfgVal ? "#b91c1c" : "#94a3b8"};background:${cfgVal ? "#fff1f2" : "#f8fafc"};cursor:pointer;transition:all .15s;`;
-        selLock.innerHTML = `
-          <option value=""    ${!cfgVal              ? "selected" : ""}>○ Livre</option>
-          <option value="ajustes" ${cfgVal === "ajustes" ? "selected" : ""}>🔒 Bloqueio</option>
-          <option value="tudo"    ${cfgVal === "tudo"    ? "selected" : ""}>🔒 Total</option>
-        `;
+        selLock.innerHTML = OPCOES_EDICAO;
+        selLock.value = cfgVal || "";
+        estiloSelEdicao(selLock);
         selLock.addEventListener("change", () => {
-          const val = selLock.value;
-          cbLock.checked = !!val;
-          selLock.style.border     = val ? "1px solid #fca5a5" : "1px solid #e2e8f0";
-          selLock.style.color      = val ? "#b91c1c" : "#94a3b8";
-          selLock.style.background = val ? "#fff1f2" : "#f8fafc";
+          cbLock.checked = !!selLock.value;
+          estiloSelEdicao(selLock);
         });
 
         // — Omie toggle —
-        const lblOmie = document.createElement("label");
-        lblOmie.style.cssText = "display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #e2e8f0;background:#f8fafc;transition:all .15s;";
         const cbOmie = document.createElement("input");
         cbOmie.type = "checkbox";
         cbOmie.dataset.stageId  = stageKey;
         cbOmie.dataset.omieFlag = "1";
-        cbOmie.style.cssText    = "width:12px;height:12px;cursor:pointer;accent-color:#0ea5e9;";
         cbOmie.checked          = !!cfgOmie[stageKey];
-        const applyOmieStyle = () => {
-          lblOmie.style.background  = cbOmie.checked ? "#e0f2fe" : "#f8fafc";
-          lblOmie.style.color       = cbOmie.checked ? "#0369a1" : "#94a3b8";
-          lblOmie.style.borderColor = cbOmie.checked ? "#7dd3fc" : "#e2e8f0";
-        };
-        applyOmieStyle();
-        cbOmie.addEventListener("change", applyOmieStyle);
-        lblOmie.appendChild(cbOmie);
-        lblOmie.appendChild(document.createTextNode("Omie"));
+        const lblOmie = mkChaveStatus(cbOmie, false);
 
         // — Modificação toggle —
-        const lblMod = document.createElement("label");
-        lblMod.style.cssText = "display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #e2e8f0;background:#f8fafc;transition:all .15s;";
         const cbMod = document.createElement("input");
         cbMod.type = "checkbox";
         cbMod.dataset.stageId = stageKey;
         cbMod.dataset.modFlag = "1";
-        cbMod.style.cssText   = "width:12px;height:12px;cursor:pointer;accent-color:#f59e0b;";
         cbMod.checked         = !!cfgMod[stageKey];
-        const applyModStyle = () => {
-          lblMod.style.background  = cbMod.checked ? "#fffbeb" : "#f8fafc";
-          lblMod.style.color       = cbMod.checked ? "#b45309" : "#94a3b8";
-          lblMod.style.borderColor = cbMod.checked ? "#fcd34d" : "#e2e8f0";
-        };
-        applyModStyle();
-        cbMod.addEventListener("change", applyModStyle);
-        lblMod.appendChild(cbMod);
-        lblMod.appendChild(document.createTextNode("Modif."));
+        const lblMod = mkChaveStatus(cbMod, true);
 
         // — Badge de campos obrigatórios —
         const obrigBadge = document.createElement("span");
         obrigBadge.dataset.badgeStage = stageKey;
         const updateBadge = (n) => {
-          obrigBadge.textContent = n ? `${n} obrig.` : "Nenhum";
-          obrigBadge.style.cssText = `font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;background:${n ? "#ede9fe" : "#f1f5f9"};color:${n ? "#6d28d9" : "#94a3b8"};border:1px solid ${n ? "#c4b5fd" : "#e2e8f0"};cursor:default;white-space:nowrap;transition:all .15s;`;
+          mkBadgeObrig(n, obrigBadge);
         };
         updateBadge(obrigKeys.length);
 
@@ -1986,8 +1986,15 @@
         expandBtn.style.cssText = "border:none;background:transparent;cursor:pointer;padding:2px;display:flex;align-items:center;color:#94a3b8;transition:transform .2s;flex-shrink:0;";
         expandBtn.innerHTML = `<span class="material-icons-outlined" style="font-size:18px;">expand_more</span>`;
 
-        controls.append(cbLock, selLock, lblOmie, lblMod, obrigBadge, expandBtn);
+        controls.append(cbLock, expandBtn);
         head.append(dot, nameWrap, controls);
+
+        const caixa = mkCaixaControles([
+          { titulo: "Edição da proposta",  icone: "edit", controle: selLock,    dica: DICAS_ETAPA.edicao },
+          { titulo: "Enviar para Omie",    icone: "send", controle: lblOmie,    dica: DICAS_ETAPA.omie },
+          { titulo: "Salvar alterações",   icone: "save", controle: lblMod,     dica: DICAS_ETAPA.salvar },
+          { titulo: "Campos obrigatórios", icone: "rule", controle: obrigBadge, dica: DICAS_ETAPA.obrig },
+        ]);
 
         // ── Painel expansível ────────────────────────────────────────────────
         const body = document.createElement("div");
@@ -2126,8 +2133,9 @@
           toggleExpand();
         });
         expandBtn.addEventListener("click", e => { e.stopPropagation(); toggleExpand(); });
+        obrigBadge.addEventListener("click", () => { if (!expanded) toggleExpand(); });
 
-        card.append(head, body);
+        card.append(head, caixa, body);
         pipeGroup.appendChild(card);
       });
 
