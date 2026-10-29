@@ -8726,7 +8726,6 @@ async function sincronizarPDVparaKommo({ skipNumeroPedido = false } = {}) {
   // ── Datas ─────────────────────────────────────────
   const prazoPrevisto       = document.getElementById("prazoPrevisto")?.value;
   const dataPedidoEnviado   = document.getElementById("dataPedidoEnviadoCliente")?.value;
-  const dataPedidoAssinado  = document.getElementById("dataPedidoAssinado")?.value;
   const dataMedicao         = document.getElementById("dataMedicaoRealizada")?.value;
   const dataLiberacaoObra   = document.getElementById("dataLiberacaoObra")?.value;
   const dataProjetoEnviado  = document.getElementById("dataProjetoEnviado")?.value;
@@ -8734,7 +8733,7 @@ async function sincronizarPDVparaKommo({ skipNumeroPedido = false } = {}) {
 
   if (prazoPrevisto)       campos.kommo_data_prevista      = prazoPrevisto;
   if (dataPedidoEnviado)   campos.kommo_contrato_enviado   = dataPedidoEnviado;
-  if (dataPedidoAssinado)  campos.kommo_contrato_assinado  = dataPedidoAssinado;
+  // dataPedidoAssinado não vai para a Kommo: ela é a fonte ("Contrato Assinado")
   if (dataMedicao)         campos.kommo_medicao_realizada  = dataMedicao;
   if (dataLiberacaoObra)   campos.kommo_obra_liberada      = dataLiberacaoObra;
   if (dataProjetoEnviado)  campos.kommo_projeto_enviado    = dataProjetoEnviado;

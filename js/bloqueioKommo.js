@@ -92,6 +92,22 @@ function verificarBloqueioKommo() {
     });
   }
 
+  // Data Pedido Assinado = campo "Contrato Assinado" da Kommo, mesmo que o PDV tenha salvo outra.
+  // O campo fica só leitura e o salvar grava esta data por cima da anterior.
+  // preencher.js usa window._kommoContratoAssinado se a proposta carregar depois do lead.
+  function aplicarContratoAssinado(data) {
+    window._kommoContratoAssinado = data;
+    const el = document.getElementById("dataPedidoAssinado");
+    if (el) {
+      el.value = data;
+      el.dataset.valorOriginal = data;
+      el.readOnly = true;
+      el.style.background = "#f3f3f3";
+      el.title = "Vem do campo \"Contrato Assinado\" da Kommo";
+    }
+    document.querySelectorAll('.tab-pane input[name="dataPedidoAssinado"]').forEach(inp => { inp.value = data; });
+  }
+
   function checar() {
     const cfgServer = window.CFgAPI?.obter()?.travamentoKommo;
     const cfgKommo = (cfgServer && Object.keys(cfgServer).length)
@@ -123,6 +139,8 @@ function verificarBloqueioKommo() {
     .then(([lead, aprovacoes]) => {
       if (!lead) { console.warn("[kommo-lock] Lead não encontrado."); return; }
       console.log("[kommo-lock] Resposta do lead:", lead);
+
+      if ("contratoAssinado" in lead) aplicarContratoAssinado(lead.contratoAssinado || "");
 
       const statusId = String(lead.status_id);
       const nomeEtapa = lead.nomeEtapa || statusId;

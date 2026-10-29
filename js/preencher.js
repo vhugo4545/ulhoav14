@@ -224,10 +224,12 @@ async function carregarPropostaEditavel(proposta) {
     setIfExists("prazoEntrega", dados.prazoEntrega);
     setIfExists("dataPedidoEnviadoCliente", dados.dataPedidoEnviadoCliente);
     setIfExists("meioEnvioPedido", dados.meioEnvioPedido);
-    setIfExists("dataPedidoAssinado", dados.dataPedidoAssinado);
+    // Se a Kommo já respondeu (bloqueioKommo.js), vale o "Contrato Assinado" dela, não o salvo
+    const dataAssinado = window._kommoContratoAssinado !== undefined ? window._kommoContratoAssinado : dados.dataPedidoAssinado;
+    setIfExists("dataPedidoAssinado", dataAssinado);
     (() => {
       const el = document.getElementById("dataPedidoAssinado");
-      if (el && dados.dataPedidoAssinado) el.dataset.valorOriginal = dados.dataPedidoAssinado;
+      if (el && dataAssinado) el.dataset.valorOriginal = dataAssinado;
     })();
     setIfExists("dataEntregaProjeto", dados.dataEntregaProjeto);
     setIfExists("dataInicioProjeto", dados.dataInicioProjeto);
