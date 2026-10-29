@@ -1272,7 +1272,17 @@
       regraWrap.style.cssText = "display:flex;flex-direction:column;gap:14px;";
       regraWrap.append(tituloRegra, LV.criarEditorRegra(LV.estado.global));
 
-      body.append(linhaAprov, dicaAprov, regraWrap);
+      // Salvar aqui mesmo, sem rolar até o rodapé do card de etapas (mesma ação do rodapé)
+      const linhaSalvar = document.createElement("div");
+      linhaSalvar.style.cssText = "display:flex;gap:10px;align-items:center;flex-wrap:wrap;";
+      linhaSalvar.innerHTML = `
+        <button type="button" class="cfg-save-btn" onclick="salvarTravamentoKommo()">
+          <span class="material-icons-outlined">cloud_upload</span> Salvar Configurações
+        </button>
+        <span class="cfg-status" id="cfg-status-lv"></span>
+        <span style="font-size:11px;color:#64748b;">Salva a trava por valor e toda a configuração por etapa da Kommo.</span>`;
+
+      body.append(linhaAprov, dicaAprov, regraWrap, linhaSalvar);
       LV.mostrarCard = () => card.scrollIntoView({ behavior: "smooth", block: "center" });
 
       card.append(head, body);
@@ -1790,7 +1800,43 @@
           obrigSectionM.appendChild(grupoWrap);
         });
 
-        bodyM.append(LV.criarSecaoEtapa(stageKeys), obrigSectionM);
+        // Seção PDFs: o chip visível grava no stageKeys[0]; inputs ocultos replicam nas demais etapas do grupo
+        const pdfSectionM = document.createElement("div");
+        pdfSectionM.style.cssText = "padding:12px 14px 8px;border-bottom:1px solid #f1f5f9;";
+        const pdfTitleM = document.createElement("div");
+        pdfTitleM.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#ef4444;margin-bottom:8px;display:flex;align-items:center;gap:5px;";
+        pdfTitleM.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;">picture_as_pdf</span> PDFs bloqueados`;
+        const pdfChipsM = document.createElement("div");
+        pdfChipsM.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
+        BOTOES_PDF.forEach(btn => {
+          const ligado = stageKeys.some(k => cfgBotoes[k] && typeof cfgBotoes[k] === "object" && cfgBotoes[k][btn.id]);
+          stageKeys.forEach((sk, i) => {
+            if (i === 0) return;
+            const sh = document.createElement("input"); sh.type = "checkbox"; sh.style.display = "none";
+            sh.dataset.stageId = sk; sh.dataset.btnId = btn.id; sh.dataset.btnFlag = "1"; sh.checked = ligado;
+            shadows.appendChild(sh);
+          });
+          const lbl = document.createElement("label");
+          lbl.style.cssText = "display:flex;align-items:center;gap:5px;cursor:pointer;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:500;border:1px solid #e2e8f0;background:#fff;transition:all .15s;color:#64748b;";
+          const cbBtn = document.createElement("input");
+          cbBtn.type = "checkbox";
+          cbBtn.dataset.stageId = stageKeys[0]; cbBtn.dataset.btnId = btn.id; cbBtn.dataset.btnFlag = "1";
+          cbBtn.style.cssText = "width:12px;height:12px;cursor:pointer;accent-color:#ef4444;";
+          cbBtn.checked = ligado;
+          const aplicarEstilo = () => {
+            lbl.style.background  = cbBtn.checked ? "#fff1f2" : "#fff";
+            lbl.style.color       = cbBtn.checked ? "#b91c1c" : "#64748b";
+            lbl.style.borderColor = cbBtn.checked ? "#fca5a5" : "#e2e8f0";
+            shadows.querySelectorAll(`input[data-btn-flag][data-btn-id="${btn.id}"]`).forEach(s => s.checked = cbBtn.checked);
+          };
+          aplicarEstilo();
+          cbBtn.addEventListener("change", aplicarEstilo);
+          lbl.append(cbBtn, document.createTextNode("🔒 " + btn.label));
+          pdfChipsM.appendChild(lbl);
+        });
+        pdfSectionM.append(pdfTitleM, pdfChipsM);
+
+        bodyM.append(pdfSectionM, LV.criarSecaoEtapa(stageKeys), obrigSectionM, kommoTravRodapeEtapa(stageKeys, stageNome));
 
         let expandedM = false;
         const toggleExpandM = () => {
@@ -2065,7 +2111,7 @@
           obrigSection.appendChild(grupoWrap);
         });
 
-        body.append(pdfSection, LV.criarSecaoEtapa([stageKey]), obrigSection);
+        body.append(pdfSection, LV.criarSecaoEtapa([stageKey]), obrigSection, kommoTravRodapeEtapa([stageKey], etapa.nome));
 
         // Toggle expand/collapse
         let expanded = false;
@@ -2123,35 +2169,14 @@
     });
   }
 
-  async function salvarTravamentoKommo() {
-    const container = document.getElementById("kommo-trav-container");
-
-    // Valida antes de gravar qualquer coisa, para não salvar parte das configurações
-    // A trava por valor vale sempre que houver regra configurada (padrão ou por etapa)
-    const cfgLimiteValor = LV.obterConfig();
-    cfgLimiteValor.ativo = cfgLimiteValor.global?.valorLimite > 0
-      || Object.values(cfgLimiteValor.etapas || {}).some(r => r.modo === "personalizado" && r.valorLimite > 0);
-    if (cfgLimiteValor.ativo && !cfgLimiteValor.aprovadorId) {
-      alert("Trava por valor: escolha o aprovador no card \"Trava por valor do orçamento\" e salve de novo.");
-      LV.mostrarCard?.();
-      return;
-    }
-
-    const cfg             = {};
-    const cfgOmie         = {};
-    const cfgBotoes       = {};
-    const cfgModificacoes = {};
-    const cfgObrig        = {};
+  // Lê da tela a configuração de todas as etapas (o salvar e o "aplicar a outras etapas" usam)
+  function kommoTravColetar(container) {
+    const cfg = {}, cfgOmie = {}, cfgBotoes = {}, cfgModificacoes = {}, cfgObrig = {};
 
     // Bloqueio: lido do <select data-tipo-bloqueio>
     container.querySelectorAll("select[data-tipo-bloqueio]").forEach(sel => {
       cfg[sel.dataset.stageId] = sel.value || false;
     });
-
-    if (!Object.keys(cfg).length) {
-      alert("Nenhuma etapa carregada. Clique em 'Recarregar' primeiro.");
-      return;
-    }
 
     // Demais checkboxes
     container.querySelectorAll("input[type=checkbox]").forEach(cb => {
@@ -2167,6 +2192,127 @@
         if (cb.checked) cfgObrig[cb.dataset.stageId].push(cb.dataset.fieldKey);
       }
     });
+    return { cfg, cfgOmie, cfgBotoes, cfgModificacoes, cfgObrig };
+  }
+
+  // Rodapé de cada etapa: salvar sem rolar a página e copiar esta configuração para outras etapas
+  function kommoTravRodapeEtapa(stageKeys, nomeEtapa) {
+    const rod = document.createElement("div");
+    rod.style.cssText = "display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 14px;border-top:1px solid #f1f5f9;background:#f8fafc;";
+    const salvar = document.createElement("button");
+    salvar.type = "button";
+    salvar.className = "cfg-save-btn";
+    salvar.innerHTML = `<span class="material-icons-outlined">cloud_upload</span> Salvar Configurações`;
+    salvar.addEventListener("click", e => { e.stopPropagation(); salvarTravamentoKommo(); });
+    const aplicar = document.createElement("button");
+    aplicar.type = "button";
+    aplicar.style.cssText = "border:1px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;";
+    aplicar.innerHTML = `<span class="material-icons-outlined" style="font-size:16px;">content_copy</span> Aplicar a outras etapas…`;
+    aplicar.addEventListener("click", e => { e.stopPropagation(); kommoTravAbrirAplicar(stageKeys, nomeEtapa); });
+    const status = document.createElement("span");
+    status.className = "cfg-status cfg-status-etapa";
+    rod.append(salvar, aplicar, status);
+    return rod;
+  }
+
+  // Seletor das etapas de destino, agrupadas por funil
+  function kommoTravAbrirAplicar(stageKeys, nomeEtapa) {
+    const origem = new Set(stageKeys.map(String));
+    const pipelines = window._kommoLastPipelines || [];
+    const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px;";
+    const grupos = pipelines.map(p => {
+      const etapas = (p.etapas || []).filter(e => !origem.has(String(e.status_id)));
+      if (!etapas.length) return "";
+      return `<div style="margin-bottom:12px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#475569;margin-bottom:6px;cursor:pointer;">
+          <input type="checkbox" data-funil="${esc(p.pipeline_id)}"> ${esc(p.pipeline_name || "Funil " + p.pipeline_id)}
+        </label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;padding-left:20px;">
+          ${etapas.map(e => `<label style="display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;cursor:pointer;background:#fff;">
+            <input type="checkbox" data-alvo="${esc(e.status_id)}" data-de-funil="${esc(p.pipeline_id)}"> ${esc(e.nome)}</label>`).join("")}
+        </div></div>`;
+    }).join("");
+    ov.innerHTML = `
+      <div style="background:#fff;border-radius:14px;width:min(720px,100%);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.3);">
+        <div style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+          <div style="font-size:15px;font-weight:700;color:#1e293b;">Aplicar a configuração de "${esc(nomeEtapa)}" a outras etapas</div>
+          <div style="font-size:12px;color:#64748b;margin-top:4px;">Copia tudo desta etapa: bloqueio, PDFs bloqueados, Omie, Modif., trava por valor e campos obrigatórios. Depois salva.</div>
+        </div>
+        <div style="padding:14px 20px;overflow:auto;">${grupos || '<div style="color:#94a3b8;font-size:13px;">Nenhuma outra etapa carregada.</div>'}</div>
+        <div style="padding:12px 20px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end;align-items:center;">
+          <span data-contador style="font-size:12px;color:#64748b;margin-right:auto;">0 etapa(s) selecionada(s)</span>
+          <button type="button" data-acao="cancelar" style="padding:8px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;">Cancelar</button>
+          <button type="button" data-acao="aplicar" class="cfg-save-btn">Aplicar e salvar</button>
+        </div>
+      </div>`;
+    const marcados = () => [...new Set([...ov.querySelectorAll("input[data-alvo]:checked")].map(i => i.dataset.alvo))];
+    const atualizar = () => { ov.querySelector("[data-contador]").textContent = `${marcados().length} etapa(s) selecionada(s)`; };
+    ov.addEventListener("change", e => {
+      const f = e.target.dataset.funil;
+      if (f) ov.querySelectorAll(`input[data-de-funil="${f}"]`).forEach(i => { i.checked = e.target.checked; });
+      atualizar();
+    });
+    ov.addEventListener("click", async e => {
+      const acao = e.target.closest("[data-acao]")?.dataset.acao;
+      if (e.target === ov || acao === "cancelar") { ov.remove(); return; }
+      if (acao !== "aplicar") return;
+      const alvos = marcados();
+      if (!alvos.length) { alert("Selecione ao menos uma etapa."); return; }
+      ov.remove();
+      await kommoTravAplicarEm(String(stageKeys[0]), alvos);
+    });
+    document.body.appendChild(ov);
+  }
+
+  // Copia a configuração da etapa de origem para as etapas de destino, redesenha e salva
+  async function kommoTravAplicarEm(origem, alvos) {
+    const container = document.getElementById("kommo-trav-container");
+    const d = kommoTravColetar(container);
+    const lv = LV.obterConfig();
+    lv.etapas = lv.etapas || {};
+    alvos.forEach(k => {
+      d.cfg[k]             = d.cfg[origem] || false;
+      d.cfgOmie[k]         = !!d.cfgOmie[origem];
+      d.cfgModificacoes[k] = !!d.cfgModificacoes[origem];
+      d.cfgObrig[k]        = [...(d.cfgObrig[origem] || [])];
+      d.cfgBotoes[k]       = { ...(d.cfgBotoes[origem] || {}) };
+      if (lv.etapas[origem]) lv.etapas[k] = JSON.parse(JSON.stringify(lv.etapas[origem]));
+      else delete lv.etapas[k];
+    });
+    window.CFG = Object.assign({}, window.CFG, {
+      travamentoKommo:        d.cfg,
+      omieEtapas:             d.cfgOmie,
+      botoesKommo:            d.cfgBotoes,
+      travamentoModificacoes: d.cfgModificacoes,
+      obrigatoriedadeCampos:  d.cfgObrig,
+      limiteValor:            lv,
+    });
+    kommoTravRenderizar(window._kommoLastPipelines);
+    await salvarTravamentoKommo();
+  }
+
+  async function salvarTravamentoKommo() {
+    const container = document.getElementById("kommo-trav-container");
+
+    // Valida antes de gravar qualquer coisa, para não salvar parte das configurações
+    // A trava por valor vale sempre que houver regra configurada (padrão ou por etapa)
+    const cfgLimiteValor = LV.obterConfig();
+    cfgLimiteValor.ativo = cfgLimiteValor.global?.valorLimite > 0
+      || Object.values(cfgLimiteValor.etapas || {}).some(r => r.modo === "personalizado" && r.valorLimite > 0);
+    if (cfgLimiteValor.ativo && !cfgLimiteValor.aprovadorId) {
+      alert("Trava por valor: escolha o aprovador no card \"Trava por valor do orçamento\" e salve de novo.");
+      LV.mostrarCard?.();
+      return;
+    }
+
+    const { cfg, cfgOmie, cfgBotoes, cfgModificacoes, cfgObrig } = kommoTravColetar(container);
+
+    if (!Object.keys(cfg).length) {
+      alert("Nenhuma etapa carregada. Clique em 'Recarregar' primeiro.");
+      return;
+    }
 
     localStorage.setItem(TRAV_KOMMO_LS_KEY, JSON.stringify(cfg));
     localStorage.setItem("cfg_omie_etapas", JSON.stringify(cfgOmie));
@@ -2176,8 +2322,12 @@
 
     localStorage.setItem("cfg_limite_valor", JSON.stringify(cfgLimiteValor));
 
-    const statusEl = document.getElementById("cfg-status-travamento-kommo");
-    if (statusEl) statusEl.textContent = "Salvando…";
+    // Status nos dois botões de salvar (rodapé e card da trava por valor)
+    const statusEls = [
+      ...["cfg-status-travamento-kommo", "cfg-status-lv"].map(id => document.getElementById(id)).filter(Boolean),
+      ...document.querySelectorAll(".cfg-status-etapa"),
+    ];
+    statusEls.forEach(el => el.textContent = "Salvando…");
 
     const cfgParcial = Object.assign({}, window.CFgAPI?.obter() || {}, {
       travamentoKommo:        cfg,
@@ -2189,10 +2339,10 @@
     });
     const ok = await window.CFgAPI?.salvar(cfgParcial);
 
-    if (statusEl) {
-      statusEl.textContent = ok === false ? "Salvo localmente" : "Salvo!";
-      setTimeout(() => statusEl.textContent = "", 3000);
-    }
+    statusEls.forEach(el => {
+      el.textContent = ok === false ? "Salvo localmente" : "Salvo!";
+      setTimeout(() => el.textContent = "", 3000);
+    });
   }
 
   document.addEventListener("DOMContentLoaded", function () {
