@@ -1064,11 +1064,11 @@
   const KOMMO_SERVER_URL  = "https://kommo-server-9f1243cbe450.herokuapp.com";
 
   const BOTOES_IMPRESSAO = [
-    { id: "btn-visualizar-proposta",  label: "Visualizar Proposta"  },
-    { id: "btn-folhas-impressao",     label: "Folhas de Impressão"  },
-    { id: "btn-folha-ordem-servico",  label: "Ordem de Serviço"     },
-    { id: "btn-etapas-processo",      label: "Etapas do Processo"   },
-    { id: "btn-historico-producao",   label: "Rel. Entrega"         },
+    { id: "btn-visualizar-proposta",  label: "Proposta (PDF do orçamento)" },
+    { id: "btn-folhas-impressao",     label: "Folhas de Impressão (todas)" },
+    { id: "btn-folha-ordem-servico",  label: "Ordem de Serviço" },
+    { id: "btn-etapas-processo",      label: "Etapas do Processo" },
+    { id: "btn-historico-producao",   label: "Relatório de Entrega / Instalação" },
   ];
 
   // ── Trava por Valor do Orçamento ────────────────────────────────────────────
@@ -1414,11 +1414,8 @@
     const cfgObrig     = (() => { const s = window.CFgAPI?.obter()?.obrigatoriedadeCampos; if (s && Object.keys(s).length) return s; try { return JSON.parse(localStorage.getItem("cfg_obrigatoriedade_campos")) || {}; } catch { return {}; } })();
 
     const BOTOES_PDF = [
-      { id: "btn-visualizar-proposta", label: "Proposta"   },
-      { id: "btn-folhas-impressao",    label: "Folhas"     },
-      { id: "btn-folha-ordem-servico", label: "O.Serviço"  },
-      { id: "btn-etapas-processo",     label: "Etapas"     },
-      { id: "btn-historico-producao",  label: "Entrega"    },
+      // Mesmos nomes do card da trava por valor (BOTOES_IMPRESSAO)
+      ...BOTOES_IMPRESSAO,
     ];
 
     const CAMPOS_OBRIG_DEF = [
@@ -1628,7 +1625,7 @@
         const bloq = cb.checked === bloqueiaMarcado;
         txt.textContent = bloq ? "🔒 Bloqueado" : "✓ Liberado";
         acao.textContent = bloq ? "· clique para liberar" : "· clique para bloquear";
-        lbl.style.cssText = `display:inline-flex;align-items:center;cursor:pointer;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;user-select:none;transition:all .15s;border:1px solid ${bloq ? "#fca5a5" : "#86efac"};background:${bloq ? "#fff1f2" : "#f0fdf4"};color:${bloq ? "#b91c1c" : "#15803d"};`;
+        lbl.style.cssText = `display:inline-flex;align-items:center;white-space:nowrap;cursor:pointer;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;user-select:none;transition:all .15s;border:1px solid ${bloq ? "#fca5a5" : "#86efac"};background:${bloq ? "#fff1f2" : "#f0fdf4"};color:${bloq ? "#b91c1c" : "#15803d"};`;
       };
       cb.addEventListener("change", () => { aplicar(); if (aoMudar) aoMudar(); });
       lbl.append(cb, txt, acao);
@@ -1646,6 +1643,96 @@
       el.textContent = n ? `${n} campo(s) · editar ›` : "Nenhum · definir ›";
       el.style.cssText = `font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap;cursor:pointer;transition:all .15s;background:${n ? "#ede9fe" : "#f8fafc"};color:${n ? "#6d28d9" : "#64748b"};border:1px solid ${n ? "#c4b5fd" : "#e2e8f0"};`;
     }
+
+    const PDF_INFO = {
+      "btn-visualizar-proposta": { icone: "description",    dica: "PDF do orçamento que vai para o cliente." },
+      "btn-folhas-impressao":    { icone: "print",          dica: "Botão que abre as 3 folhas abaixo. Bloqueado: trava as 3 de uma vez." },
+      "btn-folha-ordem-servico": { icone: "assignment",     dica: "Folha da ordem de serviço para a produção." },
+      "btn-etapas-processo":     { icone: "checklist",      dica: "Folha com as etapas do processo de fabricação." },
+      "btn-historico-producao":  { icone: "local_shipping", dica: "Relatório usado na entrega e na instalação." },
+    };
+    const PDFS_FOLHAS = new Set(["btn-folha-ordem-servico", "btn-etapas-processo", "btn-historico-producao"]);
+
+    // Seção "PDFs bloqueados" no mesmo padrão do box de controles. criarCb(btn) devolve o checkbox salvo e o que sincronizar
+    function mkSecaoPdfs(criarCb) {
+      const sec = document.createElement("div");
+      sec.style.cssText = "padding:12px 14px;border-bottom:1px solid #f1f5f9;";
+      const tit = document.createElement("div");
+      tit.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#ef4444;display:flex;align-items:center;gap:5px;";
+      tit.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;">picture_as_pdf</span> PDFs bloqueados`;
+      const expl = document.createElement("div");
+      expl.style.cssText = "font-size:11px;color:#64748b;margin:4px 0 10px;line-height:1.4;";
+      expl.textContent = "Clique no status para bloquear ou liberar cada PDF nesta etapa. Bloqueado: o vendedor não gera aquele PDF. Admin e gestor sempre geram.";
+
+      const grade = itens => {
+        const g = document.createElement("div");
+        g.style.cssText = "display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;";
+        itens.forEach(btn => {
+          const { cb, aoMudar } = criarCb(btn);
+          const info = PDF_INFO[btn.id] || { icone: "picture_as_pdf", dica: "" };
+          const cel = document.createElement("div");
+          cel.style.cssText = "border:1px solid #e2e8f0;border-radius:8px;padding:9px 12px;background:#fff;display:flex;flex-direction:column;gap:6px;align-items:flex-start;";
+          const nome = document.createElement("div");
+          nome.style.cssText = "font-size:12px;font-weight:700;color:#1e293b;display:flex;align-items:center;gap:5px;";
+          nome.innerHTML = `<span class="material-icons-outlined" style="font-size:15px;color:#94a3b8;">${info.icone}</span>`;
+          nome.appendChild(document.createTextNode(btn.label));
+          const d = document.createElement("div");
+          d.style.cssText = "font-size:10px;color:#94a3b8;line-height:1.35;";
+          d.textContent = info.dica;
+          cel.append(nome, mkChaveStatus(cb, true, aoMudar), d);
+          g.appendChild(cel);
+        });
+        return g;
+      };
+      const sub = document.createElement("div");
+      sub.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;margin:12px 0 6px;display:flex;align-items:center;gap:4px;";
+      sub.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;">subdirectory_arrow_right</span> Folhas dentro de “Folhas de Impressão”: para travar só uma`;
+
+      sec.append(tit, expl,
+        grade(BOTOES_PDF.filter(b => !PDFS_FOLHAS.has(b.id))),
+        sub,
+        grade(BOTOES_PDF.filter(b => PDFS_FOLHAS.has(b.id))));
+      return sec;
+    }
+
+    const normalizarBusca = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+    // Barra de pesquisa: filtra os cards pelo nome da etapa, do funil ou pelo ID
+    const filtrarEtapas = () => {
+      const termo = normalizarBusca(window._kommoBusca).trim();
+      let visiveis = 0;
+      container.querySelectorAll("[data-grupo-etapas]").forEach(grupo => {
+        let noGrupo = 0;
+        grupo.querySelectorAll(":scope > [data-busca]").forEach(card => {
+          const ok = !termo || card.dataset.busca.includes(termo);
+          card.style.display = ok ? "" : "none";
+          if (ok) noGrupo++;
+        });
+        grupo.style.display = noGrupo ? "" : "none";
+        visiveis += noGrupo;
+      });
+      const vazio = container.querySelector("[data-busca-vazia]");
+      if (vazio) vazio.style.display = visiveis ? "none" : "block";
+      const cont = container.querySelector("[data-busca-contador]");
+      if (cont) cont.textContent = termo ? `${visiveis} etapa(s) encontrada(s)` : "";
+    };
+    const barraBusca = document.createElement("div");
+    barraBusca.style.cssText = "position:sticky;top:0;z-index:5;background:#fff;padding:0 0 12px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid #f1f5f9;";
+    barraBusca.innerHTML = `
+      <div style="flex:1;min-width:220px;display:flex;align-items:center;gap:8px;border:1px solid #e2e8f0;border-radius:8px;padding:7px 12px;background:#f8fafc;">
+        <span class="material-icons-outlined" style="font-size:18px;color:#94a3b8;">search</span>
+        <input type="search" data-busca-etapa placeholder="Pesquisar etapa por nome, funil ou ID…" style="flex:1;border:none;outline:none;background:transparent;font-size:13px;color:#1e293b;font-family:inherit;">
+      </div>
+      <span data-busca-contador style="font-size:12px;color:#64748b;"></span>`;
+    const inpBusca = barraBusca.querySelector("input");
+    inpBusca.value = window._kommoBusca || "";
+    inpBusca.addEventListener("input", () => { window._kommoBusca = inpBusca.value; filtrarEtapas(); });
+    inpBusca.addEventListener("change", e => e.stopPropagation());
+    const buscaVazia = document.createElement("div");
+    buscaVazia.dataset.buscaVazia = "1";
+    buscaVazia.style.cssText = "display:none;padding:24px;text-align:center;color:#94a3b8;font-size:13px;";
+    buscaVazia.textContent = "Nenhuma etapa encontrada.";
+    container.append(barraBusca, buscaVazia);
 
     const DICAS_ETAPA = {
       edicao: "Escolha na lista. Liberado: todos editam. Bloqueia campos: vendedor não altera a proposta. Campos e PDFs: também não gera PDFs.",
@@ -1669,6 +1756,7 @@
 
     if (nomesMergeados.size > 0) {
       const comumGroup = document.createElement("div");
+      comumGroup.dataset.grupoEtapas = "1";
       comumGroup.style.cssText = "margin-bottom:24px;";
       const comumTitle = document.createElement("div");
       comumTitle.style.cssText = "font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:6px;";
@@ -1858,15 +1946,8 @@
           obrigSectionM.appendChild(grupoWrap);
         });
 
-        // Seção PDFs: o chip visível grava no stageKeys[0]; inputs ocultos replicam nas demais etapas do grupo
-        const pdfSectionM = document.createElement("div");
-        pdfSectionM.style.cssText = "padding:12px 14px 8px;border-bottom:1px solid #f1f5f9;";
-        const pdfTitleM = document.createElement("div");
-        pdfTitleM.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#ef4444;margin-bottom:8px;display:flex;align-items:center;gap:5px;";
-        pdfTitleM.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;">picture_as_pdf</span> PDFs bloqueados`;
-        const pdfChipsM = document.createElement("div");
-        pdfChipsM.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
-        BOTOES_PDF.forEach(btn => {
+        // Seção PDFs: o status visível grava no stageKeys[0]; inputs ocultos replicam nas demais etapas do grupo
+        const pdfSectionM = mkSecaoPdfs(btn => {
           const ligado = stageKeys.some(k => cfgBotoes[k] && typeof cfgBotoes[k] === "object" && cfgBotoes[k][btn.id]);
           stageKeys.forEach((sk, i) => {
             if (i === 0) return;
@@ -1874,25 +1955,12 @@
             sh.dataset.stageId = sk; sh.dataset.btnId = btn.id; sh.dataset.btnFlag = "1"; sh.checked = ligado;
             shadows.appendChild(sh);
           });
-          const lbl = document.createElement("label");
-          lbl.style.cssText = "display:flex;align-items:center;gap:5px;cursor:pointer;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:500;border:1px solid #e2e8f0;background:#fff;transition:all .15s;color:#64748b;";
-          const cbBtn = document.createElement("input");
-          cbBtn.type = "checkbox";
-          cbBtn.dataset.stageId = stageKeys[0]; cbBtn.dataset.btnId = btn.id; cbBtn.dataset.btnFlag = "1";
-          cbBtn.style.cssText = "width:12px;height:12px;cursor:pointer;accent-color:#ef4444;";
-          cbBtn.checked = ligado;
-          const aplicarEstilo = () => {
-            lbl.style.background  = cbBtn.checked ? "#fff1f2" : "#fff";
-            lbl.style.color       = cbBtn.checked ? "#b91c1c" : "#64748b";
-            lbl.style.borderColor = cbBtn.checked ? "#fca5a5" : "#e2e8f0";
-            shadows.querySelectorAll(`input[data-btn-flag][data-btn-id="${btn.id}"]`).forEach(s => s.checked = cbBtn.checked);
-          };
-          aplicarEstilo();
-          cbBtn.addEventListener("change", aplicarEstilo);
-          lbl.append(cbBtn, document.createTextNode("🔒 " + btn.label));
-          pdfChipsM.appendChild(lbl);
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.dataset.stageId = stageKeys[0]; cb.dataset.btnId = btn.id; cb.dataset.btnFlag = "1";
+          cb.checked = ligado;
+          return { cb, aoMudar: () => shadows.querySelectorAll(`input[data-btn-flag][data-btn-id="${btn.id}"]`).forEach(x => x.checked = cb.checked) };
         });
-        pdfSectionM.append(pdfTitleM, pdfChipsM);
 
         bodyM.append(pdfSectionM, LV.criarSecaoEtapa(stageKeys), obrigSectionM, kommoTravRodapeEtapa(stageKeys, stageNome));
 
@@ -1910,6 +1978,7 @@
         });
         expandBtnM.addEventListener("click", e => { e.stopPropagation(); toggleExpandM(); });
 
+        card.dataset.busca = normalizarBusca([stageNome, ...list.flatMap(({ pipeline, etapa }) => [pipeline.pipeline_name, etapa.status_id])].join(" "));
         card.append(head, caixaM, bodyM);
         comumGroup.appendChild(card);
       });
@@ -1927,6 +1996,7 @@
       pipeTitle.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;color:#94a3b8;">account_tree</span>${pipeline.pipeline_name || "Pipeline " + pipeline.pipeline_id}`;
 
       const pipeGroup = document.createElement("div");
+      pipeGroup.dataset.grupoEtapas = "1";
       pipeGroup.style.cssText = "margin-bottom:24px;";
       pipeGroup.appendChild(pipeTitle);
 
@@ -2030,39 +2100,15 @@
         body.style.cssText = "display:none;border-top:1px solid #f1f5f9;background:#fafbfc;";
 
         // Seção PDFs
-        const pdfSection = document.createElement("div");
-        pdfSection.style.cssText = "padding:12px 14px 8px;border-bottom:1px solid #f1f5f9;";
-
-        const pdfTitle = document.createElement("div");
-        pdfTitle.style.cssText = "font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#ef4444;margin-bottom:8px;display:flex;align-items:center;gap:5px;";
-        pdfTitle.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;">picture_as_pdf</span> PDFs bloqueados`;
-
-        const pdfChips = document.createElement("div");
-        pdfChips.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
-
-        BOTOES_PDF.forEach(btn => {
-          const lbl = document.createElement("label");
-          lbl.style.cssText = "display:flex;align-items:center;gap:5px;cursor:pointer;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:500;border:1px solid #e2e8f0;background:#fff;transition:all .15s;color:#64748b;";
-          const cbBtn = document.createElement("input");
-          cbBtn.type = "checkbox";
-          cbBtn.dataset.stageId = stageKey;
-          cbBtn.dataset.btnId   = btn.id;
-          cbBtn.dataset.btnFlag = "1";
-          cbBtn.style.cssText   = "width:12px;height:12px;cursor:pointer;accent-color:#ef4444;";
-          cbBtn.checked         = !!cfgBtns[btn.id];
-          const applyBtnStyle = () => {
-            lbl.style.background  = cbBtn.checked ? "#fff1f2" : "#fff";
-            lbl.style.color       = cbBtn.checked ? "#b91c1c" : "#64748b";
-            lbl.style.borderColor = cbBtn.checked ? "#fca5a5" : "#e2e8f0";
-          };
-          applyBtnStyle();
-          cbBtn.addEventListener("change", applyBtnStyle);
-          lbl.appendChild(cbBtn);
-          lbl.appendChild(document.createTextNode("🔒 " + btn.label));
-          pdfChips.appendChild(lbl);
+        const pdfSection = mkSecaoPdfs(btn => {
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.dataset.stageId = stageKey;
+          cb.dataset.btnId   = btn.id;
+          cb.dataset.btnFlag = "1";
+          cb.checked         = !!cfgBtns[btn.id];
+          return { cb };
         });
-
-        pdfSection.append(pdfTitle, pdfChips);
 
         // Seção Campos Obrigatórios
         const obrigSection = document.createElement("div");
@@ -2164,12 +2210,15 @@
         expandBtn.addEventListener("click", e => { e.stopPropagation(); toggleExpand(); });
         obrigBadge.addEventListener("click", () => { if (!expanded) toggleExpand(); });
 
+        card.dataset.busca = normalizarBusca([etapa.nome, pipeline.pipeline_name, stageKey].join(" "));
         card.append(head, caixa, body);
         pipeGroup.appendChild(card);
       });
 
       container.appendChild(pipeGroup);
     });
+
+    filtrarEtapas();
 
     // Sincroniza estado inicial dos checkboxes globais com as etapas já carregadas
     syncGlobalCheckboxes();

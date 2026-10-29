@@ -194,7 +194,8 @@ function verificarBloqueioKommo() {
         "btn-etapas-processo",
         "btn-historico-producao",
       ];
-      TODOS_BOTOES_PDF.forEach(id => {
+      // As folhas do popup "Folhas de Impressão" só existem com ele aberto: o popup chama de novo
+      const aplicarPdfsEtapa = () => TODOS_BOTOES_PDF.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
         if (botoesEtapa[id]) {
@@ -217,6 +218,8 @@ function verificarBloqueioKommo() {
           el.disabled = false;
         }
       });
+      window._kommoAplicarPdfs = aplicarPdfsEtapa;
+      aplicarPdfsEtapa();
     })
     .catch(e => console.warn("[kommo-lock] Erro ao verificar etapa:", e.message));
   }
