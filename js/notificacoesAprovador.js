@@ -35,6 +35,26 @@
     try { return JSON.parse(localStorage.getItem("ulhoa_cfg_v1")); } catch { return null; }
   }
 
+  // Responsável pelo pedido: o aprovador da faixa de valor que contém o total (a de maior "de"
+  // se houver sobreposição). Sem faixa, ou em pedido de etapa (sem total), o aprovador principal.
+  // Mesma regra do servidor (aprovacaoValorController.js)
+  function responsavelPedido(lv, total) {
+    const t = Number(total);
+    const faixa = t > 0
+      ? (lv?.faixas || [])
+          .filter(f => f?.aprovadorId && t >= (Number(f.de) || 0) && (!(Number(f.ate) > 0) || t <= Number(f.ate)))
+          .sort((a, b) => (Number(b.de) || 0) - (Number(a.de) || 0))[0]
+      : null;
+    const f = faixa || lv || {};
+    return { id: String(f.aprovadorId || ""), nome: f.aprovadorNome || "o aprovador", email: (f.aprovadorEmail || "").toLowerCase() };
+  }
+
+  // Todos os aprovadores (principal e das faixas) recebem os avisos dos pedidos
+  const aprovadoresDe = lv => [lv, ...(lv?.faixas || [])]
+    .filter(a => a?.aprovadorId || a?.aprovadorEmail)
+    .map(a => ({ id: String(a.aprovadorId || ""), email: (a.aprovadorEmail || "").toLowerCase() }));
+  const souEu = a => (!!idUsuario && a.id === idUsuario) || (!!emailUsuario && !!a.email && a.email === emailUsuario);
+
   async function listar(query) {
     const r = await fetch(`${API_APROV}?${query}`);
     if (!r.ok) throw new Error("HTTP " + r.status);
@@ -147,7 +167,7 @@
   }
 
   // ── Aprovador ───────────────────────────────────────────────────────────
-  function iniciarAprovador() {
+  function iniciarAprovador(lv) {
     const ui = criarUI();
     const vistos = lerSet(LS_VISTOS);
     let pendentes = [];
@@ -178,7 +198,7 @@
       ui.pillTxt.textContent = n === 1 ? "1 aprovação pendente" : `${n} aprovações pendentes`;
       marcarTitulo(n);
       ui.titulo.textContent = n
-        ? (n === 1 ? "1 orçamento aguardando sua aprovação" : `${n} orçamentos aguardando sua aprovação`)
+        ? (n === 1 ? "1 orçamento aguardando aprovação" : `${n} orçamentos aguardando aprovação`)
         : "Nenhuma aprovação pendente";
       ui.dica.textContent = "Valor: \"até o valor\" trava de novo se o total subir. Etapa: \"só nesta etapa\" trava de novo se o lead mudar para outra etapa bloqueada.";
 
@@ -192,6 +212,9 @@
         item.className = "lv-item" + (novosIds.has(d._id) ? " novo" : "");
         const url = `editar.html?id=${encodeURIComponent(d.propostaId)}`;
         const etapa = d.tipo === "etapa";
+        // Todos veem o pedido, mas só o responsável (faixa do total ou principal) decide
+        const resp = responsavelPedido(lv, etapa ? undefined : d.valorTotal);
+        const decido = souEu(resp);
         item.innerHTML = `
           <div class="lv-top">
             <span class="lv-nome">${esc(d.numeroProposta || "Sem número")} · ${esc(d.nomeCliente || "Cliente")}${novosIds.has(d._id) ? ' <span style="font-size:10px;background:#c2410c;color:#fff;border-radius:999px;padding:1px 7px;vertical-align:middle;">NOVO</span>' : ""}</span>
@@ -200,11 +223,12 @@
           <div class="lv-meta">${etapa ? "Desbloqueio da etapa da Kommo" : `Valor acima do limite de ${fmtBRL(d.valorLimite)}`} · pedido por ${esc(d.solicitante)} em ${fmtData(d.dataHora)}</div>
           ${d.justificativa ? `<div class="lv-meta" style="color:#334155;">💬 ${esc(d.justificativa)}</div>` : ""}
           <div class="lv-acoes">
-            <button type="button" data-a="sempre" style="background:#16a34a;color:#fff;">Liberar para sempre</button>
+            ${decido ? `<button type="button" data-a="sempre" style="background:#16a34a;color:#fff;">Liberar para sempre</button>
             ${etapa
               ? `<button type="button" data-a="etapa" style="background:#0f766e;color:#fff;">Liberar só nesta etapa</button>`
               : `<button type="button" data-a="valor" style="background:#0f766e;color:#fff;">Liberar até ${fmtBRL(d.valorTotal)}</button>`}
-            <button type="button" data-a="negar" style="background:#fff;color:#b91c1c;border-color:#fca5a5;">Negar</button>
+            <button type="button" data-a="negar" style="background:#fff;color:#b91c1c;border-color:#fca5a5;">Negar</button>`
+            : `<span style="padding:7px 12px;border-radius:8px;font-size:12px;font-weight:600;background:#f1f5f9;color:#475569;display:inline-flex;align-items:center;gap:5px;"><span class="material-icons-outlined" style="font-size:15px;">person</span>Quem decide: ${esc(resp.nome)}</span>`}
             <a href="${url}" style="background:#f1f5f9;color:#334155;margin-left:auto;">Abrir orçamento</a>
           </div>
           <div class="lv-motivo">
@@ -227,6 +251,9 @@
     }
 
     async function atualizar() {
+      // Relê a configuração: as faixas e os aprovadores podem mudar em Ajustes
+      const cfg = await obterConfig();
+      if (cfg?.limiteValor) lv = cfg.limiteValor;
       try { pendentes = await listar("status=pendente"); } catch (_) { return; }
       const novos = pendentes.filter(d => !vistos.has(d._id));
       novos.forEach(d => novosIds.add(d._id));
@@ -311,10 +338,8 @@
     const lv = cfg?.limiteValor;
     // Sem aprovador definido não há para quem pedir (vale para trava por valor e por etapa)
     if (!lv?.aprovadorId && !lv?.aprovadorEmail) return;
-    // Reconhece o aprovador pelo id do login (token); o e-mail fica como alternativa
-    const ehAprovador = (!!idUsuario && String(lv.aprovadorId || "") === idUsuario)
-      || (!!emailUsuario && (lv.aprovadorEmail || "").toLowerCase() === emailUsuario);
-    if (ehAprovador) iniciarAprovador();
+    // Reconhece o aprovador (principal ou de faixa) pelo id do login (token); o e-mail fica como alternativa
+    if (aprovadoresDe(lv).some(souEu)) iniciarAprovador(lv);
     else iniciarSolicitante();
   }
 

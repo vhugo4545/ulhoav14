@@ -1074,6 +1074,7 @@
   // ── Trava por Valor do Orçamento ────────────────────────────────────────────
   // Config salva em CFG.limiteValor:
   // { ativo, aprovadorId, aprovadorNome, aprovadorEmail,
+  //   faixas: [{ de, ate, aprovadorId, aprovadorNome, aprovadorEmail }]   (ate 0 = sem limite),
   //   global: { valorLimite, tipoBloqueio, pdfs:{btnId:true}, bloquearSalvar, bloquearOmie },
   //   etapas: { [statusId]: { modo:"desativado" } | { modo:"personalizado", ...regra } } }  (ausente = herda global)
   const LV_USUARIOS_URL = "https://ulhoa-0a02024d350a.herokuapp.com/api/auth/usuarios";
@@ -1095,6 +1096,7 @@
         aprovadorId:    salvo.aprovadorId    || "",
         aprovadorNome:  salvo.aprovadorNome  || "",
         aprovadorEmail: salvo.aprovadorEmail || "",
+        faixas:         JSON.parse(JSON.stringify(salvo.faixas || [])),
         global:         { ...LV.regraVazia(), ...(salvo.global || {}) },
         etapas:         JSON.parse(JSON.stringify(salvo.etapas || {})),
       };
@@ -1198,11 +1200,20 @@
       return wrap;
     },
 
+    // Lista de usuários carregada uma vez e usada pelo aprovador principal e pelas faixas
+    carregarUsuarios() {
+      if (!LV._usuariosP) {
+        LV._usuariosP = fetch(LV_USUARIOS_URL)
+          .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(u => (LV.usuarios = u))
+          .catch(e => { LV._usuariosP = null; throw e; });
+      }
+      return LV._usuariosP;
+    },
+
     async preencherAprovadores(sel) {
       try {
-        const res = await fetch(LV_USUARIOS_URL);
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const users = await res.json();
+        const users = await LV.carregarUsuarios();
         const atual = LV.estado.aprovadorId;
         sel.innerHTML = `<option value="">Selecione o aprovador…</option>` + users
           .map(u => `<option value="${u._id}" data-nome="${(u.nome || "").replace(/"/g, "&quot;")}" data-email="${u.email || ""}"${u._id === atual ? " selected" : ""}>${u.nome || u.email} · ${u.email || "sem e-mail"} · ${u.tipo || "user"}</option>`)
@@ -1219,6 +1230,92 @@
       } catch (e) {
         sel.innerHTML = `<option value="${LV.estado.aprovadorId}">${LV.estado.aprovadorNome || "Erro ao carregar usuários"}</option>`;
       }
+    },
+
+    // Faixas de valor com aprovador dedicado. Fora das faixas, e nos pedidos de etapa, decide o principal
+    criarSecaoFaixas() {
+      const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      const sec = document.createElement("div");
+      sec.style.cssText = "display:flex;flex-direction:column;gap:8px;";
+      const tit = document.createElement("div");
+      tit.style.cssText = `font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${LV_COR.fg};display:flex;align-items:center;gap:5px;`;
+      tit.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;">stacked_bar_chart</span> Aprovadores por faixa de valor`;
+      const expl = document.createElement("div");
+      expl.style.cssText = "font-size:11px;color:#64748b;line-height:1.4;margin-top:-4px;";
+      expl.textContent = "Dedique uma pessoa aos orçamentos de uma faixa de total (ex.: de R$ 10.000 até R$ 50.000). Todos os aprovadores recebem o aviso do pedido, mas só o responsável pela faixa libera ou nega. Fora das faixas, decide o aprovador principal.";
+      const lista = document.createElement("div");
+      lista.style.cssText = "display:flex;flex-direction:column;gap:6px;";
+      const add = document.createElement("button");
+      add.type = "button";
+      add.style.cssText = `align-self:flex-start;display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1px dashed ${LV_COR.border};border-radius:8px;background:#fff;color:${LV_COR.fg};font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;`;
+      add.innerHTML = `<span class="material-icons-outlined" style="font-size:16px;">add</span> Adicionar faixa`;
+
+      const rotulo = t => {
+        const el = document.createElement("span");
+        el.style.cssText = "font-size:11px;font-weight:600;color:#475569;";
+        el.textContent = t;
+        return el;
+      };
+      const campoValor = (faixa, chave, vazio) => {
+        const inp = document.createElement("input");
+        inp.type = "text"; inp.inputMode = "decimal"; inp.placeholder = vazio;
+        inp.value = faixa[chave] ? LV.fmtBRL(faixa[chave]) : "";
+        inp.style.cssText = "width:130px;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-weight:600;color:#1e293b;outline:none;";
+        inp.addEventListener("input", () => { faixa[chave] = LV.parseBRL(inp.value); });
+        inp.addEventListener("blur",  () => { inp.value = faixa[chave] ? LV.fmtBRL(faixa[chave]) : ""; });
+        return inp;
+      };
+      const opcoes = faixa => {
+        if (!LV.usuarios) {
+          return faixa.aprovadorId
+            ? `<option value="${esc(faixa.aprovadorId)}">${esc(faixa.aprovadorNome || faixa.aprovadorId)}</option>`
+            : `<option value="">Carregando usuários…</option>`;
+        }
+        let html = `<option value="">Selecione o aprovador…</option>` + LV.usuarios.map(u =>
+          `<option value="${esc(u._id)}" data-nome="${esc(u.nome)}" data-email="${esc(u.email)}"${u._id === faixa.aprovadorId ? " selected" : ""}>${esc(u.nome || u.email)} · ${esc(u.email || "sem e-mail")}</option>`).join("");
+        if (faixa.aprovadorId && !LV.usuarios.some(u => u._id === faixa.aprovadorId)) {
+          html += `<option value="${esc(faixa.aprovadorId)}" selected>${esc(faixa.aprovadorNome || faixa.aprovadorId)} (não encontrado)</option>`;
+        }
+        return html;
+      };
+
+      const render = () => {
+        lista.innerHTML = "";
+        if (!LV.estado.faixas.length) {
+          lista.innerHTML = `<div style="font-size:11px;color:#94a3b8;">Nenhuma faixa: o aprovador principal decide todos os pedidos.</div>`;
+          return;
+        }
+        LV.estado.faixas.forEach((faixa, i) => {
+          const linha = document.createElement("div");
+          linha.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;";
+          const sel = document.createElement("select");
+          sel.style.cssText = "flex:1;min-width:220px;font-size:12px;font-weight:600;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;color:#1e293b;background:#fff;cursor:pointer;";
+          sel.innerHTML = opcoes(faixa);
+          sel.addEventListener("change", () => {
+            const opt = sel.selectedOptions[0];
+            faixa.aprovadorId    = sel.value;
+            faixa.aprovadorNome  = opt?.dataset.nome  || "";
+            faixa.aprovadorEmail = opt?.dataset.email || "";
+          });
+          const del = document.createElement("button");
+          del.type = "button"; del.title = "Remover faixa";
+          del.style.cssText = "border:none;background:none;cursor:pointer;color:#94a3b8;display:flex;padding:4px;";
+          del.innerHTML = `<span class="material-icons-outlined" style="font-size:18px;pointer-events:none;">delete</span>`;
+          del.addEventListener("click", () => { LV.estado.faixas.splice(i, 1); render(); });
+          linha.append(rotulo("De"), campoValor(faixa, "de", "R$ 0,00"), rotulo("até"), campoValor(faixa, "ate", "sem limite"),
+            rotulo("Aprovador"), sel, del);
+          lista.appendChild(linha);
+        });
+      };
+      add.addEventListener("click", () => {
+        LV.estado.faixas.push({ de: 0, ate: 0, aprovadorId: "", aprovadorNome: "", aprovadorEmail: "" });
+        render();
+      });
+      render();
+      LV.carregarUsuarios().then(render).catch(() => {});
+
+      sec.append(tit, expl, lista, add);
+      return sec;
     },
 
     criarCardGlobal() {
@@ -1240,7 +1337,7 @@
 
       const linhaAprov = document.createElement("label");
       linhaAprov.style.cssText = "display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:#475569;flex-wrap:wrap;";
-      linhaAprov.textContent = "Aprovador";
+      linhaAprov.textContent = "Aprovador principal";
       const selAprov = document.createElement("select");
       selAprov.style.cssText = "font-size:12px;font-weight:600;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;color:#1e293b;background:#fff;cursor:pointer;min-width:240px;";
       selAprov.innerHTML = `<option>Carregando usuários…</option>`;
@@ -1259,7 +1356,7 @@
 
       const dicaAprov = document.createElement("div");
       dicaAprov.style.cssText = "font-size:10px;color:#64748b;margin-top:-8px;";
-      dicaAprov.textContent = "O aprovador decide os pedidos de desbloqueio por valor e por etapa da Kommo.";
+      dicaAprov.textContent = "Decide os pedidos de desbloqueio por etapa da Kommo e os pedidos por valor fora das faixas abaixo.";
 
       const regraWrap = document.createElement("div");
       regraWrap.style.cssText = "display:flex;flex-direction:column;gap:14px;";
@@ -1275,7 +1372,7 @@
         <span class="cfg-status" id="cfg-status-lv"></span>
         <span style="font-size:11px;color:#64748b;">Salva a trava por valor e toda a configuração por etapa da Kommo.</span>`;
 
-      body.append(linhaAprov, dicaAprov, regraWrap, linhaSalvar);
+      body.append(linhaAprov, dicaAprov, LV.criarSecaoFaixas(), regraWrap, linhaSalvar);
       LV.mostrarCard = () => card.scrollIntoView({ behavior: "smooth", block: "center" });
 
       card.append(head, body);
@@ -2467,6 +2564,12 @@
     const cfgLimiteValor = LV.obterConfig();
     cfgLimiteValor.ativo = cfgLimiteValor.global?.valorLimite > 0
       || Object.values(cfgLimiteValor.etapas || {}).some(r => r.modo === "personalizado" && r.valorLimite > 0);
+    const faixaRuim = (cfgLimiteValor.faixas || []).find(f => !f.aprovadorId || (Number(f.ate) > 0 && Number(f.ate) < Number(f.de)));
+    if (faixaRuim) {
+      alert("Aprovadores por faixa de valor: escolha o aprovador de cada faixa e confira se o \"até\" é maior que o \"de\".");
+      LV.mostrarCard?.();
+      return;
+    }
     if (cfgLimiteValor.ativo && !cfgLimiteValor.aprovadorId) {
       alert("Trava por valor: escolha o aprovador no card \"Trava por valor do orçamento\" e salve de novo.");
       LV.mostrarCard?.();

@@ -122,6 +122,8 @@
         sub: `Total ${fmtBRL(v.total)} acima do limite de ${fmtBRL(v.limite)}.`,
         pendente: v.pendente, negado: v.negado,
         enviar: v.solicitar,
+        // Pedido por valor vai para o aprovador da faixa do total
+        aprovador: { id: v.idAprovador || "", nome: v.nomeAprovador || "o aprovador" },
       });
     }
     return lista;
@@ -130,7 +132,7 @@
   function render() {
     const lista = travas();
     const aprov = cfgAprovador();
-    const sig = JSON.stringify([aprov.id, lista.map(t => [t.chave, t.titulo, t.pendente?._id, t.negado?._id])]);
+    const sig = JSON.stringify([aprov.id, lista.map(t => [t.chave, t.titulo, t.pendente?._id, t.negado?._id, t.aprovador?.id])]);
 
     // Reativa os próprios botões: o bloqueioKommo desabilita todos os botões da página
     wrap.querySelectorAll("button, textarea").forEach(el => {
@@ -155,16 +157,17 @@
       const item = document.createElement("div");
       item.className = "dbf-item";
       let corpo = `<div class="dbf-tit">${esc(t.titulo)}</div><div class="dbf-sub">${esc(t.sub)}</div>`;
-      if (!aprov.id) {
+      const resp = t.aprovador || aprov;
+      if (!resp.id) {
         corpo += `<span class="dbf-tag" style="background:#f1f5f9;color:#475569;">Nenhum aprovador definido em Ajustes. Fale com o gestor.</span>`;
       } else if (t.pendente) {
-        corpo += `<span class="dbf-tag" style="background:#fffbeb;color:#92400e;">⏳ Pedido enviado em ${fmtData(t.pendente.dataHora)} · aguardando ${esc(aprov.nome)}</span>`;
+        corpo += `<span class="dbf-tag" style="background:#fffbeb;color:#92400e;">⏳ Pedido enviado em ${fmtData(t.pendente.dataHora)} · aguardando ${esc(resp.nome)}</span>`;
       } else {
         if (t.negado) {
-          corpo += `<span class="dbf-tag" style="background:#fee2e2;color:#991b1b;">⛔ Negado por ${esc(t.negado.aprovador || aprov.nome)}${t.negado.observacao ? ": " + esc(t.negado.observacao) : ""}</span>`;
+          corpo += `<span class="dbf-tag" style="background:#fee2e2;color:#991b1b;">⛔ Negado por ${esc(t.negado.aprovador || resp.nome)}${t.negado.observacao ? ": " + esc(t.negado.observacao) : ""}</span>`;
         }
-        corpo += `<textarea placeholder="Justificativa para ${esc(aprov.nome)} (opcional)"></textarea>
-          <button type="button">${t.negado ? "Pedir novamente" : `Enviar pedido para ${esc(aprov.nome)}`}</button>`;
+        corpo += `<textarea placeholder="Justificativa para ${esc(resp.nome)} (opcional)"></textarea>
+          <button type="button">${t.negado ? "Pedir novamente" : `Enviar pedido para ${esc(resp.nome)}`}</button>`;
       }
       item.innerHTML = corpo;
       const btn = item.querySelector("button");

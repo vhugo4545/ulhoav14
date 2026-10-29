@@ -79,10 +79,23 @@
     } catch { return ""; }
   }
 
-  function isAprovador(cfg) {
+  // Responsável pelo pedido: o aprovador da faixa de valor que contém o total (a de maior "de"
+  // se houver sobreposição). Sem faixa, ou em pedido de etapa (sem total), o aprovador principal.
+  // Mesma regra do servidor (aprovacaoValorController.js)
+  function responsavelPedido(lv, total) {
+    const t = Number(total);
+    const faixa = t > 0
+      ? (lv?.faixas || [])
+          .filter(f => f?.aprovadorId && t >= (Number(f.de) || 0) && (!(Number(f.ate) > 0) || t <= Number(f.ate)))
+          .sort((a, b) => (Number(b.de) || 0) - (Number(a.de) || 0))[0]
+      : null;
+    const f = faixa || lv || {};
+    return { id: String(f.aprovadorId || ""), nome: f.aprovadorNome || "o aprovador", email: (f.aprovadorEmail || "").toLowerCase() };
+  }
+
+  function isAprovador(resp) {
     const id = idUsuarioLogado();
-    return (!!id && String(cfg?.aprovadorId || "") === id)
-      || (!!emailUsuario && !!cfg?.aprovadorEmail && cfg.aprovadorEmail.toLowerCase() === emailUsuario);
+    return (!!id && resp.id === id) || (!!emailUsuario && !!resp.email && resp.email === emailUsuario);
   }
 
   // Liberação vigente para o total atual
@@ -345,10 +358,12 @@
     const pendente = estado.aprovacoes.find(a => a.status === "pendente");
     const ultima = estado.aprovacoes.find(a => a.status !== "cancelado");
     const negado = ultima?.status === "negado" ? ultima : null;
-    const aprovador = isAprovador(cfg);
-    const nomeAprovador = cfg.aprovadorNome || "o aprovador";
+    // Quem decide este total: o aprovador da faixa de valor, ou o principal
+    const resp = responsavelPedido(cfg, total);
+    const aprovador = isAprovador(resp);
+    const nomeAprovador = resp.nome;
     // Sem aprovador definido em Ajustes não há quem decida: não oferece o pedido
-    const podePedir = !isSuperUser && !!cfg.aprovadorId;
+    const podePedir = !isSuperUser && !!resp.id;
     const resumo = `Total ${fmtBRL(total)} · limite ${fmtBRL(limite)}`;
 
     if (liberacao) {
@@ -368,7 +383,7 @@
     const isento = isSuperUser || aprovador;
     // Estado para o botão flutuante de desbloqueio (desbloqueioFlutuante.js)
     window._lvBloqueio = {
-      travado: !isento, total, limite, pendente: pendente || null, negado, nomeAprovador,
+      travado: !isento, total, limite, pendente: pendente || null, negado, nomeAprovador, idAprovador: resp.id,
       solicitar: justificativa => solicitar(total, regra, justificativa),
     };
     if (!isento) {
@@ -427,7 +442,7 @@
         : `🔒 Orçamento travado: valor acima do limite`,
       detalhe: isSuperUser
         ? `${resumo} · usuários comuns precisam da aprovação de ${nomeAprovador}.`
-        : cfg.aprovadorId
+        : resp.id
           ? `${resumo} · precisa da aprovação de ${nomeAprovador}.${estado.camposTravados ? "" : " Salve a proposta antes de solicitar."}`
           : `${resumo} · nenhum aprovador definido em Ajustes; fale com o gestor.`,
       acoes: podePedir ? [solicitarAcao] : [],
