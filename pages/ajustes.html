@@ -1288,25 +1288,51 @@
       sec.style.cssText = "padding:12px 14px;border-bottom:1px solid #f1f5f9;";
 
       const titulo = document.createElement("div");
-      titulo.style.cssText = `font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${LV_COR.fg};margin-bottom:8px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;`;
+      titulo.style.cssText = `font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${LV_COR.fg};display:flex;align-items:center;gap:5px;`;
       titulo.innerHTML = `<span class="material-icons-outlined" style="font-size:13px;">price_check</span> Trava por valor nesta etapa`;
+      const explica = document.createElement("div");
+      explica.style.cssText = "font-size:11px;color:#64748b;margin:4px 0 10px;line-height:1.4;";
+      explica.textContent = "Se o total do orçamento passar do valor definido, a proposta trava até o aprovador liberar. Admin e gestor não são afetados. Escolha uma opção:";
 
-      const sel = document.createElement("select");
-      sel.style.cssText = "font-size:11px;font-weight:600;border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;color:#1e293b;background:#fff;cursor:pointer;margin-left:6px;text-transform:none;letter-spacing:0;";
-      sel.innerHTML = `
-        <option value="">Usar regra padrão</option>
-        <option value="personalizado">Regra própria</option>
-        <option value="desativado">Sem trava por valor</option>`;
-      const atual = LV.estado.etapas[stageKeys[0]];
-      sel.value = atual?.modo || "";
-      titulo.appendChild(sel);
+      // Resumo da regra padrão, para a pessoa saber o que "Usar regra padrão" significa
+      const g = LV.estado.global || {};
+      const resumoPadrao = g.valorLimite
+        ? `Trava acima de ${LV.fmtBRL(g.valorLimite)}, como no card “Trava por valor do orçamento”.`
+        : "A regra padrão está sem valor, então esta etapa não trava por valor.";
+
+      const OPCOES = [
+        { modo: "",              icone: "public",     titulo: "Usar regra padrão",   dica: resumoPadrao },
+        { modo: "personalizado", icone: "tune",       titulo: "Regra própria",       dica: "Valor e bloqueios só desta etapa. Definidos logo abaixo." },
+        { modo: "desativado",    icone: "lock_open",  titulo: "Sem trava por valor", dica: "Esta etapa nunca trava por valor, mesmo acima do limite padrão." },
+      ];
+      let modoAtual = LV.estado.etapas[stageKeys[0]]?.modo || "";
+
+      const opcoes = document.createElement("div");
+      opcoes.style.cssText = "display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;";
+      const cartoes = OPCOES.map(op => {
+        const c = document.createElement("button");
+        c.type = "button";
+        c.innerHTML = `<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;">
+            <span class="material-icons-outlined" data-radio style="font-size:16px;"></span>
+            <span class="material-icons-outlined" style="font-size:15px;">${op.icone}</span>${op.titulo}</div>
+          <div style="font-size:10px;font-weight:400;line-height:1.35;margin-top:4px;opacity:.85;">${op.dica}</div>`;
+        c.addEventListener("click", e => { e.stopPropagation(); modoAtual = op.modo; pintar(); renderEditor(); });
+        opcoes.appendChild(c);
+        return { c, op };
+      });
+      const pintar = () => cartoes.forEach(({ c, op }) => {
+        const on = op.modo === modoAtual;
+        c.style.cssText = `text-align:left;cursor:pointer;padding:9px 12px;border-radius:8px;transition:all .15s;font-family:inherit;border:1px solid ${on ? LV_COR.border : "#e2e8f0"};background:${on ? LV_COR.bg : "#fff"};color:${on ? LV_COR.fg : "#64748b"};${on ? `box-shadow:0 0 0 2px ${LV_COR.soft};` : ""}`;
+        c.querySelector("[data-radio]").textContent = on ? "radio_button_checked" : "radio_button_unchecked";
+      });
+      pintar();
 
       const editorWrap = document.createElement("div");
 
-
       const renderEditor = () => {
         editorWrap.innerHTML = "";
-        const modo = sel.value;
+        editorWrap.style.cssText = "";
+        const modo = modoAtual;
         if (!modo) {
           stageKeys.forEach(k => delete LV.estado.etapas[k]);
           return;
@@ -1321,12 +1347,12 @@
           : { ...JSON.parse(JSON.stringify(LV.estado.global)), modo: "personalizado" };
         // Etapas em comum compartilham o mesmo objeto de regra
         stageKeys.forEach(k => { LV.estado.etapas[k] = base; });
+        editorWrap.style.cssText = `margin-top:10px;padding:12px;border:1px dashed ${LV_COR.border};border-radius:8px;background:#fffdfa;`;
         editorWrap.appendChild(LV.criarEditorRegra(base));
       };
-      sel.addEventListener("change", e => { e.stopPropagation(); renderEditor(); });
       renderEditor();
 
-      sec.append(titulo, editorWrap);
+      sec.append(titulo, explica, opcoes, editorWrap);
       return sec;
     },
   };
@@ -1595,14 +1621,17 @@
     function mkChaveStatus(cb, bloqueiaMarcado, aoMudar) {
       const lbl = document.createElement("label");
       const txt = document.createElement("span");
+      const acao = document.createElement("span");
+      acao.style.cssText = "font-weight:400;opacity:.75;margin-left:6px;";
       cb.style.display = "none";
       const aplicar = () => {
         const bloq = cb.checked === bloqueiaMarcado;
         txt.textContent = bloq ? "🔒 Bloqueado" : "✓ Liberado";
+        acao.textContent = bloq ? "· clique para liberar" : "· clique para bloquear";
         lbl.style.cssText = `display:inline-flex;align-items:center;cursor:pointer;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;user-select:none;transition:all .15s;border:1px solid ${bloq ? "#fca5a5" : "#86efac"};background:${bloq ? "#fff1f2" : "#f0fdf4"};color:${bloq ? "#b91c1c" : "#15803d"};`;
       };
       cb.addEventListener("change", () => { aplicar(); if (aoMudar) aoMudar(); });
-      lbl.append(cb, txt);
+      lbl.append(cb, txt, acao);
       aplicar();
       return lbl;
     }
@@ -1619,7 +1648,7 @@
     }
 
     const DICAS_ETAPA = {
-      edicao: "Liberado: todos editam. Bloqueia campos: vendedor não altera a proposta. Campos e PDFs: também não gera PDFs.",
+      edicao: "Escolha na lista. Liberado: todos editam. Bloqueia campos: vendedor não altera a proposta. Campos e PDFs: também não gera PDFs.",
       omie:   "Botão “Enviar para Omie” nesta etapa. Vale para todos, inclusive admin.",
       salvar: "Botão “Salvar Proposta”. Bloqueado: só admin e gestor salvam alterações.",
       obrig:  "Campos que precisam estar preenchidos para salvar a proposta.",
