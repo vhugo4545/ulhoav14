@@ -519,7 +519,8 @@ function criarBlocoDeProposta(nomeGrupo = "", ambiente = "") {
   }
 
   const estaEditandoModelo = window.location.pathname.includes("editarModelo.html");
-  const isAdmin = (localStorage.getItem("usuarioTipo") || "") === "admin";
+  // Quem vê custo, mínimo e sugerido (Ajustes → Perfis); padrão: admin
+  const isAdmin = window.Permissoes ? window.Permissoes.pode("verCustos") : (localStorage.getItem("usuarioTipo") || "") === "admin";
 
   const camposFinanceiros = [
     { label: "Custo Total de Material", name: "custoTotalMaterial" },

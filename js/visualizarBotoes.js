@@ -63,21 +63,31 @@ async function controlarBotoesSidebar() {
     });
   });
 
+  // Ajustes → Perfis; sem permissoes.js carregado, vale a regra antiga (só admin)
+  const _pode = (acao, antigo) => window.Permissoes ? window.Permissoes.pode(acao) : antigo;
+  const verTodos = _pode("verTodosBotoes", tipoUsuario === "admin");
+  const podeAprovar = _pode("aprovarOrcamento", tipoUsuario === "admin");
+
   // Na página de edição: mostra todos os botões e aplica configuração de visibilidade
   if (paginaAtual === "editar.html") {
+    // Perfil de consulta (Visualização): sem botões de ação
+    if (!_pode("editarSalvar", true)) {
+      ["btn-editar", "btn-destravar"].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = "none"; });
+      return;
+    }
     // Quando travado para vendedor, mostra APENAS Duplicar
     const STATUS_TRAVADO = ["Pendente de aprovação"];
-    if (STATUS_TRAVADO.includes(status) && tipoUsuario !== "admin") {
+    if (STATUS_TRAVADO.includes(status) && !verTodos && !podeAprovar) {
       esconderTodos();
       if (botoes.criar) botoes.criar.style.display = "block";
       return;
     }
 
     Object.values(botoes).forEach(btn => btn && (btn.style.display = "block"));
+    if (!_pode("criarDuplicar", true) && botoes.criar) botoes.criar.style.display = "none";
+    if (!podeAprovar && botoes.autorizar) botoes.autorizar.style.display = "none";
 
-    if (tipoUsuario !== "admin") {
-      // Sempre oculta o botão de autorizar para não-admin
-      if (botoes.autorizar) botoes.autorizar.style.display = "none";
+    if (!verTodos) {
 
       // Aplica configuração de visibilidade do servidor
       const cfgVis = window.CFgAPI?.obter()?.visibilidadeBotoes ||
@@ -108,6 +118,8 @@ async function controlarBotoesSidebar() {
       });
     }
 
+    // Quem aprova sempre vê o botão Aprovar, mesmo que a tabela por status o esconda
+    if (podeAprovar && botoes.autorizar) botoes.autorizar.style.display = "block";
     return;
   }
 
@@ -187,7 +199,7 @@ document.addEventListener("click", function (e) {
   if (btn && btn.classList.contains("btn-bloqueado")) {
     // Admin e gestor não têm trava: para eles o cadeado é só indicação visual
     const tipo = localStorage.getItem("usuarioTipo") || "";
-    if (tipo === "admin" || tipo === "gestor") return;
+    if (window.Permissoes ? window.Permissoes.pode("semTravas") : (tipo === "admin" || tipo === "gestor")) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     alert("⚠️ Esta ação só está disponível após a proposta ser aprovada pelo gestor.");

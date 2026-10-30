@@ -1843,10 +1843,11 @@ Instagram: </textarea>
     <button onclick="fecharPopupPendencias()" class="btn btn-secondary w-100">Fechar</button>
   </div>
   <script src="../js/configuracoes.js"></script>
-  <script src="../js/bloqueioKommo.js?v=ctr1"></script>
-  <script src="../js/bloqueioValor.js?v=fx1"></script>
+  <script src="../js/permissoes.js?v=pf1"></script>
+  <script src="../js/bloqueioKommo.js?v=pf1"></script>
+  <script src="../js/bloqueioValor.js?v=pf1"></script>
   <script src="../js/desbloqueioFlutuante.js?v=fx1"></script>
-  <script src="../js/salvarPropostas.js?v=gst2" defer></script>
+  <script src="../js/salvarPropostas.js?v=pf1" defer></script>
    <script src="../js/cadastroClientes.js"></script>
   <script src="../js/validarToken.js" defer></script>
   <script src="../js/sair.js" defer></script>
@@ -1864,7 +1865,7 @@ Instagram: </textarea>
   <script src="../js/clienteAutocomplete.js" defer></script>
   <script src="../js/consultaCEP.js" defer></script>
 
-  <script src="../js/BarraPesquisa.js?v=aut1" defer></script>
+  <script src="../js/BarraPesquisa.js?v=pf1" defer></script>
 
 
   <script src="../js/equipeInterna.js" defer></script>
@@ -1877,12 +1878,12 @@ Instagram: </textarea>
   <script src="../js/enviarPropostas.js" defer></script>
   <script src="../js/carregamento.js" defer></script>
   <script src="../js/formularioOrcamento.js" defer></script>
-  <script src="../js/formulaValores.js" defer></script>
-  <script src="../js/salvarPropostas.js?v=gst2" defer></script>
+  <script src="../js/formulaValores.js?v=pf1" defer></script>
+  <script src="../js/salvarPropostas.js?v=pf1" defer></script>
   <script src="../js/carregamento.js" defer></script>
-  <script src="../js/visualizarBotoes.js?v=gst1" defer></script>
+  <script src="../js/visualizarBotoes.js?v=pf1" defer></script>
   <script src="../js/envioOmie.js?v=ctr1" defer></script>
-  <script src="../js/totais.js?v=f9g8h7i" defer></script>
+  <script src="../js/totais.js?v=pf1" defer></script>
   <script src="../js/conferencia.js" defer></script>
   <script>
 
@@ -2195,6 +2196,10 @@ document.body.appendChild(btn);
 
 
 window.atualizarPropostaEditavel = async function () {
+  if (window.Permissoes && !window.Permissoes.pode("editarSalvar")) {
+    alert("Seu perfil é só de consulta: não é possível salvar o orçamento.");
+    return;
+  }
   // Guard: se for o modelo base, pula validação de itens zerados
   const _idAtualEditar = new URLSearchParams(window.location.search).get("id");
   if (_idAtualEditar !== "68746e305b9691a7ed3b3f97") {
@@ -2628,7 +2633,7 @@ async function marcarPendenteAprovacao() {
 
 // 3️⃣ Aprovado Pelo Gestor
 async function marcarAprovadoPeloGestor() {
-  const _isAdmin = (localStorage.getItem("usuarioTipo") || "") === "admin";
+  const _isAdmin = window.Permissoes ? window.Permissoes.pode("aprovarOrcamento") : (localStorage.getItem("usuarioTipo") || "") === "admin";
 
   if (_isAdmin) {
     const pendentes = (window._solicitacoesAprovacaoMinimo || []).filter(s => s.status === "pendente");

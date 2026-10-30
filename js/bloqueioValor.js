@@ -22,7 +22,8 @@
   const tipoUsuario  = localStorage.getItem("usuarioTipo") || "";
   const emailUsuario = (localStorage.getItem("usuarioEmail") || "").toLowerCase();
   const nomeUsuario  = localStorage.getItem("usuarioNome") || "";
-  const isSuperUser  = tipoUsuario === "admin" || tipoUsuario === "gestor";
+  // Perfis sem travas (Ajustes → Perfis); padrão: admin e gestor
+  const isSuperUser  = (window.Permissoes ? window.Permissoes.pode("semTravas") : (tipoUsuario === "admin" || tipoUsuario === "gestor"));
 
   const estado = {
     aprovacoes: [],

@@ -6,7 +6,8 @@ function verificarBloqueioKommo() {
   const idProposta  = new URLSearchParams(window.location.search).get("id");
   console.log(`[kommo-lock] usuarioTipo: ${tipoUsuario} | idProposta: ${idProposta}`);
 
-  const isSuperUser = tipoUsuario === "admin" || tipoUsuario === "gestor";
+  // Perfis sem travas (Ajustes → Perfis); padrão: admin e gestor
+  const isSuperUser = (window.Permissoes ? window.Permissoes.pode("semTravas") : (tipoUsuario === "admin" || tipoUsuario === "gestor"));
   if (!idProposta) {
     console.warn("[kommo-lock] ID da proposta não encontrado na URL.");
     return;

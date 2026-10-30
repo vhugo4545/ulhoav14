@@ -414,6 +414,10 @@ function extrairNumeroMoeda(texto) {
 }
 
 window.atualizarPropostaEditavel = async function () {
+  if (window.Permissoes && !window.Permissoes.pode("editarSalvar")) {
+    alert("Seu perfil é só de consulta: não é possível salvar o orçamento.");
+    return;
+  }
   // ── Validação: itens com custo zero (exceto o 1º de cada grupo) ──────────
   const _idAtual = new URLSearchParams(window.location.search).get("id");
   if (_idAtual === "68746e305b9691a7ed3b3f97") { // modelo — pula validação
@@ -461,7 +465,7 @@ window.atualizarPropostaEditavel = async function () {
     const _statusAtual = window._kommoStatusAtual?.statusId;
     const _isSuperUser = (() => {
       const t = localStorage.getItem("usuarioTipo") || "";
-      return t === "admin" || t === "gestor";
+      return (window.Permissoes ? window.Permissoes.pode("semTravas") : (t === "admin" || t === "gestor"));
     })();
 
     if (_statusAtual && !_isSuperUser) {
@@ -1108,8 +1112,8 @@ async function marcarPendenteAprovacao() {
 // 3️⃣ Aprovado Pelo Gestor
 async function marcarAprovadoPeloGestor() {
   const tipoUsuario = localStorage.getItem("usuarioTipo") || "usuario";
-  if (tipoUsuario !== "admin") {
-    alert("❌ Apenas administradores podem aprovar propostas.");
+  if (!(window.Permissoes ? window.Permissoes.pode("aprovarOrcamento") : tipoUsuario === "admin")) {
+    alert("❌ Seu perfil não pode aprovar propostas.");
     return;
   }
   await _statusKommoERecarregar("Aprovado Pelo Gestor", "aprovar-gestor");

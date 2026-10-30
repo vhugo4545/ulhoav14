@@ -89,6 +89,7 @@
 
 
       <script src="../js/authFetch.js"></script>
+      <script src="../js/permissoes.js?v=pf1"></script>
   <script>
         (function () {
           const nome = localStorage.getItem("usuarioNome") || localStorage.getItem("usuarioEmail") || "Usuário";
@@ -97,7 +98,8 @@
           const tipoEl = document.getElementById("usuario-tipo");
           if (tipo) tipoEl.textContent = tipo;
 
-          if (tipo !== "admin") {
+          // Ajustes → Perfis; padrão: só admin
+          if (!(window.Permissoes ? window.Permissoes.pode("editarConfig") : tipo === "admin")) {
             ["btn-editar-modelo", "btn-editar-formulas", "btn-editar-ajustes"].forEach(id => {
               const el = document.getElementById(id);
               if (el) el.style.display = "none";
@@ -391,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <script src="../js/carregamento.js" defer></script>
   <script src="../js/list.js?v=140880c" defer></script>
   <script src="../js/auth.js" defer></script>
-  <script src="../js/notificacoesAprovador.js?v=cen1" defer></script>
+  <script src="../js/notificacoesAprovador.js?v=pf1" defer></script>
 
   <!-- Botão voltar ao topo -->
   <button id="btn-topo" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Voltar ao topo" style="

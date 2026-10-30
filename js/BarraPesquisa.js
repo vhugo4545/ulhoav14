@@ -309,7 +309,7 @@ async function validarDtAltProdutos() {
   const regra = window.CFgAPI?.obter()?.regraAtualizacaoProduto;
   if (!regra?.ativo) return true;
   const tipo = localStorage.getItem("usuarioTipo") || "";
-  if (tipo === "admin" || tipo === "gestor") return true;
+  if ((window.Permissoes ? window.Permissoes.pode("semTravas") : (tipo === "admin" || tipo === "gestor"))) return true;
   if (window.propostaAtual?.aprovadoPeloGestor) return true;
   const limiteDias = Number(regra.dias) || 30;
 

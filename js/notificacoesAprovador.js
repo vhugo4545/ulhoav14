@@ -32,6 +32,11 @@
   })();
   if (!emailUsuario && !idUsuario) return;
   const ehAdmin = tipoUsuario === "admin";
+  // Ajustes → Perfis (permissoes.js); sem ele, vale a regra antiga: só admin
+  let cfgAtual = null;
+  const pode = acao => window.Permissoes ? window.Permissoes.pode(acao, cfgAtual || undefined) : ehAdmin;
+  const decideExcecoes = () => pode("liberarExcecoes");   // produto desatualizado e valor mínimo
+  const aprovaStatus   = () => pode("aprovarOrcamento");  // status do PDV pendente
 
   const fmtBRL = n => (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const fmtData = d => d ? new Date(d).toLocaleString("pt-BR") : "";
@@ -407,14 +412,15 @@
       if (souAprovador()) {
         fontes.push(buscar(`${API.valor}?status=aprovado`), buscar(`${API.valor}?status=negado`));
       }
-      if (ehAdmin) fontes.push(buscar(API.produto), buscar(API.minimo));
+      const excecoes = decideExcecoes();
+      if (excecoes) fontes.push(buscar(API.produto), buscar(API.minimo));
       const res = await Promise.all(fontes);
       let i = 0;
       const lista = [];
       if (souAprovador()) {
         [...(res[i++] || []), ...(res[i++] || [])].forEach(d => lista.push({ origem: origemValor(d), doc: d }));
       }
-      if (ehAdmin) {
+      if (excecoes) {
         (res[i++] || []).forEach(d => lista.push({ origem: "produto", doc: d }));
         (res[i++] || []).forEach(d => lista.push({ origem: "minimo", doc: d }));
       }
@@ -427,13 +433,14 @@
     async function atualizar() {
       // Relê a configuração: as faixas e os aprovadores podem mudar em Ajustes
       const cfg = await obterConfig();
+      if (cfg) cfgAtual = cfg;
       if (cfg?.limiteValor) lv = cfg.limiteValor;
 
       const [valor, produto, minimo, propostas] = await Promise.all([
         souAprovador() ? buscar(`${API.valor}?status=pendente`) : [],
-        ehAdmin ? buscar(`${API.produto}?status=pendente`) : [],
-        ehAdmin ? buscar(`${API.minimo}?status=pendente`) : [],
-        ehAdmin ? buscar(`${API_BASE}/propostas`) : [],
+        decideExcecoes() ? buscar(`${API.produto}?status=pendente`) : [],
+        decideExcecoes() ? buscar(`${API.minimo}?status=pendente`) : [],
+        aprovaStatus() ? buscar(`${API_BASE}/propostas`) : [],
       ]);
       if (valor === null && produto === null && minimo === null) return; // sem conexão: mantém a lista
 
@@ -520,7 +527,8 @@
     const cfg = await obterConfig();
     const lv = cfg?.limiteValor || {};
     // Aprovador (principal ou de faixa) ou admin: central de aprovações; os demais só recebem as respostas
-    if (ehAdmin || aprovadoresDe(lv).some(souEu)) iniciarCentral(lv);
+    cfgAtual = cfg;
+    if (decideExcecoes() || aprovaStatus() || aprovadoresDe(lv).some(souEu)) iniciarCentral(lv);
     else iniciarSolicitante();
   }
 

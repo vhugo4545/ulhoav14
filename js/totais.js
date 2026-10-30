@@ -414,7 +414,8 @@ function adicionarTotalizadoresPorAmbienteComAgrupamento() {
         avisoEl.style.cssText = "display:flex;justify-content:center;margin-top:12px;";
         final.appendChild(avisoEl);
       }
-      const _isAdmin   = (localStorage.getItem("usuarioTipo") || "") === "admin";
+      // Quem decide o desconto abaixo do mínimo (Ajustes → Perfis); padrão: admin
+      const _isAdmin   = window.Permissoes ? window.Permissoes.pode("liberarExcecoes") : (localStorage.getItem("usuarioTipo") || "") === "admin";
       const _solic     = window._solicitacoesAprovacaoMinimo || [];
       const _aprovada  = _solic.find(s => s.status === "aprovado");
       const _pendente  = _solic.find(s => s.status === "pendente");
