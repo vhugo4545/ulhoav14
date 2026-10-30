@@ -326,7 +326,7 @@ async function validarDtAltProdutos() {
   } catch (e) { /* usa a hora local */ }
 
   const porCodigo = new Map(window.todosProdutos.map(p => [String(p.codigo_produto || p.codigo || ""), p]));
-  const vencidos = new Map(); // codigo -> texto
+  const vencidos = new Map(); // codigo -> { codigo, descricao, dataAlt, dias }
   document.querySelectorAll("td.data-alt-omie[data-codigo]").forEach(td => {
     const codigo = String(td.dataset.codigo || "");
     if (vencidos.has(codigo)) return;
@@ -337,21 +337,129 @@ async function validarDtAltProdutos() {
     const diasDesde = Math.floor((agora - new Date(+m[3], +m[2] - 1, +m[1])) / 86400000);
     if (diasDesde > limiteDias) {
       const descricao = td.closest("tr")?.children[1]?.textContent.trim() || codigo;
-      vencidos.set(codigo, `• ${descricao} — alterado em ${dAlt} (${diasDesde} dias)`);
+      vencidos.set(codigo, { codigo, descricao, dataAlt: dAlt, dias: diasDesde });
     }
   });
 
   if (!vencidos.size) return true;
-  const linhas = [...vencidos.values()];
-  alert(
-    `⚠️ Não é possível gerar o PDF.\n\n` +
-    `${linhas.length} produto(s) estão com a data de alteração na Omie há mais de ${limiteDias} dias:\n\n` +
-    linhas.slice(0, 12).join("\n") + (linhas.length > 12 ? `\n… e mais ${linhas.length - 12}` : "") +
-    `\n\nAtualize os produtos ou peça a aprovação do gestor.`
-  );
+
+  // O gestor pode ter autorizado depois que a página abriu: confere a proposta no servidor
+  if (await _aprovadoPeloGestorAgora()) return true;
+
+  _popupAutorizacaoProduto([...vencidos.values()], limiteDias);
   return false;
 }
 window.validarDtAltProdutos = validarDtAltProdutos;
+
+// ── Pedido de autorização (produtos desatualizados) ─────────────────────────
+// O vendedor pede pelo popup; o gestor decide no sino da listagem (notificacoesGestor.js).
+// Aprovado → a proposta fica "aprovado pelo gestor" e o PDF libera.
+const API_APROV_PRODUTO = "https://ulhoa-0a02024d350a.herokuapp.com/api/aprovacoes-produto";
+
+async function _aprovadoPeloGestorAgora() {
+  const id = new URLSearchParams(window.location.search).get("id") || window.propostaAtual?._id;
+  if (!id) return false;
+  try {
+    const r = await fetch(`https://ulhoa-0a02024d350a.herokuapp.com/api/propostas/${id}`);
+    if (!r.ok) return false;
+    const p = await r.json();
+    if (p?.aprovadoPeloGestor && window.propostaAtual) window.propostaAtual.aprovadoPeloGestor = true;
+    return !!p?.aprovadoPeloGestor;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function _popupAutorizacaoProduto(produtos, limiteDias) {
+  const idProposta = new URLSearchParams(window.location.search).get("id") || window.propostaAtual?._id;
+  const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const fmtData = d => d ? new Date(d).toLocaleString("pt-BR") : "";
+  document.getElementById("aut-prod-overlay")?.remove();
+
+  const ov = document.createElement("div");
+  ov.id = "aut-prod-overlay";
+  ov.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px;";
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:14px;width:min(560px,100%);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.3);overflow:hidden;font-family:inherit;color:#1e293b;">
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:16px 20px;background:#fff7ed;border-bottom:1px solid #fed7aa;">
+        <span class="material-icons-outlined" style="font-size:22px;color:#c2410c;background:#ffedd5;border-radius:10px;padding:8px;">inventory_2</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:16px;font-weight:700;color:#7c2d12;">Produtos desatualizados na Omie</div>
+          <div style="font-size:12px;color:#9a3412;margin-top:2px;">${produtos.length} produto(s) com a data de alteração na Omie há mais de ${limiteDias} dias. Para gerar o PDF, peça a autorização do gestor ou atualize os produtos na Omie.</div>
+        </div>
+        <button type="button" data-acao="fechar" title="Fechar" style="border:none;background:none;cursor:pointer;color:#9a3412;padding:2px;"><span class="material-icons-outlined" style="pointer-events:none;">close</span></button>
+      </div>
+      <div style="padding:12px 20px;overflow:auto;flex:1;">
+        ${produtos.map(p => `
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
+            <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;">${esc(p.descricao)}</span>
+            <span style="white-space:nowrap;color:#b45309;font-size:12px;font-weight:600;">${esc(p.dataAlt)} · ${p.dias} dias</span>
+          </div>`).join("")}
+      </div>
+      <div data-area-pedido style="padding:14px 20px;border-top:1px solid #e2e8f0;background:#fcfcfd;">
+        <div style="font-size:12px;color:#94a3b8;">Verificando pedidos…</div>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener("click", e => {
+    if (e.target === ov || e.target.closest('[data-acao="fechar"]')) ov.remove();
+  });
+
+  const area = ov.querySelector("[data-area-pedido]");
+  const btnCss = cor => `padding:9px 16px;border:none;border-radius:8px;background:${cor};color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;`;
+  const tag = (bg, cor, txt) => `<div style="padding:8px 12px;border-radius:8px;background:${bg};color:${cor};font-size:12px;font-weight:600;margin-bottom:10px;">${txt}</div>`;
+
+  const formulario = negado => {
+    area.innerHTML =
+      (negado ? tag("#fee2e2", "#991b1b", `⛔ Negado por ${esc(negado.aprovador || "gestor")}${negado.observacao ? ": " + esc(negado.observacao) : ""}`) : "") +
+      `<textarea placeholder="Justificativa para o gestor (opcional)" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;min-height:56px;"></textarea>
+       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+         <button type="button" data-acao="fechar" style="padding:9px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:inherit;">Cancelar</button>
+         <button type="button" data-acao="enviar" style="${btnCss("#c2410c")}">${negado ? "Pedir novamente" : "Solicitar autorização ao gestor"}</button>
+       </div>`;
+    area.querySelector('[data-acao="enviar"]').addEventListener("click", async e => {
+      const btn = e.currentTarget;
+      btn.disabled = true; btn.textContent = "Enviando…";
+      const proposta = window.propostaAtual || {};
+      const r = await fetch(API_APROV_PRODUTO, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propostaId:     idProposta,
+          numeroProposta: proposta.numeroProposta || proposta.camposFormulario?.numeroOrcamento || "",
+          nomeCliente:    proposta.camposFormulario?.clientes?.[0]?.nome_razao_social || "",
+          solicitante:    localStorage.getItem("usuarioNome") || localStorage.getItem("usuarioEmail") || "Usuário",
+          email:          (localStorage.getItem("usuarioEmail") || "").toLowerCase(),
+          justificativa:  area.querySelector("textarea").value.trim(),
+          limiteDias,
+          produtos,
+        }),
+      }).catch(() => null);
+      if (!r?.ok) {
+        alert("Não foi possível enviar o pedido de autorização.");
+        btn.disabled = false; btn.textContent = negado ? "Pedir novamente" : "Solicitar autorização ao gestor";
+        return;
+      }
+      aguardando(await r.json());
+    });
+  };
+
+  const aguardando = pedido => {
+    area.innerHTML =
+      tag("#fffbeb", "#92400e", `⏳ Pedido enviado em ${fmtData(pedido.dataHora)}. Aguardando o gestor autorizar.`) +
+      `<div style="font-size:12px;color:#64748b;margin-bottom:10px;">Quando o gestor aprovar, clique de novo no botão para gerar o PDF.</div>
+       <div style="display:flex;justify-content:flex-end;"><button type="button" data-acao="fechar" style="${btnCss("#475569")}">Fechar</button></div>`;
+  };
+
+  // Último pedido desta proposta: pendente → aguardando; negado → mostra o motivo e permite pedir de novo
+  let ultimo = null;
+  try {
+    const r = await fetch(`${API_APROV_PRODUTO}?propostaId=${encodeURIComponent(idProposta)}`);
+    if (r.ok) ultimo = (await r.json()).find(d => d.status !== "cancelado") || null;
+  } catch (e) { /* sem histórico, mostra o formulário */ }
+  if (ultimo?.status === "pendente") aguardando(ultimo);
+  else formulario(ultimo?.status === "negado" ? ultimo : null);
+}
 
 async function _salvarAprovadoGestor(novoValor) {
   const id = new URLSearchParams(window.location.search).get("id") || window.propostaAtual?._id;

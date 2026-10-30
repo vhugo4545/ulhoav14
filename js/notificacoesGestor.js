@@ -3,6 +3,8 @@
 (function () {
   const API          = "https://ulhoa-0a02024d350a.herokuapp.com/api/propostas";
   const API_APROV    = "https://ulhoa-0a02024d350a.herokuapp.com/api/aprovacoes-minimo";
+  // Pedidos de autorização para gerar o PDF com produtos desatualizados na Omie (BarraPesquisa.js)
+  const API_PRODUTO  = "https://ulhoa-0a02024d350a.herokuapp.com/api/aprovacoes-produto";
   const STATUS_PENDENTE = "Pendente de aprovação";
   const POLL_INTERVAL = 30000; // 30s
 
@@ -110,6 +112,8 @@
           font-size: 13px;
         }
         .ng-item.ng-item--min { border-left: 3px solid #f59e0b; }
+        .ng-item.ng-item--prod { border-left: 3px solid #c2410c; }
+        .ng-prod-lista { font-size: 11px; color: #6b7280; margin: 0 0 6px; padding-left: 14px; }
         .ng-item.ng-item--aprovado { border-left: 3px solid #22c55e; }
         .ng-item.ng-item--negado { border-left: 3px solid #ef4444; }
         .ng-item-top { font-weight: 700; color: #111827; margin-bottom: 2px; }
@@ -201,6 +205,39 @@
   // ── Estado global ────────────────────────────────────────────────────
   let _todasPropostas  = [];
   let _todasAprovacoes = []; // coleção dedicada aprovacoes_minimo
+  let _todasProduto    = []; // coleção aprovacoes_produto (produtos desatualizados na Omie)
+
+  const _esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // Card do pedido de produto desatualizado (pendente ou já decidido)
+  function _itemProduto(s) {
+    const dt = new Date(s.dataHora).toLocaleString("pt-BR");
+    const prods = s.produtos || [];
+    const lista = prods.slice(0, 3).map(p => `<li>${_esc(p.descricao)} · ${_esc(p.dataAlt)} (${p.dias} dias)</li>`).join("")
+      + (prods.length > 3 ? `<li>… e mais ${prods.length - 3}</li>` : "");
+    const pendente = s.status === "pendente";
+    const aprovado = s.status === "aprovado";
+    const ver = `<button class="ng-btn ng-btn--ver" onclick="window.location.href='editar.html?id=${_esc(s.propostaId)}'">Ver</button>`;
+    return `
+      <div class="ng-item ${pendente ? "ng-item--prod" : aprovado ? "ng-item--aprovado" : "ng-item--negado"}">
+        <div class="ng-item-top">Proposta ${_esc(s.numeroProposta || "—")}</div>
+        <div class="ng-item-sub">${_esc(s.nomeCliente || "Cliente não informado")}</div>
+        <div class="ng-item-valores">📦 ${prods.length} produto(s) desatualizado(s) na Omie (mais de ${s.limiteDias || "—"} dias) · pede liberação do PDF</div>
+        <ul class="ng-prod-lista">${lista}</ul>
+        ${s.justificativa ? `<div class="ng-item-sub" style="color:#374151;">💬 ${_esc(s.justificativa)}</div>` : ""}
+        <div class="ng-item-sub">Solicitante: ${_esc(s.solicitante)} · ${dt}</div>
+        ${pendente
+          ? `<span class="ng-pill ng-pill--pendente">⏳ Pendente</span>
+             <div class="ng-btns">
+               <button class="ng-btn ng-btn--aprovar" onclick="_ngProduto('${_esc(s._id)}','aprovado')">✓ Aprovar</button>
+               <button class="ng-btn ng-btn--negar"   onclick="_ngProduto('${_esc(s._id)}','negado')">✗ Negar</button>
+               ${ver}
+             </div>`
+          : `<span class="ng-pill ${aprovado ? "ng-pill--aprovado" : "ng-pill--negado"}">${aprovado ? "✓ Aprovado" : "✗ Negado"}</span>
+             <div class="ng-item-sub">Por: ${_esc(s.aprovador || "—")} · ${s.dataAprovacao ? new Date(s.dataAprovacao).toLocaleString("pt-BR") : "—"}${s.observacao ? " · " + _esc(s.observacao) : ""}</div>
+             <div class="ng-btns">${ver}</div>`}
+      </div>`;
+  }
 
   // ── Renderiza a aba ativa ───────────────────────────────────────────
   function renderizarAba(aba) {
@@ -209,13 +246,14 @@
 
     if (aba === "pendentes") {
       const pendentes = _todasAprovacoes.filter(s => s.status === "pendente");
+      const pendProduto = _todasProduto.filter(s => s.status === "pendente");
 
-      if (pendentes.length === 0) {
+      if (pendentes.length === 0 && pendProduto.length === 0) {
         lista.innerHTML = '<div id="ng-vazio">Nenhuma solicitação pendente.</div>';
         return;
       }
       const fmtBRL = n => (n||0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-      lista.innerHTML = pendentes.map(s => {
+      lista.innerHTML = pendProduto.map(_itemProduto).join("") + pendentes.map(s => {
         const dt = new Date(s.dataHora).toLocaleString("pt-BR");
         return `
           <div class="ng-item ng-item--min">
@@ -233,7 +271,7 @@
       }).join("");
 
     } else if (aba === "historico") {
-      const historico = _todasAprovacoes
+      const historico = [..._todasAprovacoes, ..._todasProduto.map(s => ({ ...s, _produto: true }))]
         .filter(s => s.status === "aprovado" || s.status === "negado")
         .sort((a, b) => new Date(b.dataAprovacao || b.dataHora) - new Date(a.dataAprovacao || a.dataHora));
 
@@ -243,6 +281,7 @@
       }
       const fmtBRL = n => (n||0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
       lista.innerHTML = historico.map(s => {
+        if (s._produto) return _itemProduto(s);
         const dtSolic  = new Date(s.dataHora).toLocaleString("pt-BR");
         const dtAp     = s.dataAprovacao ? new Date(s.dataAprovacao).toLocaleString("pt-BR") : "—";
         const aprovado = s.status === "aprovado";
@@ -326,6 +365,34 @@
     renderizarAba("pendentes");
   }
 
+  // Decide o pedido de produto desatualizado; aprovado → a proposta fica "aprovado pelo gestor"
+  window._ngProduto = async function(id, status) {
+    let observacao = "";
+    if (status === "negado") {
+      const motivo = prompt("Motivo da negativa (opcional):");
+      if (motivo === null) return;
+      observacao = motivo;
+    } else if (!confirm("Autorizar o PDF desta proposta? Ela ficará como \"aprovado pelo gestor\".")) {
+      return;
+    }
+    const token = localStorage.getItem("accessToken") || "";
+    const put = await fetch(`${API_PRODUTO}/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status, observacao, aprovador: localStorage.getItem("usuarioNome") || "Gestor" })
+    }).catch(() => null);
+    if (!put?.ok) {
+      const err = await put?.json().catch(() => null);
+      alert(err?.error || "Erro ao salvar decisão.");
+      return;
+    }
+    const doc = await put.json();
+    const idx = _todasProduto.findIndex(s => s._id === id);
+    if (idx >= 0) _todasProduto[idx] = doc;
+    atualizarBadge();
+    renderizarAba("pendentes");
+  };
+
   // ── Atualiza badge ─────────────────────────────────────────────────
   function atualizarBadge() {
     const badge = document.getElementById("ng-badge");
@@ -334,7 +401,8 @@
 
     const pendentesMin   = _todasAprovacoes.filter(s => s.status === "pendente").length;
     const pendentesStatus = _todasPropostas.filter(p => p.statusOrcamento === STATUS_PENDENTE).length;
-    const total = pendentesMin + pendentesStatus;
+    const pendentesProduto = _todasProduto.filter(s => s.status === "pendente").length;
+    const total = pendentesMin + pendentesStatus + pendentesProduto;
 
     label.textContent   = total;
     badge.style.display = total > 0 ? "flex" : "none";
@@ -346,9 +414,10 @@
     try {
       const token = localStorage.getItem("accessToken") || "";
 
-      const [respostaPropostas, respostaAprovacoes] = await Promise.all([
+      const [respostaPropostas, respostaAprovacoes, respostaProduto] = await Promise.all([
         fetch(API,        { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
-        fetch(API_APROV,  { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
+        fetch(API_APROV,  { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
+        fetch(API_PRODUTO, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
       ]);
 
       if (respostaPropostas?.ok) {
@@ -358,6 +427,10 @@
       if (respostaAprovacoes?.ok) {
         const lista = await respostaAprovacoes.json();
         _todasAprovacoes = Array.isArray(lista) ? lista : [];
+      }
+      if (respostaProduto?.ok) {
+        const lista = await respostaProduto.json();
+        _todasProduto = Array.isArray(lista) ? lista : [];
       }
 
       atualizarBadge();
